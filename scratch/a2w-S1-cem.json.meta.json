@@ -1,0 +1,42 @@
+{
+ "mode": "cem",
+ "seed": 7101,
+ "evals": 600,
+ "pop": 12,
+ "games": 2,
+ "n": 5,
+ "elite": 4,
+ "sig0": 0.2,
+ "trainMode": "long",
+ "holdoutGames": 60,
+ "startFit": 0.7309977858532548,
+ "inLoopBest": 1.2285706543783264,
+ "holdoutFit": 0.30924090113458735,
+ "holdoutFirst": 0.08333333333333333,
+ "holdoutTop2": 0.1,
+ "curve": [
+  {
+   "evals": 60,
+   "best": 1.0853531201925857
+  },
+  {
+   "evals": 156,
+   "best": 1.0853531201925857
+  },
+  {
+   "evals": 300,
+   "best": 1.0853531201925857
+  },
+  {
+   "evals": 456,
+   "best": 1.0853531201925857
+  },
+  {
+   "evals": 600,
+   "best": 1.2285706543783264
+  }
+ ],
+ "secs": 113.3,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/a2w-S1-cem.json"
+}

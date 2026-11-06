@@ -1,0 +1,124 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/GD3-RATION.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration4",
+ "keySplit": 1,
+ "rareOnly": "railgun,charge",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 3075,
+  "hit": 2864,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 2400,
+  "moved": 0,
+  "gone": 0,
+  "keys": 2400,
+  "rare": 2085,
+  "byKey": {
+   "ji": 623,
+   "charge": 1636,
+   "gun": 134,
+   "ring": 4,
+   "railgun": 3
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 1,
+    "teacherLl": -6.594740396795676e-9,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 1,
+    "teacherLl": -2.6632629838063243e-9,
+    "studentAgree": 1,
+    "studentLl": -2.6887174080690503e-9,
+    "studentN": 200
+   },
+   {
+    "round": 2,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 1,
+    "teacherLl": -1.7766853118546506e-10,
+    "studentAgree": 1,
+    "studentLl": -0.000003916263710398728,
+    "studentN": 400
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 3403,
+    "firstDiff": 0,
+    "dim": 7993
+   },
+   {
+    "round": 2,
+    "moved": 3427,
+    "firstDiff": 0,
+    "dim": 7993
+   }
+  ],
+  "startAgree": 0.73,
+  "startLl": -3.1792017166367534,
+  "agree": 1,
+  "ll": -1.7766853118546506e-10,
+  "wAgree": 1,
+  "nTest": 200,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 1,
+  "studentN": 400,
+  "byKey": [
+   {
+    "key": "charge#elec",
+    "n": 200,
+    "hit": 200
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD3-RATION.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}

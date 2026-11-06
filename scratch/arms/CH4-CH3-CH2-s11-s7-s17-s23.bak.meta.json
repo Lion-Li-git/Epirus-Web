@@ -1,0 +1,323 @@
+{
+ "mode": "cem",
+ "seed": 23,
+ "evals": 6000,
+ "pop": 48,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 24000,
+ "gamesActualLoop": 24000,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 24000,
+ "netForwards": 572164,
+ "netCandScores": 10077647,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 1,
+ "inLoopBest": 1,
+ "holdoutFit": 0.00014430014430014877,
+ "holdoutFirst": 0.33181818181818185,
+ "holdoutTop2": 0.95,
+ "holdoutStartFit": 0.35638528138528147,
+ "holdoutStartFirst": 0.5409090909090909,
+ "holdoutStartTop2": 0.9272727272727272,
+ "dFirst": -0.20909090909090905,
+ "dTop2": 0.022727272727272707,
+ "currency": "arena2.clean",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.031818181818181815,
+  "cur": "clean",
+  "diverse": false,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "gun",
+   "share": 0.4957901554404145,
+   "nonji": 3088
+  },
+  "startMaxCard": {
+   "key": "snipe",
+   "share": 0.45109034267912773,
+   "nonji": 1605
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0.1,
+    "score": 0.3,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0,
+    "score": 0,
+    "cleanScore": 0,
+    "firstScore": 0
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.65,
+    "draw": 0,
+    "score": 0.3,
+    "cleanScore": 0.3,
+    "firstScore": 0.3
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0.05,
+    "score": 0.2875,
+    "cleanScore": 0.25,
+    "firstScore": 0.25
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0,
+    "score": -0.19999999999999996,
+    "cleanScore": -0.27499999999999997,
+    "firstScore": -0.19999999999999996
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.4,
+    "draw": 0,
+    "score": 0.10000000000000002,
+    "cleanScore": 0.10000000000000002,
+    "firstScore": 0.10000000000000002
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": -0.0625,
+    "cleanScore": -0.1875,
+    "firstScore": -0.0625
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0.1,
+    "score": -0.0625,
+    "cleanScore": -0.1875,
+    "firstScore": -0.125
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0.05,
+    "score": 0.15625,
+    "cleanScore": 0,
+    "firstScore": 0.125
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0,
+    "score": 0.08571428571428577,
+    "cleanScore": -0.14285714285714282,
+    "firstScore": 0.08571428571428577
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0.05,
+    "score": -0.0277777777777778,
+    "cleanScore": -0.055555555555555594,
+    "firstScore": -0.055555555555555594
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 2496,
+   "best": 1
+  },
+  {
+   "games": 6144,
+   "best": 1
+  },
+  {
+   "games": 12096,
+   "best": 1
+  },
+  {
+   "games": 18048,
+   "best": 1
+  }
+ ],
+ "secs": 65.4,
+ "startLabel": "夹具包 scratch/arms/CH3-CH2-s11-s7-s17.bak",
+ "lineage": {
+  "parent": "scratch/arms/CH3-CH2-s11-s7-s17.bak",
+  "parentHash": "9c2c04a7849dcce6e563d16300bcdeb3",
+  "outHash": "e183ee554b91f84019ee8036e2cf4f7a",
+  "gen": 2,
+  "seed": 23,
+  "recipe": {
+   "arenaLex": true,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  }
+ },
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 23.203,
+   "entShareMed": 0.4471,
+   "spreadMed": 3.5523,
+   "odds": 19274411229.42,
+   "tieArgmax": 6,
+   "agreeRandom": 8.3,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "开"
+ },
+ "headGate": "绿",
+ "wrote": "D:/code/Epirus-Web/scratch/arms/CH4-CH3-CH2-s11-s7-s17-s23.bak",
+ "container": {
+  "v": 91,
+  "arch": "S1o",
+  "gen": 2,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3",
+   "inter": 0,
+   "gen": 2,
+   "dof": 208
+  },
+  "n": 6122,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 464,
+    "weight": [
+     0,
+     448
+    ],
+    "bias": [
+     448,
+     464
+    ],
+    "fanIn": 28
+   },
+   {
+    "name": "actEnc",
+    "off": 464,
+    "len": 488,
+    "weight": [
+     464,
+     944
+    ],
+    "bias": [
+     944,
+     952
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 952,
+    "len": 3360,
+    "weight": [
+     952,
+     4280
+    ],
+    "bias": [
+     4280,
+     4312
+    ],
+    "fanIn": 104
+   },
+   {
+    "name": "cand",
+    "off": 4312,
+    "len": 1752,
+    "weight": [
+     4312,
+     6040
+    ],
+    "bias": [
+     6040,
+     6064
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 6064,
+    "len": 25,
+    "weight": [
+     6064,
+     6089
+    ],
+    "bias": null,
+    "fanIn": 24
+   },
+   {
+    "name": "qHead",
+    "off": 6089,
+    "len": 33,
+    "weight": [
+     6089,
+     6122
+    ],
+    "bias": null,
+    "fanIn": 32
+   }
+  ]
+ },
+ "verifGate": "不适用（本臂 mode=cem 没有 esa 计数 ⇒ 这条闸只判 ESA/精英接受口径）"
+}

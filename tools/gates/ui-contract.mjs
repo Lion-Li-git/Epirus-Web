@@ -245,7 +245,9 @@ t('D28 模式入口一致性：两根轴都在页面上、每档下拉都被映�
     return out;
   };
   const pl = optVals('sel-players'), hp = optVals('sel-hp');
-  ok(pl !== null && pl.join(',') === '2,3,4,5', '①a 人数下拉必须在、且恰好 2/3/4/5 四档（实测 ' + JSON.stringify(pl) + '）');
+  /* v1.8.45（11-06 夜 · 用户授权 6-8P）：人数轴 2~5 → **2~8**（引擎与池本就支持任意 N；长短考试 8P PASS 见
+   * `RESULTS-2026-11-06-night-zcode.md` §五）。这里的期望跟着产品走：恰好 2..8 七档。 */
+  ok(pl !== null && pl.join(',') === '2,3,4,5,6,7,8', '①a 人数下拉必须在、且恰好 2~8 七档（v1.8.45 起；实测 ' + JSON.stringify(pl) + '）');
   ok(hp !== null && hp.length >= 3, '①b 血量下拉 `#sel-hp` 必须在（v1.6.5：人数与血量是两根正交轴）');
   /* ①c 每一档血量都必须被 `ui.js` 的映射表接住（表里的行形状是 `3: 'multi'` ⇒ 判 `\b<值>:`） */
   for (const h of (hp || [])) ok(new RegExp('\\b' + h + ':').test(uiSrc), '①c 血量档 ' + h + ' 血在 `ui.js` 的映射表里必须有行（没行 = 选了它却静默建出默认血量的局）');

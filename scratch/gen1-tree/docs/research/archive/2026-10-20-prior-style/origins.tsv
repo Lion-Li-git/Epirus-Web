@@ -1,0 +1,22 @@
+id	path	wid	holo_ε0	Geff	Hp	Hplong
+v7beadseed-82	docs/artifacts/v7beadseed-82.bak	492b77d8516e82b6	15.97	7.37	62.5	68.7
+v7bead15-93	docs/artifacts/v7bead15-93.bak	822dfb4846cce5cd	16.07	4.34	60.1	67.0
+v7wall-34	docs/artifacts/v7wall-34.bak	ae496c39a2871259	19.90	5.76	46.4	44.9
+Lctl	docs/artifacts/eval-out/win-Lctl.bak	dfae5c38af537bb7	23.85	6.82	36.2	40.1
+v7teach-32	docs/artifacts/v7teach-32.bak	a21e867e46aa5378	80.90	3.32	33.1	39.0
+
+# 00:29 追加两枚独立起点（判据不变，见 PREREG §七事后登记）
+id	path	wid	holo_ε0	Geff	Hp	Hplong
+K1	docs/artifacts/e234-out/K1.js	ced8c61b2047da58	54.83	3.79	38.5	32.6
+G-s82	docs/artifacts/e514-out/G-s82.js	ec95478c2e3ddb5d	19.23	7.48	35.0	38.8
+
+# 01:2x 追加 8 枚独立起点（簇数 7→15，见 PREREG §九-5）
+id	path	wid	holo_ε0	Geff	Hp	Hplong
+mix-31	docs/artifacts/mix-31.bak	b105c7dd8bf03134	77.95	3.14	28.8	25.3
+S-s114	docs/artifacts/e521-out/S-s114.js	03d6a22f9407a1f0	47.13	3.12	21.6	16.5
+sty-35	docs/artifacts/sty-35.bak	353a1b940e7e67a0	46.58	4.01	9.7	10.2
+T8-s110	docs/artifacts/e521-out/T-s110.js	d68eadfefbaeaac4	17.48	4.16	40.5	36.8
+v7a-31	docs/artifacts/v7a-31.bak	4877a44a7afaaf1d	17.02	3.54	37.8	34.7
+v7ws1-31	docs/artifacts/v7press3-31.bak	ab2a1959c1e327fc	15.38	5.98	57.3	61.6
+v7f2t-31	docs/artifacts/v7f2t-31.bak	aca8bb57e2f8d054	13.72	5.34	49.7	51.1
+v9-32	docs/artifacts/v9-32.bak	c1beff4ccd84659f	13.05	8.42	44.3	39.9

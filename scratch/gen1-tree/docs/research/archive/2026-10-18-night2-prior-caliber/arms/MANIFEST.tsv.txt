@@ -1,0 +1,7 @@
+# arms/ 名单签名 · 每格这一臂的**权威产物**从哪儿来（生成 2026-10-18T17:47:04.920Z）	# 关档那三格的产物 = 驱动在落盘时刻收走的 train-3p-out.js（rc=0 真写了）；开档那三格 rc=9 ⇒ 没写 ⇒ 权威产物 = 臂日志里 `[band-save] …（当选）` 那个 .bak。	arm	veto	seed	rc	权威源（仓内相对路径）	权重本体 sha8	arms/ 里的拷贝	5人实测 1st
+gv0-77000	0	77000	0	arms/gv0-77000.winner.js（落盘时刻收的 train-3p-out.js）	156cca91	gv0-77000.winner.js	46.1
+gv1-77000	1	77000	9	docs/artifacts/gv-gv1-77000/gv1-77000-band4.bak（当选行）	d3527fe3	gv1-77000.winner.js	42.6
+gv0-77001	0	77001	0	arms/gv0-77001.winner.js（落盘时刻收的 train-3p-out.js）	c2152166	gv0-77001.winner.js	47.9
+gv1-77001	1	77001	9	docs/artifacts/gv-gv1-77001/gv1-77001-band4.bak（当选行）	c2152166	gv1-77001.winner.js	47.9
+gv0-77002	0	77002	0	arms/gv0-77002.winner.js（落盘时刻收的 train-3p-out.js）	6c1a540a	gv0-77002.winner.js	51.4
+gv1-77002	1	77002	9	docs/artifacts/gv-gv1-77002/gv1-77002-band2.bak（当选行）	83d25ab8	gv1-77002.winner.js	48.9

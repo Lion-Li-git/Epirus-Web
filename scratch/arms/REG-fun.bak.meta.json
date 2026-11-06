@@ -1,0 +1,339 @@
+{
+ "mode": "cem",
+ "seed": 7,
+ "evals": 16,
+ "pop": 16,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "ignoredFlags": null,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 64,
+ "gamesActualLoop": 80,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": null,
+ "netForwards": 30853,
+ "netCandScores": 263045,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.375,
+ "inLoopBest": 0.5,
+ "holdoutFit": 0.022141053391053402,
+ "holdoutFirst": 0.2772727272727273,
+ "holdoutTop2": 0.9454545454545454,
+ "holdoutStartFit": -0.012211399711399711,
+ "holdoutStartFirst": 0.2590909090909091,
+ "holdoutStartTop2": 0.9181818181818182,
+ "dFirst": 0.018181818181818188,
+ "dTop2": 0.027272727272727226,
+ "currency": "arena2.net",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.05909090909090909,
+  "cur": "net",
+  "diverse": false,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "gun",
+   "share": 0.8593456186536291,
+   "nonji": 2659
+  },
+  "startMaxCard": {
+   "key": "gun",
+   "share": 0.3382918697101821,
+   "nonji": 3899
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0.25,
+    "score": 0.15,
+    "cleanScore": -0.1,
+    "firstScore": -0.1
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0.1,
+    "score": 0.3,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0.25,
+    "score": 0.15,
+    "cleanScore": -0.2,
+    "firstScore": -0.1
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.45,
+    "draw": 0,
+    "score": 0.175,
+    "cleanScore": 0.1,
+    "firstScore": 0.175
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": -0.27499999999999997,
+    "cleanScore": -0.42499999999999993,
+    "firstScore": -0.27499999999999997
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0,
+    "score": -0.12499999999999997,
+    "cleanScore": -0.12499999999999997,
+    "firstScore": -0.12499999999999997
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0.05,
+    "score": -0.03125,
+    "cleanScore": -0.125,
+    "firstScore": -0.0625
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": -0.0625,
+    "cleanScore": -0.1875,
+    "firstScore": -0.0625
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0,
+    "score": -0.125,
+    "cleanScore": -0.1875,
+    "firstScore": -0.125
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0,
+    "score": 0.1428571428571429,
+    "cleanScore": -0.08571428571428567,
+    "firstScore": 0.1428571428571429
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0,
+    "score": -0.05555555555555558,
+    "cleanScore": -0.11111111111111113,
+    "firstScore": -0.05555555555555558
+   }
+  }
+ },
+ "curve": [
+  {
+   "evals": 16,
+   "best": 0.5
+  },
+  {
+   "evals": 16,
+   "best": 0.5
+  },
+  {
+   "evals": 16,
+   "best": 0.5
+  },
+  {
+   "evals": 16,
+   "best": 0.5
+  },
+  {
+   "evals": 16,
+   "best": 0.5
+  }
+ ],
+ "secs": 1.5,
+ "startLabel": "夹具包 scratch/arms/OB3S-C2-s7.bak",
+ "id": "REG-fun",
+ "parent": "OB3S-C2-s7",
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "parentHash": "c3a162835b33dc78965a806dc7ca5b67",
+  "outHash": "65492df6afc250c66799546c53a36d1e",
+  "gen": 2,
+  "seed": 7,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  },
+  "noOp": false
+ },
+ "mastery": null,
+ "funnel": {
+  "take": 4,
+  "coarseGames": 2,
+  "totalGames": 4,
+  "gamesFirstStage": 32,
+  "gamesSecondStage": 8
+ },
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 12.576,
+   "entShareMed": 0.3747,
+   "spreadMed": 3.3957,
+   "odds": 6786764259.62,
+   "tieArgmax": 25,
+   "agreeRandom": 6.9,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "scratch/arms/REG-fun.bak",
+ "container": {
+  "v": 91,
+  "arch": "S1o",
+  "gen": 2,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3b",
+   "inter": 0,
+   "tinter": 0,
+   "gen": 2,
+   "dof": 415
+  },
+  "n": 8026,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 1408,
+    "weight": [
+     0,
+     1392
+    ],
+    "bias": [
+     1392,
+     1408
+    ],
+    "fanIn": 87
+   },
+   {
+    "name": "actEnc",
+    "off": 1408,
+    "len": 488,
+    "weight": [
+     1408,
+     1888
+    ],
+    "bias": [
+     1888,
+     1896
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 1896,
+    "len": 4320,
+    "weight": [
+     1896,
+     6184
+    ],
+    "bias": [
+     6184,
+     6216
+    ],
+    "fanIn": 134
+   },
+   {
+    "name": "cand",
+    "off": 6216,
+    "len": 1752,
+    "weight": [
+     6216,
+     7944
+    ],
+    "bias": [
+     7944,
+     7968
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 7968,
+    "len": 25,
+    "weight": [
+     7968,
+     7993
+    ],
+    "bias": null,
+    "fanIn": 24
+   },
+   {
+    "name": "qHead",
+    "off": 7993,
+    "len": 33,
+    "weight": [
+     7993,
+     8026
+    ],
+    "bias": null,
+    "fanIn": 32
+   }
+  ]
+ }
+}

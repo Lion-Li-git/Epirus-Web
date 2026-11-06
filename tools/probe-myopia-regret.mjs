@@ -31,13 +31,15 @@
  * 只读 `js/**`，不改引擎、不加门、不动冠军槽。
  */
 import { writeFileSync } from 'node:fs';
+import { encode as obs2Encode, MANIFEST as OBS2_MANIFEST, dims as obs2Dims } from './proto2/obs2.mjs';
+import { encode as obs3Encode } from './proto2/obs3.mjs';
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
+rejectUnknownFlags(argv, ['envs', 'games', 'every', 'rmax', 'keep', 'rep', 'arm', 'cont', 'config', 'seed', 'dump', 'dumpcover', 'dumpsx', 'dumpobs', 'dumpobs3', 'dumpfx', 'pack', 'depth2', 'k2', 'selfcheck', 'sweep', 'resetmem', 'freshrng', 'freshseats', 'allowrngleak', 'memisolate', 'bare', 'cover'], 'probe-myopia-regret');
 function arg(k, d) { const i = argv.findIndex(a => a === '--' + k || a.startsWith('--' + k + '=')); return i < 0 ? d : (argv[i].split('=')[1] ?? d); }
 const GAMES = Math.max(1, Number(arg('games', 10)) || 10);
 const EVERY = Math.max(1, Number(arg('every', 6)) || 6);
@@ -117,17 +119,66 @@ if (!argv.includes('--freshrng') && ALLOW_LEAK) FRESHRNG = false;   /* 显式要
  *     而"上限能不能被一个可学的头拿到"必须用**同一批标签**来问，否则两边的 regret 不可比。
  *   ⚠ 只在非自检遍里落行（自检遍会把 A0 再跑一遍，行会重复）。 */
 const DUMP = arg('dump', '');
+/* ===== §E817（10-28 下午 · 2.0 架构研究）：把**结算摘要**并进同一批行（`--dumpsx=<path>`，默认不写）=====
+ * 为什么并在这里而不是另起一台采集器：与 §E197 同一条理由 —— **rollout 的算术只能有一份**，
+ *   而"把落点变成输入能不能多兑现上限"必须用**同一批标签**问，否则两边的 regret 不可比。
+ * ⇒ 本文件输出的默认路径**一字不变**（这段只在 `--dumpsx` 开着时执行）。
+ * ⚠ rng 隔离是**硬要求**：`js/core/state.js:241` 的 `cloneState` 是 `c.rng = s.rng`（**共享**同一条流），
+ *   而本仪器自己在 §E204 就栽过这条 ⇒ `settleVec` 先给克隆换一条**独立**流再 resolve，
+ *   否则"算一次落点"会抽掉母局的随机数 ⇒ 整批 rollout 标签被扰动（症状：采样数/赢率漂，且不可复现）。
+ * 落点定义 = **solo 1-ply**（只递交焦点席这一手、过 `resolveActions`，不过 `endTurn`）：
+ *   决策时刻他人的这一手还不存在（`js/core/play.js:56-71` 先收齐 picks 才 resolve）⇒ 这是唯一算得出的形状。 */
+const DUMPSX = arg('dumpsx', '');
+const SXROWS = [];
+const aliveN = (p) => { let k = 0; for (let i = 0; i < p.length; i++) if (p[i].hp > 0) k++; return k; };
+function settleVec(st, pid, cand, salt) {
+  const q = S.cloneState(st);
+  let h = (salt * 2654435761) >>> 0;
+  q.rng = { next: function () { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; } };   /* 换流：母局那条一个字都不许被抽走 */
+  try { S.attemptAction(q, pid, cand.key, { bead: cand.bead, target: cand.target, target2: cand.target2 }); } catch (e) { return null; }
+  try { W.EpirusResolve.resolveActions(q); } catch (e) { return null; }
+  let dealt = 0, selfLoss = st.p[0].hp - q.p[0].hp;
+  for (let i = 0; i < st.p.length; i++) if (i !== 0) dealt += st.p[i].hp - q.p[i].hp;
+  const t = cand.target == null ? null : cand.target;
+  return [dealt, selfLoss, aliveN(st.p) - aliveN(q.p), q.p[0].ep, q.p[0].elec + q.p[0].boom,
+    q.p[0].guardNext ? 1 : 0, q.over ? 1 : 0, (q.winner === pid) ? 1 : 0,
+    t == null ? 0 : q.p[t].hp, t == null ? 0 : q.p[t].ep - st.p[t].ep];
+}
 /* ===== §E223 的原料：把**教师标签**落盘（`--dumpcover=<path>`，默认不写）=====
  * 为什么不另写一台采集器：rollout 的算术只能有一份（本仓"两份同构实现必漂移"的老病），而"搜索的偏好能不能被这张脸学到"
  * 必须用**同一批标签**来问。每行 = 一个采样决策：状态向量存一份 + 每候选一份动作向量 + 该候选的模拟赢率均值 + 逐流 0/1。
  *   ⇒ 逐流数组留着是为了算**教师自己的分半一致率**（= 可学性的天花板；没有它我会把"教师噪声"误读成"脸不行"）。
  * ⚠ 只读引擎、不改任何出厂路径；默认关（不带旗标 ⇒ 一行都不写）。 */
 const DUMPCOVER = arg('dumpcover', '');
+const DUMPOBS = arg('dumpobs', '');   /* 2026-10-28 DS：2.0 观测集（obs2.mjs）的逐候选 dump */
+const DUMPOBS3 = arg('dumpobs3', ''); /* 2026-10-29 千问：obs3（"可知信息全覆盖 + 无死维"第三版）的逐候选 dump */
+/* ===== §E824（2026-10-29 03:1x · 千问 · 任务 #143）：**夹具落盘**（`--dumpfx=<path>`，默认关 ⇒ 一行不写）=====
+ * 为什么是"落盘"而不是"把 rollout 抽成公共库"：本仓对"rollout 的算术只能有一份"的既有解法一直是
+ *   **instrument 落标签、下游读 JSONL**（`probe-distill-learnability` ‖ `probe-label-resolution` ‖ `probe-settle-capture`
+ *   ‖ `probe-value-head-ceiling` ‖ `proto2/rank-signal` ‖ `proto2/audit-dims` ‖ `proto2/obs2-from-v7` 七台同形）。
+ *   抽 lib 要动的是一台**被 D214 门 spawn 的仪器**的控制流 ⇒ 风险换不到好处。
+ * 为什么下游能原地重建（三行代码级事实）：`js/core/state.js:241` 的 cloneState 本身就是 JSON 往返（只有 `rng` 那只闭包要外挂）‖
+ *   `js/core/play.js:9` 的 `legalActions(state,pid)` 挂在 `EpirusPlay` 上 ⇒ `T.econBase` 要的 `legal` 从状态算得出 ‖
+ *   候选身份 = `{key,target,target2,bead}` 四元组且**无其他字段**（`policy.js:607-672`）⇒ 匹配得回引擎那一只。
+ * ⇒ 只加这一段、不加别的字段；`--dumpobs3` 那些既有导出**逐字不动**。 */
+const DUMPFX = arg('dumpfx', '');
+const FXROWS = [];
+const O3ROWS = [];
+const OBSROWS = [];
 const CROWS = [];
 const ROWS = [];
 
+/* §E818（10-28 下午）：`--pack=<路径>` ⇒ 让这台仪器能指到**训练臂刚产出的那枚包**上量组内排序，
+ *   而不是只能量线上槽。缺省值 = 原来那句 `'js/bundled-champion-3p.js'`（逐字未动）⇒
+ *   不带旗标时本仪器输出与在册 §E195~§E205 那批同源可比（实测：加旗标前后 `--games=2 --seed=4100` 的 stdout 逐字相同）。 */
+const CHAMP_PACK = arg('pack', 'js/bundled-champion-3p.js');
 const W = sandbox(), S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
-const params = (function () { const p = loadChamp(W, 'js/bundled-champion-3p.js'); return p && p.params ? p.params : p; })();
+const params = (function () { const p = loadChamp(W, CHAMP_PACK); return p && p.params ? p.params : p; })();
+if (!params) { console.error('⛔ `--pack` 指的那枚包读不出：' + CHAMP_PACK); process.exit(2); }
+if (argv.some(a => a === '--pack' || a.startsWith('--pack='))) console.log('[selfcheck] 本机现测：本遍的被测包 = ' + CHAMP_PACK + '（不带 `--pack` 时 = 线上槽，与 §E195~§E205 同源可比）');
+/* §E824：`--dumpfx` 的每一行都带这枚参照包的短指纹 ⇒ 下游能断定"我复算 `net` 用的就是落盘时那枚粒"。
+ *   （不加这一列，标签面与参照面换了包会**同形**：读到的还是同一个字段名。） */
+const PARAMS_FP = (function () { const a = Float64Array.from(params || []); let h = 2166136261; for (let i = 0; i < a.length; i++) { const v = Math.round(a[i] * 1e6); h = (h ^ (v & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; h = (h ^ ((v >> 8) & 255)) >>> 0; h = Math.imul(h, 16777619) >>> 0; } return (h >>> 0).toString(16) + '/' + a.length; })();
 const { pool: POOL } = poolFromSpecs(B, OPP_SPECS);
 const ENVS = ENV_PICK.map(n => { const q = POOL.find(z => z.name === n); if (!q) { console.error('⛔ 环境 `' + n + '` 不在原型池'); process.exit(2); } return q; });
 const HB = loadPool(W, 'human');
@@ -320,6 +371,59 @@ function runArm(arm, selfCheck) {
                *   两边挑到同一手的比例 = 这份标签到底把"哪手更好"定死了没有）。只加字段，默认分析器不读 ⇒ 旧读数逐字不变。 */
               winS: sr[i].win,
               x: xs.concat(P.actionFeatures(state, pid, pool[i].c.key, pool[i].c)).map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPOBS && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const xo = obs2Encode(W, state, pid, pool[i].c);
+            OBSROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop,
+              x: xo.map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPOBS3 && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const x3 = obs3Encode(W, state, pid, pool[i].c);
+            O3ROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop, rounds: res[i].rounds,
+              /* ⚑ `--dumpobs3` 的 `winS` 一直是**空字段**（10-29 03:0x 抓到）：这里写的是 `res[i].winS`，
+              *   而 `res` 是 `sr.map(x => ({win, hpTop, rounds}))` 的产物 ⇒ `winS` 恒 undefined ⇒ JSON 里连键都不留。
+              *   后果：`a6w-*-obs3.jsonl` 这些 210 维 dump **从来没有 rollout 标签**，所以"稠密且与强度同向"那条臂昨夜做不了。
+              *   逐流数组在 `sr[i].win` 上（与上面 ROWS 那条同一口径），不是 `res[i]` 上。 */
+              winS: sr[i].win,
+              x: x3.map(v => Math.round(v * 1e4) / 1e4) }));
+          }
+        }
+        if (DUMPFX && !selfCheck) {
+          /* 一行 = **一个采样决策**（不是候选）：整只状态 + 焦点席 + top-`KEEP` 名单的身份与标签。
+           * ⚠ `st` 里的 `rng` 是闭包 ⇒ `JSON.stringify` 自动丢掉它 ⇒ 下游必须自己挂一条**定标流**（不许抽母局的流）。
+           * ⚠ 标签口径跟着这批走：`arm`/`cfg`/`keep`/`rep`/`freshrng` 一并写进每一行，
+           *   否则换一枚旗标就换了一次口径，而下游读到的还是同一个字段名（本仓栽过太多次）。 */
+          FXROWS.push(JSON.stringify({
+            seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+            pk: env.name + '#' + g + '#' + n,
+            cfg: CFG, seats: N, keep: KEEP, rep: REP, freshrng: (FRESHRNG ? 'ON' : 'off'), focus: FOCUS,
+            pid: pid, st: state, pfp: PARAMS_FP,
+            pool: pool.map(function (s, ii) { return {
+              key: s.c.key, target: s.c.target == null ? null : s.c.target,
+              target2: s.c.target2 == null ? null : s.c.target2, bead: s.c.bead || null,
+              net: s.v, win: res[ii].win, hpTop: res[ii].hpTop, rounds: res[ii].rounds, winS: sr[ii].win,
+              x3: obs3Encode(W, state, pid, s.c).map(function (v) { return Math.round(v * 1e4) / 1e4; }) }; })
+          }));
+        }
+        if (DUMPSX && !selfCheck) {
+          for (let i = 0; i < pool.length; i++) {
+            const sv = settleVec(state, pid, pool[i].c, (g * 131 + n * 17 + i + 1));
+            if (!sv) continue;
+            SXROWS.push(JSON.stringify({ seed: SEED, arm: arm.key, env: env.name, g, n, round: state.round,
+              pk: env.name + '#' + g + '#' + n, i, key: pool[i].c.key,
+              target: pool[i].c.target == null ? null : pool[i].c.target,
+              net: pool[i].v, win: res[i].win, hpTop: res[i].hpTop,
+              sx: sv.map(v => Math.round(v * 1e4) / 1e4) }));
           }
         }
         let bi = 0; for (let i = 1; i < res.length; i++) if (res[i].win > res[bi].win || (res[i].win === res[bi].win && res[i].hpTop > res[bi].hpTop)) bi = i;
@@ -696,9 +800,32 @@ console.log('· ②递交的动作被引擎记进当回合动作栏（`state.act
   + (chk.applied === chk.nApplied ? ' ✔' : ' ⇒ ⛔ 有 ' + (chk.nApplied - chk.applied) + ' 次覆盖没被接受，oracle 那手可能根本没打出来'));
 console.log('· ③候选数均值 ' + (rows[0].candSum / Math.max(1, rows[0].decisions)).toFixed(1) + '、采样 ' + rows.reduce((p, q) => p + q.decisions, 0) + ' 个'
   + (rows[0].candSum / Math.max(1, rows[0].decisions) > 1.5 ? ' ✔（有选择余地）' : ' ⇒ ⛔ 没有余地，regret 无从谈起'));
+if (DUMPOBS) {
+  writeFileSync(DUMPOBS, OBSROWS.join('\n') + '\n');
+  console.log('· [obs2] 导出 **' + OBSROWS.length + ' 行**（决策 × 候选）到 `' + DUMPOBS + '` ‖ 维 ' + obs2Dims());
+}
+if (DUMPOBS3) {
+  writeFileSync(DUMPOBS3, O3ROWS.join('\n') + '\n');
+  console.log('· [obs3] 导出 **' + O3ROWS.length + ' 行**（决策 × 候选）到 `' + DUMPOBS3 + '` ‖ 维 ' + (O3ROWS.length ? JSON.parse(O3ROWS[0]).x.length : 0) + '（MANIFEST 见 tools/proto2/obs3.mjs）');
+}
 if (DUMP) {
   writeFileSync(DUMP, ROWS.join('\n') + '\n');
   console.log('· 导出 **' + ROWS.length + ' 行**（决策 × 候选）到 `' + DUMP + '` ‖ 每行 x 长度 ' + (ROWS.length ? JSON.parse(ROWS[0]).x.length : 0));
+}
+if (DUMPFX) {
+  const txt = FXROWS.join('\n') + '\n';
+  writeFileSync(DUMPFX, txt);
+  let candN = 0; for (const s of FXROWS) candN += JSON.parse(s).pool.length;
+  console.log('· §E824 夹具导出 **' + FXROWS.length + ' 个决策**（候选标签 ' + candN + ' 条 ‖ 均值 '
+    + (candN / Math.max(1, FXROWS.length)).toFixed(1) + '/决策）到 `' + DUMPFX + '` ‖ ' + (txt.length / 1024).toFixed(0) + 'KB'
+    + ' ‖ 标签口径 arm=' + ARMS.join(',') + ' cfg=' + CFG + ' keep=' + KEEP + ' rep=' + REP
+    + ' freshrng=' + (FRESHRNG ? 'ON' : 'off'));
+}
+if (DUMPSX) {
+  writeFileSync(DUMPSX, SXROWS.join('\n') + '\n');
+  console.log('· §E817 结算摘要导出 **' + SXROWS.length + ' 行** 到 `' + DUMPSX + '` ‖ 每行 sx 长度 '
+    + (SXROWS.length ? JSON.parse(SXROWS[0]).sx.length : 0)
+    + '（= dealt ‖ selfLoss ‖ kills ‖ epAfter ‖ beads ‖ guardOn ‖ over ‖ iWin ‖ tgtHp ‖ tgtEpDelta）');
 }
 if (DUMPCOVER) {
   if (!COVER) { console.error('⛔ `--dumpcover` 必须与 `--cover` 同开（教师标签来自全表 rollout，不开 cover 就没有标签可写）'); process.exit(64); }

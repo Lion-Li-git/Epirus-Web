@@ -1,0 +1,180 @@
+{
+ "mode": "esa",
+ "seed": 11,
+ "evals": 153,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "sigFloor": 0.02,
+ "sigRestart": 3,
+ "esaSig": {
+  "start": 0.2,
+  "final": 0.11014137747212324,
+  "min": 0.11014137747212324,
+  "floor": 0.02,
+  "restarts": 0
+ },
+ "gamesPlanned": 612,
+ "gamesActualLoop": 6072,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 6000,
+ "netForwards": 216529,
+ "netCandScores": 3821218,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": -0.875,
+ "inLoopBest": 0.5,
+ "holdoutFit": 0.20759379509379453,
+ "holdoutFirst": 0.44545454545454544,
+ "holdoutTop2": 0.9454545454545454,
+ "holdoutStartFit": -0.2855699855699861,
+ "holdoutStartFirst": 0.16818181818181818,
+ "holdoutStartTop2": 0.9090909090909091,
+ "dFirst": 0.2772727272727272,
+ "dTop2": 0.036363636363636376,
+ "currency": "arena2.clean+div",
+ "arena": {
+  "fp": "arena2.v1|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.013636363636363636,
+  "cur": "clean",
+  "diverse": true,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 3,
+  "divTrigger": 0.4,
+  "esa": {
+   "accepted": 3,
+   "byScore": 3,
+   "byDiv": 0,
+   "divProbes": 53,
+   "parentShare": 0.7313725490196078
+  },
+  "bestMaxCard": {
+   "key": "gun",
+   "share": 0.6917862838915471,
+   "nonji": 2508
+  },
+  "startMaxCard": {
+   "key": "reflect",
+   "share": 0.26191342306293197,
+   "nonji": 5498
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.7,
+    "draw": 0,
+    "score": 0.4,
+    "cleanScore": 0.4
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.85,
+    "draw": 0.05,
+    "score": 0.75,
+    "cleanScore": 0.7
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.8,
+    "draw": 0,
+    "score": 0.6,
+    "cleanScore": 0.6
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.4,
+    "cleanScore": 0.4
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.4,
+    "draw": 0,
+    "score": 0.1,
+    "cleanScore": 0.1
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.35,
+    "draw": 0,
+    "score": 0.025000000000000022,
+    "cleanScore": 0.025000000000000022
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0,
+    "score": 0.125,
+    "cleanScore": 0.0625
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.25,
+    "draw": 0,
+    "score": 0.0625,
+    "cleanScore": 0.0625
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.35,
+    "draw": 0,
+    "score": 0.1875,
+    "cleanScore": 0.1875
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0.05,
+    "score": 0.11428571428571432,
+    "cleanScore": -0.14285714285714282
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.1,
+    "draw": 0.05,
+    "score": 0.02777777777777777,
+    "cleanScore": -0.11111111111111113
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 648,
+   "best": -0.375
+  },
+  {
+   "games": 1520,
+   "best": 0.5
+  },
+  {
+   "games": 3000,
+   "best": 0.5
+  },
+  {
+   "games": 4584,
+   "best": 0.5
+  },
+  {
+   "games": 6072,
+   "best": 0.5
+  }
+ ],
+ "secs": 20.1,
+ "startLabel": "夹具包 scratch/arms/P2-A1-fit2-S1o.bak",
+ "wrote": "scratch/arms/MILD-s11.bak"
+}

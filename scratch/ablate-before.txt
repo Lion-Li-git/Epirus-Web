@@ -1,0 +1,7 @@
+## 修复前 ‖ obs3 dof=208 ‖ obs3b dof=415
+   序列块型：这版还没有 seqLayout（= 修复前的代码）
+
+   CEM48c-s7.bak ‖ input=obs3 ‖ 决策点 72
+     不开消融=3e6d0ac03ebf39e4 ‖ 关Q.out=67b4f8bdffa889ca ‖ 关Q.seq=d136e3e9ded1f7c7 ‖ 关Q.bag=3e6d0ac03ebf39e4 ‖ 三者互不相同=true
+   ⚠ scratch/arms/OB3-BIGT-s7.bak：unpack 不出（装档形状与包不符？）⇒ 跳过
+   ⚠ scratch/arms/OB3-BIGT2-s7.bak：unpack 不出（装档形状与包不符？）⇒ 跳过

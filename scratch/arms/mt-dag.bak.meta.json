@@ -1,0 +1,114 @@
+{
+ "tool": "supfit-gd",
+ "tag": "minit-dagger",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 1600,
+ "trainG": 1200,
+ "testG": 400,
+ "objective": "key",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 1600,
+ "shapeBal": 1,
+ "teacher": "minit",
+ "keySplit": 1,
+ "playedAgree": {
+  "n": 3222,
+  "hit": 3155,
+  "stuckCharge": 23,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 4800,
+  "moved": 0,
+  "gone": 0,
+  "keys": 4800
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1200,
+    "teacherAgree": 0.975,
+    "teacherLl": -0.7605107147768799,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 1600,
+    "trainG": 1600,
+    "teacherAgree": 0.9775,
+    "teacherLl": -0.7551027156589679,
+    "studentAgree": 0.9775,
+    "studentLl": -0.47746855487897605,
+    "studentN": 400
+   },
+   {
+    "round": 2,
+    "studentG": 1600,
+    "trainG": 1600,
+    "teacherAgree": 0.9925,
+    "teacherLl": -0.39541445273250947,
+    "studentAgree": 0.98875,
+    "studentLl": -0.5363206884003305,
+    "studentN": 800
+   }
+  ],
+  "startAgree": 0.3125,
+  "startLl": -3.094898867019899,
+  "agree": 0.9925,
+  "ll": -0.39541445273250947,
+  "wAgree": 0.9315728590532415,
+  "nTest": 400,
+  "nTrain": 1600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.98875,
+  "studentN": 800,
+  "byKey": [
+   {
+    "key": "railgun",
+    "n": 68,
+    "hit": 67
+   },
+   {
+    "key": "ji",
+    "n": 251,
+    "hit": 251
+   },
+   {
+    "key": "charge#elec",
+    "n": 74,
+    "hit": 74
+   },
+   {
+    "key": "miniT",
+    "n": 7,
+    "hit": 5
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}

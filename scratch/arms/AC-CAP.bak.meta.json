@@ -1,0 +1,58 @@
+{
+ "tool": "pg-train",
+ "tag": null,
+ "parent": "scratch/arms/supfit-gdc1.bak",
+ "seed": 7,
+ "games": 1000,
+ "batch": 48,
+ "lr": 0.0003,
+ "temp": 0.15,
+ "lamC": 0,
+ "lamF": 0,
+ "cur": "net",
+ "updates": 21,
+ "wallSecs": 10,
+ "criticDiag": {
+  "warm": true,
+  "last": {
+   "mv": 0.18809561746146447,
+   "sv": 0.187945534280371,
+   "mg": 0.5904259864555953,
+   "sg": 0.592274348078117
+  }
+ },
+ "baseline": "qhead",
+ "criticLr": 0.05,
+ "probe": null,
+ "rollbackTol": 0.05,
+ "rollbackCount": 0,
+ "probeGames": 0,
+ "bestProbeScore": null,
+ "critic": {
+  "qHeadOff": 7993,
+  "qHeadLen": 33,
+  "advDenom": "sd(残差)",
+  "lastR2": -0.435
+ },
+ "loop": {
+  "meanScore": 0.4505019841269843,
+  "firePerGame": 3.905,
+  "discChargePerGame": 3.971,
+  "entropy": 0.045999623863963134,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/supfit-gdc1.bak",
+  "gen": 2,
+  "recipe": {
+   "objective": "scoreNet only (λ=0 negative control)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 7 legs)",
+   "baseline": "qhead"
+  }
+ }
+}

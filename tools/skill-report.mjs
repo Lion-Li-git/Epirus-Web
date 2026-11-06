@@ -25,6 +25,22 @@ for (const a of process.argv.slice(2)) {
 const N = parseInt(ARGV[0] || '3', 10);
 const GAMES = parseInt(ARGV[1] || '6', 10);
 const OUT = ARGV[2] || 'docs/skill-report.html';
+/* 自守（11-04 千问 · 在册 #66）：**位置参数被填错时不许静默回退到默认槽**。
+ * 实测病：把包路径当第一个位置参数传（正确写法是 `--champ=`）⇒ `parseInt('scratch/…')=NaN`
+ *   ⇒ 下面 `const file = CHAMP_FILE || (N > 2 ? 3P : 2P)` 里 `NaN > 2` 为 **false** ⇒ 整份报告
+ *   量的是**线上 2P 槽**，而退出码 0、文件 18667 字节、表全填——三次调用逐字节相同就是唯一的破绽。
+ * 报告头其实印了 `冠军=<file>`（所以"看不见主语"不是工具的错，是读表人的），但**能当场拒的不要指望人读表**。 */
+const looksLikePath = /\.[A-Za-z]{2,4}$|[\\/]/.test(String(ARGV[0] || ''));
+if (!Number.isFinite(N) || !Number.isInteger(N) || N < 2 || N > 12) {
+  console.error('⛔ 人数这一位收到的是 ' + JSON.stringify(ARGV[0]) + '（要 2~12 的整数）' +
+    (looksLikePath ? '\n   ⇒ 看着像**包路径**放错位置了：被测冠军请用 `--champ=<路径>`，人数仍是第一个位置参数\n      例：node tools/skill-report.mjs 5 6 out.html --champ=' + ARGV[0] : '') +
+    '\n   ⇒ 拒绝继续：继续会拿**默认槽**的成绩出一份完整的报告（旧行为，已判为假读数）');
+  process.exit(2);
+}
+if (!Number.isFinite(GAMES) || !Number.isInteger(GAMES) || GAMES < 1) {
+  console.error('⛔ 每条件局数这一位收到的是 ' + JSON.stringify(ARGV[1]) + '（要 ≥1 的整数）⇒ 拒绝继续');
+  process.exit(2);
+}
 /* v1.4.4：--champ=<文件> 指定被测冠军（原先写死线下路径 ⇒ 没法规格对比多个版本）；
  * --json=<文件> 导出逐技能结果，供 tools/skill-report-cmp.mjs 做多版本对比。
  * ⚠️ 训练实验进行中时 js/bundled-champion-3p.js 是**中途产物**，对比务必显式传 --champ。 */
@@ -48,7 +64,7 @@ const sb = {
 };
 sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const file = CHAMP_FILE || (N > 2 ? 'js/bundled-champion-3p.js' : 'js/bundled-champion.js');
@@ -59,6 +75,28 @@ vm.runInNewContext(src, sb, { filename: file });
 const W = sb.window, R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, P = W.EpirusPolicy, B = W.EpirusBots;
 const champ = P.unpack(W[gname], true);   // v7：允许历史形状（保持原生形状，旧包走旧口径）
 if (!champ) throw new Error('冠军解包失败：' + file);
+
+/* ===== 11-01 深夜（用户裁定「3 代训练和考试把引擎的干预先关掉」）：干预档把手 =====
+ * 背景：BIGT_PUSH 是**硬兑现**且 v1.5.333 起引擎默认开（evo.js:648），挂在 policyChooserN 的 eps 分支**之前**
+ *   ⇒ 本报告的冠军 chooser（makeSel → T.policyChooserN）**一直带着它跑** ⇒ bigT 的"实际使用率"混了引擎强塞的那部分。
+ * 纪律照 eval-5p §E271：不设旗标 = 引擎默认档（历史读数口径不动）；要干净读数必须**显式** `--shipbigt=0`（+ `--shipdrain=0`），
+ *   下达后引擎回读逐键比对，不一致 ⇒ 拒跑（拒静默空转）。摄魂/贴贴 push 是 eps>0 soft 分支专属（节点侧到不了），
+ *   这里只收 bigT 一档就够量干净使用率——但把手做成两个，考试口径要双显式关时一个不缺。 */
+(function applyReportKnobs() {
+  const KN = [['shipbigt', 'setBigTPush', 'bigTPushOn'], ['shipdrain', 'setDrainPush', 'drainPushOn']];
+  for (const [flag, setter, getter] of KN) {
+    if (FLAG[flag] == null) continue;
+    if (typeof T[setter] !== 'function' || typeof T[getter] !== 'function') {
+      console.error('⛔ --' + flag + ' 下达了，但引擎没有 `' + setter + '` ⇒ 黑键，拒跑'); process.exit(6);
+    }
+    T[setter](Number(FLAG[flag]));
+    const back = Number(T[getter]());
+    if (back !== Number(FLAG[flag])) {
+      console.error('⛔ --' + flag + '=' + FLAG[flag] + ' 没生效：引擎回读 ' + back + ' ⇒ 拒静默空转'); process.exit(7);
+    }
+    console.log('[干预档] --' + flag + ' ⇒ ' + back);
+  }
+})();
 
 /* v1.5.0：模式缺省**跟随冠军产物自己的 meta.mode**（长程冠军 ⇒ 自动按 5 血测），可用 --mode= 覆盖。
  * 为什么必须做：此前本报告只按 multi(3 血) 建局，对 5 血冠军给出的其实是"3 血下的读数"，

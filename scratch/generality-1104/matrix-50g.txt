@@ -1,0 +1,3 @@
+AK3-s7 | 3人multi=67.3% | 4人multi4=68.5% | 5人long=73.7% | 8人multi=48.7% | 10人multi=46.1%
+EFFG-s41 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s41 | 3人multi=63.4% | 4人multi4=64.7% | 5人long=70.7% | 8人multi=46.9% | 10人multi=45.4%

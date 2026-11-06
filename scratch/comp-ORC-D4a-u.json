@@ -1,0 +1,1166 @@
+{
+ "tool": "tools/proto2/arena2.mjs",
+ "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|regen=0|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+ "temp": 0.15,
+ "temps": [
+  0.05,
+  0.1,
+  0.15
+ ],
+ "gamesPerShape": 40,
+ "poolSeed": 20261029,
+ "rows": [
+  {
+   "tag": "2.0包 ORC-D4a-u.bak t=0.05",
+   "temp": 0.05,
+   "arch": "S1o",
+   "games": 440,
+   "first": 0.3568181818181818,
+   "draw": 0.07272727272727272,
+   "clean": 0.32727272727272727,
+   "top2": 0.865909090909091,
+   "score": 0.12637536075036027,
+   "cleanScore": 0.024909812409812486,
+   "firstScore": 0.06257215007215014,
+   "rounds": 32.945454545454545,
+   "acts": 24.063636363636363,
+   "maxCard": {
+    "key": "charge",
+    "share": 0.5625274243089075,
+    "nonji": 4558
+   },
+   "cat": {
+    "ji": 6030,
+    "charge": 2564,
+    "gun": 520,
+    "bigT": 25,
+    "railgun": 1052,
+    "reflect": 223,
+    "guard": 164,
+    "transfer": 10
+   },
+   "byShape": {
+    "2:multi": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.15,
+     "score": 0.1,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:multi4": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.2,
+     "score": 0.15,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:long": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0.125,
+     "score": -0.125,
+     "cleanScore": -0.25,
+     "firstScore": -0.25
+    },
+    "3:multi": {
+     "games": 40,
+     "first": 0.4,
+     "draw": 0.075,
+     "score": 0.15625,
+     "cleanScore": 0.025,
+     "firstScore": 0.1
+    },
+    "3:multi4": {
+     "games": 40,
+     "first": 0.425,
+     "draw": 0.15,
+     "score": 0.25,
+     "cleanScore": 0.1375,
+     "firstScore": 0.1375
+    },
+    "3:long": {
+     "games": 40,
+     "first": 0.45,
+     "draw": 0,
+     "score": 0.175,
+     "cleanScore": 0.1375,
+     "firstScore": 0.175
+    },
+    "5:multi": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0,
+     "score": 0.21875,
+     "cleanScore": 0.15625,
+     "firstScore": 0.21875
+    },
+    "5:multi4": {
+     "games": 40,
+     "first": 0.325,
+     "draw": 0.025,
+     "score": 0.171875,
+     "cleanScore": 0.0625,
+     "firstScore": 0.15625
+    },
+    "5:long": {
+     "games": 40,
+     "first": 0.4,
+     "draw": 0,
+     "score": 0.25,
+     "cleanScore": 0.21875,
+     "firstScore": 0.25
+    },
+    "8:multi": {
+     "games": 40,
+     "first": 0.15,
+     "draw": 0.05,
+     "score": 0.057142857142857176,
+     "cleanScore": -0.08571428571428566,
+     "firstScore": 0.028571428571428616
+    },
+    "10:multi": {
+     "games": 40,
+     "first": 0.075,
+     "draw": 0.025,
+     "score": -0.013888888888888912,
+     "cleanScore": -0.02777777777777781,
+     "firstScore": -0.02777777777777781
+    }
+   },
+   "byClass": {
+    "@me": {
+     "games": 440,
+     "first": 0.3568181818181818,
+     "draw": 0.07272727272727272
+    },
+    "only:ring": {
+     "games": 23,
+     "first": 0.5217391304347826,
+     "draw": 0.043478260869565216
+    },
+    "beadburst": {
+     "games": 23,
+     "first": 0.13043478260869565,
+     "draw": 0
+    },
+    "only:snipe": {
+     "games": 113,
+     "first": 0.3185840707964602,
+     "draw": 0.008849557522123894
+    },
+    "only:guard": {
+     "games": 99,
+     "first": 0.3333333333333333,
+     "draw": 0.26262626262626265
+    },
+    "random": {
+     "games": 23,
+     "first": 0.2608695652173913,
+     "draw": 0
+    },
+    "only:reflect": {
+     "games": 117,
+     "first": 0.2905982905982906,
+     "draw": 0.017094017094017096
+    },
+    "only:gun": {
+     "games": 22,
+     "first": 0,
+     "draw": 0
+    },
+    "only:bigT": {
+     "games": 109,
+     "first": 0.29357798165137616,
+     "draw": 0.11009174311926606
+    },
+    "champion": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:armor": {
+     "games": 23,
+     "first": 0.2608695652173913,
+     "draw": 0.043478260869565216
+    },
+    "only:curse": {
+     "games": 22,
+     "first": 0.45454545454545453,
+     "draw": 0.045454545454545456
+    },
+    "reflecttank": {
+     "games": 25,
+     "first": 0.48,
+     "draw": 0.04
+    },
+    "defend": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "only:purify": {
+     "games": 25,
+     "first": 0.48,
+     "draw": 0
+    },
+    "combocounter": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0
+    },
+    "only:sword": {
+     "games": 22,
+     "first": 0.13636363636363635,
+     "draw": 0
+    },
+    "guardgun": {
+     "games": 20,
+     "first": 0.15,
+     "draw": 0
+    },
+    "breakdef": {
+     "games": 25,
+     "first": 0.08,
+     "draw": 0
+    },
+    "only:mine": {
+     "games": 23,
+     "first": 0.391304347826087,
+     "draw": 0.043478260869565216
+    },
+    "whiff": {
+     "games": 23,
+     "first": 0.4782608695652174,
+     "draw": 0
+    },
+    "only:charge": {
+     "games": 19,
+     "first": 0.10526315789473684,
+     "draw": 0.10526315789473684
+    },
+    "only:mirror": {
+     "games": 23,
+     "first": 0.5217391304347826,
+     "draw": 0
+    },
+    "baguaspam": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "mix": {
+     "games": 25,
+     "first": 0.12,
+     "draw": 0
+    },
+    "only:laserEye": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0.047619047619047616
+    },
+    "only:drain": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0
+    },
+    "only:jinshield": {
+     "games": 22,
+     "first": 0.45454545454545453,
+     "draw": 0.09090909090909091
+    },
+    "reflectmix": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "tankline": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "only:transfer": {
+     "games": 22,
+     "first": 0.09090909090909091,
+     "draw": 0.045454545454545456
+    },
+    "heavyfire": {
+     "games": 23,
+     "first": 0.21739130434782608,
+     "draw": 0.043478260869565216
+    },
+    "only:proto": {
+     "games": 24,
+     "first": 0.4583333333333333,
+     "draw": 0.041666666666666664
+    },
+    "only:bagua": {
+     "games": 23,
+     "first": 0.34782608695652173,
+     "draw": 0.043478260869565216
+    },
+    "only:firestorm": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "defreflectgun": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0.047619047619047616
+    },
+    "protowall": {
+     "games": 21,
+     "first": 0.23809523809523808,
+     "draw": 0
+    },
+    "only:holo": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0
+    },
+    "guardspam": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0.08
+    },
+    "only:tank": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0
+    },
+    "only:rod": {
+     "games": 17,
+     "first": 0.23529411764705882,
+     "draw": 0
+    },
+    "wall": {
+     "games": 22,
+     "first": 0.45454545454545453,
+     "draw": 0
+    },
+    "only:ji": {
+     "games": 22,
+     "first": 0.5454545454545454,
+     "draw": 0.045454545454545456
+    },
+    "only:shift": {
+     "games": 24,
+     "first": 0.08333333333333333,
+     "draw": 0
+    },
+    "only:railgun": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0
+    },
+    "only:taunt": {
+     "games": 20,
+     "first": 0.2,
+     "draw": 0
+    },
+    "reflectspam": {
+     "games": 22,
+     "first": 0.2727272727272727,
+     "draw": 0.045454545454545456
+    },
+    "balanced": {
+     "games": 21,
+     "first": 0.047619047619047616,
+     "draw": 0
+    },
+    "aggro": {
+     "games": 23,
+     "first": 0.2608695652173913,
+     "draw": 0
+    },
+    "only:cannon": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:miniT": {
+     "games": 17,
+     "first": 0.17647058823529413,
+     "draw": 0.058823529411764705
+    },
+    "only:dualGun": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    }
+   },
+   "perGame": null,
+   "cur": "net"
+  },
+  {
+   "tag": "2.0包 ORC-D4a-u.bak t=0.1",
+   "temp": 0.1,
+   "arch": "S1o",
+   "games": 440,
+   "first": 0.35454545454545455,
+   "draw": 0.07272727272727272,
+   "clean": 0.32727272727272727,
+   "top2": 0.8636363636363636,
+   "score": 0.12353445165945119,
+   "cleanScore": 0.02523448773448781,
+   "firstScore": 0.05973124098124105,
+   "rounds": 32.97727272727273,
+   "acts": 24.25227272727273,
+   "maxCard": {
+    "key": "charge",
+    "share": 0.5649803750545137,
+    "nonji": 4586
+   },
+   "cat": {
+    "ji": 6085,
+    "charge": 2591,
+    "gun": 523,
+    "bigT": 26,
+    "railgun": 1056,
+    "reflect": 220,
+    "guard": 161,
+    "transfer": 9
+   },
+   "byShape": {
+    "2:multi": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.15,
+     "score": 0.1,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:multi4": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.2,
+     "score": 0.15,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:long": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0.125,
+     "score": -0.125,
+     "cleanScore": -0.25,
+     "firstScore": -0.25
+    },
+    "3:multi": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0.075,
+     "score": 0.11875,
+     "cleanScore": 0.025,
+     "firstScore": 0.0625
+    },
+    "3:multi4": {
+     "games": 40,
+     "first": 0.45,
+     "draw": 0.15,
+     "score": 0.2875,
+     "cleanScore": 0.175,
+     "firstScore": 0.175
+    },
+    "3:long": {
+     "games": 40,
+     "first": 0.45,
+     "draw": 0,
+     "score": 0.175,
+     "cleanScore": 0.1375,
+     "firstScore": 0.175
+    },
+    "5:multi": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0,
+     "score": 0.21875,
+     "cleanScore": 0.15625,
+     "firstScore": 0.21875
+    },
+    "5:multi4": {
+     "games": 40,
+     "first": 0.3,
+     "draw": 0.025,
+     "score": 0.140625,
+     "cleanScore": 0.03125,
+     "firstScore": 0.125
+    },
+    "5:long": {
+     "games": 40,
+     "first": 0.4,
+     "draw": 0,
+     "score": 0.25,
+     "cleanScore": 0.1875,
+     "firstScore": 0.25
+    },
+    "8:multi": {
+     "games": 40,
+     "first": 0.15,
+     "draw": 0.05,
+     "score": 0.05714285714285718,
+     "cleanScore": -0.05714285714285709,
+     "firstScore": 0.028571428571428602
+    },
+    "10:multi": {
+     "games": 40,
+     "first": 0.075,
+     "draw": 0.025,
+     "score": -0.013888888888888912,
+     "cleanScore": -0.02777777777777781,
+     "firstScore": -0.02777777777777781
+    }
+   },
+   "byClass": {
+    "@me": {
+     "games": 440,
+     "first": 0.35454545454545455,
+     "draw": 0.07272727272727272
+    },
+    "only:ring": {
+     "games": 23,
+     "first": 0.5217391304347826,
+     "draw": 0.043478260869565216
+    },
+    "beadburst": {
+     "games": 23,
+     "first": 0.17391304347826086,
+     "draw": 0
+    },
+    "only:snipe": {
+     "games": 113,
+     "first": 0.3274336283185841,
+     "draw": 0.008849557522123894
+    },
+    "only:guard": {
+     "games": 99,
+     "first": 0.3333333333333333,
+     "draw": 0.26262626262626265
+    },
+    "random": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0
+    },
+    "only:reflect": {
+     "games": 117,
+     "first": 0.28205128205128205,
+     "draw": 0.017094017094017096
+    },
+    "only:gun": {
+     "games": 22,
+     "first": 0,
+     "draw": 0
+    },
+    "only:bigT": {
+     "games": 109,
+     "first": 0.26605504587155965,
+     "draw": 0.11009174311926606
+    },
+    "champion": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:armor": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "only:curse": {
+     "games": 22,
+     "first": 0.45454545454545453,
+     "draw": 0.045454545454545456
+    },
+    "reflecttank": {
+     "games": 25,
+     "first": 0.44,
+     "draw": 0.04
+    },
+    "defend": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "only:purify": {
+     "games": 25,
+     "first": 0.48,
+     "draw": 0
+    },
+    "combocounter": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0
+    },
+    "only:sword": {
+     "games": 22,
+     "first": 0.09090909090909091,
+     "draw": 0
+    },
+    "guardgun": {
+     "games": 20,
+     "first": 0.15,
+     "draw": 0
+    },
+    "breakdef": {
+     "games": 25,
+     "first": 0.08,
+     "draw": 0
+    },
+    "only:mine": {
+     "games": 23,
+     "first": 0.391304347826087,
+     "draw": 0.043478260869565216
+    },
+    "whiff": {
+     "games": 23,
+     "first": 0.5217391304347826,
+     "draw": 0
+    },
+    "only:charge": {
+     "games": 19,
+     "first": 0.15789473684210525,
+     "draw": 0.10526315789473684
+    },
+    "only:mirror": {
+     "games": 23,
+     "first": 0.4782608695652174,
+     "draw": 0
+    },
+    "baguaspam": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "mix": {
+     "games": 25,
+     "first": 0.12,
+     "draw": 0
+    },
+    "only:laserEye": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0.047619047619047616
+    },
+    "only:drain": {
+     "games": 21,
+     "first": 0.09523809523809523,
+     "draw": 0
+    },
+    "only:jinshield": {
+     "games": 22,
+     "first": 0.4090909090909091,
+     "draw": 0.09090909090909091
+    },
+    "reflectmix": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "tankline": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "only:transfer": {
+     "games": 22,
+     "first": 0.09090909090909091,
+     "draw": 0.045454545454545456
+    },
+    "heavyfire": {
+     "games": 23,
+     "first": 0.21739130434782608,
+     "draw": 0.043478260869565216
+    },
+    "only:proto": {
+     "games": 24,
+     "first": 0.4583333333333333,
+     "draw": 0.041666666666666664
+    },
+    "only:bagua": {
+     "games": 23,
+     "first": 0.34782608695652173,
+     "draw": 0.043478260869565216
+    },
+    "only:firestorm": {
+     "games": 23,
+     "first": 0.34782608695652173,
+     "draw": 0.043478260869565216
+    },
+    "defreflectgun": {
+     "games": 21,
+     "first": 0.19047619047619047,
+     "draw": 0.047619047619047616
+    },
+    "protowall": {
+     "games": 21,
+     "first": 0.19047619047619047,
+     "draw": 0
+    },
+    "only:holo": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0
+    },
+    "guardspam": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0.08
+    },
+    "only:tank": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0
+    },
+    "only:rod": {
+     "games": 17,
+     "first": 0.23529411764705882,
+     "draw": 0
+    },
+    "wall": {
+     "games": 22,
+     "first": 0.45454545454545453,
+     "draw": 0
+    },
+    "only:ji": {
+     "games": 22,
+     "first": 0.5,
+     "draw": 0.045454545454545456
+    },
+    "only:shift": {
+     "games": 24,
+     "first": 0.08333333333333333,
+     "draw": 0
+    },
+    "only:railgun": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0
+    },
+    "only:taunt": {
+     "games": 20,
+     "first": 0.2,
+     "draw": 0
+    },
+    "reflectspam": {
+     "games": 22,
+     "first": 0.2727272727272727,
+     "draw": 0.045454545454545456
+    },
+    "balanced": {
+     "games": 21,
+     "first": 0.047619047619047616,
+     "draw": 0
+    },
+    "aggro": {
+     "games": 23,
+     "first": 0.21739130434782608,
+     "draw": 0
+    },
+    "only:cannon": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:miniT": {
+     "games": 17,
+     "first": 0.17647058823529413,
+     "draw": 0.058823529411764705
+    },
+    "only:dualGun": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    }
+   },
+   "perGame": null,
+   "cur": "net"
+  },
+  {
+   "tag": "2.0包 ORC-D4a-u.bak t=0.15",
+   "temp": 0.15,
+   "arch": "S1o",
+   "games": 440,
+   "first": 0.34545454545454546,
+   "draw": 0.07272727272727272,
+   "clean": 0.3159090909090909,
+   "top2": 0.8681818181818182,
+   "score": 0.11103445165945118,
+   "cleanScore": 0.009325396825396813,
+   "firstScore": 0.047231240981241054,
+   "rounds": 32.95909090909091,
+   "acts": 24.104545454545455,
+   "maxCard": {
+    "key": "charge",
+    "share": 0.56494076349276,
+    "nonji": 4558
+   },
+   "cat": {
+    "ji": 6048,
+    "charge": 2575,
+    "gun": 528,
+    "bigT": 25,
+    "railgun": 1043,
+    "reflect": 218,
+    "guard": 160,
+    "transfer": 9
+   },
+   "byShape": {
+    "2:multi": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.15,
+     "score": 0.1,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:multi4": {
+     "games": 40,
+     "first": 0.475,
+     "draw": 0.2,
+     "score": 0.15,
+     "cleanScore": -0.05,
+     "firstScore": -0.05
+    },
+    "2:long": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0.125,
+     "score": -0.125,
+     "cleanScore": -0.25,
+     "firstScore": -0.25
+    },
+    "3:multi": {
+     "games": 40,
+     "first": 0.35,
+     "draw": 0.075,
+     "score": 0.08125,
+     "cleanScore": -0.012499999999999994,
+     "firstScore": 0.025
+    },
+    "3:multi4": {
+     "games": 40,
+     "first": 0.425,
+     "draw": 0.15,
+     "score": 0.25,
+     "cleanScore": 0.1375,
+     "firstScore": 0.1375
+    },
+    "3:long": {
+     "games": 40,
+     "first": 0.45,
+     "draw": 0,
+     "score": 0.175,
+     "cleanScore": 0.1,
+     "firstScore": 0.175
+    },
+    "5:multi": {
+     "games": 40,
+     "first": 0.35,
+     "draw": 0,
+     "score": 0.1875,
+     "cleanScore": 0.125,
+     "firstScore": 0.1875
+    },
+    "5:multi4": {
+     "games": 40,
+     "first": 0.3,
+     "draw": 0.025,
+     "score": 0.140625,
+     "cleanScore": 0.03125,
+     "firstScore": 0.125
+    },
+    "5:long": {
+     "games": 40,
+     "first": 0.375,
+     "draw": 0,
+     "score": 0.21875,
+     "cleanScore": 0.15625,
+     "firstScore": 0.21875
+    },
+    "8:multi": {
+     "games": 40,
+     "first": 0.15,
+     "draw": 0.05,
+     "score": 0.05714285714285718,
+     "cleanScore": -0.05714285714285709,
+     "firstScore": 0.028571428571428602
+    },
+    "10:multi": {
+     "games": 40,
+     "first": 0.075,
+     "draw": 0.025,
+     "score": -0.013888888888888912,
+     "cleanScore": -0.02777777777777781,
+     "firstScore": -0.02777777777777781
+    }
+   },
+   "byClass": {
+    "@me": {
+     "games": 440,
+     "first": 0.34545454545454546,
+     "draw": 0.07272727272727272
+    },
+    "only:ring": {
+     "games": 23,
+     "first": 0.5217391304347826,
+     "draw": 0.043478260869565216
+    },
+    "beadburst": {
+     "games": 23,
+     "first": 0.13043478260869565,
+     "draw": 0
+    },
+    "only:snipe": {
+     "games": 113,
+     "first": 0.3185840707964602,
+     "draw": 0.008849557522123894
+    },
+    "only:guard": {
+     "games": 99,
+     "first": 0.3333333333333333,
+     "draw": 0.26262626262626265
+    },
+    "random": {
+     "games": 23,
+     "first": 0.2608695652173913,
+     "draw": 0
+    },
+    "only:reflect": {
+     "games": 117,
+     "first": 0.2564102564102564,
+     "draw": 0.017094017094017096
+    },
+    "only:gun": {
+     "games": 22,
+     "first": 0,
+     "draw": 0
+    },
+    "only:bigT": {
+     "games": 109,
+     "first": 0.25688073394495414,
+     "draw": 0.11009174311926606
+    },
+    "champion": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:armor": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "only:curse": {
+     "games": 22,
+     "first": 0.4090909090909091,
+     "draw": 0.045454545454545456
+    },
+    "reflecttank": {
+     "games": 25,
+     "first": 0.44,
+     "draw": 0.04
+    },
+    "defend": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "only:purify": {
+     "games": 25,
+     "first": 0.48,
+     "draw": 0
+    },
+    "combocounter": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0
+    },
+    "only:sword": {
+     "games": 22,
+     "first": 0.09090909090909091,
+     "draw": 0
+    },
+    "guardgun": {
+     "games": 20,
+     "first": 0.15,
+     "draw": 0
+    },
+    "breakdef": {
+     "games": 25,
+     "first": 0.08,
+     "draw": 0
+    },
+    "only:mine": {
+     "games": 23,
+     "first": 0.391304347826087,
+     "draw": 0.043478260869565216
+    },
+    "whiff": {
+     "games": 23,
+     "first": 0.4782608695652174,
+     "draw": 0
+    },
+    "only:charge": {
+     "games": 19,
+     "first": 0.15789473684210525,
+     "draw": 0.10526315789473684
+    },
+    "only:mirror": {
+     "games": 23,
+     "first": 0.4782608695652174,
+     "draw": 0
+    },
+    "baguaspam": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "mix": {
+     "games": 25,
+     "first": 0.12,
+     "draw": 0
+    },
+    "only:laserEye": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0.047619047619047616
+    },
+    "only:drain": {
+     "games": 21,
+     "first": 0.09523809523809523,
+     "draw": 0
+    },
+    "only:jinshield": {
+     "games": 22,
+     "first": 0.4090909090909091,
+     "draw": 0.09090909090909091
+    },
+    "reflectmix": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    },
+    "tankline": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0.043478260869565216
+    },
+    "only:transfer": {
+     "games": 22,
+     "first": 0.09090909090909091,
+     "draw": 0.045454545454545456
+    },
+    "heavyfire": {
+     "games": 23,
+     "first": 0.21739130434782608,
+     "draw": 0.043478260869565216
+    },
+    "only:proto": {
+     "games": 24,
+     "first": 0.4583333333333333,
+     "draw": 0.041666666666666664
+    },
+    "only:bagua": {
+     "games": 23,
+     "first": 0.34782608695652173,
+     "draw": 0.043478260869565216
+    },
+    "only:firestorm": {
+     "games": 23,
+     "first": 0.34782608695652173,
+     "draw": 0.043478260869565216
+    },
+    "defreflectgun": {
+     "games": 21,
+     "first": 0.19047619047619047,
+     "draw": 0.047619047619047616
+    },
+    "protowall": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0
+    },
+    "only:holo": {
+     "games": 21,
+     "first": 0.14285714285714285,
+     "draw": 0
+    },
+    "guardspam": {
+     "games": 25,
+     "first": 0.28,
+     "draw": 0.08
+    },
+    "only:tank": {
+     "games": 23,
+     "first": 0.30434782608695654,
+     "draw": 0
+    },
+    "only:rod": {
+     "games": 17,
+     "first": 0.23529411764705882,
+     "draw": 0
+    },
+    "wall": {
+     "games": 22,
+     "first": 0.4090909090909091,
+     "draw": 0
+    },
+    "only:ji": {
+     "games": 22,
+     "first": 0.5,
+     "draw": 0.045454545454545456
+    },
+    "only:shift": {
+     "games": 24,
+     "first": 0.08333333333333333,
+     "draw": 0
+    },
+    "only:railgun": {
+     "games": 21,
+     "first": 0.3333333333333333,
+     "draw": 0
+    },
+    "only:taunt": {
+     "games": 20,
+     "first": 0.2,
+     "draw": 0
+    },
+    "reflectspam": {
+     "games": 22,
+     "first": 0.2727272727272727,
+     "draw": 0.045454545454545456
+    },
+    "balanced": {
+     "games": 21,
+     "first": 0,
+     "draw": 0
+    },
+    "aggro": {
+     "games": 23,
+     "first": 0.21739130434782608,
+     "draw": 0
+    },
+    "only:cannon": {
+     "games": 20,
+     "first": 0.05,
+     "draw": 0
+    },
+    "only:miniT": {
+     "games": 17,
+     "first": 0.17647058823529413,
+     "draw": 0.058823529411764705
+    },
+    "only:dualGun": {
+     "games": 22,
+     "first": 0.045454545454545456,
+     "draw": 0
+    }
+   },
+   "perGame": null,
+   "cur": "net"
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+{
+  "ts": "2026-11-01T08:36:04.019Z",
+  "rows": [
+    {
+      "pack": "scratch/arms/GD3-HOLD.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 7050,
+      "roundsMean": 47,
+      "drawRate": 1,
+      "epHistogram": {
+        "0": 150,
+        "1": 3450,
+        "2": 3450
+      },
+      "beads": {
+        "none": 3750,
+        "e": 3300
+      },
+      "offered": {
+        "charge": 6900,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 3450,
+        "gun": 6900
+      },
+      "chosenWhenOffered": {
+        "charge": 3450,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 3600,
+        "charge": 3450
+      },
+      "nonJiKinds": 1
+    }
+  ]
+}

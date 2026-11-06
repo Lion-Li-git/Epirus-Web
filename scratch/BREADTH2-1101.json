@@ -1,0 +1,175 @@
+{
+  "ts": "2026-11-01T00:46:18.247Z",
+  "games": 120,
+  "n": 5,
+  "rows": [
+    {
+      "pack": "v7（锚·同尺同档）",
+      "container": "v7 5689",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1566,
+      "landedKeys": 5,
+      "effSkillsLand": 3.3489183816743533,
+      "distinctCast": 12,
+      "maxCastKey": "sword",
+      "maxCastShare": 0.24010382868267358,
+      "maxLandShare": 0.41315453384418904,
+      "maxLandKey": "gun",
+      "pierceMissing": [
+        "tank"
+      ]
+    },
+    {
+      "pack": "gd3b-ks-sb.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1034,
+      "landedKeys": 2,
+      "effSkillsLand": 1.0917401179876152,
+      "distinctCast": 3,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.560633601661906,
+      "maxLandShare": 0.9825918762088974,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "RB2P-s7.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1017,
+      "landedKeys": 1,
+      "effSkillsLand": 1,
+      "distinctCast": 2,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.5033763044812769,
+      "maxLandShare": 1,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "RB2P-s13.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1022,
+      "landedKeys": 1,
+      "effSkillsLand": 1,
+      "distinctCast": 2,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.5,
+      "maxLandShare": 1,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "RB2P-s41.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1022,
+      "landedKeys": 1,
+      "effSkillsLand": 1,
+      "distinctCast": 2,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.5,
+      "maxLandShare": 1,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "BROAD-tkCH-s7.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1055,
+      "landedKeys": 3,
+      "effSkillsLand": 1.9809393284403505,
+      "distinctCast": 13,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.3282247765006386,
+      "maxLandShare": 0.7592417061611374,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank"
+      ]
+    },
+    {
+      "pack": "BROAD-tkCH-s41.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 1090,
+      "landedKeys": 2,
+      "effSkillsLand": 1.967752287740266,
+      "distinctCast": 11,
+      "maxCastKey": "gun",
+      "maxCastShare": 0.3492428598811578,
+      "maxLandShare": 0.5899082568807339,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "tk-OB3CH.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 960,
+      "landedKeys": 2,
+      "effSkillsLand": 1.3255291534871212,
+      "distinctCast": 12,
+      "maxCastKey": "guard",
+      "maxCastShare": 0.26494871153365024,
+      "maxLandShare": 0.91875,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    },
+    {
+      "pack": "gd3repro-OB3RB2s23.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "games": 120,
+      "n": 5,
+      "landedTotal": 786,
+      "landedKeys": 1,
+      "effSkillsLand": 1,
+      "distinctCast": 2,
+      "maxCastKey": "charge",
+      "maxCastShare": 0.5,
+      "maxLandShare": 1,
+      "maxLandKey": "railgun",
+      "pierceMissing": [
+        "sword",
+        "tank",
+        "snipe"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+GD3ALL-POPP-s17 | 3人multi=76.4% | 4人multi4=56.4% | 5人long=62.5% | 8人multi=46.4% | 10人multi=41.8%
+GD3ALL-PUSHON-s13 | 3人multi=76.4% | 4人multi4=60.0% | 5人long=55.0% | 8人multi=41.1% | 10人multi=33.2%
+GD3ALL-PUSHON-s41 | 3人multi=70.4% | 4人multi4=61.8% | 5人long=63.6% | 8人multi=46.8% | 10人multi=47.5%
+GD3ALL-G5-8p-s41 | 3人multi=66.8% | 4人multi4=58.2% | 5人long=65.0% | 8人multi=45.7% | 10人multi=43.2%
+D-a-s13 | 3人multi=46.8% | 4人multi4=44.3% | 5人long=53.2% | 8人multi=41.4% | 10人multi=40.7%
+DSTR-s13 | 3人multi=57.1% | 4人multi4=37.1% | 5人long=41.8% | 8人multi=37.9% | 10人multi=35.4%
+L5-1200-s13 | 3人multi=67.9% | 4人multi4=78.2% | 5人long=81.1% | 8人multi=46.8% | 10人multi=50.7%
+D1200-s13 | 3人multi=47.5% | 4人multi4=67.1% | 5人long=65.4% | 8人multi=47.5% | 10人multi=44.6%
+CB-s13 | 3人multi=34.6% | 4人multi4=37.9% | 5人long=42.9% | 8人multi=28.9% | 10人multi=21.8%
+=== 泛用性矩阵完成 00:27
+EFFG-s41 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s7 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s5 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+G5DEF-s41 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s41 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s7 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s5 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+G5DEF-s41 | 3人multi=NA% | 4人multi4=NA% | 5人long=NA% | 8人multi=NA% | 10人multi=NA%
+EFFG-s41 | 3multi=NA% | 4multi4=NA% | 5long=NA% | 8multi=NA% | 10multi=NA%
+EFFG-s7 | 3multi=NA% | 4multi4=NA% | 5long=NA% | 8multi=NA% | 10multi=NA%
+EFFG-s5 | 3multi=NA% | 4multi4=NA% | 5long=NA% | 8multi=NA% | 10multi=NA%
+G5DEF-s41 | 3multi=NA% | 4multi4=NA% | 5long=NA% | 8multi=NA% | 10multi=NA%
+EFFG-s41 | 3multi=64.5% | 4multi4=66.2% | 5long=70.0% | 8multi=44.8% | 10multi=48.8%
+EFFG-s7 | 3multi=74.0% | 4multi4=62.4% | 5long=67.1% | 8multi=35.7% | 10multi=35.7%
+EFFG-s5 | 3multi=68.1% | 4multi4=65.5% | 5long=65.5% | 8multi=45.5% | 10multi=42.6%
+G5DEF-s41 | 3multi=66.4% | 4multi4=59.3% | 5long=66.9% | 8multi=51.0% | 10multi=46.0%

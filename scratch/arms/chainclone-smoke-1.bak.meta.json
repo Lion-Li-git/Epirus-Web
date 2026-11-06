@@ -1,0 +1,45 @@
+{
+ "tool": "chain-clone",
+ "mode": "clone",
+ "parent": "scratch/arms/smoke-1.bak",
+ "evals": 1000,
+ "targetGames": null,
+ "blend": 0,
+ "l2": 0.01,
+ "dagger": 0,
+ "rounds": [
+  {
+   "round": 0,
+   "fx": 1000,
+   "all": 0.002,
+   "act": 0.005076142131979695,
+   "base": 0.11084198361634741
+  }
+ ],
+ "clone": {
+  "agree": 0.002,
+  "agreeAct": 0.005076142131979695,
+  "agreeBefore": 0.098,
+  "agreeActBefore": 0.24873096446700507,
+  "base": 0.11084198361634741,
+  "baseAct": 0.06901568957406524,
+  "flat": 0,
+  "n": 500,
+  "nAct": 197
+ },
+ "container": {
+  "v": 91,
+  "gen": 2,
+  "input": "obs3",
+  "hid2": 24
+ },
+ "lineage": {
+  "parent": "scratch/arms/smoke-1.bak",
+  "gen": 2,
+  "recipe": {
+   "clone": "chain-lib.pickChain",
+   "blend": 0,
+   "dagger": 0
+  }
+ }
+}

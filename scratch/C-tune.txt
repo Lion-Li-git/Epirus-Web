@@ -1,0 +1,2 @@
+tune s7 rc=0
+tune s13 rc=0

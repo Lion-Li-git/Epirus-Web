@@ -1,0 +1,17 @@
+arch2 装进量具沙箱：面=obs3b ‖ paramCount=7993 ‖ 接线自证={"forwards":1827,"chooseCandidatesCalls":1531,"fit":0.06437720259595066}
+CBG-s13-seg1.bak
+  multi ⇒ D2K2（防御族 7.3% ‖ 种数 10 ‖ ring 8.5% sword 6.8% holo 5.6% charge 4.7% taunt 3.4% mine 3.4% bigT 2.6% proto 1.3% tank 0.9% railgun 0.9% ‖ acts/局=19.5）
+  long ⇒ D2K2（防御族 7.7% ‖ 种数 10 ‖ sword 7.2% drain 4.1% mine 3.8% proto 3.6% ring 2.6% holo 2.4% tank 2.4% armor 1.7% bigT 1.7% taunt 1.4% ‖ acts/局=34.8）
+CBG-s13-seg2.bak
+  multi ⇒ D0K1（防御族 0.4% ‖ 种数 6 ‖ ring 14.5% sword 8.3% bigT 7.0% mine 3.1% gun 2.6% drain 1.3% ‖ acts/局=19.0）
+  long ⇒ D1K2（防御族 2.2% ‖ 种数 9 ‖ ring 10.7% sword 7.7% bigT 6.1% gun 4.4% drain 2.5% mine 2.2% proto 1.4% charge 0.8% holo 0.8% ‖ acts/局=30.3）
+CBG-s13-seg3.bak
+  multi ⇒ D2K3（防御族 7.9% ‖ 种数 12 ‖ ring 6.6% sword 5.8% taunt 5.0% holo 5.0% proto 2.5% gun 2.1% mine 2.1% bigT 1.7% drain 1.7% tank 1.2% charge 0.8% railgun 0.8% ‖ acts/局=20.1）
+  long ⇒ D2K2（防御族 7.4% ‖ 种数 10 ‖ holo 6.8% sword 6.2% ring 5.9% tank 3.4% mine 2.8% bigT 2.5% gun 1.9% drain 1.9% taunt 1.9% proto 0.6% ‖ acts/局=26.9）
+CBG-s13-seg4.bak
+  multi ⇒ D1K2（防御族 1.4% ‖ 种数 8 ‖ ring 19.4% bigT 7.9% mine 2.8% tank 1.9% gun 1.4% sword 1.4% drain 1.4% holo 1.4% ‖ acts/局=18.0）
+  long ⇒ D1K2（防御族 2.5% ‖ 种数 9 ‖ ring 14.0% bigT 6.6% mine 4.5% drain 2.9% tank 2.7% sword 2.5% gun 1.8% holo 1.6% proto 0.9% ‖ acts/局=36.8）
+V7M-s13-seg1.bak：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7M-s13-seg2.bak：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7M-s13-seg3.bak：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）
+V7M-s13-seg4.bak：跳过（容器 v=7 ≠ --gen=92 ⇒ 留给另一代那次进程）

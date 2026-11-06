@@ -64,7 +64,7 @@ function __seedSandbox(sbox, seed) {
   sbox.Math = M;
 }
 
-for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js','js/train/trainer.js']) {
+for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/policy2.js','js/train/evo.js','js/train/trainer.js']) {
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer, P = sb.EpirusPolicy, R = sb.EpirusRules;
@@ -888,7 +888,17 @@ const server = http.createServer((req, res) => {
       return;
     }
     sse(res, { type: 'start', gens, pop, gpo, seeds: seedsN, rounds: roundsN, from: 0, fresh });
-    if (!running) { running = true; runTrain(gens, { popSize: pop, gamesPerOpp: gpo }, { seeds: seedsN, rounds: roundsN, fresh, seed0: seed0 }); }
+    /* v1.8.45（11-06 夜，C4-2a）：2P 路原来 `runTrain(...)` **不 await 不 catch** ⇒ 内部任何一次 rejection
+     * ① Node ≥15 下直接崩掉整个服务进程；② 进程侥幸活着则 `running` 永远 true ⇒ 后续 2P 请求全部静默丢弃。
+     * N 路径（上面几行）早就有同款 catch（v1.5.55 同族）⇒ 这里补齐同一形状：报给客户端 + 松锁。 */
+    if (!running) {
+      running = true;
+      Promise.resolve(runTrain(gens, { popSize: pop, gamesPerOpp: gpo }, { seeds: seedsN, rounds: roundsN, fresh, seed0: seed0 }))
+        .catch(function (e) { for (const c of clients) sse(c, { type: 'error', msg: String(e && e.message || e) }); running = false; });
+    } else {
+      /* C4-2b：与 N 路径同一条 v1.5.55 纪律——第二个请求**明确拒绝**，不许静默吞。 */
+      sse(res, { type: 'error', msg: '已有 2P 训练在跑：本次请求被拒绝。一次只允许一场，避免产物串味。' });
+    }
     return;
   }
   if (url.pathname === '/champion') {

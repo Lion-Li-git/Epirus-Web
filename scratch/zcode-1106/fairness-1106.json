@@ -1,0 +1,85 @@
+{
+ "E1_mirror_5P": {
+  "n": 5,
+  "packId": "L5-1200-s13",
+  "games": 600,
+  "draws": 3,
+  "perSeat": [
+   18.9,
+   19.9,
+   21.6,
+   18.9,
+   20.7
+  ],
+  "fair": 20
+ },
+ "E1b_mirror_5P": {
+  "n": 5,
+  "packId": "DSTR-s13",
+  "games": 600,
+  "draws": 37,
+  "perSeat": [
+   19,
+   19.8,
+   19.8,
+   19.9,
+   21.5
+  ],
+  "fair": 20
+ },
+ "E2_mirror_8P": {
+  "n": 8,
+  "packId": "L5-1200-s13",
+  "games": 400,
+  "draws": 0,
+  "perSeat": [
+   12.8,
+   11.3,
+   13.3,
+   13,
+   12.5,
+   13,
+   13.3,
+   11
+  ],
+  "fair": 12.5
+ },
+ "E3_product_8P": {
+  "n": 8,
+  "games": 600,
+  "draws": 5,
+  "seatMarginal": [
+   14.6,
+   12.6,
+   11.8,
+   13.9,
+   10.4,
+   13.8,
+   12.4,
+   10.4
+  ],
+  "fair": 12.5,
+  "packMarginal": {
+   "GD3ALL-PUSHON-s13": 59,
+   "EFFG-s5": 32,
+   "EFFG-s41": 34,
+   "GD3ALL-G5-8p-s41": 33,
+   "GD3ALL-POPP-s17": 17,
+   "L5-1200-s13": 11,
+   "DDEF-s13": 30,
+   "D-b-hpseed-s13": 38,
+   "GD3ALL-PUSHON-s41": 35,
+   "GD3ALL-G5-s13": 18,
+   "D-a-s13": 31,
+   "G5DEF-s41": 25,
+   "EFFG-s7": 37,
+   "GD3ALL-POPP-s41": 46,
+   "D1200-s13": 67,
+   "GD3ALL-NGA2R-s41": 25,
+   "DSTR-s13": 21,
+   "GD3ALL-PLAIN-s13": 15,
+   "LE-s13": 9,
+   "DSTR4-s13": 12
+  }
+ }
+}

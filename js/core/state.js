@@ -157,6 +157,19 @@
       return { ok: true, ep: 2, hp: 0, beads: { elec: 1 } };
     }
     if (key === R.SK.FIRESTORM) {
+      /* R64（2026-11-06 用户裁定）：**先查有没有自己贴出的、可引爆的符咒**，一枚都没有 ⇒ 条件不满足。
+       * 口径与 resolve `case SK.FIRESTORM` 的引爆清单逐字同款（owner=自己 && age≤3 && 持有者存活 && 非自己）；
+       * 实锤动因：results/2.0 的 8P 长程局第 14 回合，冠军在无一枚自己符咒时"空放"天火（1 ジ 纯浪费）。
+       * legalActions / UI 置灰 / AI 候选 / 脚本 mpAff 全走本函数 ⇒ 一处改、四处一致；
+       * 示范层 evo.js 的 `myLiveStickers > 0` 原就同口径（belt & suspenders，保留）。 */
+      let live = 0;
+      for (let v = 0; v < state.p.length; v++) {
+        if (v === pid) continue;
+        const h = state.p[v];
+        if (!h || h.hp <= 0) continue;
+        for (const st of h.stickers) if (st.owner === pid && st.age <= 3) live++;
+      }
+      if (live < 1) return { ok: false, reason: '天火需有自己贴出的符咒可引爆' };
       /* R62（2026-10-25 用户裁定）：首下 1ジ；连续使用（上一手也是天火）2ジ；隔开（出过任何别的招）重置 1ジ。
        * 连续的判定与 R32 激光眼同一支 lastSkill。 */
       return { ok: true, ep: p.lastSkill === R.SK.FIRESTORM ? 2 : 1, hp: 0, beads: null };
@@ -196,8 +209,11 @@
     if (p.hp <= 0) return fail('invalid', '已淘汰（无法行动）');
 
     function fail(outcome, reason) {
-      state.actions[pid] = { key, voided: true, outcome, target: tg, target2: tg2 };
-      ev2({ type: 'action', pid, key, outcome, reason });
+      state.actions[pid] = { key, voided: true, outcome, reason, target: tg, target2: tg2 };
+      /* ⚑ 10-31 凌晨（ZCode，obs3b 面配套）：事件补 `target/target2`——手势是公开信息，但此前事件流
+       *   不带目标 ⇒ "过去几回合谁把目标指向谁"在局后重建不出来（state.actions 每回合清空、
+       *   p.lastTarget 只剩上一手）。纯增字段，现有读者都按字段名取值 ⇒ 不受影响；D16 指纹会变（预期内）。 */
+      ev2({ type: 'action', pid, key, outcome, reason, target: tg, target2: tg2 });
       return { skill: key, outcome, reason };
     }
 
@@ -233,7 +249,7 @@
       key, voided: false, outcome: 'ok', opt: opt || null, target: tg, target2: tg2,
       phase: cost.cannonPhase || null
     };
-    ev2({ type: 'action', pid, key, outcome: 'ok' });
+    ev2({ type: 'action', pid, key, outcome: 'ok', target: tg, target2: tg2 });
     return { skill: key, outcome: 'ok' };
   }
 

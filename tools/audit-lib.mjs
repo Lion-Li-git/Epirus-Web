@@ -25,7 +25,11 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const CORE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/policy.js', 'js/train/bots.js', 'js/train/evo.js',
+  'js/train/policy.js',
+  /* 10-30 晚：冠军包 2.0 的浏览器侧打分器（v:91 容器 ⇒ EpirusPolicy2；v7 路径一行未动）。
+     量具与产品跑同一份，`tools/proto2/browser-parity.mjs` 逐位对账的就是这两个实现。 */
+  'js/train/policy2.js',
+  'js/train/bots.js', 'js/train/evo.js',
   /* §E590 池抽签：产品与量具跑**同一份**（契约 `docs/POOL-CONTRACT.md` §3 ⇒ 这里的顺序就是 `index.html` 里的加载顺序）*/
   'js/pool-draw.js'];
 
@@ -158,6 +162,40 @@ export function loadChamp(W, file, root) {
   /* v7：测量工具必须能读历史形状（v5/v6）——**保持原生形状**读取，不要嵌入：
    * 嵌入会把形状变成 v7，chooser 就切到候选口径，历史基线分复现不了。 */
   return W.EpirusPolicy.unpack(JSON.parse(m[1]), true);
+}
+
+/* ===== 对手表定标 + 指纹（2.0 那两把尺共用 · 千问 · 10-29 11:2x） =====
+ * 为什么必须**同源**而不各抄一份：`profile2` 要把臂的夺1放进 `ladder` 那条"30 枚单技能固定打法"的阶梯里排名次，
+ *   而两把尺只有在**同一张对手表**上跑才可比。第一版两边各写一遍 `buildPoolSeeded` ⇒ 任何一边改了种子或混合函数
+ *   都不会报错，只会安静地把名次算歪（本仓最怕的"看着有数、其实量的是空气"那一族）。
+ *   ⇒ 指纹（`poolFingerprint`）因此是**可比的**：不一致就是"锚过期"，而不是"两份哈希实现不同"。
+ * ⚠ 这里的 mulberry 与上面 `mulberry32` **不是同一个流**（`>>> 0` vs `| 0`、最后一步 `+` vs `^`），
+ *   所以不许换用：换了种子同一、池子就不同，`profile2`/`ladder` 在册的读数全部作废。 */
+export function poolMulberry(seedVal) {
+  let a = seedVal >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** 只在造表期间临时顶掉 `Math.random`，出来立刻还原（`T.buildOpps` 内部直接用它，没有种子形参）。 */
+export function buildPoolSeeded(T, refParams, seedVal, aggr = 0.05) {
+  const real = Math.random;
+  try { Math.random = poolMulberry(seedVal); return T.buildOpps(refParams, aggr); } finally { Math.random = real; }
+}
+/** 覆盖每个对手的**全部数值字段 + 键名**（只数前 6 条会在"脚本型对手没有 params"时退化成名字列表）。 */
+export function poolFingerprint(PL) {
+  let h = 2166136261, nums = 0;
+  const mix = (s) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } };
+  for (const o of PL) {
+    mix('name=' + (o.name || '') + '|');
+    const walk = (v, depth) => {
+      if (depth > 3 || v == null) return;
+      if (typeof v === 'number') { nums++; mix('n' + Math.round(v * 1e6)); return; }
+      if (typeof v !== 'object') { mix('s' + String(v)); return; }
+      if (Array.isArray(v)) { mix('[' + v.length); for (const q of v) walk(q, depth + 1); mix(']'); return; }
+      for (const k of Object.keys(v).sort()) { mix('{' + k); walk(v[k], depth + 1); mix('}'); }
+    };
+    walk(o, 0);
+  }
+  return (h >>> 0).toString(16) + '/' + nums;
 }
 
 /* A. 外部考卷（沿用 canonical eval-5p，默认 20 局） */
@@ -945,7 +983,9 @@ export function aggressionProfile(W, params, GAMES, opts) {
  *                  分层带来的不是新总量，而是**可读性**：S 低到底是"只敢用一类"，还是"每类只薅一张"。
  *   S_norm    = S / ln(K_menu) ∈ [0,1]（**固定分母** ⇒ 不能靠"把菜单变穷"刷分，v1.5.86/DIV_K 的教训）
  *   G_eff     = exp(S)  —— 与历史的 `G 有效技能数` **同值**（口径不变 ⇒ 历史读数仍可比）
- *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**，只打印、不参与判定）
+ *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**）
+ *     ‖ 10-29 现状：`degeneracyVerdict` 吃它，`promote` 里**只打印不阻断**（升阻断等用户裁，理由见下面那只函数的注释）
+ *     ‖ ⚠ 它比 S/G_eff 更**剂量敏感**：同一枚包 20 局 63.0% ‖ 60 局 51.9%（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）
  *   catsUsed  = 占比 ≥1% 的类数（给人读的"覆盖了几类"）
  * ⚠️ 样本敏感（`docs/METHODOLOGY.md` 规则 22）：同一个包 n5=3.08 / n10=2.99 / n20=4.24 / n40=4.54
  *   ⇒ 返回值**必须带 N 与 games**，打印时一起报；小样本之间的 S 差**不可比**。
@@ -1034,6 +1074,53 @@ export function breadthProfile(W, params, mode, GAMES) {
     maxCardShare: maxCardShare, maxCardKey: maxCardKey, catsUsed: catsUsed, rolesUsed: rolesUsed,
     catShares: catShares, roleShares: roleShares, counts: cnt
   };
+}
+
+/* ===== 2026-10-29（DS · 强度尺修复 ‖ 千问 13:4x 按实测改接线）：反退化门（纯函数） =====
+ * 病：一只「只**反弹**」（`reflect`，cost=0 的后手防御，**不是** 3EP 的镜面反射 `mirror`——后者实测 0.3%）的笨蛋
+ *   在这 16 格 arena 上夺1 **65.3%**，参照包 v7 只有 **40.4%**。机制见台账第二十九段：
+ *   反弹把打在它身上的枪/坦克伤害**以它为 source** 重投给攻击者（`resolve.js:519-521`），而长局打满突死线后
+ *   全灭按**累计造成伤害**判胜（`resolve.js:1400-1417`）⇒ "不还手"也能靠替对手记账拿下夺1。
+ *   （锚 `scratch/ladder-anchor.json` ‖ `ladder --guard` 判红 exit 4）。
+ *   ⚠ 这一格 DS 写的是 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，**那是我的归因错**：
+ *     同一枚尺实测 reflect 夺1 = 20 局/格 **64.7%** ‖ 40 局/格 **66.6%** ‖ 120 局/格 **65.3%**
+ *     ⇒ 区间是**剂量**给的，不是两把尺给的 ⇒ 引用这格必须带剂量（ rung 自身 ±2pt 的剂量敏感性也是新量到的一格）。
+ * 两道**可失败**的门（纯函数 ⇒ 可以喂合成输入验它有没有牙，`preflight2` ⑦ 就干这件事）：
+ *   ① degeneracyVerdict(brd)：非ジ最大单卡占比 ≥ 阈值 ⇒ 判退化；
+ *   ② arenaGuardVerdict(anchor)：任何一枚固定单技能打法的夺1 ≥ 参照包 ⇒ 这套 arena 不能当强度尺。
+ * ⚑ **接线现状（10-29 改）**：② 走研究侧硬失败（`ladder --guard` exit 4）✔；① 在产品侧 `promote` **只记录不阻断**——
+ *   理由量出来了两条：全池 30 枚同口径有 **5 枚 ≥60%**（含硬档 `G12H1`、`R-s123`），且 20 局那一档同一枚包跨到 60 局能摆 12.6pt
+ *   （`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）⇒ 阈值+剂量都还没定，升阻断等用户点名。
+ *   ⇒ 返回值里 `maxShare` / `minN` **每一格都带**（早先只在正常路径带 ⇒ 打印方一判 underpowered 就拿到 undefined，显示成 NaN%）。 */
+export function degeneracyVerdict(brd, opts) {
+  const o = opts || {};
+  const maxShare = (typeof o.maxShare === "number") ? o.maxShare : 0.60;
+  const minN = (typeof o.minN === "number") ? o.minN : 100;
+  const share = Number(brd && brd.maxCardShare);
+  const N = Number(brd && brd.N);
+  const key = (brd && brd.maxCardKey) || null;
+  if (!isFinite(share)) return { level: "unknown", fail: false, share: NaN, key, N, maxShare, minN, reason: "读不出 maxCardShare（探针缺失）" };
+  if (isFinite(N) && N > 0 && N < minN) return { level: "underpowered", fail: false, share, key, N, maxShare, minN, reason: "非ジ出手只有 " + N + " < " + minN + " ⇒ 不判（样本不足，不是合格）" };
+  const fail = share >= maxShare;
+  return { level: fail ? "degenerate" : "ok", fail, share, key, N, maxShare, minN };
+}
+
+export function arenaGuardVerdict(anchor, opts) {
+  const o = opts || {};
+  const margin = (typeof o.margin === "number") ? o.margin : 0;
+  const rungs = (anchor && Array.isArray(anchor.rungs)) ? anchor.rungs : [];
+  const v7 = Number(anchor && anchor.v7Win);
+  const fixed = rungs.filter(function (r) { return r && r.key !== "v7" && r.key !== "rand" && isFinite(Number(r.win)); });
+  if (!fixed.length || !isFinite(v7)) return { level: "unknown", fail: false, reason: "锚里缺固定打法行或 v7 行 ⇒ 读不出（不是合格）" };
+  let best = fixed[0];
+  fixed.forEach(function (r) { if (Number(r.win) > Number(best.win)) best = r; });
+  const bestWin = Number(best.win), bestKey = best.key;
+  const fail = bestWin >= v7 - margin;
+  /* ⚠ 口径：ladder 锚里的 win/v7Win 是**百分点数**（65.26 = 65.26%），不是 0..1 比例 ⇒ 打印不许再乘 100
+   *   （第一版乘了 100，输出「6526.0%」——这就是"口径写错"的活例，留在这里当反例）。 */
+  return { level: fail ? "broken-arena" : "ok", fail, bestWin, bestKey, v7Win: v7, margin,
+    reason: fail ? ("固定打法「只" + bestKey + "」" + bestWin.toFixed(1) + "% ≥ 参照包 v7 " + v7.toFixed(1) + "% ⇒ 这套 arena 会把退化读成进步")
+                 : ("最好的固定打法「只" + bestKey + "」" + bestWin.toFixed(1) + "% < v7 " + v7.toFixed(1) + "% ⇒ arena 有下限刻度") };
 }
 
 /** v1.5.234：**不认识的 `--` 参数必须响亮失败**（仓规：静默忽略 = 假读数）。

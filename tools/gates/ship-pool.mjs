@@ -114,16 +114,22 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
    *     · 同一枚包坐两臂 ⇒ 逐批配对差必须**恰好 0**（仪器自证①；两臂没共用盐/阵容就 exit 8）
    *     · `rand` 坐主体席 ⇒ 必须明显低于参照（公平份额锚；接反了就 exit 8）
    *   ⚠ 判"跑成"不许只看退出码（`D233` / v1.7.62 同一条纪律）⇒ 三条输出行都得点名，
-   *     否则"跳过了自证还报绿"这件事又没人守。夹具一律用**在册** `FIXTURE_PACK`（tracked，干净克隆读得到；
-   *     不拿两颗活槽当夹具 —— 会换主人的指针不是夹具，R3 普查那条）。 */
-  const prPair = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK, '--ref=' + FIXTURE_PACK,
+   *     否则"跳过了自证还报绿"这件事又没人守。夹具一律用**在册**包（tracked，干净克隆读得到；
+   *     不拿两颗活槽当夹具 —— 会换主人的指针不是夹具，R3 普查那条）。
+   *   v1.8.45（11-06 夜）：`probe-pool` 的"库"= **池 bundle**（主体/参照都得是池成员）⇒ 2.0 池上桌后
+   *   夹具换成**新池成员**（tracked：`docs/artifacts/2p0-pool/D1200-s13.bak`；`FIXTURE_PACK` 不动——
+   *   它被 61 处属性级断言钉着，换它 = 另一件事）。
+   *   11-06 晨：原候选 L5-1200-s13 实测主体席只有 10%，随机席 20%，锚会因夹具过弱而假红；
+   *   D1200-s13 同条件实测 27.5% vs 12.5%，故统一用它。 */
+  const POOL_FIXTURE = 'docs/artifacts/2p0-pool/D1200-s13.bak';
+  const prPair = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE, '--ref=' + POOL_FIXTURE,
     '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
   eq(prPair.status, 0, '⑥b 主体席尺（同枚两臂）必须跑成（实测 exit=' + prPair.status + ' ‖ ' + String(prPair.stderr || '').slice(-240) + '）');
   ok(/自证①（同枚两臂 ⇒ 差恰好 0）：\d+ 批全过/.test(String(prPair.stdout || '')),
     '⑥b 必须印出"同枚两臂配对差恰好 0"那条自证 ⇒ 没印 = 自证根本没跑却报绿（这台尺的配对性没人验过）');
   ok(/配对差 \+0\.00pt/.test(String(prPair.stdout || '')),
     '⑥b 同枚两臂的配对差均值必须是 +0.00pt ⇒ 不是 +0.00 就说明两臂没共用盐/阵容，那"配对"是假的');
-  const prRand = spawnSync(process.execPath, [PB, '--subject=rand', '--ref=' + FIXTURE_PACK,
+  const prRand = spawnSync(process.execPath, [PB, '--subject=rand', '--ref=' + POOL_FIXTURE,
     '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
   eq(prRand.status, 0, '⑥b 主体席尺（`rand` 公平份额锚）必须跑成（实测 exit=' + prRand.status + '）');
   ok(/自证②（公平份额锚）：随机席 [\d.]+% < 参照 [\d.]+%/.test(String(prRand.stdout || '')),
@@ -136,7 +142,7 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     *   这本身就是"行与行没串"的数值证据（不是只看退出码，`D233` 那条纪律）。 */
   /* 第二枚用 `rand`（公平份额锚）而不是另一枚真包：实测 2 批 × 20 局时**两枚真包的榜内极差会恰好打平成 0.00**
    *   ⇒ 那条"极差 > 0"的牙就变成看运气。`rand` 与参照的差是十几 pt 量级 ⇒ 小预算也稳。 */
-  const hallRun = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK + ',rand', '--ref=' + FIXTURE_PACK,
+  const hallRun = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE + ',rand', '--ref=' + POOL_FIXTURE,
     '--batches=2', '--games=20', '--modes=multi', '--elected=1'], { encoding: 'utf8', timeout: 180000 });
   eq(hallRun.status, 0, '⑥c 榜模式（两枚不同包 + 影子行）必须跑成（实测 exit=' + hallRun.status + ' ‖ ' + String(hallRun.stderr || '').slice(-240) + '）');
   ok(/^   名次 \| 被考 /m.test(String(hallRun.stdout || '')), '⑥c 必须印出榜表（没印 = 榜模式从没被走过，全绿是假的）');
@@ -153,7 +159,7 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
 /* ⑥c-2（2026-10-17 · 千问指出「--elected= 的 id 写错那一支只有代码路径保证」）：补实测。
  *   V4 测的是**路径写错**；这里测 **id 写错** —— 两者都能让「点了却没点到」，而后者会被读成
  *   「这臂的当选者查过了」，与 ⑥c 正文同一条纪律（静默跳过 = 假读数）。 */
-const electBad = spawnSync(process.execPath, [PB, '--subject=' + FIXTURE_PACK + ',rand', '--ref=' + FIXTURE_PACK,
+const electBad = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE + ',rand', '--ref=' + POOL_FIXTURE,
   '--batches=2', '--games=20', '--modes=multi', '--elected=no-such-id-zzz'], { encoding: 'utf8', timeout: 180000 });
 eq(electBad.status, 2, '⑥c-2 `--elected=` 给了不存在的 id 必须 exit 2（响亮拒绝），实际 ' + electBad.status);
 ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝时必须说清「认不出来」并列出可用的 id（不许静默跳过）');
@@ -247,7 +253,15 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
    *   判据不能靠 mtime（CI 检出顺序会让它假红）⇒ 重烘到临时路径逐字节比。
    *   ⑩d 是给这条比本身验牙：把在册产物改一个字符再比，必须**不等**（否则 ⑩c 只是"跑了个烘焙"）。 */
   const bakeFix = join(tmpdir(), 'np-d234-rebake-' + process.pid + '.html');
-  const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs', '--out=' + bakeFix],
+  /* §G3（11-05 上午 · 千问）：**规范命令不再是"裸默认"**。11-05 夜班把 2.0 点并进主图
+   *   （`--fit=coords-gen3-1105.tsv --preset=all`），而这条门把参数写死成裸默认 ⇒ 门与产物各说各话
+   *   （实测：ZCode 在册那版 1349KB ≠ 裸默认烘出 1323KB ⇒ 这条在 §G3 之后就是**结构性假红**，与产品无关）。
+   *   判据一字不动（在册产物必须逐字等于生成器输出、⑩d 照样改一字节验牙），只把**命令收成单源**：
+   *   `champion-map/bake-flags.txt` 一行旗标。文件不在 ⇒ 响亮判红，不许静默退回裸默认。 */
+  const BF = 'champion-map/bake-flags.txt';
+  const BF_FLAGS = existsSync(BF) ? readFileSync(BF, 'utf8').trim().split(/\s+/).filter(Boolean) : [];
+  if (!existsSync(BF)) { console.error('⛔ ⑩c 的规范烘焙旗标不在册：' + BF + ' ⇒ 不许退回"裸默认"烘（那与 §G3 之后的产物必然不等，是假红）'); }
+  const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs'].concat(BF_FLAGS, ['--out=' + bakeFix]),
     { cwd: process.cwd(), encoding: 'utf8' });
   eq(bk.status, 0, '⑩c 烘焙必须成功（失败 ⇒ 页面产物是旧的，判据与截图都跑在上一版上）：' +
     String(bk.stdout || bk.stderr || '').trim().split('\n').slice(-2).join(' ‖ ').slice(0, 220));

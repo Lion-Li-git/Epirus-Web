@@ -1,0 +1,7 @@
+闸 = feasibilityOf 单一真源 ‖ 样本量 n=20/aggr100/seat100 ‖ 分片 1/1 ‖ 名单源 = coords-gen3-1105.tsv
+名单 39 枚（坐标表全量）‖ 本片 39 枚 ‖ 本 out 已量 0 ⇒ champion-map/feas-mixed-g3-1105.tsv
+  1/39 ‖ 8.48s/枚 ‖ 已用 8s ‖ 预计还需 5.4 分 ‖ 最新 BAS-s41 ok=0 G=6.53 场B=0.01
+  26/39 ‖ 6.99s/枚 ‖ 已用 182s ‖ 预计还需 1.5 分 ‖ 最新 D1200-s13 ok=0 G=2.65 场B=4
+  39/39 ‖ 6.85s/枚 ‖ 已用 267s ‖ 预计还需 0.0 分 ‖ 最新 KD-V7 ok=0 G=6.7 场B=0
+完成 39 枚，用时 267s ⇒ D:\code\Epirus-Web\champion-map\feas-mixed-g3-1105.tsv
+mixed rc=0

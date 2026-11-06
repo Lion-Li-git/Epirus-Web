@@ -40,7 +40,10 @@
   }
 
   /* N 人自动对局：choosers[pid](state, pid, legal, events) → key | {key,target} */
-  function autoGameN(state, choosers, onTurn, onRoundStart) {
+  function autoGameN(state, choosers, onTurn, onRoundStart, onPicks) {
+    /* `onPicks(state, picks, legals)`（11-02 晚 · DS，用户「作弊教师」点子）：**在全部席位选完、结算之前**
+     *   给一个只读+可覆盖的钩子——用来做「事后先知」教师（看见别人这一手打谁、再改自己这一手）。
+     *   默认 undefined ⇒ 逐位不变（线上/训练零影响）。⚠ 这是**研究用**入口，不进产品决策路径。 */
     const N = state.p.length;
     let guardN = 0;
     while (!state.over) {
@@ -52,16 +55,19 @@
        * 要公平测量这类技能，只能在 legal 之前开珠。默认 undefined，对线上/训练零影响。 */
       if (onRoundStart) onRoundStart(state);
       const beadOf = function (p) { return p.elec > p.boom ? 'boom' : 'elec'; };   // 相等时取电珠，与页面同口径
-      const picks = [];
+      let picks = [];
+      const legals = [];
       for (let pid = 0; pid < N; pid++) {
         if (state.p[pid].hp <= 0) { picks.push(null); continue; }   // N12：死者不行动
         const ch = choosers[pid];
         const legal = legalActions(state, pid);
+        legals.push(legal);
         const raw = normPick(ch ? ch(state, pid, legal, state.events) : null);
         const l = legal.find(function (x) { return x.key === raw.key; });
         const k = (ch && ch.whiffOk) ? raw.key : ((l && l.affordable) ? raw.key : R.SK.JI);
         picks.push({ key: k, target: raw.target, target2: raw.target2, bead: raw.bead });
       }
+      if (onPicks) { const ov = onPicks(state, picks, legals); if (Array.isArray(ov) && ov.length === N) picks = ov; }
       for (let pid = 0; pid < N; pid++) {
         if (!picks[pid]) continue;
         /* v7：候选给了 bead 就用它（"为放电而蓄电珠"要能学会）；没给才走启发式兜底。 */

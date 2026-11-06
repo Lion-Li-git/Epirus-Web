@@ -1,0 +1,18 @@
+import { sandbox } from '../tools/audit-lib.mjs';
+import { install } from './arch2-dbg.mjs';
+const W = sandbox();
+const P = W.EpirusPolicy, S = W.EpirusState, R = W.EpirusRules;
+let seed = 7;
+const rng = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+const A = install(W, { input: 'obs3', seatH: 16, actH: 8, hid: 32, hid2: 24, mutMode: 'seg' });
+const L = A.L; const sg = {}; for (const s of L.seg) sg[s.name] = s;
+const seatW = (j,i)=>sg.seatEnc.off + j*L.seatIn + i, ctxW=(j,i)=>sg.ctx.off + j*L.ctxDim + i, candW=(j,i)=>sg.cand.off + j*L.candIn + i, headW=(j)=>sg.policyHead.off + j;
+const st = S.createState('multi', { next: rng }, 5); st.rng = { next: rng };
+st.p[0].hp = 1; for (let i=1;i<5;i++) st.p[i].hp = 3;
+const cands = P.candidatesFor(st, 0, [{ key: R.SK.JI, affordable: true }], { lockTarget: false });
+const lg = (p) => Number(P.forwardCands(st, 0, cands, p, { temp: 0.5 }).logits[0]);
+globalThis.__DBG = 1;
+let p = new Float64Array(L.n); p[ctxW(0,0)]=1; p[candW(0,0)]=1; p[headW(0)]=1;
+console.log('ctx[0,0] only ⇒ logit ' + lg(p).toFixed(4));
+p = new Float64Array(L.n); p[seatW(0,0)]=1; p[ctxW(0,57)]=1; p[candW(0,0)]=1; p[headW(0)]=1;
+console.log('seat+ctx[0,57] ⇒ logit ' + lg(p).toFixed(4));

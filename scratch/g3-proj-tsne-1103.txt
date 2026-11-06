@@ -1,0 +1,3 @@
+  §E605-C 中位秩 ‖ 有并列的轴：dmg 772/927 ‖ heavy 735/927 ‖ holo 786/927 ‖ rounds 316/927 ‖ drawRate 926/927 ‖ zeroRate 926/927 ‖ seatSpread 528/927 ‖ distinctKeys 903/927 ‖ charges 666/927 ‖ waste 626/927 ‖ noThreatStance 697/927 ‖ fieldAAtk 199/927
+  t-SNE(perp=30, iters=500, seed=7)：Spearman=0.298  kNN@10=0.47   （旧 x2/y2 基线：0.365 / 0.08）
+  已写 D:\code\Epirus-Web\scratch\g3map-wt\champion-map\coords.tsv（新增/覆盖列 xt yt xt3 yt3 zt3）

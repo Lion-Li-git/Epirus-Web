@@ -20,17 +20,32 @@
  * 落盘：在 coords.tsv 里**新增/覆盖** 5 列 —— xt, yt（二维）· xt3, yt3, zt3（三维，给"三维行为轴/势阱"用，
  *   它们现在用的是同样无界的 x3/y3/z3 ⇒ 立体态被拉成竖条也是这个病）。
  *   ⚠ 不动任何已有列（H/S/Geff/F/rank/x2/y2/x3/y3/z3 与全部行为列），也**不动行序**。
- * 用法：node champion-map/proj-tsne.mjs [--perp=30] [--iters=500] [--seed=7] [--write=0|1]
- *   退出码 0 = 跑完（含自报指标）‖ 2 = 输入不齐（没有 12 个数值特征列）
+ * 用法：node champion-map/proj-tsne.mjs [--in=coords.tsv] [--perp=30] [--iters=500] [--seed=7]
+ *        [--method=auto|tsne|mds] [--write=0|1]
+ *   ⚠ 11-05 中午两处**跟着 N 走**的改动（逐视图重投影带出来的，见下面 §G3 两段注释）：
+ *     困惑度默认 `min(30, max(4, N/5))`；二维布局默认 `auto` = 在 t-SNE 与经典 MDS 里按 kNN 保住率取高者。
+ *     大表（800+）两者都落回原取值 ⇒ 现役 xt/yt 逐字不变。
+ * 退出码 0 = 跑完（含自报指标）‖ 2 = 输入不齐（没有 12 个数值特征列）
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const CF = join(HERE, 'coords.tsv');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
-const PERP = +arg('perp', 30), ITERS = +arg('iters', 500), SEED = +arg('seed', 7), WRITE = arg('write', '1') !== '0';
+/* §G3（11-05 上午 · 千问）：`--in=<表>` ⇒ 对**任意一份**同 schema 的坐标表重投影（默认 `coords.tsv` ⇒ 历史调用逐字不变）。
+ *   为什么现在要这个：11-05 夜班把 2.0 点并进旧图时用了"kNN 插值"，因为投影只在 `coords.tsv` 上算过一次 ⇒
+ *   并集里的新点没有自己的投影，只能借邻域。重投影一遍就不借了：**一张图只许有一套 fit**。
+ *   路径口径与 `viewer.mjs` / `pool-sync.mjs` 同族（§E608）：带盘符或前导 `/` 的不再 join。 */
+const IN = arg('in', 'coords.tsv');
+/* 路径口径（§E608 同族）：**先按调用方给的原样试**（相对 cwd），再试 HERE 拼，再试只取文件名 ⇒
+ *   原来只 `join(HERE, IN)`，于是 `--in=champion-map/coords-gen3-1105.tsv` 拼成 `champion-map/champion-map/…` ENOENT。
+ *   三个都不存在 ⇒ 响亮报错并列出试过的路径（不许退默认表偷偷投影另一批点）。 */
+const CAND = [IN, join(HERE, IN), join(HERE, IN.split(/[\\/]/).pop())];
+const CF = CAND.find(p => existsSync(p)) || '';
+if (!CF) { console.error('⛔ --in=' + IN + ' 三个候选路径都不存在：\n   ' + CAND.join('\n   ') + '\n   ⇒ 宁可报错，不许退回 coords.tsv 投影另一批点'); process.exit(2); }
+const PERP_ARG = arg('perp', '');   /* 显式给了就用给的；没给 ⇒ 见下面按 N 自适应 */
+const ITERS = +arg('iters', 500), SEED = +arg('seed', 7), WRITE = arg('write', '1') !== '0';
 
 const FEAT = ['dmg', 'heavy', 'holo', 'rounds', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys',
   'charges', 'waste', 'noThreatStance', 'fieldAAtk'];
@@ -45,6 +60,16 @@ const miss = FEAT.filter(k => H.indexOf(k) < 0);
 if (miss.length) { console.error('⛔ coords.tsv 缺特征列: ' + miss.join(' ')); process.exit(2); }
 const rows = lines.slice(1).map(l => l.split('\t'));
 const N = rows.length;
+/* §G3（11-05 中午 · 千问）**困惑度必须跟着 N 走**。原来写死 30，那是"800+ 枚"年代的取值；
+ *   逐视图重投影（用户："投影是局域性的不是绝对坐标"）之后，2.0 那张只有 **39 枚** ⇒
+ *   困惑度 30 = 每点的高斯要摊到 38 个邻居里的 30 个 ⇒ P 矩阵几乎不含局部结构 ⇒
+ *   t-SNE 把 37 枚压成一坨、2 枚弹出去（实测 kNN@10=0.31，而**瞎猜就有 10/38=0.26** ⇒ 等于没分）。
+ *   现在默认 `N/5` 夹在 [4,30]：870 枚那张算出 174 ⇒ 夹回 30 ⇒ **大表逐字不变**；39 枚 ⇒ 7。
+ *   `--perp=` 显式给了就不自适应。 */
+const PERP = PERP_ARG !== '' ? +PERP_ARG : Math.max(4, Math.min(30, Math.floor(N / 5)));
+/* kNN 的 k 同理：N 小的时候 k=10 已经快把全集当邻居了 ⇒ k 也按 N/5 夹在 [3,10] */
+const KN = Math.max(3, Math.min(10, Math.floor(N / 5)));
+console.log('  N=' + N + ' ‖ 困惑度=' + PERP + (PERP_ARG === '' ? '（自适应 N/5，夹 [4,30]）' : '（--perp= 指定）') + ' ‖ kNN 的 k=' + KN + ' ‖ 瞎猜基线 k/(N−1)=' + (KN / (N - 1)).toFixed(3));
 const num = v => { const x = +v; return isFinite(x) ? x : NaN; };
 const X = FEAT.map(k => { const j = H.indexOf(k); return rows.map(r => num(r[j])); });
 if (X.some(c => c.some(v => !isFinite(v)))) { console.error('⛔ 有特征列含非数值（NaN）⇒ 先修数据'); process.exit(2); }
@@ -150,7 +175,7 @@ function tsne(DIM, targetPerp, iters, seed) {
 
 /* ===== 指标（与"先定度量"一致）===== */
 function metrics(P2) {
-  const k = 10;
+  const k = KN;
   const d2 = new Float64Array(N * N);
   for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
     let s = 0; for (let d = 0; d < 2; d++) { const q = P2[d][i] - P2[d][j]; s += q * q; }
@@ -158,8 +183,11 @@ function metrics(P2) {
   }
   const nbr = (M, self) => { const out = []; for (let i = 0; i < N; i++) { const a = []; for (let j = 0; j < N; j++) if (j !== i) a.push([M[i * N + j], j]); a.sort((x, y) => x[0] - y[0]); out.push(a.slice(0, k).map(t => t[1])); } return out; };
   const nA = nbr(d2), nB = nbr(D2);
-  let rec = 0; for (let i = 0; i < N; i += 3) { const s = new Set(nA[i]); let c = 0; for (const j of nB[i]) if (s.has(j)) c++; rec += c / k; }
-  rec /= Math.ceil(N / 3);
+  /* 抽样步长：大表（800+）沿用了原来的每 3 点取 1（省时间，且 270 点够稳）；小表逐点算，
+   *   否则 39 枚只抽 13 枚 ⇒ 指标本身比投影还抖。 */
+  const STRIDE = N > 200 ? 3 : 1;
+  let rec = 0; for (let i = 0; i < N; i += STRIDE) { const s = new Set(nA[i]); let c = 0; for (const j of nB[i]) if (s.has(j)) c++; rec += c / k; }
+  rec /= Math.ceil(N / STRIDE);
   const rnd = mulberry(11); let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, M = 0;
   const AA = [], BB = [];
   for (let t = 0; t < 200000; t++) { const i = Math.floor(rnd() * N), j = Math.floor(rnd() * N); if (i === j) continue; AA.push(Math.sqrt(D2[i * N + j])); BB.push(d2[i * N + j]); }
@@ -172,16 +200,60 @@ function metrics(P2) {
 
 const T2 = tsne(2, PERP, ITERS, SEED);
 const T3 = tsne(3, PERP, ITERS, SEED + 1);
+/* §G3（11-05 中午 · 千问）**经典 MDS 也算一份，按同一把尺选**。
+ *   起因是逐视图重投影：2.0 那张只有 39 枚 ⇒ t-SNE 的"局部邻域"在这规模上根本没东西可保
+ *   （实测 kNN@7 在 0.15~0.29 之间摆，而**瞎猜就有 0.184** ⇒ 与随机无异 ⇒ 画出来就是"一坨 + 两枚飞出去"）。
+ *   同一份 D2 上 MDS 给 0.502（2.7× 瞎猜、Spearman 0.84）；大表上反过来（870 枚：MDS 0.09 ‖ t-SNE 0.45）。
+ *   ⇒ 不是"哪个方法更好"，是**哪个方法配得上这个 N** ⇒ 默认 `--method=auto` 按 kNN 保住率取高者，
+ *     两个数都印出来（判据先于结果，且换法必须看得见理由）。`--method=tsne|mds` 可点名锁死。
+ *   ⚠ 大表（800+）auto 恒选 t-SNE ⇒ 现役 xt/yt 逐字不变，这一改只动小表。 */
+function mds(DIM) {
+  const mRow = new Array(N).fill(0), mCol = new Array(N).fill(0);
+  let g = 0;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { mRow[i] += D2[i * N + j]; mCol[j] += D2[i * N + j]; g += D2[i * N + j]; }
+  const B = new Float64Array(N * N);
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) B[i * N + j] = -0.5 * (D2[i * N + j] - mRow[i] / N - mCol[j] / N + g / (N * N));
+  const V = [];
+  for (let d = 0; d < DIM; d++) {
+    let v = new Array(N).fill(0).map((_, i) => Math.sin((i + 1) * (d + 1) * 0.7) + 0.1);
+    for (let it = 0; it < 400; it++) {
+      const u = new Array(N).fill(0);
+      for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) u[i] += B[i * N + j] * v[j];
+      for (const w of V) { let dot = 0; for (let i = 0; i < N; i++) dot += u[i] * w[i]; for (let i = 0; i < N; i++) u[i] -= dot * w[i]; }
+      const nn = Math.hypot(...u) || 1; v = u.map(x => x / nn);
+    }
+    V.push(v);
+  }
+  const out = [];
+  for (let d = 0; d < DIM; d++) for (let i = 0; i < N; i++) out.push(V[d][i]);
+  return out;
+}
 /* 每个轴按 0.5%~99.5% 跨度线性拉到 [-1,1] 并夹住尾巴。
  *   为什么不是只按 IQR 归一：t-SNE 输出的长宽比是任意的，只归 IQR 会画成一条横带（x 跨度远大于 y），
- *   画布上下全空、场网格也浪费；按跨度归一 ⇒ 云团填满画布，且两者跨度相同（线性、逐轴保序）。 */
+ *   画布上下全空、场网格也浪费；按跨度归一 ⇒ 云团填满画布，且两者跨度相同（线性、逐轴保序）。
+ *   ⚠ 必须在两把尺对拍**之前**定义（const 有 TDZ），11-05 中午加 MDS 那一路时踩过一次。 */
 const scale = (arr) => { const s = arr.slice().sort((a, b) => a - b);
   const lo = s[Math.floor(s.length * 0.005)], hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
   const sp = (hi - lo) || 1;
   return arr.map(v => Math.max(-1.05, Math.min(1.05, (v - lo) / sp * 2 - 1))); };
-const x2 = scale(T2.slice(0, N)), y2 = scale(T2.slice(N, 2 * N));
-const m = metrics([x2, y2]);
-console.log('  t-SNE(perp=' + PERP + ', iters=' + ITERS + ', seed=' + SEED + ')：Spearman=' + m.sp.toFixed(3) + '  kNN@10=' + m.knn.toFixed(2) + '   （旧 x2/y2 基线：0.365 / 0.08）');
+const M2 = mds(2), M3 = mds(3);
+const mkT = metrics([scale(T2.slice(0, N)), scale(T2.slice(N, 2 * N))]);
+const mkM = metrics([scale(M2.slice(0, N)), scale(M2.slice(N, 2 * N))]);
+const chance = KN / (N - 1);
+console.log('  两把尺对拍（同一份 12 维距离、同一个 k=' + KN + '，瞎猜基线 ' + chance.toFixed(3) + '）：');
+console.log('    t-SNE(perp=' + PERP + ', iters=' + ITERS + ', seed=' + SEED + ')  kNN@' + KN + '=' + mkT.knn.toFixed(3) + ' ⇒ ' + (mkT.knn / chance).toFixed(1) + '× ‖ Spearman=' + mkT.sp.toFixed(3));
+console.log('    经典 MDS（双中心化+幂迭代）        kNN@' + KN + '=' + mkM.knn.toFixed(3) + ' ⇒ ' + (mkM.knn / chance).toFixed(1) + '× ‖ Spearman=' + mkM.sp.toFixed(3));
+const METHOD = arg('method', 'auto');
+const USE_MDS = METHOD === 'mds' || (METHOD === 'auto' && mkM.knn > mkT.knn);
+console.log('  ⇒ 取 ' + (USE_MDS ? 'MDS' : 't-SNE') + (METHOD === 'auto' ? '（auto：按 kNN 保住率取高者）' : '（--method= 点名）'));
+const pick = (tArr, mArr) => (USE_MDS ? mArr : tArr);
+const out2 = pick(T2, M2).slice(0, 2 * N);
+const out3 = pick(T3, M3).slice(0, 3 * N);
+const m = USE_MDS ? mkM : mkT;
+const x2 = scale(out2.slice(0, N)), y2 = scale(out2.slice(N, 2 * N));
+console.log('  ⇒ 落盘 xt/yt 用 ' + (USE_MDS ? 'MDS' : 't-SNE') + '：Spearman=' + m.sp.toFixed(3) + '  kNN@' + KN + '=' + m.knn.toFixed(3) +
+  ' ‖ 瞎猜基线 ' + chance.toFixed(3) + ' ⇒ 高出 ' + (m.knn / chance).toFixed(1) + '×' +
+  '   （旧 x2/y2 在 800+ 枚大表上的基线：0.365 / 0.08，小表不可直接引用）');
 
 if (WRITE) {
   let hx = H.indexOf('xt'), hy = H.indexOf('yt'), hx3 = H.indexOf('xt3'), hy3 = H.indexOf('yt3'), hz3 = H.indexOf('zt3');
@@ -195,7 +267,7 @@ if (WRITE) {
   for (let i = 0; i < N; i++) {
     const r = rows[i];
     fill(r, hx, x2[i].toFixed(6)); fill(r, hy, y2[i].toFixed(6));
-    fill(r, hx3, scale(T3.slice(0, N))[i].toFixed(6)); fill(r, hy3, scale(T3.slice(N, 2 * N))[i].toFixed(6)); fill(r, hz3, scale(T3.slice(2 * N, 3 * N))[i].toFixed(6));
+    fill(r, hx3, scale(out3.slice(0, N))[i].toFixed(6)); fill(r, hy3, scale(out3.slice(N, 2 * N))[i].toFixed(6)); fill(r, hz3, scale(out3.slice(2 * N, 3 * N))[i].toFixed(6));
   }
   const head = H.concat(add);
   writeFileSync(CF, [head.join('\t')].concat(rows.map(r => r.join('\t'))).join(EOL) + EOL);

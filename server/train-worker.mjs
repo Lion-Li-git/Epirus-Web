@@ -43,7 +43,7 @@ function __seedSandbox(sbox, seed) {
   sbox.Math = M;
 }
 
-for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js']) {
+for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/policy2.js','js/train/evo.js']) {
   vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
 }
 const T = sb.EpirusTrainer;

@@ -1,0 +1,43 @@
+[shipbigt] 已按旗标改引擎档：`js/train/evo.js` 的 `BIGT_PUSH = 0`（0 = 关 · 引擎自己的默认档回读为 12，不设旗标就是它） · 目标 = ep 最高的对手（平手取血少、再取座位号小）· 不消耗 `state.rng` · 用量由引擎事件数（`champ.use`），不是工具自己的计数器
+[support] 未设旗标 ⇒ 走**引擎默认档** `SUPPORT_PRIOR = 0`（0 = 引擎默认关；**页面另有默认，见 `js/ui/ui.js`**） ‖ knobs 默认 = pick=weighted skipP=0.6 minEp=3 ⇒ 这一臂不带动作先验
+=== 5 人局评测 ===
+主体: docs/artifacts/v7expo-34.bak
+meta: {"source":"server/train-server.mjs","n":5,"gens":250,"games":8,"pop":16,"opps":"random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ringspam,ringspam,ringspam","mode":"multi","styleOpps":"","styleW":0,"styleGames":0,"ecoOverride":"","fightOverride":"","fightEffective":"{\"whistlePen\":0,\"override\":0,\"dealW\":0.01,\"firstW\":0}","ecoEffective":"{\"targetOverride\":null,\"capOverride\":null,\"divW\":0.06,\"stockBonus\":0.05,\"hoardPen\":0.12,\"at3\":{\"target\":3,\"cap\":10},\"at5long\":{\"target\":5,\"cap\":20}}","ts":"2026-09-14T05:05:07.832Z","firstRate":0.42091503267973857,"top2Rate":0.5620915032679739,"seed":34,"fresh":false,"hotstartFrom":"d13d3c856c6cff62","seedEmbeddedFrom":6,"workers":16}
+对手池(7): random defend antidef wall farmer heavyfire deepsaver
+!! 模式 --mode=multi : 多人模式(3-5人)  hp=3  摄魂门槛 HP<=1
+对手场 = 4 个互不相同的脚本，全部 35 组合 × 200 局 = 7000 局；含深经济对手的组合 30/35
+随机基线（5 人局）: 1st 20.0% / top2 40.0% / top3 60.0%
+
+[shipdrain] ⚠ 引擎默认档 = 1，但本臂 ε=0 ⇒ 这一档**永不触发**（钩子在 soft 探索支里）⇒ 与关档逐字相同。要量它必须带**探索剂量**：首选产品那张表 `--eps-tier=lv:regular`（页面默认档 0.1·斜坡），硬写 `--eps=0.2 --eps-mode=soft` 量的是**简单档**（§E283：3 血桌上每 4.3 局一张 ‖ 关档 0 张/200 局）。
+[消融·拿掉 holo] 1st=32.5% 严胜=31.3% 并列=1.1%  2nd=45.9%  3rd=16.0%  4th=4.2%  5th=1.4%   | top2=78.4% top3=94.4%
+    各座位 1st 率: P0=32.0% P1=32.4% P2=33.3% P3=31.0% P4=33.7%
+    前置条件: 主体场均承伤=2.64  平均回合=33.3  转移事件=1220  火焰伤害事件=94
+    机制: 自己的攻击被弹回=0.86 次/局  平局率=3%  终局血量=0.37
+    拆分: 含深经济对手 34.3%（6000 局）  vs  不含 21.5%（1000 局）  Δ=12.8pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 32.5%（7000 局）  Δ=-
+[对照 pickRandom] 1st=8.4% 严胜=7.9% 并列=0.6%  2nd=14.4%  3rd=27.3%  4th=26.2%  5th=23.8%   | top2=22.7% top3=50.0%
+    各座位 1st 率: P0=7.1% P1=8.8% P2=9.0% P3=8.9% P4=8.1%
+    前置条件: 主体场均承伤=2.99  平均回合=36.5  转移事件=595  火焰伤害事件=160
+    机制: 自己的攻击被弹回=0.05 次/局  平局率=4%  终局血量=0.09
+    拆分: 含深经济对手 9.0%（6000 局）  vs  不含 4.3%（1000 局）  Δ=4.8pt
+    拆分: 含反弹席(reflectspam) -（0 局）  vs  不含 8.4%（7000 局）  Δ=-
+[消融自检] 决策 162290 次，其中被拿掉的技能在可负担集里 57175 次 = 35.2%   OK 消融有效
+
+=== 消融·拿掉 holo 的经济行为（这套指标才是"货架"的直接读数）===
+决策次数=162290  到达过的最高 ep=3  ep>=3 的决策占比=0.0%  cost>=3 出手占比=0.0%
+  决策时 ep 分带: 0-1=99.6%  2-4=0.4%  5-9=0.0%  10+=0.0%   ← 若 5+/10+ 占比高，则"钱不够"不是约束，问题是**买了什么**
+出手种类=13  分布（前 12）:
+  ジ          43.7%   费用=0
+  枪          41.3%   费用=1
+  反弹          4.7%   费用=0
+  八卦阵         4.7%   费用=0
+  防御          4.7%   费用=0
+  藤甲          0.4%   费用=1
+  激光剑         0.4%   费用=2
+  雷击之枪        0.1%   费用=2
+  蓄能          0.0%   费用=1
+  无极变速        0.0%   费用=1
+  原型制御        0.0%   费用=1
+  坦克          0.0%   费用=2
+耗时 16.8s
+逐桌子命中数 → docs/research/archive/2026-10-20-ban-holo/expo-ban-multi-77001.per.txt（35 组 × 200 局）

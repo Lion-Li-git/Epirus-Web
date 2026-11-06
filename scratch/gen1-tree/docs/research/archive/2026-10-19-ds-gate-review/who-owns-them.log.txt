@@ -1,0 +1,30 @@
+ship-feas.mjs:630  腿@517「D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 base 的局 seed 重叠 · 单粒必须逐字等于旧算式」
+    近旁 env 键：EPIRUS_SEL_EVAL_SEEDS
+ship-promote.mjs:417  腿@396「D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读」
+    近旁 env 键：EPIRUS_XN ‖ EPIRUS_BAND_DIR ‖ EPIRUS_ARM
+ship-promote.mjs:422  腿@396「D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读」
+    近旁 env 键：EPIRUS_XN ‖ EPIRUS_BAND_DIR ‖ EPIRUS_ARM
+train-env.mjs:59  腿@36「D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：tra」
+    近旁 env 键：EPIRUS_FIGHT_WHISTLE ‖ EPIRUS_ALLOW_DARK ‖ EPIRUS_BAND_DIR ‖ EPIRUS_T ‖ EPIRUS_ARM ‖ EPIRUS_PASSIVE_FIELD
+train-env.mjs:69  腿@36「D122 CLI 黑旋钮不许静默（v1.5.155 · DS 裁定；v1.5.159 升级：已下达的键改用**空枪检测**）：tra」
+    近旁 env 键：EPIRUS_PASSIVE_FIELD ‖ EPIRUS_KILL_FIELD ‖ EPIRUS_SEED ‖ EPIRUS_BAND_DIR ‖ EPIRUS_T ‖ EPIRUS_ARM
+train-evo.mjs:2065  腿@2004「D123 收割席注入（v1.5.160 · §N13 · 用户裁定」【有意写基线?】
+    近旁 env 键：EPIRUS_T ‖ EPIRUS_SEED ‖ EPIRUS_ARM ‖ EPIRUS_BAND_DIR ‖ EPIRUS_KILL_FIELD
+train-evo.mjs:2474  腿@2405「D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可逆**、开了要**真打到适应度**、没接的入口要**」【有意写基线?】
+    近旁 env 键：(一个都没有 ⇒ 那这次调用完全继承外层环境)
+train-runner.mjs:674  腿@662「D119 热启动不许静默失败（v1.5.153 · DS）：两种外壳都认 + 读不出种子必须 exit 5 —— 否则整臂白跑」
+    近旁 env 键：EPIRUS_HOTSTART ‖ EPIRUS_SEEDPACK ‖ EPIRUS_CHAMPION_
+train-runner.mjs:738  腿@679「D127 兑现广度（v1.5.167 · §N24 · 用户」【有意写基线?】
+    近旁 env 键：EPIRUS_SEED ‖ EPIRUS_ARM ‖ EPIRUS_SEL_LAND ‖ EPIRUS_BAND_DIR
+train-runner.mjs:837  腿@789「D130 判据原型必须能放上**训练桌**（v1.5.172 · §N35 · 」
+    近旁 env 键：EPIRUS_SEED ‖ EPIRUS_ARM ‖ EPIRUS_COUNTER_OPPS ‖ EPIRUS_BAND_DIR
+train-runner.mjs:1307  腿@1299「D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + 全塌缩不硬换人 + 账进产物 + 无」
+    近旁 env 键：EPIRUS_BAND_DIR ‖ EPIRUS_T ‖ EPIRUS_ARM
+train-runner.mjs:1315  腿@1299「D176 载重优点 veto（v1.5.265b · §E66）：容差 100% 逐位不变 + 全塌缩不硬换人 + 账进产物 + 无」
+    近旁 env 键：EPIRUS_CHAMPION_ ‖ EPIRUS_SEL_KEEP
+train-runner.mjs:1474  腿@1456「D184 产物=起点读数（v1.5.276 · §E113）：正例喊、反例不喊、冷启动为 null」
+    近旁 env 键：EPIRUS_CHAMPION_ ‖ EPIRUS_BAND_DIR
+train-runner.mjs:1539  腿@1524「D185 起点补进重验池（v1.5.277 · §E114）：默认零行 + 只多候选不动打分 + 幂等」
+    近旁 env 键：EPIRUS_CHAMPION_ ‖ EPIRUS_BAND_DIR ‖ EPIRUS_SEED ‖ EPIRUS_HOTSTART ‖ EPIRUS_ANCHOR ‖ EPIRUS_SEEDPACK
+
+可疑处合计 14 处 ‖ 判读：【发布态】与【有意写基线?】不算违例，剩下的才是 C 方案要显式声明的名单。

@@ -1,0 +1,239 @@
+{
+ "mode": "cem",
+ "seed": 7,
+ "evals": 140,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "ignoredFlags": null,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 560,
+ "gamesActualLoop": 560,
+ "gamesActualHoldout": 20,
+ "gamesActualStartHoldout": 20,
+ "targetGames": 560,
+ "netForwards": 14760,
+ "netCandScores": 315864,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 0.625,
+ "inLoopBest": 1,
+ "holdoutFit": 0.625,
+ "holdoutFirst": 0.75,
+ "holdoutTop2": 0.95,
+ "holdoutStartFit": 0.55,
+ "holdoutStartFirst": 0.7,
+ "holdoutStartTop2": 0.95,
+ "dFirst": 0.050000000000000044,
+ "dTop2": 0,
+ "currency": "arena2.net",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=3:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=0",
+  "temp": 0.15,
+  "shapes": 1,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 20,
+  "draw": 0,
+  "cur": "net",
+  "diverse": false,
+  "highN": 1,
+  "stratified": false,
+  "stratCap": 4,
+  "stratMix": 1,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "charge",
+   "share": 0.6296296296296297,
+   "nonji": 189
+  },
+  "startMaxCard": {
+   "key": "charge",
+   "share": 0.5029940119760479,
+   "nonji": 167
+  },
+  "bestByShape": {
+   "3:multi": {
+    "games": 20,
+    "first": 0.75,
+    "draw": 0,
+    "score": 0.625,
+    "cleanScore": 0.475,
+    "firstScore": 0.625
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 56,
+   "best": 0.625
+  },
+  {
+   "games": 168,
+   "best": 1
+  },
+  {
+   "games": 280,
+   "best": 1
+  },
+  {
+   "games": 448,
+   "best": 1
+  }
+ ],
+ "secs": 1.3,
+ "startLabel": "夹具包 scratch/arms/gd3b-ks-sb.bak",
+ "id": "SHAPEFIX-teeth",
+ "parent": "gd3b-ks-sb",
+ "lineage": {
+  "parent": "scratch/arms/gd3b-ks-sb.bak",
+  "parentHash": "ba3a1ba88bf3251b791f1680d2b413d2",
+  "outHash": "ac97b775a5f62271ce2fe171b417fe54",
+  "gen": 3,
+  "seed": 7,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  },
+  "noOp": false
+ },
+ "mastery": null,
+ "funnel": null,
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": 36.4361,
+   "odds": 3.113632821889944e+105,
+   "tieArgmax": 0,
+   "agreeRandom": 12.5,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "scratch/arms/SHAPEFIX-teeth.bak",
+ "container": {
+  "v": 92,
+  "arch": "S1o",
+  "gen": 3,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3b",
+   "inter": 0,
+   "tinter": 0,
+   "gen": 3,
+   "keySplit": 1,
+   "dof": 415
+  },
+  "n": 7993,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 1408,
+    "weight": [
+     0,
+     1392
+    ],
+    "bias": [
+     1392,
+     1408
+    ],
+    "fanIn": 87
+   },
+   {
+    "name": "actEnc",
+    "off": 1408,
+    "len": 488,
+    "weight": [
+     1408,
+     1888
+    ],
+    "bias": [
+     1888,
+     1896
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 1896,
+    "len": 4320,
+    "weight": [
+     1896,
+     6184
+    ],
+    "bias": [
+     6184,
+     6216
+    ],
+    "fanIn": 134
+   },
+   {
+    "name": "cand",
+    "off": 6216,
+    "len": 1752,
+    "weight": [
+     6216,
+     7944
+    ],
+    "bias": [
+     7944,
+     7968
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 7968,
+    "len": 25,
+    "weight": [
+     7968,
+     7993
+    ],
+    "bias": null,
+    "fanIn": 24
+   }
+  ]
+ }
+}

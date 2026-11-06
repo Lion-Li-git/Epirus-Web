@@ -232,6 +232,23 @@ t('D137 三把量具（v1.5.190）：判定必须过显著性 · 通吃必须"�
   eq(noSe.length, 0, '每行都必须带配对 SE（`se` / `banSe`）：' + JSON.stringify(noSe));
   eq(monoBad.length, 0, '不许给"分不出"的卡贴四象限标签（Q-9 的正面钉）：' + JSON.stringify(monoBad));
   eq(banBad.length, 0, '消融臂同一条规矩（承重/陷阱要过 1.96·SE）：' + JSON.stringify(banBad));
+  /* ===== ①b（11-04 千问，并进同一条 D137，不另立新门）：**参数不合法不许出报告** =====
+   * 病（在册 #66 实测）：把包路径当**第一个位置参数**传（正确写法是 `--champ=`）⇒ `parseInt('scratch/…')=NaN`
+   *   ⇒ 旧代码 `const file = CHAMP_FILE || (N > 2 ? 3P : 2P)` 里 `NaN > 2` 是 **false** ⇒ 整份报告量的是
+   *   **线上 2P 槽**，退出码 0、HTML 一万八千字、表全填 —— 我拿它当"那枚包的成绩"引用过。
+   * 牙按 clause 分别验：① 必须非零退出；② 必须点名收到什么并提示 `--champ=`；③ **不许留下产物文件**
+   *   （只拒码不删文件 = 读的人仍会打开上一份/半成品）；④ 合法档必须照旧跑通（上面 `run.status===0` 就是这条）。 */
+  {
+    const badOut = join(dir, 'guard-should-not-exist.html');
+    const bad = spawnSync(process.execPath, ['tools/skill-report.mjs', FIXTURE_PACK, '6', badOut],
+      { encoding: 'utf8', timeout: 120000 });
+    ok(bad.status !== 0, '人数这一位被填成包路径 ⇒ 必须拒绝（旧行为：静默回退默认槽 + 退出码 0）');
+    ok(/--champ=/.test(String(bad.stderr || '')), '拒绝时要给出**正确写法**（点名 `--champ=`），只说"参数错"会被当成打字问题');
+    ok(!existsSync(badOut), '拒跑必须**不落产物**（落了就等于给人一份错对象的报告）：' + badOut);
+    const badN = spawnSync(process.execPath, ['tools/skill-report.mjs', '99', '6', join(dir, 'guard-n.html')],
+      { encoding: 'utf8', timeout: 120000 });
+    ok(badN.status !== 0, '人数越界（99）同样要当场拒');
+  }
   ok(/要辨[\d.]+pt需\d+局\/组/.test(String(run.stdout || '')),
     '控制台必须印"要辨 X pt 需几局/组"（算力价码；没有它就只剩一句"噪声内"，等于没回答 Q-10）');
   ok(/噪声内.*张/.test(String(run.stdout || '')) && /1\.96SE 中位/.test(String(run.stdout || '')),

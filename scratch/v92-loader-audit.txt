@@ -1,0 +1,38 @@
+参照组（清单含 policy2）→ unpack OK（7993 参数） ‖ EpirusPolicy2 在场=true
+夹具 = scratch/night4/CB-s13.js（v:92 ‖ 参数 7993）
+
+清单 | 含 policy2 | v:92 解得开？ | 参数数 | 报错
+champion-map/evaln-noise.mjs | **否** | ✘ 解不开（返回空） | — | 
+champion-map/selkeys.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/diag.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/gates/_ctx.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-5p-envfit.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-cross-mode.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-econ-reset-audit.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-ep-reach.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-g4-anatomy.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-intercept-cost.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-kill-reward.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-ring-ablate.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-round1-open.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-skill-marginal.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/probe-sticker-injection.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/promote-champion2p.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/rules-fingerprint.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/style-exam.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/train-3p.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/train-best.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/train-fast.mjs | **否** | ✘ 解不开（返回空） | — | 
+tools/train-selftest.mjs | **否** | ✘ 解不开（返回空） | — | 
+server/train-server.mjs | 是 | ✔ 解得开 | 7993 | 
+server/train-worker.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/audit-lib.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/eval-5p.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/gate-drafts.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/probe-layer-caliber.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/proto2/coverage-gate.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/score13.mjs | 是 | ✔ 解得开 | 7993 | 
+tools/skill-report.mjs | 是 | ✔ 解得开 | 7993 | 
+
+共扫 31 份引擎清单 ⇒ **解不开 v:92 的 22 份**（这些工具对每一枚 gen-3 包都读不出权重）
+注：本审计只判"解不解得开"，不判该工具**该不该**支持 gen-3（2P 槽那类按设计只吃 v7 的，得点名后再定）。

@@ -225,6 +225,7 @@ t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', f
   /* v1.5.8：多人局允许"熬到上限比血量"，而考卷看不出"熬"与"打" ⇒ 必须让"熬出来的胜利"不那么值钱。
    * 实测动因（tools/champ-audit.mjs，5 座同一冠军自对局）：long-33 考卷 45.3%、自对局 20/20 局零伤害。 */
   const C = T.rankCredit;
+  const TM0 = T.trainMode();          // 出场要复位它（见下面那行）：以前这条腿把沙箱留在 'multi'
   ok(typeof C === 'function', 'T.rankCredit 必须存在（纯函数，便于钉语义）');
   T.setFightReward({ whistlePen: 0 });                    // 旧行为
   eq(C(1, 1), 1.0, 'whistlePen=0 时头名仍是 1.0（KO 胜）');
@@ -243,7 +244,11 @@ t('D18 哨声惩罚：熬到回合上限的胜利必须打折（反摆烂）', f
   T.setTrainMode('multi'); eq(T.fightReward().whistlePen, 0, 'multi 默认关');
   T.setTrainMode('long'); eq(T.fightReward().whistlePen, 0, 'long 默认也关（v1.5.12 回滚了自动 0.5）');
   T.setFightReward({ whistlePen: 0.5 }); eq(T.fightReward().whistlePen, 0.5, '仍可显式开（env / setFightReward）');
-  T.setFightReward({ reset: true }); T.setTrainMode('multi');
+  T.setFightReward({ reset: true }); T.setTrainMode(TM0);
+  /* ⚑ 这里原本硬编码 `setTrainMode('multi')` 当收尾 ⇒ 本条腿**离开时把共享沙箱留在 multi**，
+   *   同进程后面的腿读到的就不是出厂机器 —— D178「①″ 旋钮不在出厂位」当场把它抓红（11-04 实测：
+   *   `--group=engine` 里 D178 红、单跑绿 ⇒ 正是这种跨腿污染）。修法是按在册规矩**改造成因的腿**（复位成进来的值），
+   *   不是放宽 D178。 */
 });
 
 t('D19 终局收缩是**全局规则**：第 100 回合起每回合末全员 −1 血（不可格挡、不计来源）', function () {

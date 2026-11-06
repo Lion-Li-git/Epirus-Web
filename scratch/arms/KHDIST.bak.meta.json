@@ -1,0 +1,134 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/KHSEED.js",
+ "seed": 13,
+ "lr": 0.02,
+ "steps": 800,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "pack:js/bundled-champion-3p.js",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 722,
+  "moved": 78,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "ji": 430,
+   "gun": 81,
+   "charge": 22,
+   "railgun": 20,
+   "sword": 81,
+   "guard": 35,
+   "bagua": 45,
+   "reflect": 35,
+   "holo": 33,
+   "bigT": 11,
+   "snipe": 2,
+   "ring": 4,
+   "miniT": 1
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.5025641025641026,
+    "teacherLl": -7.044282737992493,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.2717948717948718,
+  "startLl": -2.934466877351836,
+  "agree": 0.5025641025641026,
+  "ll": -7.044282737992493,
+  "wAgree": 0.4420767626473527,
+  "nTest": 195,
+  "nTrain": 600,
+  "testClassNotInTrain": 5,
+  "startClassNotInTrain": 5,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 125,
+    "hit": 71
+   },
+   {
+    "key": "sword",
+    "n": 27,
+    "hit": 7
+   },
+   {
+    "key": "charge#elec",
+    "n": 9,
+    "hit": 2
+   },
+   {
+    "key": "railgun",
+    "n": 8,
+    "hit": 7
+   },
+   {
+    "key": "bigT",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "gun",
+    "n": 21,
+    "hit": 10
+   },
+   {
+    "key": "bagua",
+    "n": 2,
+    "hit": 1
+   },
+   {
+    "key": "guard",
+    "n": 1,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/KHSEED.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

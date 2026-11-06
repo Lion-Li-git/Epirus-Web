@@ -1,0 +1,45 @@
+{
+ "tool": "chain-clone",
+ "mode": "clone",
+ "parent": "scratch/arms/G2-s11.bak",
+ "evals": 1000,
+ "targetGames": null,
+ "blend": 0,
+ "l2": 0.01,
+ "dagger": 0,
+ "rounds": [
+  {
+   "round": 0,
+   "fx": 1000,
+   "all": 0,
+   "act": 0,
+   "base": 0.11084198361634741
+  }
+ ],
+ "clone": {
+  "agree": 0,
+  "agreeAct": 0,
+  "agreeBefore": 0.134,
+  "agreeActBefore": 0,
+  "base": 0.11084198361634741,
+  "baseAct": 0.06901568957406524,
+  "flat": 0,
+  "n": 500,
+  "nAct": 197
+ },
+ "container": {
+  "v": 91,
+  "gen": 2,
+  "input": "obs3",
+  "hid2": 24
+ },
+ "lineage": {
+  "parent": "scratch/arms/G2-s11.bak",
+  "gen": 2,
+  "recipe": {
+   "clone": "chain-lib.pickChain",
+   "blend": 0,
+   "dagger": 0
+  }
+ }
+}

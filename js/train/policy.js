@@ -334,6 +334,18 @@
   ];
   function paramsOf(featS, featA) { return HID * (featS + featA) + HID + HID + 1; }
   function shapeOf(params) {
+    /* ===== 冠军包 2.0（v:91）的**版本门控分派**（10-30 晚，千问）=====
+     * 只有 `o.v === 92` 的容器 / 带 `params.p2` 的张量才走 `EpirusPolicy2`，其余路径**一行算术都不改**（v7 逐字不变）。
+     * ⚑ v:91（代 2）曾在名单里：Stage B 删 qHead 后段表与它不同形 ⇒ 同一个 v 会指两种网络，所以整体退役，不是留个"兼容开关"。
+     * ⚑ 为什么连 `shapeOf` 都要认：`evo.js` 的 `LEGACY(params)` 写的是 `!sh || sh.legacy === true` ⇒
+     *   6122 长的 2.0 张量在这里返回 null 就会被判成"旧包"，于是走 v7 那台**键 + 启发式目标**的打分器：
+     *   症状不是崩，而是"AI 照打、打的不是这枚包"（本仓最贵的那一族：坏了不红）。验收见 `tools/proto2/browser-parity.mjs`。 */
+    if (params && params.p2) {
+      const P2 = global.EpirusPolicy2;
+      if (!P2) throw new Error('params 是 2.0 张量（带 p2 布局）但 `js/train/policy2.js` 没加载 ⇒ 不许退回 v7 打分器');
+      /* 代 3 唯一 ⇒ v 就是那一个数（写死 91 会把代 3 的包标成代 2，跨代对账时就是假对照） */
+      return { v: P2.V_GEN3, featS: 0, featA: 0, featN: 0, legacy: false, p2: true };
+    }
     const n = params.length;
     if (n === paramCount()) return { v: PACK_VERSION, featS: FEAT_S, featA: FEAT_A, featN: FEAT_N, legacy: false };
     for (let i = 0; i < VER_SHAPES.length; i++) {
@@ -476,13 +488,25 @@
     for (let i = 0; i < p.length; i++) p[i] = randn() * (scale || 0.25);
     return p;
   }
-  function mutatePolicy(p, sigma) { const q = p.slice(); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
+  /* v1.8.45（11-06 夜，C4-1）：**复制权重必须连 `legacyFrom` 一起带**。
+   * `Float64Array.slice()` 只拷数值 ⇒ 旧包的形状标记在训练管线第一代就丢
+   * （`isLegacyChooser` 读不到 ⇒ 旧包被按 v7 候选口径评分/选拔——v1.5.64 建 `lv` 防线要防的就是这个）。
+   * 复制点（本函数 / embedLegacy / evo 的 seedChampion）都走这里；新增复制点也必须走它。 */
+  function copyParams(p) {
+    const q = p.slice();
+    if (p && p.legacyFrom != null) q.legacyFrom = p.legacyFrom;
+    return q;
+  }
+  function mutatePolicy(p, sigma) { const q = copyParams(p); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
   function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = __rng() < 0.5 ? a[i] : b[i]; return c; }
 
   /* ---- (s,a) 值网络：value(state,pid,key,params[,sh][,cand]) ----
    * v7：`sh.featA` 决定动作段宽度（v5/v6 = 14、v7 = 22）；`cand` 提供目标/珠类型。
    * 不传 `cand` 时新维度恒 0 ⇒ 旧口径（2P 路径 / 老工具）读数逐位不变。 */
   function value(state, pid, key, params, sh, cand) {
+    if (params && params.p2) throw new Error('2.0 结构没有 v7 这种 (s,a) 单点 value()：请走 forwardCands/chooseCandidates（逐候选集合打分）。' +
+      '走到这里说明有代码在按 v7 偏移切 2.0 权重（信念搜索的 beam/`BELIEF_TIE=1` 两条路都会到这里）⇒ 宁可当场抛，不许静默错切。' +
+      '训练侧同一句话由 tools/proto2/arch2.mjs 说；产品侧这份由本文件说，两处同文由 browser-parity 的 P6 对账。');
     const S_ = sh ? sh.featS : FEAT_S;
     const N = sh ? sh.featN : FEAT_N;
     const A_ = sh ? sh.featA : FEAT_A;
@@ -542,6 +566,7 @@
 
   /* 对合法动作集合打分 → softmax → 返回 {probs(按 ACT_KEYS 索引), argmaxKey} */
   function forward(state, pid, legal, params, opts) {
+    if (params && params.p2) throw new Error('`forward` 是 v7 的"动作键层"打分器，2.0 张量请走 forwardCands（逐候选集合）⇒ 当场拒，不许按 v7 偏移切。');
     opts = opts || {};
     const sh = shapeOf(params);   // P0：形状自适应（v5/v6 存档共存）
     const mask = new Array(A).fill(false);
@@ -675,6 +700,11 @@
 
   /* 候选打分 → softmax → 返回 {probs, argmax, cand} */
   function forwardCands(state, pid, cands, params, opts) {
+    if (params && params.p2) {                                  // 2.0 张量 ⇒ 整条前向交给 EpirusPolicy2（v7 那台的算术一行不走）
+      const P2 = global.EpirusPolicy2;
+      if (!P2) throw new Error('params 是 2.0 张量（带 p2 布局）但 `js/train/policy2.js` 没加载 ⇒ 不许退回 v7 打分器');
+      return P2.forwardCands(global, state, pid, cands, params, opts || {});
+    }
     opts = opts || {};
     const sh = shapeOf(params);
     const h0 = statePre(state, pid, params, sh);      // 状态段只算一次（v7 候选多了 5 倍）
@@ -763,6 +793,11 @@
    * 返回 {ok:true} 或 {ok:false, reason, got, want}。reason 取值：
    *   missing / no-version / version / length / feature / hidden */
   function checkPack(o) {
+    if (o && o.v === 92) {                                        // 代 3 容器（v:91=代 2 已随 qHead 退役）⇒ 交给它那一个出口判（代闸/段表/dof 都在那边）
+      const P2 = global.EpirusPolicy2;
+      const c = P2 ? P2.checkPack(o, global) : { ok: false, reason: 'no-policy2-module' };
+      return { ok: !!c.ok, reason: c.reason, got: c.got, want: c.want, detail: c.detail };
+    }
     if (!o || !Array.isArray(o.a)) return { ok: false, reason: 'missing' };
     if (typeof o.v !== 'number') return { ok: false, reason: 'no-version', got: o.v, want: PACK_VERSION };
     if (o.v !== PACK_VERSION) return { ok: false, reason: 'version', got: o.v, want: PACK_VERSION };
@@ -792,6 +827,10 @@
   /* allowLegacy=true 仅工具/评测用：按包内长度反推形状重建，**游戏侧绝不使用**。
    * 这样五次失败实验的存档重新可读，A/B 证据链不再是一次性的。 */
   function unpack(o, allowLegacy) {
+    if (o && o.v === 92) {   // 代 3 唯一 ⇒ v:91（代 2，段表里还有 qHead）从这条路读不出来，是故意的
+      const P2 = global.EpirusPolicy2;
+      return P2 ? P2.unpack(o, global) : null;      // 模块没加载 ⇒ 读不出（宁可不玩，也不许按 v7 的偏移去切 2.0 的权重）
+    }
     if (allowLegacy) {
       if (!o || !Array.isArray(o.a)) return null;
       const featN = (o.a.length - HID - HID - 1) / HID;
@@ -819,7 +858,7 @@
   function embedLegacy(params) {
     const sh = shapeOf(params);
     if (!sh) return null;
-    if (!sh.legacy) return params.slice();
+    if (!sh.legacy) return copyParams(params);   // v1.8.45：连 legacyFrom 一起带（见 copyParams 注）
     const q = new Float64Array(paramCount());
     for (let j = 0; j < HID; j++) {
       const o = j * sh.featN, n = j * FEAT_N;
@@ -830,6 +869,7 @@
     for (let i = 0; i < HID; i++) q[nB1 + i] = params[oB1 + i];                 // b1
     for (let i = 0; i < HID; i++) q[nB1 + HID + i] = params[oB1 + HID + i];     // W2
     q[q.length - 1] = params[params.length - 1];                                // b2
+    if (params && params.legacyFrom != null) q.legacyFrom = params.legacyFrom;  // v1.8.45：嵌入后的旧包仍是旧口径
     return q;
   }
 
@@ -879,6 +919,6 @@
     /* §E340 全息屏障→原型制御 的映射档（默认 off）：量具/评测用它成对读同一枚包的两个玩法 */
     setHolo2Proto, holo2Proto, remapHolo,
     EFFECTS, PLAYER_SLOTS, VER_SHAPES, paramsOf, embedLegacy, loadAny,
-    paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
+    paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack, copyParams
   };
 })(typeof window !== 'undefined' ? window : globalThis);

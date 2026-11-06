@@ -1,0 +1,319 @@
+{
+ "mode": "cem",
+ "seed": 13,
+ "evals": 6006,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "ignoredFlags": null,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 24024,
+ "gamesActualLoop": 24024,
+ "gamesActualHoldout": 220,
+ "gamesActualStartHoldout": 220,
+ "targetGames": 24000,
+ "netForwards": 647055,
+ "netCandScores": 14100006,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 0.125,
+ "inLoopBest": 1,
+ "holdoutFit": 0.24082792207792164,
+ "holdoutFirst": 0.4409090909090909,
+ "holdoutTop2": 0.8909090909090909,
+ "holdoutStartFit": 0.02506313131313132,
+ "holdoutStartFirst": 0.2772727272727273,
+ "holdoutStartTop2": 0.8818181818181818,
+ "dFirst": 0.16363636363636364,
+ "dTop2": 0.009090909090909038,
+ "currency": "arena2.net",
+ "arena": {
+  "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|stratified=bigT+reflect+snipe+guard~cap2~mix0.5",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 51,
+  "pool": 20,
+  "holdGamesPerShape": 20,
+  "holdGames": 220,
+  "draw": 0.031818181818181815,
+  "cur": "net",
+  "diverse": false,
+  "highN": 1,
+  "stratified": true,
+  "stratCap": 2,
+  "stratMix": 0.5,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "reflect",
+   "share": 0.18412348401323042,
+   "nonji": 3628
+  },
+  "startMaxCard": {
+   "key": "guard",
+   "share": 0.4733417296389589,
+   "nonji": 4764
+  },
+  "bestByShape": {
+   "2:multi": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.2,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "2:multi4": {
+    "games": 20,
+    "first": 0.7,
+    "draw": 0,
+    "score": 0.4,
+    "cleanScore": 0.4,
+    "firstScore": 0.4
+   },
+   "2:long": {
+    "games": 20,
+    "first": 0.6,
+    "draw": 0,
+    "score": 0.2,
+    "cleanScore": 0.2,
+    "firstScore": 0.2
+   },
+   "3:multi": {
+    "games": 20,
+    "first": 0.7,
+    "draw": 0.05,
+    "score": 0.5875,
+    "cleanScore": 0.475,
+    "firstScore": 0.55
+   },
+   "3:multi4": {
+    "games": 20,
+    "first": 0.5,
+    "draw": 0.05,
+    "score": 0.2875,
+    "cleanScore": 0.1,
+    "firstScore": 0.25
+   },
+   "3:long": {
+    "games": 20,
+    "first": 0.7,
+    "draw": 0,
+    "score": 0.55,
+    "cleanScore": 0.25,
+    "firstScore": 0.55
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0.05,
+    "score": 0.03125,
+    "cleanScore": -0.0625,
+    "firstScore": 0
+   },
+   "5:multi4": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0,
+    "score": 0.125,
+    "cleanScore": 0.0625,
+    "firstScore": 0.125
+   },
+   "5:long": {
+    "games": 20,
+    "first": 0.3,
+    "draw": 0,
+    "score": 0.125,
+    "cleanScore": -0.0625,
+    "firstScore": 0.125
+   },
+   "8:multi": {
+    "games": 20,
+    "first": 0.2,
+    "draw": 0.1,
+    "score": 0.14285714285714288,
+    "cleanScore": -0.028571428571428553,
+    "firstScore": 0.08571428571428574
+   },
+   "10:multi": {
+    "games": 20,
+    "first": 0.05,
+    "draw": 0.1,
+    "score": -8.326672684688674e-18,
+    "cleanScore": -0.11111111111111113,
+    "firstScore": -0.055555555555555594
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 2408,
+   "best": 1
+  },
+  {
+   "games": 6048,
+   "best": 1
+  },
+  {
+   "games": 12040,
+   "best": 1
+  },
+  {
+   "games": 18032,
+   "best": 1
+  }
+ ],
+ "secs": 136.4,
+ "startLabel": "夹具包 scratch/arms/tk-OB3CH.bak",
+ "id": "BROAD-tkCH-s13",
+ "parent": "tk-OB3CH",
+ "lineage": {
+  "parent": "scratch/arms/tk-OB3CH.bak",
+  "parentHash": "fe0d0cc46b6771db9f4516ee06cb7adf",
+  "outHash": "6c5a8fd56e93883850a3f56eadbca3c1",
+  "gen": 3,
+  "seed": 13,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  },
+  "noOp": false
+ },
+ "mastery": null,
+ "funnel": null,
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": 64.728,
+   "odds": 2.5513967462703927e+187,
+   "tieArgmax": 0,
+   "agreeRandom": 6.9,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "scratch/arms/BROAD-tkCH-s13.bak",
+ "container": {
+  "v": 92,
+  "arch": "S1o",
+  "gen": 3,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3b",
+   "inter": 0,
+   "tinter": 0,
+   "gen": 3,
+   "keySplit": 1,
+   "dof": 415
+  },
+  "n": 7993,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 1408,
+    "weight": [
+     0,
+     1392
+    ],
+    "bias": [
+     1392,
+     1408
+    ],
+    "fanIn": 87
+   },
+   {
+    "name": "actEnc",
+    "off": 1408,
+    "len": 488,
+    "weight": [
+     1408,
+     1888
+    ],
+    "bias": [
+     1888,
+     1896
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 1896,
+    "len": 4320,
+    "weight": [
+     1896,
+     6184
+    ],
+    "bias": [
+     6184,
+     6216
+    ],
+    "fanIn": 134
+   },
+   {
+    "name": "cand",
+    "off": 6216,
+    "len": 1752,
+    "weight": [
+     6216,
+     7944
+    ],
+    "bias": [
+     7944,
+     7968
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 7968,
+    "len": 25,
+    "weight": [
+     7968,
+     7993
+    ],
+    "bias": null,
+    "fanIn": 24
+   }
+  ]
+ }
+}

@@ -1,0 +1,6 @@
+[cem-arm] ⚙ 架构 = 2.0 原型 `S1`（§E821） ‖ paramCount=6842 ‖ 变异算子=flat ‖ 起点=随机（v7 夹具包读不进 2.0 ⇒ 两臂同起点、只差算子）
+桌形 trainMode=long ‖ 人数 n=5 ‖ 每评估局数 games=2 ‖ 终局读数 holdoutGames=4
+起点分母：makePolicy(0.25) fit=0.7310 夺1=50.0% ‖ 随机粒 fit=0.1204 夺1=0.0%
+RESULT {"mode":"ga","seed":7101,"evals":2568,"pop":12,"games":2,"n":5,"elite":4,"sig0":0.2,"gamesPlanned":5136,"gamesActualLoop":120,"gamesActualHoldout":12,"gamesActualStartHoldout":12,"targetGames":120,"trainMode":"long","holdoutGames":4,"startFit":0.7309977858532548,"inLoopBest":1.039848947058423,"holdoutFit":0.4575491395852028,"holdoutFirst":0.25,"holdoutTop2":0.25,"holdoutStartFit":0.2301268147801409,"holdoutStartFirst":0,"holdoutStartTop2":0.25,"dFirst":0.25,"dTop2":0,"curve":[{"games":16,"best":0.5293455927382795},{"games":32,"best":0.5293455927382795},{"games":64,"best":0.7476015565828513},{"games":96,"best":1.0188444744331502}],"secs":123.4,"startLabel":"makePolicy(0.25)","wrote":"scratch/arms/20261028-1846-S1-ga-flat-s7101.bak"}
+⚠ inLoopBest 是各臂**循环内部**的分（GA 走 shaped/内部择优，CEM 走原始 fit）⇒ 跨臂不可比；跨臂只比 holdoutFit / holdoutFirst（同一函数同一场）。
+⚑ 实际局数（计数器数的，含起点分母与 holdout 之外的循环）：循环 120 局 ‖ holdout 12 局 ‖ 而标称 `evals×games` = 5136 ⇒ **横比只认这个数**；两臂循环局数不等 ⇒ "同预算"这句话不成立（§E822 实测 GA 与 CEM 差 3 倍）

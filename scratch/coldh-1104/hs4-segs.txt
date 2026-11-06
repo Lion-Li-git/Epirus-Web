@@ -1,0 +1,12 @@
+HS-4-seg1.bak long=28.0
+HS-4-seg10.bak long=15.4
+HS-4-seg11.bak long=24.0
+HS-4-seg12.bak long=31.2
+HS-4-seg2.bak long=23.7
+HS-4-seg3.bak long=23.2
+HS-4-seg4.bak long=16.2
+HS-4-seg5.bak long=22.1
+HS-4-seg6.bak long=28.3
+HS-4-seg7.bak long=19.9
+HS-4-seg8.bak long=26.4
+HS-4-seg9.bak long=4.7

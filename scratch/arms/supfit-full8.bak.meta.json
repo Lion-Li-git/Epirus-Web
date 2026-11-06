@@ -1,0 +1,39 @@
+{
+ "tool": "chain-supfit",
+ "mode": "supfit",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "evals": 2560,
+ "targetGames": null,
+ "sig": 0.08,
+ "pop": 32,
+ "elite": 8,
+ "gens": 80,
+ "mutOnly": null,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "supfit": {
+  "startAgree": 0.215,
+  "startLl": -2.7146110645650645,
+  "agree": 0.61,
+  "ll": -1.1938441100614041,
+  "nTest": 200,
+  "skipped": 0,
+  "verdict": "⇒ **H2（优化路径）**：整网可训把一致率抬起来了 ⇒ 架构表得出这条纪律，\"链形起点\"该由整网监督蒸出来"
+ },
+ "container": {
+  "v": 91,
+  "gen": 2,
+  "input": "obs3b",
+  "hid2": 24,
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "teacher log-likelihood"
+  }
+ }
+}

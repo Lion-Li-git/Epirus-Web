@@ -1,0 +1,29 @@
+▶ 计划：16/16 个部分 | 并发 4 | 门 278/278 | 排序权重 = 门数（可用 --timing=<file> 换成实测）
+  起跑顺序：train-evo engine-rules probe-instruments train-runner ship-promote ship-feas engine-fuzz meta-repo ui-contract train-feature train-env probe-libs meta-lint train-chooser ship-pool ship-artifact
+  本机：18 核（并发上限 8 是给 train-runner/train-evo 内部的 worker 池留余量，不是核数限制）
+✔ GREEN engine-rules           0.5s  62/62
+✔ GREEN ship-promote          90.3s  21/21
+✔ GREEN probe-instruments     98.2s  33/33
+✔ GREEN engine-fuzz            0.7s  13/13
+✘ RED   meta-repo              7.1s  11/12
+    ✘ D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"  → ④ 未登记的重复必须为 0（实测 3 ‖ 最坏几组：[{"w":"c71661a5","n":3,"e":["docs/artifacts/A.bak","docs/artifacts/B.bak","docs/artifacts/C.bak"]}]）⇒ 同一粒权重多存一份，就会把"N 个配方/N 枚候选"读得比实际多（§E589 普查：1443 个文件其实只有 1130 粒） got=3 want=0
+✔ GREEN ui-contract            0.2s  7/7
+✔ GREEN train-feature          0.7s  4/4
+✘ RED   ship-feas             24.5s  12/14
+    ✘ D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hill05 挤掉、当选者 3P 场B/墙双 0"）：纯函数四向 + 缺栏即不合格 + 全否决必须响  → 开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）
+    ✘ D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）  → 不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 [3P栏 n=20/aggr100/seat100] ‖ 实测打印的是：（没跑这一栏））
+✔ GREEN probe-libs            15.5s  4/4
+✔ GREEN meta-lint              6.1s  4/4
+✔ GREEN train-chooser         17.8s  2/2
+✔ GREEN ship-pool              4.2s  1/1
+✔ GREEN ship-artifact          1.9s  1/1
+✔ GREEN train-env            120.3s  4/4
+✔ GREEN train-evo            452.4s  65/65
+✔ GREEN train-runner        1014.6s  31/31
+⏳ 单独复跑（排除抢核与共享状态）：meta-repo …
+✘ meta-repo：单独复跑仍然红 ⇒ **真红**（退出码 1）
+⏳ 单独复跑（排除抢核与共享状态）：ship-feas …
+✘ ship-feas：单独复跑仍然红 ⇒ **真红**（退出码 1）
+
+（墙钟 1045.9s ‖ 各部分实测耗时合计 1855.0s —— 并行下含抢核膨胀，只作参考；真串行口径见 GATE-SHIFTS.md）
+✘ 结论：有 2 个部分红：meta-repo(exit 1) ship-feas(exit 1) （红的部分已逐条单独复跑：真红 2 ‖ 并发假红 0）

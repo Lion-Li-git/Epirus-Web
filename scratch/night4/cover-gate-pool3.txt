@@ -1,0 +1,55 @@
+== D-a-s13（gen-3） ‖ 5P long ×16 ‖ 胜 0% ‖ 局长 101.7
+   自选: ji=556 ring=120 bigT=98 proto=44 charge=40 railgun=34 drain=4 tank=4 sword=1
+   防御族份额 4.9% ‖ 质量判定 44 次（有效 5 半 0 白防 39） ⇒ 准确 11%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 31%
+   残血开局: drain 自选 7 ‖ 胜 44%
+== GD3ALL-G5-8p-s41（gen-3） ‖ 5P long ×16 ‖ 胜 13% ‖ 局长 100.5
+   自选: ji=403 sword=76 gun=61 snipe=46 tank=15 cannon=7 mine=5 rod=5 charge=2
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 自选 11 ‖ dualGun 0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 0%
+== GD3ALL-PUSHON-s13（gen-3） ‖ 5P long ×16 ‖ 胜 44% ‖ 局长 98.1
+   自选: ji=419 sword=108 gun=98 ring=25 charge=22 railgun=18 bigT=9
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 31%
+   残血开局: drain 自选 0 ‖ 胜 31%
+⛔ scratch/night3/GA-ration-s41.js：ENOENT: no such file or directory, open 'D:\code\Epirus-Web\scratch\night3\GA-ration-s41.js'
+== W0-ctrl-s13（gen-3） ‖ 5P long ×16 ‖ 胜 25% ‖ 局长 101.3
+   自选: ji=774 bigT=130 sword=16 charge=16 railgun=15
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 31%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== W0-ctrl-s41（gen-3） ‖ 5P long ×16 ‖ 胜 38% ‖ 局长 88.8
+   自选: ji=481 charge=143 railgun=110 ring=25 gun=23 sword=14 bigT=10
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 38%
+   残血开局: drain 自选 0 ‖ 胜 19%
+== W0-ctrl-s7（gen-3） ‖ 5P long ×16 ‖ 胜 50% ‖ 局长 88.1
+   自选: ji=502 charge=114 railgun=109 ring=54 sword=43 gun=30 bigT=18
+   防御族份额 0.0% ‖ 质量判定 0 次（有效 0 半 0 白防 0）
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 19%
+   残血开局: drain 自选 0 ‖ 胜 44%
+== DDEF-s41（gen-3） ‖ 5P long ×16 ‖ 胜 38% ‖ 局长 101.8
+   自选: ji=783 bigT=119 proto=36 drain=21 charge=14 railgun=12 transfer=5 holo=2 tank=2 cannon=2
+   防御族份额 3.8% ‖ 质量判定 38 次（有效 6 半 0 白防 32） ⇒ 准确 16%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 25%
+   残血开局: drain 自选 48 ‖ 胜 63%
+== DSTR-s13（gen-3） ‖ 5P long ×16 ‖ 胜 25% ‖ 局长 102.5
+   自选: ji=479 ring=122 bigT=84 proto=39 tank=20 drain=12 gun=10 mine=4 holo=3
+   防御族份额 5.4% ‖ 质量判定 42 次（有效 5 半 1 白防 36） ⇒ 准确 14%
+   8P long: mine 自选 15 ‖ dualGun 0 ‖ 胜 38%
+   残血开局: drain 自选 5 ‖ 胜 19%
+
+### 覆盖门判定（池级 = --packs 并集）
+  ✔ 主干 gun ‖ 自选 222
+  ✔ 主干 sword ‖ 自选 258
+  ✔ 主干 charge ‖ 自选 351
+  ✔ 主干 ring ‖ 自选 346
+  ✔ 主干 bigT ‖ 自选 468
+  ✔ 主干 railgun ‖ 自选 298
+  ✘ 防御原型（存在成员：份额 5-15% ∧ 准确 ≥25%） ‖ 最高份额 5.4% ‖ 池加权 1.9% ‖ 带内成员 无（准确 —）
+  ✔ 地雷（8P 自选 ≥3.2） ‖ 8P 自选 26
+  ✔ 摄魂（残血桌自选 ≥3.2） ‖ 自选 60
+  ✔ 自发 tank ‖ 5P 41 / 8P 33
+  ✔ 自发 snipe ‖ 5P 46 / 8P 28
+  － 只报不判：dualgun=0 mirror=0 curse=0 firestorm=0 taunt=0 transfer=7 mine=43 drain=132 cannon=25 tank=107 snipe=84 rod=7 purify=0 minit=0

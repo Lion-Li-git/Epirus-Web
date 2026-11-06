@@ -9,15 +9,18 @@
   function renderModes(R) {
     var el = document.getElementById('rules-modes'); if (!el) return;
     var t = '<table><tr><th>桌型</th><th>初始血量</th><th>回合上限</th><th>终局收缩</th></tr>';
-    var sd = R.SUDDEN_DEATH;
-    var g = { 3: R.MAX_ROUNDS, 4: R.MAX_ROUNDS, 5: 140 };
-    [3, 4, 5].forEach(function (hp) {
-      var maxR = g[hp];
+    /* 三列全部从 `R.MODES` 现读（此前这行把 3/4 血的收缩读成全局 `SUDDEN_DEATH`，
+     * 而引擎那侧 `multi`/`multi4` 各自带 `suddenDeath: 45` ⇒ 页面写"不触发"、第 45 回合照收缩。
+     * 回合上限同理：`maxRounds` 是模式自带的，不许在这里抄字面量。 */
+    var ORDER = ['standard', 'multi', 'multi4', 'long'];
+    ORDER.forEach(function (k) {
+      var m = R.MODES && R.MODES[k]; if (!m) return;
+      var maxR = m.maxRounds || R.MAX_ROUNDS;
+      var sd = (m.suddenDeath != null) ? m.suddenDeath : R.SUDDEN_DEATH;
       var sdShow = sd >= maxR ? '不触发（回合上限先结束）' : ('第 ' + sd + ' 回合起，每回合末全员 -1');
-      var label = hp === 5 ? '2~5 人 · 5 血（长程）' : ('2~5 人 · ' + hp + ' 血');
-      t += '<tr><td><b>' + label + '</b></td><td>' + hp + '</td><td>' + maxR + '</td><td>' + sdShow + '</td></tr>';
+      t += '<tr><td><b>' + esc(m.name) + '</b></td><td>' + m.hp + '</td><td>' + maxR + '</td><td>' + sdShow + '</td></tr>';
     });
-    el.innerHTML = t + '</table><p class="src">终局收缩的起点可以在对局设置里改；默认值下只有 5 血长程桌会在上限前进入收缩。</p>';
+    el.innerHTML = t + '</table><p class="src">终局收缩的起点可以在对局设置里改；上表按各模式自己的配置现读（3 血与 4 血桌也收缩）。</p>';
   }
   function renderSkills(R) {
     var el = document.getElementById('rules-skills'); if (!el) return;
@@ -26,7 +29,19 @@
       var cost = (s.cost == null || s.cost === '') ? '—（非固定）' : esc(s.cost);
       var needs = s.energyNeeds || {};
       var bead = Object.keys(needs).map(function (k) { return '＋' + needs[k] + ' ' + (k === 'elec' ? '电珠' : k === 'boom' ? '爆珠' : k); }).join(' ');
-      t += '<tr><td><b>' + esc(s.name) + '</b></td><td>' + esc(CAT[s.cat] || '') + '</td><td>' + cost + (bead ? '<br><span class="src">' + bead + '</span>' : '') + '</td><td>' + esc(s.pri) + '</td><td>' + esc(TGT[s.target] || '') + '</td><td>' + esc(s.desc || '') + '</td><td>' + ((R.MULTI_ONLY || []).indexOf(s.key) >= 0 ? '多人' : '') + '</td></tr>';
+      /* 卡面里的模式可变数字一律从 `R.MODES` 现读，与 `js/ui/skill-tip.js` 同一口径
+       * （`rules.js` 的 `desc` 是指纹五件套之一，不能为了显示文案而改）。 */
+      var desc = String(s.desc || '');
+      if (R.SK && s.key === R.SK.DRAIN && R.MODES) {
+        var caps = [];
+        [['standard', '2 人桌'], ['multi', '3 血'], ['multi4', '4 血'], ['long', '长程']].forEach(function (p) {
+          var m = R.MODES[p[0]]; if (!m) return;
+          var c = (m.drainHpMax != null) ? m.drainHpMax : 1;
+          var cell = p[1] + ' ≤' + c; if (caps.indexOf(cell) < 0) caps.push(cell);
+        });
+        desc = desc.replace(/仅限 HP≤\d+/, '仅限 HP≤（' + caps.join(' ‖ ') + '）');
+      }
+      t += '<tr><td><b>' + esc(s.name) + '</b></td><td>' + esc(CAT[s.cat] || '') + '</td><td>' + cost + (bead ? '<br><span class="src">' + bead + '</span>' : '') + '</td><td>' + esc(s.pri) + '</td><td>' + esc(TGT[s.target] || '') + '</td><td>' + esc(desc) + '</td><td>' + ((R.MULTI_ONLY || []).indexOf(s.key) >= 0 ? '多人' : '') + '</td></tr>';
     });
     el.innerHTML = t + '</table>';
   }
@@ -57,7 +72,7 @@
     var R = window.EpirusRules, B = window.EpirusBots;
     if (!R || !R.skills) { box.innerHTML = '<p>规则数据没加载成功，请刷新页面。</p>'; return; }
     var h = '';
-    h += '<h2>怎么玩</h2><p>2~5 人对战：每人每回合同时选一个技能和一个目标，一起结算；活到最后的人赢。人数和血量是两根独立的轴——2~5 人都能配 3/4/5 血；4 血主要多一格血，5 血（长程）回合上限更长、会进入终局收缩。</p>';
+    h += '<h2>怎么玩</h2><p>2~8 人对战：每人每回合同时选一个技能和一个目标，一起结算；活到最后的人赢。人数和血量是两根独立的轴——2~8 人都能配 3/4/5 血；4 血主要多一格血，5 血（长程）回合上限更长、会进入终局收缩。</p>';
     h += '<h2>一回合怎么走</h2><ol>';
     h += '<li><b>同时选招</b>：所有人各选一个技能和目标（架势、自增益类不用选目标）。</li>';
     h += '<li><b>按优先级结算</b>：5 → 4 → 3 → 2 → 1；同一优先级同时生效。</li>';
@@ -70,7 +85,7 @@
     h += '<h2>技能表</h2><p>费用单位是 ジ（能量）；“—”表示费用不固定（按第几次使用变价，见“作用”）。有些牌还要蓄能珠（电珠/爆珠）。标“多人”的牌只能在 3 人以上使用。</p><div id="rules-skills"></div>';
     h += '<h2>常见问题</h2>';
     h += qa('小雷（雷击之枪）挡什么？', '无效化目标本回合的<b>攻击类</b>行动，不阻止防御/架势。三家小雷连成环时整环作废；最基础的防御、反弹、原型制御不吃小雷。');
-    h += qa('大雷（真正的落雷）为什么最重？', '5 ジ，2 点电伤 + 禁用目标正在用的技能 4 回合 + 非防御类技能无效化；与本回合目标交互过的第三方也吃 2 点电伤与 3 回合禁用。防御类可以挡下这 2 点电。');
+    h += qa('大雷（真正的落雷）为什么最重？', '5 ジ，2 点电伤 + 非防御类技能无效化 + 目标本回合正在用的技能<b>接下来 3 回合</b>不能再使用（命中那一下已经让它本回合作废，所以是"当回合失效 + 之后 3 回合禁用"）；与本回合目标交互过的第三方也吃 2 点电伤与同样 3 回合禁用。防御类可以挡下这 2 点电。');
     h += qa('全息屏障是给自己套盾吗？', '不是，是给<b>其他玩家</b>套盾，被套者获得原型制御式架势。想拆盾要去打施放者。');
     h += qa('反弹能把大雷弹回去吗？', '不能，雷电不被反弹；防御、金刚盾、原型制御可以挡。反弹族弹的是技能伤害。');
     h += qa('挑衅有什么强制力？', '被挑衅者下回合必须使出一个攻击类技能，否则回合末扣 1 血；多人桌可以同时压多个目标。');

@@ -1,0 +1,3 @@
+2aebf9d503ba902ba418e16b2ff5c93b *champion-map/coords-gen3-1105.tsv
+2e83e86a2b74ef81dbb0068d068880b5 *champion-map/coords-view-18.tsv
+c6f7694f90f844164e44ef73528c050b *champion-map/coords-view-20.tsv

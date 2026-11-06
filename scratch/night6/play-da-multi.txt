@@ -1,0 +1,85 @@
+对局记录（gen-3 逐回合）· 受试 = scratch/night4/D-a-s13.js ‖ 场 = 4 × v7 线上包 ‖ 1 局 · 5P multi · 温度 0.15（困难档）· seed 基 77000
+
+=== 第 1 局（受试坐 0 号位，multi）===
+  R 0 席0★ ジ(ji)         费0  ok
+  R 0 席1  ジ(ji)         费0  ok
+  R 0 席2  ジ(ji)         费0  ok
+  R 0 席3  ジ(ji)         费0  ok
+  R 0 席4  ジ(ji)         费0  ok
+  R 1 席0★ ジ(ji)         费0  ok
+  R 1 席1  枪(gun)         费1  ok
+  R 1 席2  枪(gun)         费1  ok
+  R 1 席3  枪(gun)         费1  ok
+  R 1 席4  枪(gun)         费1  ok
+  R 2 席1  ジ(ji)         费0  ok
+  R 2 席2  ジ(ji)         费0  ok
+  R 2 席3  ジ(ji)         费0  ok
+  R 2 席4  ジ(ji)         费0  ok
+  R 3 席1  枪(gun)         费1  ok
+  R 3 席2  枪(gun)         费1  ok
+  R 3 席3  ジ(ji)         费0  ok
+  R 3 席4  枪(gun)         费1  ok
+  R 4 席1  ジ(ji)         费0  ok
+  R 4 席2  ジ(ji)         费0  ok
+  R 4 席4  ジ(ji)         费0  ok
+  R 5 席1  枪(gun)         费1  ok
+  R 5 席2  枪(gun)         费1  ok
+  R 5 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 1/2（R6）
+  R 6 席1  ジ(ji)         费0  ok
+  R 6 席2  ジ(ji)         费0  ok
+  R 6 席4  ジ(ji)         费0  ok
+  R 7 席1  全息屏障(holo)         费1  ok
+  R 7 席2  枪(gun)         费1  ok
+  R 7 席4  枪(gun)         费1  ok
+  R 8 席2  ジ(ji)         费0  ok
+  R 8 席4  ジ(ji)         费0  ok
+  R 9 席2  枪(gun)         费1  ok
+  R 9 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/2（R10）
+  R10 席2  ジ(ji)         费0  ok
+  R10 席4  ジ(ji)         费0  ok
+  R11 席2  枪(gun)         费1  ok
+  R11 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 2/4（R12）
+  R12 席2  ジ(ji)         费0  ok
+  R12 席4  ジ(ji)         费0  ok
+  R13 席2  枪(gun)         费1  ok
+  R13 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/2（R14）
+  R14 席2  ジ(ji)         费0  ok
+  R14 席4  ジ(ji)         费0  ok
+  R15 席2  枪(gun)         费1  ok
+  R15 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 2/4（R16）
+  R16 席2  ジ(ji)         费0  ok
+  R16 席4  ジ(ji)         费0  ok
+  R17 席2  枪(gun)         费1  ok
+  R17 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 2/4（R18）
+  R18 席2  ジ(ji)         费0  ok
+  R18 席4  ジ(ji)         费0  ok
+  R19 席2  枪(gun)         费1  ok
+  R19 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/2（R20）
+  R20 席2  ジ(ji)         费0  ok
+  R20 席4  ジ(ji)         费0  ok
+  R21 席2  枪(gun)         费1  ok
+  R21 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 2/4（R22）
+  R22 席2  ジ(ji)         费0  ok
+  R22 席4  ジ(ji)         费0  ok
+  R23 席2  枪(gun)         费1  ok
+  R23 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 4/2（R24）
+  R24 席2  ジ(ji)         费0  ok
+  R24 席4  ジ(ji)         费0  ok
+  R25 席2  枪(gun)         费1  ok
+  R25 席4  枪(gun)         费1  ok
+        ⚑ 相抵：席 2/4（R26）
+  R26 席2  ジ(ji)         费0  ok
+  R26 席4  ジ(ji)         费0  ok
+  终局：胜者 = 席4 ‖ 回合 = 47 ‖ 血量 0† 1† 2† 3† 4† ‖ 受试造伤 0
+
+=== 出招构成（1 局合计，受试席）===
+    ジ(ji)×2

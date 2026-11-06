@@ -1,0 +1,36 @@
+{
+ "tool": "rankfit",
+ "arch": "S1",
+ "seed": 11,
+ "groups": 600,
+ "train": 300,
+ "hold": 300,
+ "poolFp": "9f189883",
+ "labelFp": "c8d0dffb",
+ "pop": 10,
+ "elite": 3,
+ "iters": 60,
+ "sig": 0.3,
+ "holdoutStart": {
+  "regret": 27.425391882731898,
+  "pair": 0.49683337174464165,
+  "top1": 0.44333333333333336,
+  "hitVal": 0.44666666666666666,
+  "tie": 0.26,
+  "ce": 7.916707861372961,
+  "n": 300
+ },
+ "holdoutBest": {
+  "regret": 3.7378796390746847,
+  "pair": 0.7438442037335792,
+  "top1": 0.6933333333333334,
+  "hitVal": 0.8133333333333334,
+  "tie": 0.26,
+  "ce": 1.8762585668235063,
+  "n": 300
+ },
+ "deltaTop1Pt": 25,
+ "deltaPairPt": 24.701083198893752,
+ "paramCount": 5258,
+ "v7ref": "js/bundled-champion-3p.js"
+}

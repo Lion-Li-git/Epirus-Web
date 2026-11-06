@@ -1,0 +1,14 @@
+{
+ "tool": "fit2",
+ "input": "v7",
+ "decisions": 600,
+ "fitOn": 300,
+ "holdout": 300,
+ "rows": 1227,
+ "top1Agree": 0.2866666666666667,
+ "meanRho": 0.3006533729049608,
+ "randomBase": 0.07768374255071107,
+ "l2": 0.01,
+ "paramCount": 5258,
+ "v7ref": "js/bundled-champion-3p.js"
+}

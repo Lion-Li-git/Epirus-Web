@@ -1,0 +1,92 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 300,
+ "groups": 180,
+ "trainG": 135,
+ "testG": 45,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1600,
+ "shapeBal": 1,
+ "teacher": "lasereye",
+ "keySplit": 1,
+ "rareOnly": "laserEye",
+ "rareFrac": 0.7,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 180,
+  "moved": 0,
+  "gone": 0,
+  "keys": 180,
+  "rare": 463723
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 135,
+    "teacherAgree": 1,
+    "teacherLl": -0.00004679525812495848,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.2,
+  "startLl": -3.100946116037819,
+  "agree": 1,
+  "ll": -0.00004679525812495848,
+  "wAgree": 1,
+  "nTest": 45,
+  "nTrain": 135,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "railgun",
+    "n": 9,
+    "hit": 9
+   },
+   {
+    "key": "ji",
+    "n": 27,
+    "hit": 27
+   },
+   {
+    "key": "charge#elec",
+    "n": 9,
+    "hit": 9
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

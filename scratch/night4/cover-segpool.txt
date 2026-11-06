@@ -1,0 +1,94 @@
+== DSTR5-s13-seg1（gen-3） ‖ 5P long ×12 ‖ 胜 8% ‖ 局长 103.0
+   自选: ring=475 ji=100 charge=25 proto=20 railgun=20 bigT=15
+   防御族份额 3.1% ‖ 质量判定 20 次（有效 3 半 0 白防 17） ⇒ 准确 15%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 8%
+   残血开局: drain 自选 0 ‖ 胜 42%
+== DSTR5-s13-seg10（gen-3） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 100.4
+   自选: ji=292 ring=290 bigT=92 tank=24 proto=21 cannon=5 holo=1
+   防御族份额 3.0% ‖ 质量判定 22 次（有效 3 半 0 白防 19） ⇒ 准确 14%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 42%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== DSTR5-s13-seg11（gen-3） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 100.3
+   自选: ji=257 ring=186 bigT=59 proto=53 cannon=17 tank=17 sword=1
+   防御族份额 9.0% ‖ 质量判定 53 次（有效 5 半 0 白防 48） ⇒ 准确 9%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 0%
+== DSTR5-s13-seg12（gen-3） ‖ 5P long ×12 ‖ 胜 33% ‖ 局长 101.8
+   自选: ring=347 ji=333 bigT=112 proto=73 tank=1 cannon=1 gun=1
+   防御族份额 8.4% ‖ 质量判定 73 次（有效 6 半 0 白防 67） ⇒ 准确 8%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== DSTR5-s13-seg13（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 101.8
+   自选: ji=315 ring=290 bigT=92 proto=54 cannon=13 sword=10 holo=2 tank=1
+   防御族份额 7.2% ‖ 质量判定 56 次（有效 7 半 0 白防 49） ⇒ 准确 13%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== DSTR5-s13-seg14（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 101.0
+   自选: ji=233 ring=199 bigT=63 cannon=29 sword=13 proto=8 drain=2 gun=1
+   防御族份额 1.5% ‖ 质量判定 8 次（有效 0 半 0 白防 8） ⇒ 准确 0%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 0%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== DSTR5-s13-seg15（gen-3） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 101.2
+   自选: ji=294 ring=278 bigT=89 sword=21 proto=16 gun=10 cannon=6 tank=3 holo=1
+   防御族份额 2.4% ‖ 质量判定 16 次（有效 2 半 0 白防 14） ⇒ 准确 13%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 33%
+   残血开局: drain 自选 1 ‖ 胜 33%
+== DSTR5-s13-seg16（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 100.2
+   自选: ring=380 ji=312 bigT=121 proto=9 cannon=8 sword=6 holo=2
+   防御族份额 1.3% ‖ 质量判定 11 次（有效 4 半 0 白防 7） ⇒ 准确 36%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== DSTR5-s13-seg2（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 102.2
+   自选: ring=362 ji=168 bigT=92 proto=28 charge=1 railgun=1
+   防御族份额 4.3% ‖ 质量判定 27 次（有效 1 半 0 白防 26） ⇒ 准确 4%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 42%
+   残血开局: drain 自选 0 ‖ 胜 0%
+== DSTR5-s13-seg3（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 102.2
+   自选: ji=336 ring=234 bigT=93 proto=32 gun=6 drain=3 tank=2
+   防御族份额 4.5% ‖ 质量判定 32 次（有效 1 半 0 白防 31） ⇒ 准确 3%
+   8P long: mine 自选 7 ‖ dualGun 0 ‖ 胜 8%
+   残血开局: drain 自选 2 ‖ 胜 33%
+== DSTR5-s13-seg4（gen-3） ‖ 5P long ×12 ‖ 胜 33% ‖ 局长 101.8
+   自选: ji=293 ring=287 bigT=92 proto=43 gun=11 cannon=10 tank=3
+   防御族份额 5.8% ‖ 质量判定 43 次（有效 4 半 0 白防 39） ⇒ 准确 9%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 17%
+   残血开局: drain 自选 1 ‖ 胜 8%
+== DSTR5-s13-seg5（gen-3） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 101.9
+   自选: ring=352 ji=259 bigT=112 gun=4 proto=3 cannon=1
+   防御族份额 0.4% ‖ 质量判定 3 次（有效 0 半 0 白防 3） ⇒ 准确 0%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 8%
+   残血开局: drain 自选 0 ‖ 胜 33%
+== DSTR5-s13-seg6（gen-3） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 102.3
+   自选: ring=273 ji=261 bigT=85 proto=25 tank=14 gun=8
+   防御族份额 3.8% ‖ 质量判定 25 次（有效 0 半 0 白防 25） ⇒ 准确 0%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 8%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== DSTR5-s13-seg7（gen-3） ‖ 5P long ×12 ‖ 胜 0% ‖ 局长 101.9
+   自选: ring=292 ji=291 bigT=88 proto=53 tank=8 cannon=3 drain=2
+   防御族份额 7.2% ‖ 质量判定 53 次（有效 3 半 0 白防 50） ⇒ 准确 6%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 33%
+   残血开局: drain 自选 0 ‖ 胜 8%
+== DSTR5-s13-seg8（gen-3） ‖ 5P long ×12 ‖ 胜 8% ‖ 局长 102.1
+   自选: ji=309 ring=297 bigT=93 proto=69 tank=10 gun=2
+   防御族份额 8.8% ‖ 质量判定 69 次（有效 9 半 0 白防 60） ⇒ 准确 13%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 8%
+== DSTR5-s13-seg9（gen-3） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 102.3
+   自选: ji=273 ring=217 bigT=69 tank=40 proto=27 gun=2 holo=1
+   防御族份额 4.5% ‖ 质量判定 28 次（有效 3 半 0 白防 25） ⇒ 准确 11%
+   8P long: mine 自选 0 ‖ dualGun 0 ‖ 胜 8%
+   残血开局: drain 自选 0 ‖ 胜 25%
+
+### 覆盖门判定（池级 = --packs 并集）
+  ✔ 主干 gun ‖ 自选 45
+  ✔ 主干 sword ‖ 自选 51
+  ✔ 主干 charge ‖ 自选 26
+  ✔ 主干 ring ‖ 自选 4759
+  ✔ 主干 bigT ‖ 自选 1367
+  ✔ 主干 railgun ‖ 自选 21
+  ✘ 防御原型（存在成员：份额 5-15% ∧ 准确 ≥25%） ‖ 最高份额 9.0% ‖ 池加权 4.8% ‖ 带内成员 无（准确 —）
+  ✔ 地雷（8P 自选 ≥2.4000000000000004） ‖ 8P 自选 7
+  ✔ 摄魂（残血桌自选 ≥2.4000000000000004） ‖ 自选 4
+  ✔ 自发 tank ‖ 5P 123 / 8P 46
+  ✘ 自发 snipe ‖ 5P 0 / 8P 0
+  － 只报不判：dualgun=0 mirror=0 curse=0 firestorm=0 taunt=0 transfer=3 mine=7 drain=13 cannon=233 tank=206 snipe=0 rod=0 purify=0 minit=0

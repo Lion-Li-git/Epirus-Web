@@ -1,0 +1,54 @@
+{
+ "mode": "esa",
+ "seed": 1103,
+ "evals": 119,
+ "pop": 14,
+ "games": 2,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "gamesPlanned": 238,
+ "gamesActualLoop": 1200,
+ "gamesActualHoldout": 608,
+ "gamesActualStartHoldout": 608,
+ "targetGames": 1200,
+ "netForwards": 179896,
+ "netCandScores": 1407530,
+ "trainMode": "multi",
+ "holdoutGames": 600,
+ "startFit": 0.6580507755173532,
+ "inLoopBest": 1.089066618220676,
+ "holdoutFit": 0.5755920023936834,
+ "holdoutFirst": 0.23,
+ "holdoutTop2": 0.5883333333333334,
+ "holdoutStartFit": 0.5791138586559506,
+ "holdoutStartFirst": 0.23333333333333334,
+ "holdoutStartTop2": 0.5933333333333334,
+ "dFirst": -0.003333333333333327,
+ "dTop2": -0.0050000000000000044,
+ "curve": [
+  {
+   "games": 120,
+   "best": 0.6900148689288796
+  },
+  {
+   "games": 300,
+   "best": 0.7654259595720038
+  },
+  {
+   "games": 600,
+   "best": 0.7654259595720038
+  },
+  {
+   "games": 900,
+   "best": 0.7937302655071657
+  },
+  {
+   "games": 1200,
+   "best": 1.089066618220676
+  }
+ ],
+ "secs": 7,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/arms/20261029-0030-S1-esa-seg-s1103.bak"
+}

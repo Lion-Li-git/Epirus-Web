@@ -1,0 +1,56 @@
+{
+ "mode": "esa",
+ "seed": 7,
+ "evals": 499,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "gamesPlanned": 1996,
+ "gamesActualLoop": 6000,
+ "gamesActualHoldout": 68,
+ "gamesActualStartHoldout": 68,
+ "targetGames": 6000,
+ "netForwards": 636129,
+ "netCandScores": 3932253,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 0.5143149411122083,
+ "inLoopBest": 1.1677998792657704,
+ "holdoutFit": 0.6835979399239964,
+ "holdoutFirst": 0.3333333333333333,
+ "holdoutTop2": 0.7666666666666667,
+ "holdoutStartFit": 0.5844172223165288,
+ "holdoutStartFirst": 0.26666666666666666,
+ "holdoutStartTop2": 0.6333333333333333,
+ "dFirst": 0.06666666666666665,
+ "dTop2": 0.13333333333333341,
+ "currency": "scoreMemberN.fit",
+ "arena": null,
+ "curve": [
+  {
+   "games": 600,
+   "best": 0.8870299402276275
+  },
+  {
+   "games": 1500,
+   "best": 0.9258493959931571
+  },
+  {
+   "games": 3000,
+   "best": 1.1677998792657704
+  },
+  {
+   "games": 4500,
+   "best": 1.1677998792657704
+  },
+  {
+   "games": 6000,
+   "best": 1.1677998792657704
+  }
+ ],
+ "secs": 25.8,
+ "startLabel": "夹具包 scratch/arms/P2-A1-fit2-S1o.bak",
+ "wrote": "scratch/arms/OLD-s7-6k.bak"
+}

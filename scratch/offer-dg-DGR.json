@@ -1,0 +1,59 @@
+{
+  "ts": "2026-11-01T09:31:02.518Z",
+  "rows": [
+    {
+      "pack": "scratch/arms/ECON-DGR-s7.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "mirror",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 5231,
+      "roundsMean": 45.2,
+      "drawRate": 0.36666666666666664,
+      "epHistogram": {
+        "0": 559,
+        "1": 2567,
+        "2": 2105
+      },
+      "beads": {
+        "none": 3223,
+        "e": 2008
+      },
+      "offered": {
+        "charge": 4672,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 2105,
+        "gun": 4672
+      },
+      "chosenWhenOffered": {
+        "charge": 2105,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 434
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 2692,
+        "charge": 2105,
+        "gun": 434
+      },
+      "nonJiKinds": 2
+    }
+  ]
+}

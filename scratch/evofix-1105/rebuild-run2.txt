@@ -1,0 +1,32 @@
+── ① 并集表（先出一版给谱系生成器读） 12:26
+── ② 生成 lineage-g3.tsv 12:26
+── ③ 三张表 12:26
+── ④ 三套投影 12:26
+── ⑤ 烘四页 12:27
+── 收尾 12:27
+  12 维不齐、不进表（proj-tsne 要求每维都是数）：无
+    t-SNE(perp=30, iters=500, seed=7)  kNN@10=0.454 ⇒ 39.5× ‖ Spearman=0.335
+  已写 champion-map/coords-gen3-1105.tsv（新增/覆盖列 xt yt xt3 yt3 zt3）
+    t-SNE(perp=30, iters=500, seed=7)  kNN@10=0.455 ⇒ 37.8× ‖ Spearman=0.328
+  已写 champion-map/coords-view-18.tsv（新增/覆盖列 xt yt xt3 yt3 zt3）
+    t-SNE(perp=7, iters=500, seed=7)  kNN@7=0.154 ⇒ 0.8× ‖ Spearman=0.289
+  已写 champion-map/coords-view-20.tsv（新增/覆盖列 xt yt xt3 yt3 zt3）
+投影口径 ✅ 870/870 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）
+谱系图补一行合成家族：16 枚旧槽位冠军 → 家族 0（排在最上面 ‖ 横轴取 metaTs 的 16 枚）
+§E440 权重去重：870 行 → 870 枚（100 组共摘 0 行）‖ 父边改指 0 条 ‖ 活槽现主(解析) T8-s114 在图上=是
+家族 17 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 6 枚
+已写 D:\code\Epirus-Web\champion-map\index.html（1157 KB，自包含、无外部依赖）
+投影口径 ✅ 870/870 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）
+谱系图补一行合成家族：16 枚旧槽位冠军 → 家族 0（排在最上面 ‖ 横轴取 metaTs 的 16 枚）
+§E440 权重去重：870 行 → 870 枚（100 组共摘 0 行）‖ 父边改指 0 条 ‖ 活槽现主(解析) T8-s114 在图上=是
+家族 17 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 6 枚
+已写 D:\code\Epirus-Web\champion-map\index-2v-all.html（1157 KB，自包含、无外部依赖）
+投影口径 ✅ 831/831 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）
+谱系图补一行合成家族：16 枚旧槽位冠军 → 家族 0（排在最上面 ‖ 横轴取 metaTs 的 16 枚）
+§E440 权重去重：831 行 → 831 枚（100 组共摘 0 行）‖ 父边改指 0 条 ‖ 活槽现主(解析) T8-s114 在图上=是
+家族 14 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 6 枚
+已写 D:\code\Epirus-Web\champion-map\index-2v-18.html（1125 KB，自包含、无外部依赖）
+投影口径 ✅ 39/39 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）
+§E440 权重去重：39 行 → 39 枚（0 组共摘 0 行）‖ 父边改指 0 条 ‖ 活槽现主(解析) T8-s114 在图上=⛔没了
+家族 3 个（来自 lineage.tsv，旧槽位冠军那一行是本台补的合成行）‖ 无家族号 0 枚
+已写 D:\code\Epirus-Web\champion-map\index-2v-20.html（427 KB，自包含、无外部依赖）

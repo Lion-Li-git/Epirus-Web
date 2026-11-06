@@ -1,0 +1,50 @@
+{
+ "mode": "cem",
+ "seed": 2005,
+ "evals": 434,
+ "pop": 14,
+ "games": 6,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "gamesPlanned": 2604,
+ "gamesActualLoop": 6076,
+ "gamesActualHoldout": 2408,
+ "gamesActualStartHoldout": 2408,
+ "targetGames": 6000,
+ "netForwards": 680220,
+ "netCandScores": 4985671,
+ "trainMode": "multi",
+ "holdoutGames": 2400,
+ "startFit": 0.7413180262821863,
+ "inLoopBest": 0.9939109042616386,
+ "holdoutFit": 0.5943672067978163,
+ "holdoutFirst": 0.23375,
+ "holdoutTop2": 0.5966666666666667,
+ "holdoutStartFit": 0.6003125589358307,
+ "holdoutStartFirst": 0.21375,
+ "holdoutStartTop2": 0.58,
+ "dFirst": 0.020000000000000018,
+ "dTop2": 0.01666666666666672,
+ "curve": [
+  {
+   "games": 784,
+   "best": 0.8788002362389968
+  },
+  {
+   "games": 1568,
+   "best": 0.8788002362389968
+  },
+  {
+   "games": 3136,
+   "best": 0.9939109042616386
+  },
+  {
+   "games": 4508,
+   "best": 0.9939109042616386
+  }
+ ],
+ "secs": 33.7,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/arms/20261029-0036-S1-cem-seg-s2005.bak"
+}

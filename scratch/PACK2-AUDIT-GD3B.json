@@ -1,0 +1,56 @@
+{
+ "tool": "tools/proto2/pack2-audit.mjs",
+ "pack": "scratch/arms/gd3b-ks-sb.bak",
+ "era": "代 3（段偏移修正 + obs3b 观测面）",
+ "v": 92,
+ "gen": 3,
+ "arch": "S1o",
+ "dims": {
+  "seatH": 16,
+  "actH": 8,
+  "hid": 32,
+  "hid2": 24,
+  "input": "obs3b",
+  "inter": 0,
+  "tinter": 0,
+  "gen": 3,
+  "keySplit": 1,
+  "dof": 415
+ },
+ "n": 7993,
+ "seg": [
+  {
+   "name": "seatEnc",
+   "off": 0,
+   "len": 1408,
+   "fanIn": 87
+  },
+  {
+   "name": "actEnc",
+   "off": 1408,
+   "len": 488,
+   "fanIn": 60
+  },
+  {
+   "name": "ctx",
+   "off": 1896,
+   "len": 4320,
+   "fanIn": 134
+  },
+  {
+   "name": "cand",
+   "off": 6216,
+   "len": 1752,
+   "fanIn": 72
+  },
+  {
+   "name": "policyHead",
+   "off": 7968,
+   "len": 25,
+   "fanIn": 24
+  }
+ ],
+ "fixtures": 720,
+ "candEncoded": 23967,
+ "dead": null
+}

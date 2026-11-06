@@ -1,0 +1,55 @@
+===== L5-D4a-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G4[scratch/ga-arms/L5-D4a-s13/long] 无一行脚本能以 >60% 击败它（最克「珠爆发(ジ→蓄电珠→电磁炮/摄魂)」35% · 基线 19.3%/300局）
+  FAIL  G4[scratch/ga-arms/L5-D4a-s13/multi] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」66.7% · 基线 15.7%/300局）
+  FAIL  G5[scratch/ga-arms/L5-D4a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 43% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/ga-arms/L5-D4a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 70% · 阈值 ≤25% · 关掉上线档）
+  PASS  G5带档[scratch/ga-arms/L5-D4a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 31% · 阈值 ≤40% · 带上线档 N=12）
+  FAIL  G5带档[scratch/ga-arms/L5-D4a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 62% · 阈值 ≤40% · 带上线档 N=12）
+===== GD3ALL-PUSHON-s41
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G4[scratch/night3/GD3ALL-PUSHON-s41/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」30% · 基线 17%/300局）
+  PASS  G4[scratch/night3/GD3ALL-PUSHON-s41/multi] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」30.3% · 基线 15%/300局）
+  FAIL  G5[scratch/night3/GD3ALL-PUSHON-s41/long] 面对"只防御不还手"必须能清场（实测防席夺冠 27% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/night3/GD3ALL-PUSHON-s41/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 40% · 阈值 ≤25% · 关掉上线档）
+  PASS  G5带档[scratch/night3/GD3ALL-PUSHON-s41/long] 面对"只防御不还手"必须能清场（实测防席夺冠 19% · 阈值 ≤40% · 带上线档 N=12）
+  PASS  G5带档[scratch/night3/GD3ALL-PUSHON-s41/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 32% · 阈值 ≤40% · 带上线档 N=12）
+===== D-a-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/night4/D-a-s13/long] 无一行脚本能以 >60% 击败它（最克「珠爆发(ジ→蓄电珠→电磁炮/摄魂)」85% · 基线 18%/300局）
+  FAIL  G4[scratch/night4/D-a-s13/multi] 无一行脚本能以 >60% 击败它（最克「激光剑连刺」99.3% · 基线 18.7%/300局）
+  FAIL  G5[scratch/night4/D-a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 63% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/night4/D-a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 50% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5带档[scratch/night4/D-a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 57% · 阈值 ≤40% · 带上线档 N=12）
+  FAIL  G5带档[scratch/night4/D-a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 50% · 阈值 ≤40% · 带上线档 N=12）
+===== CB-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/night4/CB-s13/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」100% · 基线 22.3%/300局）
+  FAIL  G4[scratch/night4/CB-s13/multi] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」100% · 基线 20%/300局）
+  FAIL  G5[scratch/night4/CB-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 73% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/night4/CB-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 74% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5带档[scratch/night4/CB-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 71% · 阈值 ≤40% · 带上线档 N=12）
+  FAIL  G5带档[scratch/night4/CB-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 73% · 阈值 ≤40% · 带上线档 N=12）
+===== W2-d4a-s13
+  PASS  G1 判别场必须让"会瞄"与"仪式"得出不同结论
+  PASS  G2 "会瞄"策略必须满足：无环时出手数 ≤ 有环时的 25%
+  PASS  G3[long] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  PASS  G3[multi] 5 席同一冠军：座位夺冠率极差 ≤ 15pt
+  FAIL  G4[scratch/night4/W2-d4a-s13/long] 无一行脚本能以 >60% 击败它（最克「珠爆发(ジ→蓄电珠→电磁炮/摄魂)」69% · 基线 17.7%/300局）
+  FAIL  G4[scratch/night4/W2-d4a-s13/multi] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」69.7% · 基线 14.7%/300局）
+  FAIL  G5[scratch/night4/W2-d4a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 55% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/night4/W2-d4a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 80% · 阈值 ≤25% · 关掉上线档）
+  PASS  G5带档[scratch/night4/W2-d4a-s13/long] 面对"只防御不还手"必须能清场（实测防席夺冠 38% · 阈值 ≤40% · 带上线档 N=12）
+  FAIL  G5带档[scratch/night4/W2-d4a-s13/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 69% · 阈值 ≤40% · 带上线档 N=12）

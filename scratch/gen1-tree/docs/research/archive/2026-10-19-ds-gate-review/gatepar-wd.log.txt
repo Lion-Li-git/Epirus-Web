@@ -1,0 +1,24 @@
+▶ 计划：6/16 个部分 | 并发 4 | 门 168/278 | 排序权重 = 门数（可用 --timing=<file> 换成实测）
+  起跑顺序：train-evo probe-instruments train-runner ship-promote ship-feas train-env
+  本机：18 核（并发上限 8 是给 train-runner/train-evo 内部的 worker 池留余量，不是核数限制）
+✘ RED   ship-promote          68.8s  20/21
+    ✘ D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读不出必须响 + 带内候选落盘  → 迷你臂必须跑通（exit=9）
+✔ GREEN probe-instruments     88.2s  33/33
+✘ RED   ship-feas             26.1s  12/14
+    ✘ D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hill05 挤掉、当选者 3P 场B/墙双 0"）：纯函数四向 + 缺栏即不合格 + 全否决必须响  → 开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点）
+    ✘ D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）  → 不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 [3P栏 n=20/aggr100/seat100] ‖ 实测打印的是：（没跑这一栏））
+✔ GREEN train-env            119.5s  4/4
+✘ RED   train-evo            423.0s  64/65
+    ✘ D162 训练/选择执行口径旋钮（v1.5.237 · E28）：默认关要**可逆**、开了要**真打到适应度**、没接的入口要**响亮**  → 默认 CLI 产物**一个字节都不许动**（并发臂不得污染门禁比对的基线文件） got=5c652e17e0d62781b9c3b4577820c84c29f69c95 want=d1a9a7c84b0852221329184c643c575a69fcedff
+✔ GREEN train-runner         936.4s  31/31
+⏳ 单独复跑（排除抢核与共享状态）：ship-promote …
+✘ ship-promote：单独复跑仍然红 ⇒ **真红**（退出码 1）
+⏳ 单独复跑（排除抢核与共享状态）：ship-feas …
+✘ ship-feas：单独复跑仍然红 ⇒ **真红**（退出码 1）
+⏳ 单独复跑（排除抢核与共享状态）：train-evo …
+⚠ train-evo：**并发下的假红** —— 单独复跑 299.4s 全绿
+   ⇒ 它不是产品坏，而是这个部分与别的部分**共享了可变状态**（CI 上每部分一棵干净树，所以 CI 看不到）。
+
+（墙钟 1286.2s ‖ 各部分实测耗时合计 1662.0s —— 并行下含抢核膨胀，只作参考；真串行口径见 GATE-SHIFTS.md）
+✘ 结论：有 2 个部分红：ship-promote(exit 1) ship-feas(exit 1) （红的部分已逐条单独复跑：真红 2 ‖ 并发假红 1）
+   （要认证就跑全 16 个部分：不带 --part 就是整轮）

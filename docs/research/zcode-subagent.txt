@@ -1,0 +1,237 @@
+接下来我来查看相关的 UI 文件和核心引擎接口。
+
+现在我来读取剩余的 UI 文件，并检查样式和政策/训练器接口。
+
+模态框是全屏固定的（`inset:0`, `z-index:50`），因此它在选中过程中会阻挡底层按钮。现在我来验证一下 `ui.js` 所依赖的冠军包加载路径的健壮性。
+
+我来核查一下 UI 中所有 `$('...')` ID 的引用与 `index.html` 的对应情况，并仔细检查几个遗留的可疑点。
+
+研究已完成。在撰写报告之前，我再对 `resolve.js` 中的复活触发线和 `mirror-copy` 珠子回退机制进行最后一次核实。
+
+审查完成。以下是我通读 `js/ui/ui.js`(1664 行)、`js/ui/bead-choice.js`、`js/ui/skill-tip.js`、`js/ui/rules-panel.js`、`js/core/state.js`、`js/core/resolve.js`、`js/core/play.js`,并对照 `index.html`/`css/style.css`/`js/train/policy.js`/`trainer.js`/`champion-pack.js`/`pool-draw.js` 后确信的问题清单。未列出的方面(出招链主流程、悔棋语义、bead 传递、元素 id 对应)核对后是干净的，见文末“核对无误的部分”。
+
+## 问题清单
+
+**1.(中)结算等待窗口内点「新对局」/换人数/换血量/「用内置冠军」会污染新对局**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:923-944`(setTimeout 闭包)、`:1626`(`btn-newgame`)、`:1608-1609`(sel-players/sel-hp)、`:561`(`useBuiltinChampion` 内调 `newGame`)
+- 描述:`doPickMulti` 在 160~280ms 的 `setTimeout` 里对 `B.state`(执行时才取的引用)补交 AI 的 `attemptAction` 并跑 `resolveActions/endTurn`。这几个入口都没有 `B.locked` 闸：若玩家在这个窗口内重开一局，闭包会把旧局已算好的 AI 出招打到**新局**上——新局 `round=0` 时 AI 席被提交行动、`resolveActions+endTurn` 空转(典型的：AI 席白得 +1 ジ),并追加一条伪造的「第 0 回合：你=【ジ】…」日志与 transcript(`roundLineParts` 对“没出手但活着”的席一律补印【ジ】),`persistBattle` 还会把它写进 `epirus.lastBattle`。此后该局的悔棋会 pop 错位(快照对应第 N 回合前、transcript 却多出第 0 回合伪条目)，日志第 0 回合永远删不掉。
+- 触发：出招后约 0.3 秒内点「新对局」等按钮(弹窗类有全屏遮罩挡住，这几个工具栏按钮没有)。
+- 若新局人数**少于**旧局，还会在 `attemptAction` 里对越界 pid 抛 `TypeError`(`state.js:192` 对 `undefined` 写 `lastTarget`),`setTimeout` 回调中断。
+- 严重度：中(触发窗口窄，但后果是新局数据级污染，玩家可感知)。
+
+**2.(中)玩家「回魂复活」回合被观战循环整个吞掉，且日志伪造一手【ジ】**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:942`(触发点)、`:838-868`(`autoRunRest` 循环)、`:818-822`(伪印)、`D:\code\Epirus-Web\js\core\resolve.js:1358-1362`(endTurn 给挑衅施放者挂 `reviveNext`)、`resolve.js:166-171`(startTurn 复活)
+- 描述:玩家当回合出【挑衅】且在结算中阵亡时，`endTurn` 会给玩家挂 `reviveNext`(回魂)。但 `doPickMulti` 的 setTimeout 只看 `B.state.p[0].hp <= 0` 就进入 `autoRunRest`,该循环的条件也是 `hp <= 0`,循环体内**只**给 pid 1..N-1 提交行动——下一回合 `startTurn` 把玩家复活(hp=1、无限能量)后，玩家永远得不到出招机会，复活回合被 AI 自动打完，回合末又按 R48 死回去。日志里这一回合还会因 `roundLineParts` 的兜底把玩家印成「你=【ジ】」(实际没出过手)。
+- 触发：玩家出挑衅的同一回合内被杀(如对面的枪 pri2 在挑衅结算后命中)，且场上还有其他存活者。
+- 严重度:中(回魂对人类玩家等于完全失效，特定序列 100% 复现)。
+
+**3.(中)双枪/镜面反射的「目标 2/2」弹窗无法取消，Esc 和点遮罩全部失效**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:871-881`(`pickSecondTarget` 无「取消」按钮、不设 `B.picking`)、`:891-899`(第一步弹窗在跳第二步前已 `B.picking = null`)、`:1185-1186`(Esc/遮罩取消都以 `B.picking` 非空为前提)
+- 描述:第一个目标弹窗有「取消」且设了 `B.picking`;但选中目标 1 进入第二步时 `B.picking` 被清空，`pickSecondTarget` 的弹窗又没给取消项——玩家此时按 Esc、点遮罩都毫无反应，只能被迫在剩余对手里选一个。这与同文件 v1.5.80 注释里“目标/蓄能的弹窗必须能取消”的自定契约直接矛盾。
+- 触发:3 人以上局使用双枪射手或镜面反射，进入第二步选目标后反悔。
+- 严重度:中(功能性缺口，非崩溃)。
+
+**4.(低)终局弹层颜色写错：AI 获胜/平局都显示金色，`cls` 变量是死代码**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:989-996`
+- 描述:`cls` 算出 `'red'` 后从未使用;内联样式判的是 `w === 'red'`(w 是 winner,取值只有 0/'draw'/pid,恒 false)。于是「💀 玩家3 获胜」用 `--gold` 而非红/红色系显示。纯显示瑕疵。
+- 严重度:低。
+
+**5.(低)对局中切换难度时，「中途换档」记录的回合号差一**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:1621`
+- 描述:结算窗口内 `B.roundStarted` 为 true,此时改难度记录为「第 N 回合起改…」,但已算好的 AI 出招仍按旧档执行，新档实际从第 N+1 回合生效。导出记录的头部因此差一回合。
+- 触发:在出招后的 0.3 秒窗口(或任何 roundStarted 为 true 的瞬间——实际只有该窗口)拖动难度下拉。
+- 严重度:低。
+
+**6.(低)MULTI_ONLY 技能在残局(存活≤2)被置灰时，按钮文案仍写「多人模式」**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:227,234`
+- 描述:多人局打到只剩 2 人时，双枪/镜面/全息因 `canUseSkillInMode` 的存活数判定被禁用是正确的，但 `ct` 文案统一显示「多人模式」，玩家会误以为“这局不是多人所以不能用”，而非“残局人数不足”。置灰逻辑本身无误，仅提示误导。
+- 严重度:低。
+
+**7.(低)镜面反射复制「蓄能」时，人类玩家没有珠型选择，固定得电珠**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:921`(人类非蓄能技能 `bead` 恒为 null)、`D:\code\Epirus-Web\js\core\resolve.js:748-749`(`opt.broad || 'elec'` 兜底)
+- 描述:主动蓄能会弹窗问电珠/爆珠；但当人类用镜面反射复制到 AI 的蓄能时，`applyMirrorSelf` 读复制者自己的 `opt.bead`——人类这条路是 null,固定落 `'elec'`。AI 因为 `BeadChoice.of` 总是返回非空值(`js/ui/bead-choice.js:19-21`)反而有偏好。属行为不一致的边角，非崩溃。
+- 触发:人类出镜面反射且复制对象的行动是蓄能。
+- 严重度:低。
+
+**8.(低)导入冠军包的异常处理有两个小洞**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:1526-1566`、`:1568-1581`
+- 描述:① `FileReader` 没挂 `onerror`,读文件失败时静默无任何提示;② `champReasonText` 没映射 policy/policy2 的 `action-feature`、`dof`、`gen`、`seg` 等失败原因,统一落到“不是有效的冠军 JSON(xxx)”,与 `version/length/feature/hidden` 的详细中文提示不对齐。解析主路径(`champion-pack.js extract`、`P.loadGame`、`store.load`)本身对损坏输入都是安全的，已逐一核对。
+- 严重度:低。
+
+**9.(低)终局收缩输入非法值时显示与行为分叉，且会把已存的好值覆盖掉**
+- 位置:`D:\code\Epirus-Web\js\ui\ui.js:73-91`
+- 描述:输入负数时 `sdOpts()` 返回 null(回退模式自带起点),但输入框仍显示该负数;此时 `change` 触发 `saveSd()` 把 `{}` 写进 localStorage,覆盖掉之前合法的保存值。下次进页面静默回到默认 100。
+- 严重度:低。
+
+## 核对无误的部分(任务关注点，确认没有问题)
+
+- **出招链主流程**(点击→选目标→`attemptAction`→`resolve`):加锁、快照、`ensureRound`、基于回合前克隆状态的“同时决策”、事件切片渲染、`evCursor` 维护均正确；技能格置灰与 `Play.legalActions`/`computeCost` 同源，各时点(开局、startTurn 后、结算后、悔棋后)都重建，未发现按钮状态与引擎不同步的路径。
+- **悔一步语义**:`ui.js:911` 的快照确实取在 `ensureRound/startTurn` 之前,`undo()` 恢复的就是“刚打的那回合开始前”，transcript 弹栈与快照一一对应(除问题 1 的污染场景外)；没有发现状态泄漏。RNG 不回拨(AI 重打会变招)与“一局限悔一次”是注释里写明的有意设计;`B.oppMid` 不随悔棋回滚属极小瑕疵。
+- **bead 传递**:人类(弹窗二选一)与 AI(`chooseAIMulti.finish` 校验 + `BeadChoice.of` 兜底)两条路的 `opt.bead` 都正确到达 `attemptAction`/`resolve`,与 `play.js autoGameN` 的 `beadOf` 口径一致。
+- **元素 id**:ui.js 全部 48 个 `$('…')` 引用与 rules-panel.js 的 5 个 `getElementById` 均能在 index.html(或其自身生成的 HTML)中命中，无悬空引用。`ensureLog`(`ui.js:1647`)是永不调用的死代码，无副作用;`B.snap/B.aiHistory/B.warnedChampNoTrain/B.aiFallback` 为只写不读的死字段。
+- **多人边角**(除问题 2 外)：目标弹窗只列存活者、死亡席位回合行显示【已淘汰】、观战回合进 transcript、回魂徽章显示，均正确;池抽签在 bundle 未加载(not-yet)时安全降级为单包，不会抛错。
+
+
+
+现在我来读取引擎文件。
+
+两个裁决文档和引擎已读取完毕。现在我来检查一下旧程序，以交叉验证之前的实现逻辑。
+
+旧程序仍然是 2 玩家的（EpirusN.py 是一个训练数据生成器）。现在我来 grep 一下新的裁决文档，确认我注意到有偏差的特定条目，并检查剩下的几个旧文件。
+
+我来核对一下 R12 的旧程序声明与其他旧文件，并检查一下剩下的一些细节。
+
+对比完成。以下为结构化清单。所有行号以当前工作区文件为准：旧权威源 `D:\code\Epirus\README.md`（v2.1.0）、旧程序 `D:\code\Epirus\Epirus0.4.py` / `EpirusN.py`（附 `Epirus0.3.py`、`双十一拍手.py` 佐证）、新裁定 `D:\code\Epirus-Web\docs\RULES-2P.md` / `RULES-NP.md`、引擎 `D:\code\Epirus-Web\js\core\rules.js` / `state.js` / `resolve.js`。
+
+# 一、旧规则有、新实现完全没做的
+
+**结论：没有缺失的技能或规则条目。** README 30 张可选用卡 + 7 个隐藏技能全部在 `rules.js:37-88` 有定义并接入结算。唯一整块未采用的是：
+- **“贷款”条款**（README §关于贷款：消耗全部ジ、每 2 ジ扣 1 血）→ 新实现为“资源不足直接无法发动”。已有裁定记录（RULES-2P §1.2“电脑游戏口径”），**有意裁定，不算缺陷**。
+- 快速/欧皇/吸血鬼模式按约定不报（§8.1 也有显式登记）。
+
+# 二、实质偏离旧 README、且 RULES-2P/NP 无裁定记录的（重点）
+
+**B1. 过载炮“可打穿防御与反弹”——README 无此语义，裁定文档只字未提。**
+- 旧文：过载炮三条效果只有“受到 1 点伤害”，无穿透表述。
+- 新实现：`resolve.js:1076` 投递 `pierce: { defense: true, reflect: true }`；`rules.js:83` desc 自标“**新规：可打穿防御与反弹**”。
+- 裁定记录：RULES-2P §过载炮（R42 段，:309-314）完全未提穿透；§5 防御矩阵也没有过载炮行。全仓唯一记载是研究笔记 `docs/research/SUPPORT-TAXONOMY-2026-10-17.md:25`（行为描述，非裁定）。
+- 判断：**有意改动但缺裁定记录**（desc 自己写“新规”，说明是故意的）。
+
+**B2. 过载炮“被任何攻击类技能抵消”的前置反制——与 README、与本裁定文档自相矛盾。**
+- 旧文：“可以与攻击性技能抵消”，按优先级原则应是同层相抵/高阻低（炮 pri3 应阻止枪 pri2）。
+- 新实现：`resolve.js:945-963` 在 clashPass **之前**有一段“过载炮反制”：任何 ATK_EFFECT 技能**指回炮手**即作废炮（含低优先级的枪），且**反制方的攻击照常落地**（单向作废，非“抵消”）。注释自称“用户设计：任何攻击类技能都能抵消过载炮”。
+- 裁定记录：RULES-2P §过载炮写的却是“‘可以与攻击性技能抵消’→ **同层攻击相抵对其生效**”——这句描述的是旧行为，与代码现在的单向反制**直接矛盾**（代码里炮同时还在 ATK_EFFECT 里参与 clashPass，但前置反制已把多数场景吃掉）。
+- 判断：**疑似实现与文档脱节**——行为像是某次用户口头裁定，但 R/N 文档没跟上，文档反而留了一句会被代码证伪的话。2 人局可观察差异：A 炮 B 枪互指时，新实现 = 炮废、枪命中；按 README = 枪被炮阻止、炮命中。
+
+**B3. 双大雷互轰“互不无效化”（bothBig）——违反 README 优先级原则，理由未记录。**
+- 旧文：“优先级相同的攻击可以相互抵消”；大雷效果 2“使除防御技能外[目标]技能无效”。
+- 新实现：`resolve.js:883,894` `bothBig` 时双方大雷都完整结算（各吃 2 电 + 各自禁用）；大雷也不在 ATK_EFFECT，clashPass 不会相抵。
+- 裁定记录：仅 RULES-NP.md:341 一句行为描述（“双方互为目标且都用大雷时互不无效化”），**无理由、未对照 README 的同优先级相抵原则**。
+- 判断：**疑似有意裁定但缺理由记录**。
+
+**B4. 大雷的禁用豁免名单：代码比 README/R29 多了“小雷”。**
+- 旧文：3 回合禁用豁免 = {防御、反弹、金刚盾、ジ}；R29（RULES-2P:243）也只写这四个。
+- 新实现：`resolve.js:349` `BIG_T_EXEMPT = [GUARD, REFLECT, JINSHIELD, JI, MINI_T]`；另外大雷效果 2 的无效化也跳过小雷（`resolve.js:894` `ta.key !== SK.MINI_T`）。
+- 裁定记录：理由（小雷 pri5 已先结算，追溯作废/禁用是时序错误）只写在 `resolve.js:342-348` 代码注释（称“user ruling”），**RULES-2P/NP 均无此条**。
+- 判断：**有意裁定、文档漏记**。
+
+**B5. 地雷触发上限：README“最多只能触发两个”被多人口径推翻，且两份裁定文档自相矛盾。**
+- 旧文：特殊 2“地雷可以相互触发，但是最多只能触发两个”。
+- 新实现：`resolve.js:415-445` `mineResolveAll`——直接触发**无上限**、间接触发合并一波；N20 自己的例子就是“2 雷被直接攻击 = 3 次事件”（3 颗雷触发）。
+- 裁定记录：RULES-NP.md N20 写明“直接触发没有次数上限”但**未提 README 的“最多两个”上限**；RULES-2P.md:298 至今仍保留“最多触发两个”的旧句——2P 文档与 NP 文档/代码三方不一致。
+- 判断：N20 是用户裁定（有意），但**对旧文上限的取舍未记录**，且 2P 文档残留矛盾句。
+
+**B6. R13 自身的小矛盾：文档把“地雷”列进狙击干扰枚举，代码不认。**
+- RULES-2P:118 枚举“枪/激光剑/坦克/摄魂/电磁炮/过载炮/激光眼/**地雷**等”；代码 `rules.js:107` `ATK_EFFECT` **不含 MINE**（地雷既不干扰狙击也不参与同层相抵）。按 R13 自己的宽口径原则（“会对狙击手造成伤害/反制”）地雷确实不该干扰，代码是对的，**是文档枚举写多了**。判断：文档瑕疵。
+
+# 三、点名条目的字面差异（旧文原句 → 新行为 → 记录 → 判断）
+
+**1. 狙击枪的判定/爆头**
+- 爆头概率：旧文“3轮判定，若攻击者均获胜”→ `resolve.js:142` `judge3` = 3×1/2 = 1/8，**忠实**（旧程序 0.4/N 是单次 `randint(0,8)==0` = 1/9，新实现反而比旧程序更贴原文）。
+- **爆头以主弹命中为前提**：`resolve.js:1234` 仅 `res.result === 'land'` 后才掷爆头——目标用八卦阵判定挡下主弹时不掷爆头。README 未写此条件，RULES-2P R13/爆头段也未记。判断：**疑似实现取舍、未记录**（“额外减少一滴血”的文义支持新读法，但属未记录的口径）。
+- 干扰口径：“对**该玩家**（狙击手）使用带攻击效果技能才无效”（v1.5.13 澄清）+ 转移伤害不干扰（v1.5.137）→ 前者已记录（R13/np-test D20）；**后者只写在 `resolve.js:1214-1219` 代码注释**，RULES-2P 未提。判断：前者有意裁定；后者**裁定漏记**。
+
+**2. 雷击之枪的连锁**
+- 成环无效果：`resolve.js:822-838` 沿指向图找环（含三人环 A→B→C→A），环上全体作废——忠实且比旧文“两两互雷”更强，记录于 v1.5.138/N5。
+- 非环链“**从最开始的进行结算**”：实现为按 `turnOrder` 座位轮换序逐边结算（`resolve.js:839`）。代码注释断言“先手序就是‘从最开始’”，但 N≥3 且轮换相位使链首不先结算时两者结果不同（例：P1→P2→P3 链，P2 先手则 P3 被废；按链首 P1 先结则 P3 幸免）。N5 只写“按座位序逐边结算”，**未讨论 README 原句**。判断：**疑似实现错误（N≥3 边缘场景）或至少未记录的口径替换**。
+
+**3. 避雷针的能量回馈**
+- 情形 A 回馈：“获得所有雷电效果技能花费的能量，**这些能量维持1回合**”→ `resolve.js:805` 直接 `ep += cost`，**永久入账、无过期**。R31 的转述是“这些ジ**维持到本回合结束**，即立即入账可用”——这句与代码（永不过期）也对不上：若真“维持到本回合结束”，本回合行动已锁定，等于白给不到。判断：**R31 转述含糊，代码行为（永久化）强于 README 字面，取舍未记录**。
+- 其余细节忠实：雷系使用者各受 1 电（R31 对“使用者”的归属读法有记录）、窗口基 4 递减恰好覆盖“接下来 3 回合”、一次性消耗（rodGuard）忠实。
+
+**4. 聚能环**
+- 首次 3 费 +1、第 2 次 +2、第 3 次起 +3、后续零费：`state.js:138` + `resolve.js:1006-1008`，忠实。被无效化断链（R10）、被废一手不算 lastSkill（R61）均已记录且与过载炮 R43 的边界写清。**无问题**。
+
+**5. 过载炮三段**
+- 费用/效果循环、第 2 次需 ≥1 ジ（R55）、被无效化仍计次（R43）、第 3 发清目标当回合收入（R56）均忠实且已记录。
+- 残余字面差异：第 3 发“受到1点伤害**并**失去所有ジ”——`resolve.js:1076-1077` 伤害与清ジ分离，**伤害被八卦阵挡下时清ジ仍然生效**（原型制御不挡清ジ已有 R23 明文，八卦阵这一格未记录；与 R23 精神一致，轻微）。穿透与反制两处大偏差见 B1/B2。
+
+**6. 转移伤害**
+- 转给“转移者指定目标”（v1.5.136）与 R33 文本一致；“坦克不可转移”忠实于 README 坦克条。
+- **R33 文档夸口、代码没做到**：R33 写“可转移伤害=除坦克外一切伤害；**含爆头等额外伤害**”，但爆头走 `rawDamage`（`resolve.js:1240`）、天火也走 `rawDamage`（`resolve.js:1117`），两者**根本不经过转移拦截**，实际不可转移；只有走 `deliverDamage` 的主伤害可转。判断：**文档与实现不一致**（2 人局因“转移目标=狙击手⇒affect 成立⇒爆头不触发”而不可观察，多人局可观察）。
+- 地雷波的可转移性（埋雷当回合即炸不可转、后续 buff 雷可转一跳）：代码注释自称“v1.5.136 用户裁定 N6”（`resolve.js:376-380,426`），但 RULES-NP 的 N6 是大雷条，**RULES 文档查无此裁定**。判断：**裁定漏记**。
+
+**7. 挑衅**
+- 义务判定、R41 宽口径攻击清单、R54（净化只清 pending 不清 active）、必须指向挑衅者（v1.5.138）均忠实且已记录。
+- 两处未记录边界（仅代码注释）：多挑衅者“打中任一即履约”（`resolve.js:1330-1335`）、挑主全灭时义务物理不可履行⇒免罚。判断：合理推断，**轻微漏记**。
+
+# 附：隐藏技能验证与一处勘误
+
+- 7 个隐藏技能全部实现且口径有记录：铁索连环（一次性，v1.5.18 修正回“下一次”字面，R46/N9/D30）、反复横跳（N15）、聚光炮（N16）、合二为一（N17，`>=2` 有记录）、吸血鬼公爵（R47）、回魂（R48/R49）、梦魇（R50/R51）。
+- **聚光炮/反复横跳伤害绕过全部架势**：走 `rawDamage`（`resolve.js:695,710`），无防御/反弹/八卦判定机会，也不参与相抵。README 给聚光炮“优先级为 2”，按攻击语义应可被架势处理；R4 优先级表列了 2 但 N16 未说明“不进架势判定”。判断：**疑似未记录的口径**（输出目标摆防御时差异可见）。
+- 勘误：R12 称“旧程序表格坦克被反弹不反射”——实测 `Epirus0.3.py`、`Epirus0.4.py`、`EpirusN.py`、`双十一拍手.py` 四份旧表坦克×反弹格均为 `[0,-1]`（**反弹生效**），旧程序与 README 一致；R12 的裁定方向（以文档为准）不受影响，但引证有误。
+- 金刚盾：README 原文“判定获胜则**被攻击者**受到1点伤害”（防守技赢了反自伤，显系“攻击者”笔误）；实现为攻击者反受 1（R15 补充表记录了行为，未注明原文矛盾）。旧程序无此卡，无法交叉验证。判断：合理笔误修正，**建议补一句勘误记录**。
+
+**总评**：忠实度整体很高，绝大多数偏离都有 R/N 编号且带理由。真正需要补裁定/修文档的是二类五条（B1-B5），其中 B2（过载炮反制与 RULES-2P 原文直接矛盾）和B5（两份裁定文档自相矛盾）优先级最高；三类的转移伤害 R33 夸口与小雷链序（N≥3）次之。
+
+
+
+policy.js 和 trainer.js 已审查完毕。现在我来审查 bots.js，并检查相关核心文件 (state.js, play.js) 中关于 autoGame 决策时机的问题。
+
+bots.js 和 play.js 已读取。注意，`play.js` 中的 `autoGameN` 和 `autoGame` 都是在任何 `attemptAction` 之前收集所有选择——两者在决策时序上是一致的。现在我来检查 `evo.js` 的结构。
+
+在 `setMirrorGames` 中发现了一段死代码（第 3868-3873 行）。我来阅读一下 `pickChampionByWinRate` 的剩余部分，并检查 `ui.js` 是如何驱动决策的，以确保时序逻辑一致。
+
+页面在应用前也从克隆的行动前状态中计算所有选择 —— 时机语义一致。我来检查一下 `state.js` 中 `cloneState` 对 `rng` 的处理，然后阅读服务器文件。
+
+关键服务器发现如下。现在我来完整阅读一下 `runTrainNOne` 以检查池清理路径，以及并行处理文件。
+
+Worker 环境复制种子（seed）的路径需要验证。我来检查一下 `EPIRUS_SEED0` 是在哪里设置的，以及 `scoreMemberN` 是否使用了 `Math.random`。
+
+研究已完成。所有六个文件以及相关核心文件（`play.js`、`state.js`、`rules.js`、`ui.js`、`bead-choice.js`、`opp-champs.mjs`）均已阅读。以下是仅包含确凿发现的验证报告。
+
+# 审查结论
+
+## 1. policy.js 特征提取
+
+**未发现崩溃/NaN 路径。**核实过的点：`freshPlayer`（state.js:15-32）初始化了所有被裸读的字段（`stickers/chains/vampHeal/ringStreak/...`），`mk()` 给每张卡默认 `pierce: {}`（rules.js:31），`cost.ok`/`def.cost||0`/softmax 的 max 减除都有防溢出处理；`slotPids[si]` 越座时走 `op=null → 填 0`（policy.js:276-277）。
+
+**确认现状（按任务要求只确认）：**N>5 人局时 `OPP_SLOTS=4`（policy.js:32）使逐槽特征、T 关系块、B 效果块、技能历史都只覆盖血量最低的 4 个对手（policy.js:273-286、291-295、300-319），其余对手只剩聚合特征（`anyOp/sum/agg`，全对手覆盖）。是信息截断，不是越界；与任务描述一致。
+
+**[低·潜伏] `MASK_STAMP` 从未自增，掩码切换不失效缓存** — policy.js:393/398-400/531/540。`setFeatMask`（policy.js:68-80）改 `MASK` 但不 bump `MASK_STAMP`，而 `FV_CACHE`/`PRE_CACHE` 的失效条件里 `stamp === MASK_STAMP` 恒真（常量 0）。触发条件：同一 state 对象（同 round、同 events.length）在改掩码前后各算一次特征——会静默拿到旧掩码的向量。现状所有调用方（train-worker.mjs:57-60、tools/probe-*.mjs）都是启动时设一次，故为潜伏问题，但缓存失效机制本身就是死的。
+
+## 2. evo.js 冠军挑选与 rng
+
+**[中] 热启动旧包的 `legacyFrom` 标记在链路上必然丢失 → 旧冠军静默切换到 v7 候选口径** — policy.js:849-864（`embedLegacy` 不拷贝 `legacyFrom`）、policy.js:491（`mutatePolicy` 用 `slice`）、evo.js:3014/3018（`seedChampion` 用 `params.slice()`）。`Float64Array.slice` 丢弃自定义属性；`loadAny`（policy.js:890-898）嵌入旧形状后标记也没了。触发条件：server 热启动读 v5/v6 旧包或带 `lv` 的 v7 容器（train-server.mjs:85-98 `loadSeed`、:389-397 `loadSeedN` 都走 `loadAny`）。影响：v1.5.64 专门为防这个建的 `lv` 标记在训练管线的第一代就失效，`LEGACY()` 退回 `shapeOf`（v7 形状 → false），种子按"它从没训过的候选口径"被评分与选拔（policy.js:446 注释记录过同类后果：破墙伤害 12.25→7.70、目标退化成枚举序）；且 `runTrainNOne` 的 elite 按引用保留（train-server.mjs:588/604），种子对象可一路进名人堂成为终局产物，错误口径固化（re-pack 时无 `lv` 可写）。
+
+**[低中] `pickChampionByWinRate` 的兜底绕过双门槛** — evo.js:4098：`band` 为空时（所有候选都未过基准门槛或健康门槛）`best = topCand.params` 无条件选出。触发条件：末代 [champion+lastTop] 全体不过"任一基准 >50%"门。影响：2P 落盘路径（train-server.mjs:321-359）只在 N 人路径重查健康门（:697-707），基准门与健康门都不会在写盘处复查 → 硬门槛声明的"任何一条基准 <50% 不许当冠军"在整池皆输时被绕过。
+
+**[低·潜伏] `GATE_NAMES` 未声明** — evo.js:4058 唯一引用、全文件无定义；靠 `GATE_ALL=true` 短路才不炸。翻成 false 即 ReferenceError。
+
+**rng 流：**主线程路径已核实可复现——2P（train-server.mjs:274-276）与 N 人（:508-511）都 `P.setRng` + `__seedSandbox`，`breed()`/`finishStep` 的 `Math.random` 在 vm 沙箱内被盖住；N 人 breeding 用独立 `breedRng`（:608）。`scoreMember`/`pickChampionByWinRate`/`mirrorHealth` 的对局种子全是纯函数。唯一的洞见第 5 节（worker 播种）。另：`seedOfGen` 只混 `tag.length` 导致等长对手名共享局种子——代码注释自己标了"已知 bug 没修"（evo.js:354-368），属已知账，不重复报。
+
+## 3. bots.js 六人格
+
+**[低中] 模块级 `__mem` 跨局/跨席泄漏** — bots.js:50-64。`noteOpp`（唯一写入者）只被 `pickBalanced`（:142）与 `pickAdaptive`（:198）调用，而 `reactOffense`（:99 读 `__mem.oppMightDefend`）还被 `pickAggro`（:119）/`pickDefend`（:135）/`pickAntiDef`（:167）调用。触发条件：不含 balanced/adaptive 的对局（如 quickEval 的 defend/aggro 席）读到上一局残留的记忆；`resetBotMem` 在 evo/server 评测环路里无人调用（只有 tools/probe-plan-ablation.mjs:118 等量具调）。影响：同一脚本行为依赖"它之前跑过什么"，换跑序结果漂移——仓内 ladder.mjs:346 自己实测漂 1.4pt。
+
+**[低] `makeRhythm` 相位差一** — bots.js:618 `seq[(state.round||1) % seq.length]`：round=1 → 下标 1。三个节奏型（reflectmix/reflecttank/defreflectgun，:625-629）与 `pickGuardGun`（:640，round1 → GUN）第 1 回合出的都不是注释宣称的第一个动作（"反弹→枪→坦克"实为枪起手）。触发条件：必然。影响：脚本实际序列与文档/历史标定错一格；三个都在 quickEval 门槛名单里（trainer.js:73）。
+
+**[低] `pickWhiff` 注释与实现不符** — bots.js:608 返回 `bad[bad.length-1]`（legal 列表最后一个买不起的），不是注释说的"最贵的那张"。仍是一个合法空放，功能无害。
+
+**死代码确认：**`pickFarmer` 导出但不在 `BOT_PICKS`/任何池（evo.js:95-98 注释已记录为墓碑）；`pickDeepSaver` 的地雷分支注释自认 0 命中（bots.js:1198）；`fname.tankline`（trainer.js:74）是名单外键，无消费者。"买不起硬出"路径：未发现——所有 `aff(k)` 都查 `legal` 的 `affordable`，兜底 `affOrJi`/JI 恒 0 费，引擎侧 play.js:67/101 还有一道 sanitize；唯一例外 `pickWhiff` 是有意的（`whiffOk` 白名单）。
+
+**顺带（非 bug 但明显是合并事故）：**evo.js:3868-3873 `setMirrorGames` 体内嵌了一段重复的 `setSeatGames` 函数声明；train-worker.mjs:109-126 `trainEnv.kill`/`setKillField` 块整段重复两次（幂等，无行为影响）。
+
+## 4. trainer.js localStorage
+
+未发现真缺陷。`load()`（trainer.js:15-42）对 parse-error/版本/维度都处理了并清掉坏数据；`importJSON` 有 `canUpgradeStateOnly` 升级路径。一个已知设计（非 bug）：版本不符时**读取即删除**本地冠军（:25），回滚站点版本会导致冠军不可逆丢失——注释表明是有意为之，仅提示。
+
+## 5. train-server.mjs 并发/资源/SSE
+
+**[中] 2P 训练调用无 `.catch`** — train-server.mjs:891 `runTrain(...)` 未 await、未 catch。触发条件：runTrain 内任何异常（如 writeFileSync 失败、champRealWr 引擎异常）。影响：Node ≥15 下未处理 rejection 直接崩掉整个服务进程；若进程幸存则 `running` 永远 true，后续 2P 请求全部静默丢弃。
+
+**[中] `/reset` 不中止在跑的训练** — train-server.mjs:908-913 只清 `running/runningN/seeds`，async 循环继续。触发条件：训练进行中调 `/reset`。影响：① 立即可启动第二场并发训练，与旧场共享 `clients`、并发写 bundle 与 index.html（`bumpChampionVersion`）；② 旧场 `maybeEarlyStop` 读被清空的 `seeds`（:159），早停的 leader 保护静默失效；③ 旧场结束时把 `running` 置 false（:366），守卫进一步漏气。
+
+**[中] worker 无异常防线** — train-worker.mjs:157 消息处理器整体无 try/catch；paralleltrain.mjs:29-38/85-99 的 `runOne` 只挂 `message`，无 `error`/`exit` 监听、无超时。触发条件：worker 内 `scoreMemberN`/`scoreMember` 抛一次异常 → worker 未捕获异常 → 主线程 Worker 对象 'error' 事件无监听 → 整个 server 进程崩；若 worker 静默挂起则 `Promise.all` 永不结算，而墙上时钟检查在 await 之后（train-server.mjs:587）→ 永久卡死且 `runningN` 锁死。注释（paralleltrain.mjs:91-94）声称 `m.error` reject 防"挂到 30 分钟"，但它只覆盖带内错误。
+
+**[低中] `runTrainNOne` 无 try/finally，异常路径泄漏 worker 池** — train-server.mjs:505 建池后仅 6 个显式 return 走 `relPass`（:419）；任何 await 拒绝（worker error 穿透 paralleltrain.mjs:94、hall 评估、writeBundleMP 失败）→ 16 线程的池不关。`SEEDS===1&&ROUNDS===1` 快路径（:801）直接 return，没有外层 finally 兜底（borrow 路径 :840-843 才有）。
+
+**[低] 2P 第二个 /train 请求静默吞掉** — train-server.mjs:890-892：先发 `start` 事件，`running` 已 true 则什么都不做。这正是 v1.5.55 在 N 路径修掉的事故（:882-886 有显式报错），2P 路径漏修。影响：第二个客户端拿到 start 后永远等不到 done。
+
+**[低·潜伏] 多种子路径下 `EPIRUS_SEED0` 到不了 worker** — 共享池在 runTrainN:806 创建，而 env 在 runTrainNOne:504 才写（worker 的 env 是创建时拷贝）；`evalPopN` 的消息里没有 seed0 字段（paralleltrain.mjs:121-144），与 :504 注释"借用池时靠 evalN 消息里的 seed0"不符。worker 侧沙箱保持未播种（train-worker.mjs:27 seed=0 直接 return）。现状 worker 计算里唯一的沙箱 `Math.random` 消费点是环强迫（evo.js:2360，默认关）→ 当前无可观察影响，但任何新开 env 旋钮引入 Math.random 消费即破坏多种子可复现性。
+
+SSE 断连清理本身正确（train-server.mjs:854-855 `req.on('close')` 移除 + `sse()` try/catch）。
+
+## 6. 训练与实战口径一致性（结论：一致，未发现偏差）
+
+逐条核实：`autoGameN`（play.js:57-79）与 `autoGame`（play.js:94-117）都是**先收集全部 picks、后统一 `attemptAction`**——所有席位基于行动前状态；页面三条 AI 路径（ui.js:844-853 纯 AI 多人、:857-880 观战、:911-927 人类回合）都用 `preState = cloneState(B.state)` 在**任何落子之前**算所有人的选择（人类回合里 AI 的 preState 克隆在 `attemptAction(0,...)` 之前，:915 vs :921）。蓄能珠兜底公式两处逐字相同（play.js:57/103 与 bead-choice.js:14-16）；`slotSalt` 训练每局设（evo.js:260/1541）、页面按 matchSeed 设（ui.js:119）且 `cloneState` 会保留（state.js:244）并回挂 rng。未发现训练评估与页面实战的决策时机分歧。

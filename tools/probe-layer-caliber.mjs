@@ -21,7 +21,10 @@ const PACKS = arg('packs', 'js/bundled-champion-3p.js,docs/artifacts/cbs1s2-band
 const TEMP = Number(arg('temp', 0.15)), EPS = Number(arg('eps', 0.2)), EPSK = Number(arg('epsk', 5)), EPSMODE = arg('epsmode', 'soft');
 const GAMES = Number(arg('games', 120));
 const ENGINE = ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'];
+  /* v:92（gen-3/arch2）容器要在 sandbox 里才解得开：`policy.js::unpack` 见到 v:92 会转交 `EpirusPolicy2`，
+   *   少了这个文件 ⇒ 新代包一律"读不出权重，跳过"（11-03 实测：进池体检的防御质量栏对**每一枚 gen-3 包**都报"没量到"）。
+   *   与 `tools/score13.mjs` / `tools/eval-5p.mjs` 的补法同一条。 */
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js'];
 const HARDWIRED = /policyChooserN\(params, 0\.15\)/g;
 
 /* 写死处的**期望数量从源码现算**（不许冻结成常数 —— METHODOLOGY 52 刚为 75/62 那种常数记过一笔账） */

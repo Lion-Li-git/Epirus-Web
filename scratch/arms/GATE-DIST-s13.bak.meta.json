@@ -1,0 +1,119 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GATE-DIST",
+ "parent": "scratch/ga-arms/L5-D4a-s13.js",
+ "seed": 13,
+ "lr": 0.02,
+ "steps": 800,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "pack:docs/artifacts/e234-out/D4a.js",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 605,
+  "moved": 195,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "reflect": 99,
+   "ji": 237,
+   "gun": 160,
+   "guard": 158,
+   "sword": 24,
+   "bagua": 105,
+   "charge": 15,
+   "snipe": 2
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.685,
+    "teacherLl": -0.7526833907764614,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.29,
+  "startLl": -15.412037687978483,
+  "agree": 0.685,
+  "ll": -0.7526833907764614,
+  "wAgree": 0.647349106161199,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "reflect",
+    "n": 26,
+    "hit": 4
+   },
+   {
+    "key": "ji",
+    "n": 58,
+    "hit": 52
+   },
+   {
+    "key": "gun",
+    "n": 47,
+    "hit": 46
+   },
+   {
+    "key": "guard",
+    "n": 43,
+    "hit": 15
+   },
+   {
+    "key": "sword",
+    "n": 5,
+    "hit": 4
+   },
+   {
+    "key": "bagua",
+    "n": 21,
+    "hit": 16
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/ga-arms/L5-D4a-s13.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

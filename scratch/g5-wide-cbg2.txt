@@ -1,0 +1,6 @@
+##### CBG-s13-seg1.bak
+  FAIL  G5[scratch/ga-bands/CBG-s13/CBG-s13-seg1/long] 面对"只防御不还手"必须能清场（实测防席夺冠 31% · 阈值 ≤25% · 关掉上线档）
+  PASS  G5[scratch/ga-bands/CBG-s13/CBG-s13-seg1/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 21% · 阈值 ≤25% · 关掉上线档）
+##### CBG-s13-band3.bak
+  FAIL  G5[scratch/ga-bands/CBG-s13/CBG-s13-band3/long] 面对"只防御不还手"必须能清场（实测防席夺冠 100% · 阈值 ≤25% · 关掉上线档）
+  FAIL  G5[scratch/ga-bands/CBG-s13/CBG-s13-band3/multi] 面对"只防御不还手"必须能清场（实测防席夺冠 74% · 阈值 ≤25% · 关掉上线档）

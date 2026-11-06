@@ -100,7 +100,11 @@
   const AVAILABLE_2P = skills.filter(function (s) { return MULTI_ONLY.indexOf(s.key) < 0; });
 
   // “带攻击效果”技能（狙击易受影响 / 可抵消攻击同层相抵也用它判定）
-  const ATK_EFFECT = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.LASER_EYE, SK.CANNON];
+  /* 双枪射手按"两个枪"计入（用户 11-05 裁定）：它此前只在自己那两份伤害里借 `via=SK.GUN` 查表
+   * （反弹/地雷口径对），但交锋与狙击干扰这两处读的是这张表 ⇒ 双枪既不参与同层相抵、
+   * 也打断不了狙击，与 `docs/RULES-NP.md` N3「按枪的口径各结算 1 点」和优先级原则相违。
+   * 优先级仍取卡表的 3（原始规则只给枪单独标了 2，双枪未特别标注 ⇒ 按"未特别标注均为 3"）。 */
+  const ATK_EFFECT = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.LASER_EYE, SK.CANNON, SK.DUAL_GUN];
   // 挑衅合规 = 对敌方造成伤害的攻击向技能（含特殊类攻击性技能）— R41
   const TAUNT_SATISFY = [SK.GUN, SK.SWORD, SK.TANK, SK.SNIPE, SK.DRAIN, SK.RAILGUN, SK.CANNON, SK.LASER_EYE, SK.DUAL_GUN];
   const LIGHTNING = [SK.RAILGUN, SK.MINI_T, SK.BIG_T];
@@ -119,7 +123,7 @@
 
   // 连续使用计数族（聚能环）；激光眼连续由 lastSkill 判断
 
-  // N9/N14：3-5 人启用全部技能（含多人专用 双枪射手 / 镜面反射）
+  // N9/N14：多人桌（2~8 人）启用全部技能（含多人专用 双枪射手 / 镜面反射）
   const AVAILABLE_MULTI = skills;
 
   const MODES = {
@@ -131,14 +135,14 @@
      * ② **`minPlayers` / `maxPlayers` 两个字段删掉**：v1.6.5 实测**全库零消费者**（只剩 `np-test` 自建夹具里的一行字面量，不读 MODES），
      *   真拦人数的从来是页面下拉 + 旧 `syncModeOptions` 的置灰。本版把人数变成页面上独立的一根轴之后，
      *   `long` 也可能只开 2 人（`#sel-players`=2 × `#sel-hp`=5）⇒ 这个字段就从"没人读的死装饰"变成**会说谎的字段**。
-     *   人数的边界现在只有一个来源：`index.html` 的 `#sel-players`（2~5）。
+     *   人数的边界现在只有一个来源：`index.html` 的 `#sel-players`（2~8）。
      * ⚠ 这一条是**规则表换代**：`rules.js` 是指纹五件套之一 ⇒ 指纹变、门 **D16** 会红。处理按 v1.5.166 的先例：
      *   先证明既有三个模式的读数**逐位不变**（同种子配对复跑、落盘字节比对，见 CHANGELOG v1.6.5），
      *   再把新指纹 + 这段证据写进两个 bundle 的 `meta.rulesFingerprint`/`fingerprintRefresh`
      *   —— **权重字节不动、不 promote、不换包**，所以老用户拿到的还是同一颗冠军。 */
     standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
-    multi: { name: '多人模式(3-5人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
-    multi4: { name: '多人模式(4血·2-5人)', hp: 4, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.6.5：= multi 那一套 + 一格血
+    multi: { name: '多人模式(2-8人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
+    multi4: { name: '多人模式(4血·2-8人)', hp: 4, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.6.5：= multi 那一套 + 一格血
     /* v1.4.0 长程模式（5 血）—— 用户 2026-09-12 提出：线下靠多人混乱达成平衡，
      * 程序里 3 血让最优线"太明显"。算术上确实如此：v1.3.60 实测 ep 收入只有 +1/回合
      * （resolve.js:501 只有 ジ 给），所以任何 ≥2 ジ 的卡都要 2+ 回合攒钱，而任何多回合轨迹
@@ -165,7 +169,7 @@
      *   ⚠️ 同时记下我这次自抓的假效应：在 `temp=0.15` 随机场里三档"自然态"差到 −3.8pt 且"超 2SE"，但主体出手 = 0
      *      ⇒ 那只能是 `legal` 集合变长扰动 softmax 分母的抽样噪声，**不许当强度证据**（官方考卷逐位相同正好反证）。
      * ⇒ 用户裁定取 ≤2。行为变化范围见 CHANGELOG v1.5.174（新旧引擎同种子配对复现，不是估计）。 */
-    long: { name: '长程模式(5血·2-5人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 2, maxRounds: 140 }
+    long: { name: '长程模式(5血·2-8人)', hp: 5, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 2, maxRounds: 140 }
     /* v1.5.65（第五轮复核 §4-2，第四轮就提过）：**multi 的终局收缩必须落进回合上限内**。
      * 病：multi 不设 `suddenDeath` ⇒ 走全局 `SUDDEN_DEATH = 100`，而回合上限是 `MAX_ROUNDS = 60`
      * ⇒ **收缩在多人局永不触发** ⇒ "不打"零代价（守到哨声就行），场 B 的严格胜率上限恒为 0（实测 60 回合 100% 平局）。

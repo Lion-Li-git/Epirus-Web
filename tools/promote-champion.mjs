@@ -26,7 +26,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, degeneracyVerdict } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -427,6 +427,27 @@ console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_ro
 console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r2) {
   return r2 + ' ' + (100 * brd.roleShares[r2]).toFixed(1) + '%';
 }).join(' · '));
+/* ===== 2026-10-29（DS 落的反退化门 · 千问 13:4x 按实测改成**记录栏**，升阻断等用户点名） =====
+ * 病是真的，而且尺上有数：一只"只**反弹**"（`reflect`，cost=0 的后手防御；**不是** 3EP 的镜面反射 `mirror`，后者 0.3%）
+ *   的笨蛋在这套 arena 上夺1 **65.3% > v7 40.4%**（机制：反弹把敌方枪/坦克伤害记为**自己的** source，长局全灭后按累计伤害判胜）
+ *   （锚 `scratch/ladder-anchor.json` ‖ `node tools/proto2/ladder.mjs --guard=…` 现在正确红，exit 4）。
+ *   ⚠ DS 原注释写 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，那是**我的归因错**：
+ *     同一枚尺上 reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，引用要带剂量。
+ * 但"60% 这条线当阻断"现在站不住，两条都是这一次量出来的（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）：
+ *   ① **池里就有人在上面**：全池 30 枚同口径（long ‖ multi 各 20 局）扫，≥60% 的有 **5 枚**
+ *      `G12H1 66.4‖72.3 · R-s123 71.0 · N5L-30 66.6 · v7l2c-101 63.0‖63.1 · SHIPPED-Ldemo 63.0`
+ *      ⇒ 门一上就否掉 1/6 个在册成员。而"只会一招"属哪一层，是你 10-28 那句裁度（单包只判"任何风格都不该有的缺陷"、能力覆盖归整池），不是我能从数里推的。
+ *   ② **门自己的剂量不够**：promote 缺省 20 局/模式 ⇒ 同一枚包 20 局读 63.0%、60 局读 **51.9%**（`SHIPPED-Ldemo`），
+ *      带内跨档摆动最大 12.6pt ⇒ 这条线在缺省剂量下**跨批可翻**，红绿量的不是包，是剂量。
+ * ⇒ 所以现在**只打印、不阻断**；接线保留"两模式各判、取更严的那个"（与上面"广度取严的进阻断"同形，10-25 用户裁定）。
+ *   要升阻断：用户点名后在本段末尾补 `fails.push(...)`，并把 `EPIRUS_BREADTH_GAMES` 缺省抬到 60——否则 ② 会让同一枚包判出两个结果。
+ *   样本 < 100 个非ジ出手 ⇒ 判"不判"（样本不足不是合格），这条留 DS 的原形状；本轮全池最小 n = 482，没有一枚走这条路。 */
+const dgL = degeneracyVerdict(brd), dgM = degeneracyVerdict(brdM);
+const dgStrict = (dgM.share || 0) > (dgL.share || 0) ? dgM : dgL;      /* 取严 = 两模式里占比更高的那一个 */
+const fmtDg = (dg) => (isFinite(dg.share) ? (100 * dg.share).toFixed(1) + '%（' + (dg.key || '—') + ' · n=' + dg.N + '）' : '读不出（' + dg.reason + '）');
+console.log('   反退化栏（非ジ最大单卡占比 ‖ 两模式各判、取更严 ‖ **只记录，不阻断**）：long ' + fmtDg(dgL) + ' ‖ multi ' + fmtDg(dgM)
+  + ' ⇒ 取严判 `' + dgStrict.level + '`（阈值 ' + (100 * dgStrict.maxShare) + '% ‖ 剂量 ' + Number(process.env.EPIRUS_BREADTH_GAMES || 20)
+  + ' 局/模式 ‖ 这一档跨档摆动实测最大 12.6pt）' + (dgStrict.fail ? ' ‖ 若升阻断这一枚会被拒（等用户裁）' : ''));
 /* ===== v1.5.71（第五轮复核 §4-2）：**狙击场探针** —— 只记录，**暂不阻断** =====
  * 标定（40~60 局/包）把复核建议的判据否掉了：复核建议"靶向率 ≥20%"，但**它没有判别力** ——
  * 种子冠军 45.3% / eco-34 47.7% / 线上包 43.8%，全都远高于均匀 25% ⇒ 谁也分不开。
@@ -464,7 +485,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
   try {
     const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', SRC], { cwd: ROOT, encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
     const outTxt = String(gr.stdout || '') + String(gr.stderr || '');
-    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [] };
+    gateDrafts = { exit: (gr.status == null ? 'null' : gr.status), blocking: [], recorded: [], band: [], unrun: [], g6: {}, g4Pool: null, g4Blocking: [], candRows: 0, cells: {}, margins: {} };
     for (const ln of outTxt.split('\n')) {
       /* v1.5.89③：`UNRUN` = 该格**跑不了 / 不可判**（量具自己报的第三态，见 gate-drafts 的 gate()）。
        * 它既不是 FAIL、更不是 PASS ⇒ 单独收集并**醒目打印**（"不得当作通过"）。 */
@@ -476,6 +497,10 @@ if (!process.argv.includes('--skip-gate-drafts')) {
       if (mu) {
         const uKind = mu[1] || null, uName = mu[2].trim();
         const uIsRef = /^G[3-6]\[(线上包|元测试)/.test(uName);
+        /* 不可判也是"判到了" ⇒ 计入候选行。**只数候选自己的 G4/G5 格**：G3 那两行的名字是 `G3[long]`，
+         *   不带 `线上包` 前缀 ⇒ 早先那版按"非参照"计数，把在位包的座位行算成了候选行，
+         *   于是门读不出包时照样印「✅（判到 2 行）」（11-03 worktree 变异当场抓出来的）。 */
+        if (!uIsRef && (/^G4\[/.test(uName) || /^G5\[/.test(uName) || /^G5带档\[/.test(uName))) gateDrafts.candRows++;
         const uD = unrunDisposition(uKind, uIsRef);
         /* v1.5.284（Qoder §20-2 点名：DS 的 v1.5.283 只修了 FAIL 分支，UNRUN 这条路漏了）：
          * `statusOf` 会产出 `UNRUN:缺` 这种**同样可解析**的格式 ⇒ 重复打印时 UNRUN 也会被 push 两遍
@@ -496,6 +521,7 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 若把参照行也当阻断：① 任何候选都被连坐（换包实际只能靠 --force）；② 会把"候选不行"这个
        * **错误结论**传给人 —— 与 v1.5.78 想治的"把没过的当成过了"是同一类错误的反向版本。 */
       const isRef = /^G[3-6]\[(线上包|元测试)/.test(nm);
+      if (!isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm) || /^G5带档\[/.test(nm))) gateDrafts.candRows++;
       /* v1.8.44（10-28 午后 · DS 复查挖出来的）：**带档行以前既不进阻断、也从不打印** ⇒ 用 `promote --dry`
        * 复跑 G5 的人**输出里根本没有 40 档那一格**（DS 就是这样把 ZCode 的"带档 49%"判成"复现不出来"的，
        * 它读到的 30% 是**关档**那一行）。根因是阻断正则 `/^G5\[/` 匹配不到 `G5带档[` ⇒ 那一行只落到
@@ -504,6 +530,29 @@ if (!process.argv.includes('--skip-gate-drafts')) {
        * 怎么在代码里表达，都在待裁里（ACCEPTANCE-LINES §四⑧），不由这次措辞/可见性改动代裁。 */
       if (!isRef && /^G5带档\[/.test(nm)) {
         if (gateDrafts.band.indexOf(nm) < 0) gateDrafts.band.push(m[1] + ' ' + nm);
+      }
+      /* v1.9.x（11-04 晨班千问 · 14:3x）：**PASS 格也带上数字**。
+       * 动因：用户的上线判据是"所有阻断里最多差一项、且该项超限 ≤15pt"——这个判据要比较的是**边际**，
+       * 而旧输出只在 FAIL 时印实测值 ⇒ 两枚 0 阻断的包（现在全库就 AK3-s7 一枚）比不出谁离悬崖更近。
+       * 实测踩点：`AK3-s7` 在 n=300 时"最克格 47.3%"这个数字**不是从 G4 行来的**，是从"反制者期望损失"
+       * （只记录面板）偶然露出的；n=600 复量后边际从 12.7pt 缩到 7.8pt，光看回执正文看不出来。
+       * ⚠ 只加可见性：阻断集合、阈值、gate-drafts 判定与 `--dry` 行为**一字不动**。 */
+      if (!isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm) || /^G5带档\[/.test(nm))) {
+        /* 键必须带**门名**：`G4[包/long]`、`G5[包/long]`、`G5带档[包/long]` 三格的括号里是同一个
+         * `包/long`，只取括号会把它们叠成一格、最后写的盖掉前面的（60 局冒烟实测：只剩带档 4 条）。
+         * 参照行另判一次：`isRef` 的正则 `^G[3-6]\[` 匹配不到 `G5带档[` ⇒ 线上包的带档行会漏进来，
+         * 这里不改 `isRef`（它同时管着"判到 N 行"的计数口径），只在本行自己的采集里用更宽的形状。 */
+        const tag = (/^(G[3-6][^\[]*)\[/.exec(nm) || [, 'G?'])[1];
+        const inner = (/\[([^\]]*)\]/.exec(nm) || [, nm.slice(0, 24)])[1];
+        if (/^\[?(线上包|元测试)/.test(inner)) { /* 参照行不收 */ }
+        else {
+          const cellKey = tag + '[' + inner + ']';
+          const g4v = /最克「([^」]*)」\s*([0-9.]+)%/.exec(nm);
+          const g5v = /实测防席夺冠\s*([0-9.]+)%/.exec(nm);
+          const thr = /^G4\[/.test(nm) ? 60 : (/^G5带档\[/.test(nm) ? 40 : 25);
+          if (g4v) gateDrafts.margins[cellKey] = { verdict: m[1], val: Number(g4v[2]), thr, what: '最克「' + g4v[1] + '」', disp: tag.split('(')[0] + '[' + inner.split('/').slice(-2).join('/') + ']' };
+          else if (g5v) gateDrafts.margins[cellKey] = { verdict: m[1], val: Number(g5v[1]), thr, what: '防席夺冠', disp: tag.split('(')[0] + '[' + inner.split('/').slice(-2).join('/') + ']' };
+        }
       }
       if (m[1] === 'FAIL' && !isRef && (/^G4\[/.test(nm) || /^G5\[/.test(nm))) {
         /* v1.5.283（DS · Qoder §F-1 点名交给我）：**同一格会被印两遍** ⇒ 旧代码把阻断**数两遍**，
@@ -528,6 +577,14 @@ if (!process.argv.includes('--skip-gate-drafts')) {
      * `meta.gateDrafts.g6` 恒 `{}`（旧包也一样）。跨行版：标题与 detail 之间的 `\n\s*`。 */
     const mg6 = /G6\[([^\]]+)\] 靶向率[^\n]*\n\s*实测 ([\d.]+)%/g; let t6;
     while ((t6 = mg6.exec(outTxt))) gateDrafts.g6[t6[1]] = Number(t6[2]);
+    /* T2（11-03 · **只记录不阻断**）：G4 那 8 格的**期望损失**（gate-drafts 用同一批已算好的读数汇的 mean/中位/>50% 格数）。
+     * 为什么要它：G4 的 headline 只有 max ⇒ 「最克 99.7%」与「最克 61%」都读成一个"红"，也看不出是**只有一格克它**还是**到处都克它**。
+     * 解析不到 ⇒ `cells` 留空，下面那行明写"读不出"（与 g4Pool 同罪），**不许**把空读成 0。 */
+    const mc = /G4CELLS\[([^\]]+)\] mean=([\d.]+)% 中位=([\d.]+)% 格数=(\d+) 输多赢少\(>50%\)=(\d+)\/(\d+) 最克=(\S+?) ([\d.]+)% n=(\d+)/g; let tc;
+    while ((tc = mc.exec(outTxt))) {
+      gateDrafts.cells[tc[1]] = { mean: Number(tc[2]), median: Number(tc[3]), cells: Number(tc[4]),
+        over50: Number(tc[5]) + '/' + tc[6], worst: tc[7], worstPct: Number(tc[8]), n: Number(tc[9]) };
+    }
     /* v1.5.129（用户裁定②）：把 **G4 克制表的口径 id** 与**这一轮自己越过的 G4 行**分别留下 ——
      * `np-test D67` 靠它们把"线上包 G4 全红"从硬红降为"**已记录的例外**"，**且只在口径 id 相等时认账**。 */
     const m4p = /G4POOL\s+([0-9a-f]{8})/.exec(outTxt);
@@ -543,10 +600,33 @@ if (!process.argv.includes('--skip-gate-drafts')) {
     if (!gateDrafts.g4Impl) {
       console.log('   ⚠ 没能解析到 `G4IMPL` 实现身份 id ⇒ 同上，例外**不算留痕**（gate-drafts 少了那一行？）');
     }
+    /* 11-03：**「0 条 FAIL」不等于「全过」**。gen-3（v:92）包曾因 `gate-drafts` 的 sandbox 少加载 `policy2.js`
+     *   而整体 exit 64 ⇒ 候选一行未产，旧代码只看 `blocking.length` ⇒ 印成「✅ 候选自己全过」= 静默假绿。
+     *   按本仓既有规矩（UNRUN 第三态 / 「崩了不能记成体检没过」）：判不到 = 这道门没判 ⇒ 阻断并写明是没跑成。 */
+    if (!gateDrafts.blocking.length && !gateDrafts.candRows) {
+      fails.push('行为门没判到候选的任何一行（gate-drafts exit=' + gateDrafts.exit + ' ‖ 候选行数 0）〔G4/G5 **未运行** ⇒ 不许读成"全过"〕');
+    }
     console.log('   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：' +
-      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；') : '✅ 候选自己全过'));
+      (gateDrafts.blocking.length ? '✗ ' + gateDrafts.blocking.join('；')
+        : (gateDrafts.candRows ? '✅ 候选自己全过（判到 ' + gateDrafts.candRows + ' 行）'
+          : '⛔ **候选一行都没判到**（gate-drafts exit=' + gateDrafts.exit + '）⇒ 这是**没跑成**，不是全过')));
     console.log('   G5 带上线档（= **玩家实际遇到的形状**，阈值 ≤40；上面那条阻断判的是关掉上线档的 ≤25 ‖ **这一行只记录、不阻断**）：' +
       (gateDrafts.band.length ? gateDrafts.band.join('；') : '（没解析到带档行 ⇒ 这一格**读不出**，不许当"带档没问题"）'));
+    /* 逐格数字（PASS 也印）：上线判据比的是**边际**，见上面 margins 采集处的动因。阈值沿用各自常量，不新判一条。 */
+    {
+      const mk = Object.keys((gateDrafts && gateDrafts.margins) || {});
+      if (mk.length) {
+        console.log('   G4/G5 逐格数字（**PASS 也印，只为比较"离悬崖多远"** ⇒ 判定与阻断集合一字不动）：' +
+          mk.map((k) => {
+            const c = gateDrafts.margins[k];
+            const tag = c.disp || k.split('/').slice(-2).join('/');
+            const room = (c.val <= c.thr ? '余 ' + (c.thr - c.val).toFixed(1) + 'pt' : '超 ' + (c.val - c.thr).toFixed(1) + 'pt');
+            return tag + ' ' + c.what + ' ' + c.val + '%/' + c.thr + '%（' + room + '）';
+          }).join(' ‖ '));
+      } else if (gateDrafts.candRows) {
+        console.log('   （逐格数字没解析出来：gate-drafts 的措辞改了 ⇒ 这一行**只是看不见数字**，判定仍按上面那条走）');
+      }
+    }
     const refFails = gateDrafts.recorded.filter(function (x) { return x.indexOf('参照(不阻断) FAIL') === 0; });
     if (refFails.length) {
       console.log('   ⚠ 参照行（**不阻断**）：' + refFails.length + ' 条 —— **在位包自己没过** ⇒ 这是"该换包"的信号，\n      ' +
@@ -559,6 +639,18 @@ if (!process.argv.includes('--skip-gate-drafts')) {
         (uBlock ? '' : '\n      （剩下的都是"基线太弱 ⇒ 候选压着克制表打"或参照行 ⇒ 只记录、不阻断）'));
     }
     console.log('   G6 靶向率（只记录不阻断）：' + JSON.stringify(gateDrafts.g6));
+    /* T2（11-03）：反制者的**期望损失**——同一批 G4 读数汇出来的 mean/中位/几格>50%，**不进阻断、不改红绿**。
+     *   动机（今天的实测，不是推测）：CBG-s13 只印"最克 99.7%"读起来像"一格坏了"，而同一天 BAS 两枚满手反击族被克到 96~98%
+     *   ⇒ 需要一条能把"只有一格克它"和"到处都克它"分开的记录，但它**不该**当门槛（门槛是 G4 的 max，用户已裁）。
+     *   解析不到 ⇒ 明写"读不出"，不许把空对象读成 0。 */
+    const cellKeys = Object.keys(gateDrafts.cells);
+    console.log('   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：' +
+      (cellKeys.length
+        ? cellKeys.map(function (k) {
+            const c = gateDrafts.cells[k];
+            return k + ' mean=' + c.mean.toFixed(1) + '% ‖ 中位 ' + c.median.toFixed(1) + '% ‖ >50% 的格 ' + c.over50 + ' ‖ 最克「' + c.worst + '」' + c.worstPct + '%（n=' + c.n + '）';
+          }).join('\n      ')
+        : '⛔ **读不出**（没解析到 G4CELLS 行 ⇒ gate-drafts 版本比这行旧或 G4 段没跑；不许当"没问题"）'));
   } catch (e) {
     console.log('   ⚠ G4/G5 行为门未能运行（不阻断，但**别当通过**）：' + String(e && e.message || e));
     gateDrafts = { error: String(e && e.message || e) };

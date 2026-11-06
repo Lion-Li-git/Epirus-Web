@@ -1,0 +1,42 @@
+{
+ "mode": "ga",
+ "seed": 7101,
+ "evals": 600,
+ "pop": 12,
+ "games": 2,
+ "n": 5,
+ "elite": 4,
+ "sig0": 0.2,
+ "trainMode": "long",
+ "holdoutGames": 60,
+ "startFit": 0.7309977858532548,
+ "inLoopBest": 0.8689741285243138,
+ "holdoutFit": 0.2756829377106844,
+ "holdoutFirst": 0.06666666666666667,
+ "holdoutTop2": 0.26666666666666666,
+ "curve": [
+  {
+   "evals": 60,
+   "best": 0.6652749236126012
+  },
+  {
+   "evals": 156,
+   "best": 0.7945741432295517
+  },
+  {
+   "evals": 300,
+   "best": 0.7945741432295517
+  },
+  {
+   "evals": 456,
+   "best": 0.7945741432295517
+  },
+  {
+   "evals": 600,
+   "best": 0.8689741285243138
+  }
+ ],
+ "secs": 35.8,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/a2w-S1-gaflat.json"
+}

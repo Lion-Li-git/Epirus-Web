@@ -36,13 +36,13 @@ export function parsePromote(txt) {
   if (self) { out.raw.dmg = Number(self[1]); out.raw.draw = Number(self[2]); }
   const stance = t.match(/无威胁\(对手ジ<5\)时摆架势 = ([\d.]+)%/);
   if (stance) out.raw.stance = Number(stance[1]);
-  const fa = t.match(/场A 被集火还手率 = ([\d.]+)%/);
+  const fa = t.match(/被集火还手率 = ([\d.]+)%/);   /* 11-03 深夜：实际文本是「→ 场A〕被集火还手率」——旧式「场A 」前缀永不匹配（同座位行一族） */
   if (fa) out.raw.fieldA = Number(fa[1]);
-  const feas = t.match(/可行性（[^）]*）：([^\n]*)/);
+  const feas = t.match(/可行性[^\n]*/);
   if (feas) {
-    const blk = feas[1];
+    const blk = feas[0];   /* 11-03 深夜：promote 实际印「可行性〔五道地板…〕（…）：✗…」——旧正则要求「可行性（」从未匹配过 ⇒ 座/墙/场B 三条一直读不出被判红 */
     const wall = blk.match(/墙 ([\d.]+)\/局/); if (wall) out.raw.wall = Number(wall[1]);
-    const seat = blk.match(/座位 ([\d.]+)pt/); if (seat) out.raw.seat = Number(seat[1]);
+    const seat = blk.match(/(?:座位|极差) ([\d.]+)pt/); if (seat) out.raw.seat = Number(seat[1]);   /* 11-03 深夜：promote 实际印「极差 Npt」（旧格式「座位 Npt」保留兼容）——格式漂移曾把真值读成—被判红 */
     const fb = blk.match(/场B 清场 ([\d.]+)\/局/); if (fb) out.raw.fieldB = Number(fb[1]);
     out.feasOk = /✅ 五道全过/.test(blk);
     out.feasFails = (blk.match(/✗ ([^（；]+)/g) || []).map((s) => s.slice(2).trim());
@@ -73,14 +73,31 @@ export function parsePromote(txt) {
   /* 送盾（旧硬门槛的读数；2026-10-28 起登记为**只记录**） */
   const hg = t.match(/其中\*\*套给别人\*\* ([\d.]+) 次\/局/);
   if (hg) out.raw.holoOther = Number(hg[1]);
-  /* 行为门：只有红的那几格会被印出来 */
+  /* 行为门：只有红的那几格会被印出来
+   * ⚠ 11-03：`✅ 候选自己全过` 这句**曾经是假绿**——`gate-drafts` 读不出 v:92 容器时整体 exit 64、
+   *   G4/G5 一行没跑，而旧版 promote 把"0 条 FAIL"印成这句 ⇒ 夜里那几张 13 项成绩单把没跑过的门算成了绿。
+   *   现在 promote 只会印「✅ 候选自己全过（判到 N 行）」或「⛔ 候选一行都没判到…」⇒
+   *   **认不到行数就判"读不出"（null），绝不判绿**；旧格式的裸 ✅ 同样落"读不出"。 */
   const beh = (t.match(/G4\/G5 行为门（[^）]*）：([^\n]*)/) || [])[1] || '';
+  const behUnrun = /候选一行都没判到/.test(beh) || (/候选自己全过/.test(beh) && !/判到 \d+ 行/.test(beh));
   /* 只有**第一格**带 ✗，后面的格子是「；G5[...]」⇒ 必须按格子切，不能靠 ✗ 全局找（第一版就是这么少算一格的） */
   const behSegs = beh.split('；');
   out.raw.g4Fails = behSegs.filter((s) => /G4\[/.test(s)).map((s) => s.trim());
   out.raw.g5Fails = behSegs.filter((s) => /G5\[/.test(s)).map((s) => s.trim());
-  out.raw.behaviorHeader = beh.length > 0;
+  out.raw.behaviorHeader = beh.length > 0 && !behUnrun;
+  out.raw.behaviorUnrun = behUnrun;
   out.raw.g4Worst = (function () { const m = beh.match(/最克「([^」]+)」([\d.]+)%/); return m ? { cell: m[1], pct: Number(m[2]) } : null; })();
+  /* T2（11-03 · **只记录，不进 13 项判据、不改红绿**）：反制者的**期望损失**。
+   * G4 的 headline 只有 max ⇒ 「最克 99.7%」与「最克 61%」都读成一个红，也分不清"只有一格克它"与"到处都克它"；
+   *   这一条把同一批 8 格读数汇成 mean/中位/>50% 格数（`gate-drafts` 算、`promote` 印，这里只接）。
+   * ⚠ 读不出 = `null` + `g4CellsUnrun=true`，**不许**把"没这行"读成 mean=0（0 分母与 0 读数同形是本页在册教训）。 */
+  out.raw.g4Cells = (function () {
+    const re = /mean=([\d.]+)% ‖ 中位 ([\d.]+)% ‖ >50% 的格 (\d+\/\d+) ‖ 最克「([^」]+)」([\d.]+)%（n=(\d+)）/g;
+    const segs = []; let m;
+    while ((m = re.exec(t))) segs.push({ mean: Number(m[1]), median: Number(m[2]), over50: m[3], worst: m[4], worstPct: Number(m[5]), n: Number(m[6]) });
+    return segs.length ? segs : null;
+  })();
+  out.raw.g4CellsUnrun = /反制者期望损失/.test(t) && out.raw.g4Cells === null;
   return out;
 }
 
@@ -100,7 +117,7 @@ import { LINES, LAYERS } from './champion-gate.mjs';
 export function densityOf(packPath) {
   const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, Set, Map, Float64Array };
   sb.window = sb; sb.globalThis = sb;
-  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js', 'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {   /* 11-03 深夜：补 policy2 ⇒ densityOf 能读 gen-3 v:92 容器（eval-5p 同款修法） */
     vm.runInNewContext(readFileSync(REPO + '/' + f, 'utf8'), sb, { filename: f });
   }
   vm.runInNewContext(readFileSync(packPath, 'utf8'), sb, { filename: packPath });
@@ -155,11 +172,26 @@ function main() {
       [s.raw.fieldB === 0 && s.raw.fieldA === 18.7, 'S3 场B 0 / 场A 18.7'],
       [s.raw.expiredPerGame == null, 'S3 没印「过期 X/局」⇒ 珠那条必须读不出（不许当成 0）'],
       [s.raw.g4Fails.length === 2 && s.raw.g5Fails.length === 2, 'S3 G4/G5 各两格红'],
+      /* 11-03：`gate-drafts` 读不出 v:92 ⇒ G4/G5 一行没跑，旧 promote 却印「✅ 候选自己全过」——
+       *   夜里那几张 13 项成绩单就是把**没跑过的门算成了绿**。现在认"判到 N 行"，认不到就落"读不出"。 */
+      [parsePromote(SAMPLE_BEH_OK).raw.behaviorHeader === true, '✅（判到 10 行）⇒ 门真跑过 ⇒ 允许判绿'],
+      [parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorHeader === false && parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorUnrun === true, '⛔「候选一行都没判到」⇒ 读不出，不许绿'],
+      [(function () { const na = verdict({ raw: parsePromote(SAMPLE_BEH_BARE).raw, density: null, strength: 50 }, false).na.join('·'); return na.includes('G4') && na.includes('G5'); })(),
+        '旧格式裸 ✅（没有"判到 N 行"）⇒ G4 与 G5 都挂"读不出"——夜里那几张 gen-3 成绩单就是这个形状'],
       [verdict({ raw: f.raw, density: null, strength: 51.5 }, false).of === 13, '闸门默认条数 = 13（L0+L1；珍/送盾/G6 在 L3 不进分母）'],
       [verdict({ raw: s.raw, density: null, strength: 44 }, false).na.includes('（新增）'), 'S3 缺防御质量栏 ⇒ 那条挂"读不出"，不判绿'],
       [verdict({ raw: { gained: 0, expiredPerGame: 0, charge: 0, waste: 0 }, density: null, strength: null }, false)
         .rows.find(r => r.key === 'bead').ok === true, '得珠=0 ⇒ 珠那条判「不适用」（绿）而不是红'],
-      [parseEval('[冠军] 1st=51.5% 严胜=49.5%') === 51.5, 'eval 解析']
+      [parseEval('[冠军] 1st=51.5% 严胜=49.5%') === 51.5, 'eval 解析'],
+      /* T2（11-03）：期望损失**只记录** ⇒ 它不许进 13 项分母；但"没这一行"与"mean=0"必须分得开。 */
+      [(function () { const c = parsePromote(SAMPLE_CELLS_OK).raw.g4Cells; return !!c && c.length === 2 && c[0].mean === 72.3 && c[0].over50 === '7/8' && c[1].median === 38.5 && c[1].worstPct === 60.3 && c[1].n === 300; })(),
+        'T2 两格都接住：mean 72.3/41.2 ‖ >50% 格 7/8 ‖ 中位 38.5 ‖ 最克 60.3%（n=300）'],
+      [(function () { const u = parsePromote(SAMPLE_CELLS_UNREAD).raw; return u.g4Cells === null && u.g4CellsUnrun === true; })(),
+        'T2「⛔ 读不出」⇒ g4Cells=null 且旗标为真（**不许**把没这行读成 mean=0）'],
+      [(function () { const n = parsePromote(SAMPLE_BEH_OK).raw; return n.g4Cells === null && n.g4CellsUnrun === false; })(),
+        'T2 整句都没印（旧版 promote）⇒ g4Cells=null 且**不打**"读不出"旗（分母=没这条记录，不是门坏了）'],
+      [verdict({ raw: Object.assign({}, f.raw, { g4Cells: [{ mean: 72.3 }] }), density: null, strength: 51.5 }, false).of === 13,
+        'T2 有读数也**不进 13 项分母**（只记录 ⇒ 分母还是 13）']
     ];
     let bad = 0;
     for (const [ok, name] of checks) { if (!ok) bad++; console.log((ok ? 'PASS ' : 'FAIL ') + name); }
@@ -231,5 +263,13 @@ E 被动场：旧口径摆架势率 = 18%   **新口径·无威胁(对手ジ<5)�
 广度：multi 有效技能数=6.78（取严） · **long（= 长程，产品常用模式）** 有效技能数=5.99（取严）
 珠经济（40 局）：蓄能 3.48/局 · 得珠 139 · 过期 37 · **花掉 97** · 浪费率 27% · **花珠率 69.8%**
 G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✗ G4[.e814-S3/long] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」83.7%）；G4[.e814-S3/multi] 无一行脚本能以 >60% 击败它（最克「只防御(不还手)」71%）；G5[.e814-S3/long] 必须能清场（实测防席夺冠 85%）；G5[.e814-S3/multi] 必须能清场（实测防席夺冠 73%）`;
+
+/* 11-03 加的三份行为门夹具（`gate-drafts` 读不出 v:92 的那晚，promote 印的就是第三份那种**裸 ✅**） */
+const SAMPLE_BEH_OK = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过（判到 10 行）';
+const SAMPLE_BEH_UNRUN = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：⛔ **候选一行都没判到**（gate-drafts exit=64）⇒ 这是**没跑成**，不是全过';
+const SAMPLE_BEH_BARE = 'G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：✅ 候选自己全过';
+/* T2（11-03）夹具：promote 那句**只记录**的期望损失（两格 ⇒ 每格一条；措辞与 `promote-champion.mjs` 的打印同源） */
+const SAMPLE_CELLS_OK = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：.e811-F/long mean=72.3% ‖ 中位 70.0% ‖ >50% 的格 7/8 ‖ 最克「只防御(不还手)」99.7%（n=300）\n      .e811-F/multi mean=41.2% ‖ 中位 38.5% ‖ >50% 的格 2/8 ‖ 最克「激光剑连刺」60.3%（n=300）';
+const SAMPLE_CELLS_UNREAD = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：⛔ **读不出**（没解析到 G4CELLS 行 ⇒ gate-drafts 版本比这行旧或 G4 段没跑；不许当"没问题"）';
 
 if (process.argv[1] && /score13\.mjs$/.test(process.argv[1])) main();

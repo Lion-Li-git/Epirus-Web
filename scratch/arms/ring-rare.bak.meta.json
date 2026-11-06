@@ -1,0 +1,142 @@
+{
+ "tool": "supfit-gd",
+ "tag": "ring-rare",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 480,
+ "trainG": 360,
+ "testG": 120,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1600,
+ "shapeBal": 1,
+ "teacher": "toolkit",
+ "keySplit": 1,
+ "rareOnly": "ring",
+ "rareFrac": 0.7,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 356,
+  "moved": 124,
+  "gone": 0,
+  "keys": 480,
+  "rare": 103873
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 360,
+    "teacherAgree": 0.6,
+    "teacherLl": -10.293975624379547,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.2916666666666667,
+  "startLl": -2.305692003518385,
+  "agree": 0.6,
+  "ll": -10.293975624379547,
+  "wAgree": 0.1928001255065465,
+  "nTest": 120,
+  "nTrain": 360,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 66,
+    "hit": 43
+   },
+   {
+    "key": "armor",
+    "n": 4,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 14,
+    "hit": 14
+   },
+   {
+    "key": "railgun",
+    "n": 14,
+    "hit": 13
+   },
+   {
+    "key": "gun",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "shift",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "holo",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "guard",
+    "n": 7,
+    "hit": 2
+   },
+   {
+    "key": "jinshield",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "curse",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "proto",
+    "n": 1,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

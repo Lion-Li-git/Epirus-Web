@@ -1,0 +1,35 @@
+{
+ "tool": "pg-train",
+ "tag": "B2-s13",
+ "parent": "scratch/arms/supfit-gd1.bak",
+ "seed": 13,
+ "games": 24000,
+ "batch": 48,
+ "lr": 0.0003,
+ "temp": 0.5,
+ "lamC": 0.005,
+ "lamF": 0.05,
+ "cur": "net",
+ "updates": 500,
+ "wallSecs": 336,
+ "loop": {
+  "meanScore": -0.09495370370370389,
+  "firePerGame": 0.124,
+  "discChargePerGame": 4.845958333333333,
+  "entropy": 0.16629694701989658,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/supfit-gd1.bak",
+  "gen": 2,
+  "recipe": {
+   "objective": "scoreNet + λc·discCharge + λf·railgun (resident)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)"
+  }
+ }
+}

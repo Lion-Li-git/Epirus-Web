@@ -1,0 +1,79 @@
+arm	seg	gen	fit	kinds	defShare	defKinds	cell	keys	path
+BAS-s13	1	25	0.3983	11	71.4	8	D3K3	reflect bagua guard proto curse gun shift holo armor jinshield snipe	scratch/ga-bands/BAS-s13/BAS-s13-seg1.bak
+BAS-s13	2	50	0.5233	10	68.7	7	D3K2	guard reflect bagua gun curse holo armor jinshield shift miniT	scratch/ga-bands/BAS-s13/BAS-s13-seg2.bak
+BAS-s13	3	75	0.318	10	74.4	8	D3K2	reflect guard bagua gun curse armor holo jinshield shift proto	scratch/ga-bands/BAS-s13/BAS-s13-seg3.bak
+BAS-s13	4	100	0.4198	11	64.7	8	D3K3	reflect bagua guard gun jinshield shift curse holo armor proto transfer	scratch/ga-bands/BAS-s13/BAS-s13-seg4.bak
+BAS-s13	5	125	0.4983	11	66.4	8	D3K3	guard reflect bagua curse proto gun armor holo shift jinshield cannon	scratch/ga-bands/BAS-s13/BAS-s13-seg5.bak
+BAS-s13	6	150	0.5597	7	60.8	5	D3K1	reflect bagua guard curse gun armor holo	scratch/ga-bands/BAS-s13/BAS-s13-seg6.bak
+BAS-s41	1	25	0.4234	13	68	8	D3K3	reflect bagua guard curse proto gun holo shift jinshield armor firestorm snipe transfer	scratch/ga-bands/BAS-s41/BAS-s41-seg1.bak
+BAS-s41	2	50	0.3839	10	71	8	D3K2	reflect bagua guard gun shift armor curse holo jinshield proto	scratch/ga-bands/BAS-s41/BAS-s41-seg2.bak
+BAS-s41	3	75	0.7703	10	69.1	8	D3K2	reflect bagua guard curse gun holo armor jinshield shift proto	scratch/ga-bands/BAS-s41/BAS-s41-seg3.bak
+BAS-s41	4	100	0.4719	12	61.5	8	D3K3	reflect bagua guard gun armor curse proto jinshield shift holo transfer charge	scratch/ga-bands/BAS-s41/BAS-s41-seg4.bak
+BAS-s41	5	125	0.3878	7	70.7	5	D3K1	bagua guard reflect armor gun curse holo	scratch/ga-bands/BAS-s41/BAS-s41-seg5.bak
+BAS-s41	6	150	0.6366	11	68.4	8	D3K3	guard reflect bagua gun curse armor proto holo shift jinshield cannon	scratch/ga-bands/BAS-s41/BAS-s41-seg6.bak
+BREAD-W05-s13	1	25	1.5578	4	0	0	D0K0	sword ring gun bigT	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg1.bak
+BREAD-W05-s13	2	50	1.7622	6	0	0	D0K1	sword ring gun bigT charge railgun	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg2.bak
+BREAD-W05-s13	3	75	1.7355	4	0	0	D0K0	gun sword ring bigT	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg3.bak
+BREAD-W05-s13	4	100	1.557	6	0	0	D0K1	ring bigT gun sword charge railgun	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg4.bak
+BREAD-W05-s13	5	125	1.646	6	0	0	D0K1	ring bigT gun charge railgun sword	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg5.bak
+BREAD-W05-s13	6	150	1.5568	6	0	0	D0K1	ring charge gun bigT railgun sword	scratch/ga-bands/BREAD-W05-s13/BREAD-W05-s13-seg6.bak
+BREAD-W05-s41	1	25	1.5671	6	0	0	D0K1	ring bigT charge gun railgun sword	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg1.bak
+BREAD-W05-s41	2	50	1.5397	5	0	0	D0K1	ring bigT charge railgun sword	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg2.bak
+BREAD-W05-s41	3	75	1.4645	5	0	0	D0K1	ring bigT sword charge railgun	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg3.bak
+BREAD-W05-s41	4	100	1.4449	6	0	0	D0K1	charge gun railgun bigT sword ring	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg4.bak
+BREAD-W05-s41	5	125	1.5553	6	0	0	D0K1	charge railgun ring bigT sword gun	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg5.bak
+BREAD-W05-s41	6	150	1.5456	4	0	0	D0K0	charge railgun ring bigT	scratch/ga-bands/BREAD-W05-s41/BREAD-W05-s41-seg6.bak
+BREAD-W05-s7	1	25	1.5517	5	0	0	D0K1	ring bigT sword charge railgun	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg1.bak
+BREAD-W05-s7	2	50	1.4657	5	0	0	D0K1	ring charge railgun bigT sword	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg2.bak
+BREAD-W05-s7	3	75	1.4547	4	0	0	D0K0	ring bigT charge railgun	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg3.bak
+BREAD-W05-s7	4	100	1.7517	4	0	0	D0K0	bigT sword ring charge	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg4.bak
+BREAD-W05-s7	5	125	1.7452	5	0	0	D0K1	bigT sword ring charge railgun	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg5.bak
+BREAD-W05-s7	6	150	1.4612	5	0	0	D0K1	ring bigT sword charge railgun	scratch/ga-bands/BREAD-W05-s7/BREAD-W05-s7-seg6.bak
+CBG-s13	1	25	1.0978	10	7.9	3	D2K2	sword drain proto mine ring tank holo armor bigT taunt	scratch/ga-bands/CBG-s13/CBG-s13-seg1.bak
+CBG-s13	2	50	1.2561	9	2.2	2	D1K2	ring sword bigT gun drain mine proto charge holo	scratch/ga-bands/CBG-s13/CBG-s13-seg2.bak
+CBG-s13	3	75	1.0965	10	8.3	2	D3K2	holo sword ring tank gun bigT mine taunt drain proto	scratch/ga-bands/CBG-s13/CBG-s13-seg3.bak
+CBG-s13	4	100	1.0363	9	2.5	2	D1K2	ring bigT mine drain tank sword gun holo proto	scratch/ga-bands/CBG-s13/CBG-s13-seg4.bak
+CBG-s13	5	125	1.1461	6	0	0	D0K1	ring bigT gun sword tank drain	scratch/ga-bands/CBG-s13/CBG-s13-seg5.bak
+CBG-s13	6	150	1.3851	6	0.3	0	D0K1	ring bigT gun drain sword mine	scratch/ga-bands/CBG-s13/CBG-s13-seg6.bak
+CBG-s41	1	25	0.9316	10	4.1	3	D2K2	ring bigT sword gun proto charge drain holo armor taunt	scratch/ga-bands/CBG-s41/CBG-s41-seg1.bak
+CBG-s41	2	50	0.8926	13	5.3	3	D2K3	charge ring laserEye bigT armor proto railgun holo curse firestorm taunt sword mine	scratch/ga-bands/CBG-s41/CBG-s41-seg2.bak
+CBG-s41	3	75	1.1641	8	0.9	1	D1K2	ring bigT drain charge mine laserEye proto railgun	scratch/ga-bands/CBG-s41/CBG-s41-seg3.bak
+CBG-s41	4	100	0.9728	6	0	0	D0K1	ring bigT charge mine laserEye drain	scratch/ga-bands/CBG-s41/CBG-s41-seg4.bak
+CBG-s41	5	125	1.0226	8	0	0	D0K2	ring charge laserEye drain bigT sword railgun gun	scratch/ga-bands/CBG-s41/CBG-s41-seg5.bak
+CBG-s41	6	150	1.0335	5	0	0	D0K1	ring bigT sword charge mine	scratch/ga-bands/CBG-s41/CBG-s41-seg6.bak
+CBG-s7	1	25	1.0549	4	3.9	1	D2K0	gun charge holo sword	scratch/ga-bands/CBG-s7/CBG-s7-seg1.bak
+CBG-s7	2	50	1.0415	8	4.5	1	D2K2	gun sword holo drain mine charge ring railgun	scratch/ga-bands/CBG-s7/CBG-s7-seg2.bak
+CBG-s7	3	75	0.9206	11	2.4	1	D1K3	gun mine sword drain ring charge holo railgun laserEye firestorm bigT	scratch/ga-bands/CBG-s7/CBG-s7-seg3.bak
+CBG-s7	4	100	1.117	7	1.4	1	D1K1	sword bigT tank drain gun holo mine	scratch/ga-bands/CBG-s7/CBG-s7-seg4.bak
+CBG-s7	5	125	0.826	10	10.1	2	D3K2	gun holo tank sword proto drain bigT curse ring mine	scratch/ga-bands/CBG-s7/CBG-s7-seg5.bak
+CBG-s7	6	150	0.5666	7	0	0	D0K1	charge mine sword railgun tank taunt gun	scratch/ga-bands/CBG-s7/CBG-s7-seg6.bak
+CBGG-s13	1	25	1.0978	10	7.7	3	D2K2	sword drain mine proto ring holo tank armor bigT taunt	scratch/ga-bands/CBGG-s13/CBGG-s13-seg1.bak
+CBGG-s13	2	50	1.2561	9	2.2	2	D1K2	ring sword bigT gun drain mine proto charge holo	scratch/ga-bands/CBGG-s13/CBGG-s13-seg2.bak
+CBGG-s13	3	75	1.0965	10	8.3	2	D3K2	holo sword ring tank gun bigT mine taunt drain proto	scratch/ga-bands/CBGG-s13/CBGG-s13-seg3.bak
+CBGG-s13	4	100	1.0363	9	2.5	2	D1K2	ring bigT mine drain tank sword gun holo proto	scratch/ga-bands/CBGG-s13/CBGG-s13-seg4.bak
+CBGG-s13	5	125	1.1461	6	0	0	D0K1	ring bigT gun sword tank drain	scratch/ga-bands/CBGG-s13/CBGG-s13-seg5.bak
+CBGG-s13	6	150	1.3851	6	0.3	0	D0K1	ring bigT gun drain sword mine	scratch/ga-bands/CBGG-s13/CBGG-s13-seg6.bak
+G3C-s13	1	25	0.4088	12	68.7	8	D3K3	reflect guard bagua proto shift curse jinshield armor gun holo firestorm miniT	scratch/ga-bands/G3C-s13/G3C-s13-seg1.bak
+G3C-s13	2	50	0.3814	11	70.9	8	D3K3	reflect bagua guard armor curse gun shift jinshield holo proto transfer	scratch/ga-bands/G3C-s13/G3C-s13-seg2.bak
+G3C-s13	3	75	0.3354	10	71.4	8	D3K2	reflect guard bagua curse shift gun proto holo jinshield armor	scratch/ga-bands/G3C-s13/G3C-s13-seg3.bak
+G3C-s13	4	100	0.3609	10	69.3	8	D3K2	guard reflect bagua curse proto gun armor holo jinshield shift	scratch/ga-bands/G3C-s13/G3C-s13-seg4.bak
+G3C-s13	5	125	0.4882	7	69.7	5	D3K1	guard bagua reflect gun curse armor holo	scratch/ga-bands/G3C-s13/G3C-s13-seg5.bak
+G3C-s13	6	150	0.6441	7	69.6	5	D3K1	reflect bagua guard gun curse armor holo	scratch/ga-bands/G3C-s13/G3C-s13-seg6.bak
+G3C-s41	1	25	0.4152	12	68.2	8	D3K3	reflect bagua guard curse proto gun holo shift jinshield armor snipe transfer	scratch/ga-bands/G3C-s41/G3C-s41-seg1.bak
+G3C-s41	2	50	0.3481	10	74.6	8	D3K2	reflect bagua guard proto shift gun jinshield holo curse armor	scratch/ga-bands/G3C-s41/G3C-s41-seg2.bak
+G3C-s41	3	75	0.6148	7	72.3	5	D3K1	reflect guard bagua gun curse armor holo	scratch/ga-bands/G3C-s41/G3C-s41-seg3.bak
+G3C-s41	4	100	0.3924	9	70.8	7	D3K2	reflect guard bagua curse gun armor holo proto jinshield	scratch/ga-bands/G3C-s41/G3C-s41-seg4.bak
+G3C-s41	5	125	0.3086	9	65.9	7	D3K2	reflect guard bagua curse gun armor holo proto shift	scratch/ga-bands/G3C-s41/G3C-s41-seg5.bak
+G3C-s41	6	150	0.5388	10	69.8	8	D3K2	guard reflect bagua gun shift jinshield proto armor curse holo	scratch/ga-bands/G3C-s41/G3C-s41-seg6.bak
+G3M-s13	1	25	0.9212	5	0	0	D0K1	ring charge railgun bigT sword	scratch/ga-bands/G3M-s13/G3M-s13-seg1.bak
+G3M-s13	2	50	0.9776	5	0	0	D0K1	ring bigT charge railgun sword	scratch/ga-bands/G3M-s13/G3M-s13-seg2.bak
+G3M-s13	3	75	0.9962	4	0	0	D0K0	ring bigT charge railgun	scratch/ga-bands/G3M-s13/G3M-s13-seg3.bak
+G3M-s13	4	100	0.9442	4	0	0	D0K0	ring bigT charge railgun	scratch/ga-bands/G3M-s13/G3M-s13-seg4.bak
+G3M-s13	5	125	1.1708	4	0	0	D0K0	ring bigT charge railgun	scratch/ga-bands/G3M-s13/G3M-s13-seg5.bak
+G3M-s13	6	150	0.9392	4	0	0	D0K0	ring bigT charge railgun	scratch/ga-bands/G3M-s13/G3M-s13-seg6.bak
+G3M-s41	1	25	0.933	5	0	0	D0K1	ring bigT charge railgun sword	scratch/ga-bands/G3M-s41/G3M-s41-seg1.bak
+G3M-s41	2	50	0.7939	6	0	0	D0K1	ring charge railgun sword bigT gun	scratch/ga-bands/G3M-s41/G3M-s41-seg2.bak
+G3M-s41	3	75	0.9148	5	0	0	D0K1	ring bigT charge sword railgun	scratch/ga-bands/G3M-s41/G3M-s41-seg3.bak
+G3M-s41	4	100	0.6329	4	0	0	D0K0	bigT charge ring sword	scratch/ga-bands/G3M-s41/G3M-s41-seg4.bak
+G3M-s41	5	125	0.877	6	0	0	D0K1	charge railgun gun bigT ring sword	scratch/ga-bands/G3M-s41/G3M-s41-seg5.bak
+G3M-s41	6	150	0.7448	5	0	0	D0K1	charge railgun gun bigT ring	scratch/ga-bands/G3M-s41/G3M-s41-seg6.bak

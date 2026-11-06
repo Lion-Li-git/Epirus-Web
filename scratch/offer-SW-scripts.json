@@ -1,0 +1,62 @@
+{
+  "ts": "2026-11-01T07:31:34.569Z",
+  "rows": [
+    {
+      "pack": "scratch/arms/GD3-SWORD.bak",
+      "container": "v:92 gen3 obs3b n=7993",
+      "field": "scripts",
+      "eps": 0,
+      "epsK": 5,
+      "epsMode": "soft",
+      "temp": 0.15,
+      "games": 30,
+      "n": 5,
+      "mode": "multi",
+      "dec": 547,
+      "roundsMean": 23.2,
+      "drawRate": 0,
+      "epHistogram": {
+        "0": 224,
+        "1": 226,
+        "2": 85,
+        "3": 9,
+        "6": 3
+      },
+      "beads": {
+        "none": 547
+      },
+      "offered": {
+        "charge": 323,
+        "ring": 18,
+        "railgun": 0,
+        "bigT": 3,
+        "sword": 97,
+        "gun": 323
+      },
+      "chosenWhenOffered": {
+        "charge": 0,
+        "ring": 15,
+        "railgun": 0,
+        "bigT": 3,
+        "sword": 75,
+        "gun": 127
+      },
+      "chosenWhenNotOffered": {
+        "charge": 0,
+        "ring": 0,
+        "railgun": 0,
+        "bigT": 0,
+        "sword": 0,
+        "gun": 0
+      },
+      "pickKeys": {
+        "ji": 327,
+        "gun": 127,
+        "sword": 75,
+        "ring": 15,
+        "bigT": 3
+      },
+      "nonJiKinds": 4
+    }
+  ]
+}

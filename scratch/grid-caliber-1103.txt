@@ -1,0 +1,26 @@
+arch2 装进量具沙箱：面=obs3b ‖ paramCount=7993
+接线自证：{"forwards":1807,"chooseCandidatesCalls":1530,"fit":0.4420201922768022}
+CBG-s13-band1.bak
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 5 ‖ bigT 9.5% gun 5.1% ring 3.8% mine 1.9% tank 0.6% ‖ acts/局=13.2）
+  long ⇒ D0K1（防御族 0.0% ‖ 种数 6 ‖ bigT 11.6% ring 4.0% gun 3.3% drain 2.3% mine 1.3% tank 0.7% ‖ acts/局=25.1）
+CBG-s13-band2.bak
+  multi ⇒ D1K2（防御族 1.1% ‖ 种数 8 ‖ ring 6.7% bigT 6.7% gun 5.1% drain 5.1% mine 1.7% proto 0.6% holo 0.6% tank 0.6% ‖ acts/局=14.8）
+  long ⇒ D1K2（防御族 0.6% ‖ 种数 8 ‖ gun 8.3% bigT 5.7% drain 5.4% ring 4.9% mine 2.0% charge 1.7% sword 1.4% tank 1.4% ‖ acts/局=29.1）
+CBG-s13-band3.bak
+  multi ⇒ D0K1（防御族 0.0% ‖ 种数 6 ‖ ring 13.7% bigT 7.9% sword 7.0% gun 3.1% drain 1.8% mine 0.9% ‖ acts/局=18.9）
+  long ⇒ D1K2（防御族 2.2% ‖ 种数 8 ‖ sword 9.4% gun 9.1% ring 7.2% bigT 3.6% drain 3.6% proto 1.4% holo 0.8% mine 0.6% ‖ acts/局=30.3）
+CBG-s13-band4.bak
+  multi ⇒ D1K2（防御族 2.6% ‖ 种数 10 ‖ ring 10.7% sword 7.3% mine 6.0% bigT 2.6% gun 2.6% holo 1.3% proto 1.3% taunt 1.3% tank 1.3% drain 1.3% ‖ acts/局=19.5）
+  long ⇒ D2K2（防御族 4.5% ‖ 种数 9 ‖ gun 15.5% sword 7.2% mine 4.5% holo 3.6% ring 3.4% tank 1.3% drain 1.1% bigT 0.9% proto 0.9% ‖ acts/局=37.2）
+CBG-s13-band5.bak
+  multi ⇒ D0K2（防御族 0.0% ‖ 种数 8 ‖ bigT 9.6% ring 7.3% gun 3.9% mine 2.2% charge 1.1% sword 0.6% railgun 0.6% tank 0.6% ‖ acts/局=14.8）
+  long ⇒ D0K1（防御族 0.2% ‖ 种数 6 ‖ bigT 8.1% charge 7.9% ring 3.7% drain 2.9% gun 2.7% mine 2.5% ‖ acts/局=33.9）
+CBG-s13-band6.bak
+  multi ⇒ D0K2（防御族 0.0% ‖ 种数 8 ‖ ring 12.1% bigT 7.6% gun 6.4% mine 1.3% charge 1.3% railgun 1.3% tank 0.6% sword 0.6% ‖ acts/局=13.1）
+  long ⇒ D0K1（防御族 0.3% ‖ 种数 6 ‖ ring 7.4% bigT 7.1% gun 6.1% drain 5.8% sword 1.9% mine 1.3% ‖ acts/局=25.8）
+CBG-s13.js
+  multi ⇒ D1K2（防御族 1.1% ‖ 种数 8 ‖ ring 6.7% bigT 6.7% gun 5.1% drain 5.1% mine 1.7% proto 0.6% holo 0.6% tank 0.6% ‖ acts/局=14.8）
+  long ⇒ D1K2（防御族 0.6% ‖ 种数 8 ‖ gun 8.3% bigT 5.7% drain 5.4% ring 4.9% mine 2.0% charge 1.7% sword 1.4% tank 1.4% ‖ acts/局=29.1）
+CB-s13.js
+  multi ⇒ D1K2（防御族 2.0% ‖ 种数 9 ‖ ring 20.6% charge 12.3% bigT 6.4% railgun 2.0% mine 2.0% proto 1.0% holo 1.0% tank 1.0% taunt 1.0% ‖ acts/局=17.0）
+  long ⇒ D2K3（防御族 6.1% ‖ 种数 11 ‖ ring 17.0% gun 12.3% bigT 5.6% sword 3.5% charge 3.5% armor 2.6% holo 2.0% proto 1.5% tank 0.6% railgun 0.6% laserEye 0.6% ‖ acts/局=28.5）

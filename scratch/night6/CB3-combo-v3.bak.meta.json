@@ -1,0 +1,239 @@
+{
+ "tool": "supfit-gd",
+ "tag": "combo-v3",
+ "parent": "scratch/night5/EFFG-s41.js",
+ "seed": 20261106,
+ "lr": 0.004,
+ "steps": 240,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 4,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration6",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 3290,
+  "hit": 2016,
+  "stuckCharge": 86,
+  "missCharge": 23,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 4000,
+  "moved": 0,
+  "gone": 0,
+  "keys": 4000,
+  "rare": 0,
+  "byKey": {
+   "ji": 2998,
+   "gun": 273,
+   "charge": 157,
+   "laserEye": 50,
+   "holo": 42,
+   "ring": 129,
+   "bigT": 29,
+   "sword": 61,
+   "curse": 46,
+   "armor": 18,
+   "tank": 32,
+   "drain": 45,
+   "proto": 94,
+   "taunt": 4,
+   "mine": 2,
+   "cannon": 2,
+   "railgun": 8,
+   "firestorm": 10
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 4,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.4,
+    "teacherLl": -1.7693226123201284,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.57,
+    "teacherLl": -2.1760342277676217,
+    "studentAgree": 0.745,
+    "studentLl": -0.7566374045812028,
+    "studentN": 200
+   },
+   {
+    "round": 2,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.68,
+    "teacherLl": -3.6025476627063533,
+    "studentAgree": 0.8575,
+    "studentLl": -3.674741505960819,
+    "studentN": 400
+   },
+   {
+    "round": 3,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.68,
+    "teacherLl": -2.568053761298257,
+    "studentAgree": 0.78,
+    "studentLl": -2.545875205627873,
+    "studentN": 600
+   },
+   {
+    "round": 4,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.715,
+    "teacherLl": -3.199336629427881,
+    "studentAgree": 0.8275,
+    "studentLl": -3.39252577888043,
+    "studentN": 800
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 4388,
+    "firstDiff": 0,
+    "dim": 7993
+   },
+   {
+    "round": 2,
+    "moved": 3675,
+    "firstDiff": 0,
+    "dim": 7993
+   },
+   {
+    "round": 3,
+    "moved": 3750,
+    "firstDiff": 0,
+    "dim": 7993
+   },
+   {
+    "round": 4,
+    "moved": 4045,
+    "firstDiff": 0,
+    "dim": 7993
+   }
+  ],
+  "startAgree": 0.585,
+  "startLl": -14.083102409782184,
+  "agree": 0.715,
+  "ll": -3.199336629427881,
+  "wAgree": 0.5137639674809359,
+  "nTest": 200,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.8275,
+  "studentN": 800,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 112,
+    "hit": 84
+   },
+   {
+    "key": "armor",
+    "n": 6,
+    "hit": 2
+   },
+   {
+    "key": "tank",
+    "n": 6,
+    "hit": 6
+   },
+   {
+    "key": "gun",
+    "n": 16,
+    "hit": 13
+   },
+   {
+    "key": "holo",
+    "n": 5,
+    "hit": 0
+   },
+   {
+    "key": "proto",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "charge#boom",
+    "n": 5,
+    "hit": 4
+   },
+   {
+    "key": "drain",
+    "n": 5,
+    "hit": 3
+   },
+   {
+    "key": "ring",
+    "n": 13,
+    "hit": 11
+   },
+   {
+    "key": "bigT",
+    "n": 4,
+    "hit": 3
+   },
+   {
+    "key": "sword",
+    "n": 8,
+    "hit": 5
+   },
+   {
+    "key": "curse",
+    "n": 12,
+    "hit": 8
+   },
+   {
+    "key": "laserEye",
+    "n": 3,
+    "hit": 3
+   },
+   {
+    "key": "firestorm",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 1,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/night5/EFFG-s41.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x4"
+  }
+ }
+}

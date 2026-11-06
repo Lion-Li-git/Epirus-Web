@@ -13,8 +13,8 @@
 
 | 文件 | 它管什么 | 谁在读它 |
 |---|---|---|
-| [`RULES-2P.md`](RULES-2P.md) | **2 人规则裁定版**：R1..R61 + 子证（R19'/R23'/R34'） | 引擎注释逐条对应；`spec-run` / `np-test` 有多道门读它（钉的是"这条裁定在不在册"，不是措辞） |
-| [`RULES-NP.md`](RULES-NP.md) | **多人（3~5 人）裁定版**：N1..N27（血量轴 N26、难度阶梯 N27） | 同上 |
+| [`RULES-2P.md`](RULES-2P.md) | **2 人规则裁定版**：R1..R64 + 子证（R19'/R23'/R34'） | 引擎注释逐条对应；`spec-run` / `np-test` 有多道门读它（钉的是"这条裁定在不在册"，不是措辞） |
+| [`RULES-NP.md`](RULES-NP.md) | **多人（2~8 人）裁定版**：N1..N27（血量轴 N26、难度阶梯 N27） | 同上 |
 | [`METHODOLOGY.md`](METHODOLOGY.md) | **方法学与口径陷阱**（编号逐条累积） | 人读；`np-test` 有腿读它的段落存在性 |
 | [`GATE-SHIFTS.md`](GATE-SHIFTS.md) | **班次 → 该跑哪几组门禁**（§E335 六组 + §E341 `--auto` + §E355 CI 整轮） | 值班主任（DS / Qoder）每班对照 |
 | [`CHAMPION-CANDIDATES.md`](CHAMPION-CANDIDATES.md) | 够格当"第三包"的候选登记（页面「导入冠军包」吃得下的那些） | 换包体检前查它 |
@@ -36,6 +36,8 @@
 当前专题交接：[`research/CHAMPION-2.0-RESEARCH-2026-10-27.md`](research/CHAMPION-2.0-RESEARCH-2026-10-27.md) —— 规则基线、v7 包结构、跨 2–10 人/血量的瓶颈与 2.0 研究方向（研究记录，非实施裁定）。
 
 冠军验收线的**人话版**（同一话题的另一半：门槛本身怎么写、每条量的是哪种能力、哪些该摘哪些该加）：[`research/ACCEPTANCE-LINES-2026-10-28-qoder.md`](research/ACCEPTANCE-LINES-2026-10-28-qoder.md)。判据分层 = 单包只判「任何风格都不该有的缺陷」，能力覆盖归整池。
+
+**冠军架构 2.0 研究（分支 `research/champion-2.0-repr-2026-10-28`，未并进 main）**：[`research/CHAMPION-2.0-ARCH-2026-10-28-qoder.md`](research/CHAMPION-2.0-ARCH-2026-10-28-qoder.md) —— 现形状底账（5689 = `W1(24×235)‖b1‖W2‖b2` 单隐层标量头）+ 两把新尺的实测（§E815 隐元利用率与组内判别力 ‖ §E816 哪些"后果量"是当前输入的真空）+ 表示层/层数/训练的草案。**研究记录，非实施裁定**；台账在 [`research/logs/2026-10-28-afternoon-arch-qoder.md`](research/logs/2026-10-28-afternoon-arch-qoder.md)。
 
 还有三个**产物目录**不属于"文档"：`docs/artifacts/`（臂产物 `.bak` 与仪器脚本 —— 门 D82 读它）‖ `docs/debug/` ‖ `docs/screenshots/`。
 

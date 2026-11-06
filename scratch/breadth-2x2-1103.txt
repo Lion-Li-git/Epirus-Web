@@ -1,0 +1,10 @@
+G3M-s13.js ‖ 种数 5 ‖ charge 15.4% railgun 13.4% ring 11.9% bigT 3.6% sword 1.0%
+G3M-s41.js ‖ 种数 3 ‖ charge 17.9% railgun 16.7% gun 3.3%
+scratch/ga-arms/V7L-s13.js：读不出
+scratch/ga-arms/V7L-s41.js：读不出
+scratch/ga-arms/V7M-s13.js：读不出
+scratch/ga-arms/V7M-s41.js：读不出
+V7M-s13.js ‖ 种数 8 ‖ gun 12.4% guard 12.1% bagua 12.0% reflect 9.0% sword 7.5% charge 3.7% holo 2.6% railgun 1.0%
+V7M-s41.js ‖ 种数 5 ‖ sword 20.3% gun 11.9% charge 1.9% railgun 1.2% miniT 0.7%
+V7L-s13.js ‖ 种数 10 ‖ gun 11.9% sword 9.4% miniT 3.9% reflect 3.3% guard 2.5% charge 2.3% bigT 1.7% railgun 1.7% holo 1.6% bagua 1.6%
+V7L-s41.js ‖ 种数 3 ‖ holo 26.6% gun 9.5% sword 8.4%

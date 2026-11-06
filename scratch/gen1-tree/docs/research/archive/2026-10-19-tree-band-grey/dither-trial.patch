@@ -1,0 +1,51 @@
+diff --git a/champion-map/viewer.mjs b/champion-map/viewer.mjs
+index 1882653..1cc1fe6 100644
+--- a/champion-map/viewer.mjs
++++ b/champion-map/viewer.mjs
+@@ -1418,6 +1418,18 @@ function buildBitmap(key, visSigNow) {
+   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
+   var BND9 = colBand();
+   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
++  /* §E657 有序抖动（Bayer 4x4 · 试验，用户 10-19 晚点名"先试一下让我看观感"）：
++   *   每格颜色原来一律 Math.round ⇒ 一片连续值落到同一个 8-bit 电平上就是"一整片同色"，等值带在她屏幕上呈环。
++   *   改成按**格坐标**查一张 16 级阈值表决定进位 ⇒ 同一小片里约一半格子进位、一半不进位：均值不动（读法不动）。
++   *   ⚠ **实测这一层在屏幕上是无效的**（10-19 晚量，见 docs/research/archive/2026-10-19-tree-band-grey/README.md §七）：
++   *     颗粒落在 259x155 的位图上，之后被仿射 drawImage **双线性平均回去** ⇒ 最长平台 23 行 → 24 行（没降）、
++   *     电平 44/31 不变、相邻跳变 P99 仍 1 ‖ 最大仍 2，只有位图自身的不同色数 +2.6%。⇒ 要真打散等值带，
++   *     抖动必须落在**屏幕像素那一级**（先把地板烘成屏幕分辨率再抖，或走 GL 片元），不是这一级。取模用格坐标而不是屏幕坐标 ⇒ 平移/缩放时
++   *   颗粒跟着这张纸走，不会逐帧闪（随机抖动的做法会闪，所以不用随机）。
++   *   开关：深链 #dith=0 关掉看对照（默认开）。 */
++  var DTH_ON = st.dith !== 0;
++  var BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
++  function q8(v, th) { var f = Math.floor(v); return (v - f) > th ? f + 1 : f; }
+   var SHOWN = new Uint8Array(N), nShown = 0;
+   for (var s9 = 0; s9 < N; s9++) { SHOWN[s9] = (VIS[s9] && inWin(P[s9])) ? 1 : 0; nShown += SHOWN[s9]; }
+   var VIS_TB = (nShown === N) ? null : visKNN(nb, key + '@' + visSigNow, SHOWN);
+@@ -1460,9 +1472,16 @@ function buildBitmap(key, visSigNow) {
+     nPainted++;
+     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
+     var o = i * 4;
+-    dta[o] = Math.round(bR + (rgb[0] - bR) * a);
+-    dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
+-    dta[o + 2] = Math.round(bB + (rgb[2] - bB) * a);
++    if (DTH_ON) {
++      var th = (BAYER[(gj & 3) * 4 + (gi & 3)] + 0.5) / 16;
++      dta[o] = q8(bR + (rgb[0] - bR) * a, th);
++      dta[o + 1] = q8(bG + (rgb[1] - bG) * a, th);
++      dta[o + 2] = q8(bB + (rgb[2] - bB) * a, th);
++    } else {
++      dta[o] = Math.round(bR + (rgb[0] - bR) * a);
++      dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
++      dta[o + 2] = Math.round(bB + (rgb[2] - bB) * a);
++    }
+     dta[o + 3] = 255;
+   }
+   cg.putImageData(img, 0, 0);
+@@ -3585,6 +3604,7 @@ var CHKDETAIL = 0;
+     if (kv[0] === 'color') { st.color = kv[1]; HCL = kv[1]; document.getElementById('color').value = kv[1]; }
+     if (kv[0] === 'hi') { var a = kv[1].split(','); for (var j = 0; j < a.length; j++) st.hi[a[j]] = true; }
+     if (kv[0] === 'iso') st.iso = Math.max(0, Math.min(2, +kv[1]));   /* §E306 无头复核要用 */
++    if (kv[0] === 'dith') st.dith = (+kv[1] ? 1 : 0);   /* §E657 底图有序抖动开关（0 = 关掉看对照；不设 = 开） */
+     if (kv[0] === 'isot') { st.isoT = Math.max(0.15, Math.min(0.9, +kv[1])); HT_SEEN = 1; }
+     /* §E312 壳分辨率 + 谱系图相机也走深链 ⇒ 无头复核能钉住这两个状态 */
+     if (kv[0] === 'isogn') st.isoGN = Math.max(24, Math.min(128, +kv[1] || 72));

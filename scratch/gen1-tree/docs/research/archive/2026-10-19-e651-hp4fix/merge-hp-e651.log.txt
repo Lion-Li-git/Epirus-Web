@@ -1,0 +1,5 @@
+   主表 epsfull-prior2-2026-10-18.tsv → 标签 `prior` 写 794 枚
+   主表 e651-hp4-prior2-2026-10-19.tsv → 标签 `prior-e608pair` 写 4 枚
+合并 epsfull-hp-final-2026-10-19b.tsv：主表 prior 798 枚 ‖ 从 epsfull-tier-2026-10-12.tsv 补 192 枚 ‖ 合计 990 枚
+   主表里旧表没有的 id 4 枚（这些只有新口径值，正常：它们是本轮新测的枚）
+⚑ 交给链子的用法：node champion-map/rebuild-coords.mjs --hp=epsfull-hp-final-2026-10-19b.tsv   ‖ 长程那步用 --hlong=<long 的合并产物>

@@ -1,0 +1,42 @@
+{
+ "mode": "ga",
+ "seed": 7101,
+ "evals": 600,
+ "pop": 12,
+ "games": 2,
+ "n": 5,
+ "elite": 4,
+ "sig0": 0.2,
+ "trainMode": "long",
+ "holdoutGames": 60,
+ "startFit": 0.7309977858532548,
+ "inLoopBest": 0.6693644440562821,
+ "holdoutFit": 0.2627990370023631,
+ "holdoutFirst": 0.03333333333333333,
+ "holdoutTop2": 0.15,
+ "curve": [
+  {
+   "evals": 60,
+   "best": 0.5490678020380935
+  },
+  {
+   "evals": 156,
+   "best": 0.5490678020380935
+  },
+  {
+   "evals": 300,
+   "best": 0.5490678020380935
+  },
+  {
+   "evals": 456,
+   "best": 0.5547434483264457
+  },
+  {
+   "evals": 600,
+   "best": 0.6693644440562821
+  }
+ ],
+ "secs": 52.3,
+ "startLabel": "makePolicy(0.25)",
+ "wrote": "scratch/a2w-S1-gaseg.json"
+}

@@ -1,0 +1,236 @@
+/* 理想冠军规格的**逐条量具**（v1.5.204 · 只读，不训练、不落盘）
+ *
+ * 用户 2026-09-24 与千问分析出的「理想冠军」7 条 —— 规格与逐条读数记在 docs/METHODOLOGY.md 第 46 条。
+ * 本工具把每一条变成**能在现役包上直接读出来的数**，免得"理想"停在一张表上。
+ *
+ * 用法：node tools/probe-ideal-champion.mjs [--pack=js/bundled-champion-3p.js] [--games=200] [--mode=multi]
+ *
+ * 口径：
+ *   1 会为大招攒钱   = **大雷原生出手/局**（镜场 + 脚本池两处；不注入任何补贴/示范）
+ *   2 按姿态换线     = 同一包在 def 场与 nodef 场的 **1st 差**（pt）
+ *   3 会清场不是拖平 = 破防场（4 席只防御不还手）**受评席 1st 与平局率**
+ *   4 ≥2 回合序列   = 每局"第 t 回合蓄能(电珠) → 第 t+1 回合电磁炮"的完成率（珠只保留到下一回合）
+ *   5 座位无偏       = seatSymmetry 的极差 vs **该 n 的零分布 p99 线**（v1.5.202 新口径）
+ *   6 广度当约束     = 出手 G 与**净兑现 G**、**打上血的不同卡数**
+ *   7 不要的两条     = ① 有多少张"能造成伤害的卡"从未被挡过；② 镜像场设防率
+ *
+ *   ⚠️ **口径（v1.5.223 起）**：【1】~【4】【7】吃 `--temp/--eps/--epsk/--epsmode`；
+ *   **【5】【6】固定印两列**（ε=0 原生口径 + 产品口径 0.15/0.2/5/soft），因为 `seatSymmetry` 与 `mirrorHealth`
+ *   内部把参数写死了。两列都由 `build()` 产（**单一来源**，见 `probe-layer-caliber.mjs` / 门 D150）。
+ *
+ *   ⚠️ **本表不是单一口径**（v1.5.205 实测发现，见下面【5】【6】的行走标注）：【1】~【4】【7】用 TEMP/EPS/EPSK/EPSMODE，
+ *   【5】seatSymmetry（audit-lib.mjs:403）与【6】mirrorHealth（evo.js:2554）**各自在内部建 Chooser、把参数写死成 `policyChooserN(params, 0.15)`**（ε=0），
+ *   所以 `--eps=0.2 --epsmode=soft` 扫动时这两行逐字不变 —— 那不是"座位/广度对探索不敏感"，是**这两行没接到旋钮**。
+ *   ⇒ 这不是这两处的孤例：`audit-lib.mjs` 的 reflectWall/ringWallProbe/fieldRate/sniperField/seatSymmetry/densityProfile/chargeProfile/aggressionProfile/breadthProfile
+ *   共 **9 处**、`js/train/evo.js` 4 处全是同一个写死 ⇒ **整个评测层的口径是 ε=0，而产品是 ε=0.2 soft**（METHODOLOGY 49）。
+ */
+import { seatSymmetry, rejectUnknownFlags } from './audit-lib.mjs';
+/* 口径搬运**单一来源**：`build()` 来自 `probe-layer-caliber.mjs`（D150 已把"替换/装载逻辑只能活在 build 里"立成门）。
+ * 复用方的规矩（照 `probe-breadth-flip.mjs`，门 D150 守着）：**自己文件里不许再写一份"替换写死处 / 装载引擎"的逻辑**。 */
+import { build, hardwiredLine, srcLine } from './probe-layer-caliber.mjs';
+/* 指针行号现算（不写死）：D149 检查的就是"印出来的行号 = 源码里那一行的真实位置" */
+const LN_SEAT_AL = hardwiredLine('tools/audit-lib.mjs', 'export function seatSymmetry(');
+/* v1.5.237（E28）：`evo.js` 内部那四处两参直调已收成一个漏斗 `trainChooser()` ⇒ 【6】的 ε **决定在漏斗里**，
+ *   而 `mirrorHealth` 自己不再有写死处（行号若还在 mirrorHealth 里找，会读不出 ⇒ 必须指漏斗）。 */
+const LN_EVO_MH = hardwiredLine('js/train/evo.js', 'function trainChooser(');
+const LN_EVO_MH0 = srcLine('js/train/evo.js', 'function mirrorHealth(');
+
+const arg = function (k, d) { const m = new RegExp('--' + k + '=([^ ]+)').exec(process.argv.join(' ')); return m ? m[1] : d; };
+/* v1.5.236（仓规 v1.5.234）：本工具的第【5】【6】条**不吃** `--temp/--eps`（D149 钉的就是这件事），
+ *   所以更要把不认识的参数挡住 —— 不然打错一个档位名，人以为自己在扫 ε，其实那两条一直同一口径。 */
+rejectUnknownFlags(process.argv.slice(2), ['pack', 'games', 'mode', 'temp', 'eps', 'epsk', 'epsmode', 'seat-n', 'mirror-n'], 'probe-ideal-champion');
+const PACK = arg('pack', 'js/bundled-champion-3p.js');
+const GAMES = Number(arg('games', 200));
+const MODE = arg('mode', 'multi');
+/* E5（09-24 夜 · 交接 §4）：**两个旋钮必须分开**，否则会扫错杠杆 ——
+ *   `policyChooserN(params, temp, eps, ...)` 的第 2 个参数是 **softmax 温度**（原来这里只有它，写死 0.15），
+ *   第 3 个才是**探索率 ε**（`evo.js:496` 的 `state.rng.next() < eps` ⇒ 在候选里均匀抽，`epsK` 默认 top-5）。
+ *   「电磁炮 4.30→0.90」那个悬崖是 **ε** 造成的（只在浏览器传 eps>0 时生效），拿温度去扫是扫不出来的
+ *   ⇒ 实测：temp 0.05→0.25 时 镜像场电磁炮 0.47/0.43/0.43/0.44、序列率 0.47/0.43/0.43/0.44 —— **几乎不动**，
+ *      这不是"悬崖不存在"，是**拉错了杆**。默认 `temp=0.15, eps=0` ⇒ 历史读数逐字不变。 */
+const TEMP = Number(arg('temp', 0.15));
+const EPS = Number(arg('eps', 0));
+/* v1.5.224：门禁专用的小样本档（默认值不变 ⇒ 报告照旧跑满）。
+ * D149 要 spawn 本探针两次，而【5】【6】是它最贵的两段（座位 n=100+400、广度 n=400，且各跑两口径）
+ * ⇒ 实测 D149 吃 46.5 秒、是整支门禁最慢的一道。门只需要"两列都在且不同"，不需要那个 n。 */
+const SEAT_NS = String(arg('seat-n', '100,400')).split(',').map(Number).filter(function (x) { return x > 0; });
+const MIRROR_N = Number(arg('mirror-n', 400));
+/* ⚠️ 第二个陷阱：产品跑的是 `pickChampion(..., 0.15, 0.2, 5, 'soft')` —— **ε=0.2 + 键级 top5 + soft**，
+ *   而只传 `eps`（`epsK`/`epsMode` 缺省）= "**全候选均匀抽**"，那是 v1.5.139 被用户否掉的那一代口径
+ *   （"ε=0.25 全候选昏手太多 ⇒ 改 top5 键"）。⇒ 想复现"玩家会看到什么"，三个参数必须一起给。 */
+const EPSK = Number(arg('epsk', 5));
+const EPSMODE = arg('epsmode', 'soft');
+
+/* 引擎装载走 `build()` 的**关闭档**（= 与仓库当前行为逐字相同 ⇒ 所有历史读数不变）。 */
+const A = build({ on: false, pack: PACK });
+const sb = A.sb;
+const R = sb.EpirusRules, S = sb.EpirusState, T = sb.EpirusTrainer, B = sb.EpirusBots, Pol = sb.EpirusPolicy, Play = sb.EpirusPlay;
+const live = Pol.unpack(sb.EPIRUS_CHAMPION_3P, true) || Pol.unpack(sb.EPIRUS_CHAMPION, true);
+if (!live) { console.log('✗ 读不出包：' + PACK); process.exit(1); }
+/* 产品口径 = `js/ui/ui.js:464` 的 `pickChampion(..., 0.15, 0.2, 5, soft)`。
+ * ⚠️ 门禁**故意**仍用 ε=0（D153 把两个产品口径钉成常量）—— 这里只是给读数补第二把尺子。
+ * 自检：搬运必须**留下证据**（替换数 = 源码现算数，且包装层真被调用过），否则"两栏相同"会被误读成"口径无关"。 */
+const B2 = build({ on: true, pack: PACK, temp: 0.15, eps: 0.2, epsK: 5, epsMode: 'soft' });
+/* 第一半自证（立刻可判）：`evo.js` 的写死处数量**从源码现算**，替换数必须等于它。
+ * 第二半（`audit-lib` 那条路包了一层）要到【5】跑完才能判 —— 见那里。 */
+if (B2.patched !== B2.hardwired) {
+  console.log('✗ 口径搬运自证失败：`evo.js` 写死处 ' + B2.hardwired + ' 处，实际只替换 ' + B2.patched + ' 处 ⇒ 整表作废');
+  process.exit(9);
+}
+
+function mulberry32(seed) { let a = seed >>> 0; return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const pct = x => (100 * x).toFixed(1) + '%';
+const f2 = x => (x == null ? 'n/a' : x.toFixed(2));
+const GUARD_FAMILY = [R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.JINSHIELD, R.SK.ARMOR, R.SK.PROTO, R.SK.HOLO];
+
+/* 一个场地：受评席 = g%5，其余 4 席由 makeOpp 给；逐决策记录**受评席**的出招（带回合号） */
+function runField(name, games, makeOpp, seedBase) {
+  const D = { name: name, games: games, first: 0, draw: 0, alive: 0, dec: 0 };
+  const bigT = { n: 0 }, railgun = { n: 0 }, charge = { n: 0 }, defDec = { n: 0 }, allDec = { n: 0 };
+  const usage = {};
+  let seqGames = 0, seqTotal = 0;
+  const dmgVia = new Set(), blockedVia = new Set();
+  for (let g = 0; g < games; g++) {
+    const seat = g % 5;
+    const st = S.createState(MODE, { next: mulberry32(seedBase + g) }, 5);
+    st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+    const log = [];
+    const ch = [];
+    for (let i = 0; i < 5; i++) {
+      if (i !== seat) { ch.push(makeOpp(i, seedBase + g)); continue; }
+      const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE);
+      ch.push(function (state, pid, legal) {
+        const a = inner(state, pid, legal);
+        log.push({ round: state.round, key: a && a.key });
+        return a;
+      });
+    }
+    Play.autoGameN(st, ch);
+    for (const d of log) {
+      allDec.n++;
+      if (d.key === R.SK.BIG_T) bigT.n++;
+      if (d.key === R.SK.RAILGUN) railgun.n++;
+      if (d.key === R.SK.CHARGE) charge.n++;
+      if (GUARD_FAMILY.indexOf(d.key) >= 0) defDec.n++;
+      if (d.key) usage[d.key] = (usage[d.key] || 0) + 1;
+    }
+    /* 序列：第 t 回合蓄能 → 第 t+1 回合电磁炮 */
+    let seq = 0;
+    for (let i = 0; i < log.length; i++) {
+      if (log[i].key !== R.SK.CHARGE) continue;
+      for (let j = i + 1; j < log.length; j++) {
+        if (log[j].round === log[i].round + 1 && log[j].key === R.SK.RAILGUN) { seq++; break; }
+        if (log[j].round > log[i].round + 1) break;
+      }
+    }
+    if (seq) seqGames++;
+    seqTotal += seq;
+    for (const e of st.events) {
+      if (e.type === 'damage' && e.via) dmgVia.add(e.via);
+      if (e.type === 'blocked' && e.via) blockedVia.add(e.via);
+    }
+    if (st.winner === 'draw' || st.winner == null) D.draw++; else { D.dec++; if (st.winner === seat) D.first++; }
+    if (st.p[seat] && st.p[seat].hp > 0) D.alive++;
+  }
+  D.firstRate = D.dec ? D.first / D.dec : 0;
+  D.firstAll = D.first / games;
+  D.drawRate = D.draw / games;
+  D.aliveRate = D.alive / games;
+  D.bigTPerGame = bigT.n / games;
+  D.railgunPerGame = railgun.n / games;
+  D.chargePerGame = charge.n / games;
+  D.defRate = allDec.n ? defDec.n / allDec.n : 0;
+  D.seqPerGame = seqTotal / games;
+  D.seqGameRate = seqGames / games;
+  D.allDec = allDec.n; D.defDecN = defDec.n; D.usage = usage;
+  D.dmgVia = dmgVia; D.blockedVia = blockedVia;
+  return D;
+}
+
+const guardOpp = function () { return function (s2, p2, lg) { return B.pickGuardSpam(s2, p2, lg); }; };
+const gunOpp = function () { return function (s2, p2, lg) { return B.pickGunSpam(s2, p2, lg); }; };
+const balOpp = function () { return function (s2, p2, lg) { return B.pickBalanced(s2, p2, lg); }; };
+const defOpp = function () { return function (s2, p2, lg) { return B.pickDefend(s2, p2, lg); }; };
+
+console.log('=== 理想冠军规格 · 现役包实测（' + PACK + ' · ' + MODE + ' · 每场 ' + GAMES + ' 局 · temp=' + TEMP + ' · eps=' + EPS + ' · epsK=' + EPSK + ' · epsMode=' + EPSMODE + '）===\n');
+const mirror = runField('镜像(5 席同包)', GAMES, function () { const inner = T.policyChooserN(live, TEMP, EPS, EPSK, EPSMODE); return inner; }, 31000);
+const pool = runField('脚本池(gun+balanced)', GAMES, gunOpp, 32000);
+const nodef = runField('不防场(4×只枪)', GAMES, gunOpp, 33000);
+const def = runField('会防场(4×防御)', GAMES, guardOpp, 34000);
+const wall = runField('破防场(4×只防御不还手)', Math.min(GAMES, 120), guardOpp, 35000);
+/* v1.5.204：原来的"会防场"用 4×pickDefend ⇒ 实测 **100% 平局**（谁都打不死谁）⇒ 1st 不可判。
+ * 补一个**能分出胜负**的会防场：2 席防御 + 2 席只枪。*/ 
+const defMix = runField('会防场(2 防御 + 2 只枪)', GAMES, function (i) { return (i % 2) ? gunOpp : defOpp; }, 36000);
+
+console.log('【1】会为大招攒钱（跨期选择）—— 阈值：原生 大雷 ≥0.15 次/局');
+for (const d of [mirror, pool, nodef, def]) console.log('   ' + d.name.padEnd(22) + ' 大雷 ' + f2(d.bigTPerGame) + ' 次/局   电磁炮 ' + f2(d.railgunPerGame) + '   蓄能 ' + f2(d.chargePerGame));
+
+console.log('\n【2】按对手姿态换线 —— 阈值：def 场与 nodef 场 1st 差 ≤5pt');
+console.log('   def 场（4×纯防御，实测 100% 平局 ⇒ **不可判**）1st 名义 = ' + pct(def.firstRate) + '（判胜 ' + def.dec + '/' + def.games + '）');
+console.log('   nodef 场 1st = ' + pct(nodef.firstRate) + '（判胜 ' + nodef.dec + '/' + nodef.games + '）');
+console.log('   **会防场(2 防御 + 2 只枪)** 1st = ' + pct(defMix.firstRate) + '（判胜 ' + defMix.dec + '/' + defMix.games + '）');
+console.log('   出招份额（受评席）—— 只枪场 → 会防场(2 防 2 枪)：');
+{
+  const ks = new Set([...Object.keys(nodef.usage), ...Object.keys(defMix.usage)]);
+  const rows = [];
+  for (const k of ks) { const a = (nodef.usage[k] || 0) / nodef.allDec, b = (defMix.usage[k] || 0) / defMix.allDec; rows.push([R.byKey[k] ? R.byKey[k].name : k, a, b, b - a]); }
+  rows.sort(function (x, y) { return Math.abs(y[3]) - Math.abs(x[3]); });
+  for (const r of rows.slice(0, 7)) console.log('     ' + String(r[0]).padEnd(8) + ' 只枪场 ' + pct(r[1]).padStart(7) + '  会防场 ' + pct(r[2]).padStart(7) + '   Δ ' + (r[3] >= 0 ? '+' : '') + (100 * r[3]).toFixed(1) + 'pt');
+}
+console.log('   ⇒ 位移越大越像"按姿态换线"；全 0 位移 = 对姿态无反应');
+
+console.log('\n【3】会清场，不是拖平 —— 阈值：破防场 受评席 ≥50% 胜');
+console.log('   破防场 受评席 1st = ' + pct(wall.firstRate) + '  平局率 = ' + pct(wall.drawRate) + '  终场存活 = ' + pct(wall.aliveRate) + '（' + wall.games + ' 局）');
+
+console.log('\n【4】能完成 ≥2 回合序列（蓄能[电珠] → 下一回合电磁炮）—— 阈值：>0.5 次/局');
+for (const d of [mirror, pool, nodef]) console.log('   ' + d.name.padEnd(22) + ' 完成率 ' + f2(d.seqPerGame) + ' 次/局（有序列的局占比 ' + pct(d.seqGameRate) + '）');
+
+console.log('\n【5】座位无偏 —— 阈值：极差 ≤10pt（仓线 = 该 n 的零分布 p99）· v1.5.223 起**两口径并列**');
+/* v1.5.224：`--seat-n` / `--mirror-n` 是**门禁专用的小样本档**（默认值不变：报告照旧跑满）。
+ * 动机：门禁里 D149 要 spawn 本探针两次，而【5】【6】是它最贵的两段（座位 n=100+400、广度 n=400，还各跑两口径）
+ * ⇒ 实测 D149 一个人吃 46.5 秒、是整支门禁最慢的一道。门只需要"两列都在且不同"，不需要那个 n。 */
+for (const n of SEAT_NS) {
+  const a = seatSymmetry(A.sb, live, MODE, n), b = seatSymmetry(B2.sb, live, MODE, n);
+  const fmt = r => '各座 ' + r.pct.map(x => x.toFixed(1)).join('/') + '  极差 ' + r.spread.toFixed(1) + 'pt  仓线 ' + r.spreadLine.toFixed(1) + 'pt';
+  console.log('   n=' + String(n).padStart(3) + '  ε=0  ' + fmt(a) + '  ⇒ ' + a.verdict + (a.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）'));
+  console.log('           产品 ' + fmt(b) + '  ⇒ ' + b.verdict + (b.spread <= 10 ? '（≤10pt ✓）' : '（>10pt ✗ 按理想规格）') + (a.verdict !== b.verdict ? '   ⚠️ **两口径结论相反**' : ''));
+}
+/* 第二半自证（这时才可判）：`audit-lib` 那条路（把沙箱里的 `EpirusTrainer.policyChooserN` 包一层）
+ * 必须**真被调用过** —— 否则"两口径座位相同"会被误读成"口径无关"，实际是搬运没生效。 */
+if (!(B2.sb.__viaWrapper > 0)) {
+  console.log('✗ 口径搬运自证失败：`audit-lib` 路径（包一层 `policyChooserN`）一次都没被调用 ⇒ 座位那两行没真正换口径 ⇒ 整表作废');
+  process.exit(9);
+}
+console.log('   （口径搬运自证：`evo.js` 写死处 ' + B2.hardwired + ' 处 → 内存替换 ' + B2.patched + ' 处；`audit-lib` 路径经包装调用 ' + B2.sb.__viaWrapper + ' 次）');
+console.log('   ⚠️ `seatSymmetry`（audit-lib.mjs:' + (LN_SEAT_AL || '行号读不出') + '）内部写死 `policyChooserN(params, 0.15)`（ε=0）⇒「ε=0」那行是它的**原生**口径；');
+console.log('      「产品」那行靠 `build({on:true})` 把沙箱里的 `EpirusTrainer.policyChooserN` 包一层实现（与门禁口径**故意不同**：门禁仍用 ε=0）。');
+
+console.log('\n【6】广度当约束不当目标 —— 阈值：净兑现 G≥3 且 ≥4 种打上血 · v1.5.223 起**两口径并列**');
+{
+  const show = function (tag, sbx) {
+    const mh = sbx.EpirusTrainer.mirrorHealth(live, MIRROR_N, 5, MODE);
+    const lk = Object.keys(mh.landByKey || {}).filter(function (k) { return !/[\u4e00-\u9fa5]/.test(k) && ['headshot', 'dream', 'chain', 'counter', 'taunt'].indexOf(k) < 0; });
+    const kn = (mh.landedKeys != null ? mh.landedKeys : lk.length);
+    console.log('   ' + tag + ' 出手 G = ' + f2(mh.effSkills) + '（' + mh.distinctKeys + ' 种）· 净兑现 G = ' + f2(mh.effSkillsLand) +
+      '（' + kn + ' 种 / ' + mh.landedTotal + ' 次落地）⇒ ' + (mh.effSkillsLand >= 3 && kn >= 4 ? '达标' : '未达标'));
+    return mh;
+  };
+  const a = show('ε=0 ', A.sb), b = show('产品', B2.sb);
+  console.log('   ⇒ 两口径差：净兑现 G ' + f2(a.effSkillsLand) + ' → ' + f2(b.effSkillsLand) +
+    ' · 打上血的卡 ' + (a.landedKeys != null ? a.landedKeys : 0) + ' → ' + (b.landedKeys != null ? b.landedKeys : 0) + ' 种');
+  console.log('   ⚠️ `mirrorHealth`（evo.js:' + (LN_EVO_MH0 || '行号读不出') + ' 起）建 Chooser 走漏斗 `trainChooser()`（写死处 evo.js:' + (LN_EVO_MH || '行号读不出') + '）⇒ **训练侧健康门槛与体检 G 列都是 ε=0 口径**。');
+}
+
+console.log('\n【7】不要的两条');
+{
+  const all = [mirror, pool, nodef, def, wall];
+  const dmg = new Set(); const blk = new Set();
+  for (const d of all) { for (const k of d.dmgVia) dmg.add(k); for (const k of d.blockedVia) blk.add(k); }
+  const canon = Array.from(dmg).filter(function (k) { return !/[\u4e00-\u9fa5]/.test(k) && ['headshot', 'dream', 'chain', 'counter', 'taunt'].indexOf(k) < 0; });
+  const never = canon.filter(function (k) { return !blk.has(k); });
+  console.log('   ① 在这些场地里造成过伤害的卡 ' + canon.length + ' 张，其中**从未被挡过**的 ' + never.length + ' 张');
+  console.log('      （被挡过的只有：' + (Array.from(blk).filter(k => !/[\u4e00-\u9fa5]/.test(k)).join(', ') || '无') + '）');
+  console.log('      从未被挡：' + never.join(', '));
+  console.log('   ② 镜像场设防率 = ' + pct(mirror.defRate) + '（' + mirror.allDec + ' 次决策，其中防御类 ' + mirror.defDecN + ' 次）—— "逼防"若不存在则应为 0%');
+  console.log('      其余场地设防率：不防场 ' + pct(nodef.defRate) + ' · 会防场 ' + pct(def.defRate) + ' · 破防场 ' + pct(wall.defRate));
+}

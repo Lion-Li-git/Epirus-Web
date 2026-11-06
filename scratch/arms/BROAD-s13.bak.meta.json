@@ -1,0 +1,247 @@
+{
+ "mode": "cem",
+ "seed": 13,
+ "evals": 6006,
+ "pop": 14,
+ "games": 4,
+ "n": 3,
+ "elite": 4,
+ "sig0": 0.2,
+ "ignoredFlags": null,
+ "sigFloor": 0,
+ "sigRestart": 0,
+ "esaSig": null,
+ "arenaPen": 0,
+ "gamesPlanned": 24024,
+ "gamesActualLoop": 24024,
+ "gamesActualHoldout": 40,
+ "gamesActualStartHoldout": 40,
+ "targetGames": 24000,
+ "netForwards": 473736,
+ "netCandScores": 16541581,
+ "trainMode": "multi",
+ "holdoutGames": 60,
+ "startFit": 1,
+ "inLoopBest": 1,
+ "holdoutFit": -0.16874999999999998,
+ "holdoutFirst": 0.15,
+ "holdoutTop2": 0.8,
+ "holdoutStartFit": -0.1,
+ "holdoutStartFirst": 0.2,
+ "holdoutStartTop2": 0.95,
+ "dFirst": -0.05000000000000002,
+ "dTop2": -0.1499999999999999,
+ "currency": "arena2.first",
+ "arena": {
+  "fp": "arena2.v2|pool=6566dfdb/0|poolSeed=20261029|shapes=3:multi,5:multi|roster=random,defend,wall,antidef,farmer,heavyfire,deepsaver|highN=1|stratified=0",
+  "temp": 0.15,
+  "shapes": 11,
+  "roster": 7,
+  "pool": 7,
+  "holdGamesPerShape": 20,
+  "holdGames": 40,
+  "draw": 0,
+  "cur": "first",
+  "diverse": false,
+  "highN": 1,
+  "stratified": false,
+  "stratCap": 4,
+  "stratMix": 1,
+  "divTol": 0.02,
+  "divDelta": 0.1,
+  "divEvery": 10,
+  "divTrigger": 0.5,
+  "esa": null,
+  "lex": null,
+  "fpen": null,
+  "bestMaxCard": {
+   "key": "charge",
+   "share": 0.6558139534883721,
+   "nonji": 215
+  },
+  "startMaxCard": {
+   "key": "charge",
+   "share": 0.4444444444444444,
+   "nonji": 126
+  },
+  "bestByShape": {
+   "3:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": -0.27499999999999997,
+    "cleanScore": -0.35,
+    "firstScore": -0.27499999999999997
+   },
+   "5:multi": {
+    "games": 20,
+    "first": 0.15,
+    "draw": 0,
+    "score": -0.0625,
+    "cleanScore": -0.0625,
+    "firstScore": -0.0625
+   }
+  }
+ },
+ "curve": [
+  {
+   "games": 2408,
+   "best": 1
+  },
+  {
+   "games": 6048,
+   "best": 1
+  },
+  {
+   "games": 12040,
+   "best": 1
+  },
+  {
+   "games": 18032,
+   "best": 1
+  }
+ ],
+ "secs": 81,
+ "startLabel": "夹具包 scratch/arms/PP6-s13.bak",
+ "id": "BROAD-s13",
+ "parent": "PP6-s13",
+ "lineage": {
+  "parent": "scratch/arms/PP6-s13.bak",
+  "parentHash": "d97f9c772fe6ef8a8669698361111d55",
+  "outHash": "6231d42e5688ae5d4d0d2a5f29e55347",
+  "gen": 3,
+  "seed": 13,
+  "recipe": {
+   "arenaLex": false,
+   "arenaPerN": false,
+   "boN": false,
+   "shapeCap": 0,
+   "shapePick": false,
+   "warmShape": 0
+  },
+  "noOp": false
+ },
+ "mastery": null,
+ "funnel": null,
+ "headHealth": {
+  "temp": 0.15,
+  "states": 72,
+  "pack": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 42.998,
+   "entShareMed": 0,
+   "spreadMed": 50.2246,
+   "odds": 2.6010890496914936e+145,
+   "tieArgmax": 0,
+   "agreeRandom": 12.5,
+   "flat": false,
+   "agreeRefs": 3
+  },
+  "v7": {
+   "states": 72,
+   "temp": 0.15,
+   "candMed": 43,
+   "concMed": 43,
+   "entShareMed": 0,
+   "spreadMed": null,
+   "odds": null,
+   "tieArgmax": 0,
+   "agreeRandom": null,
+   "flat": false
+  },
+  "flatLineAgreePct": 60,
+  "calib": "随机起点彼此 93~97% ‖ v7 5%（60 个真局决策点，原件 scratch/qoder-1030-headcalib2.mjs）",
+  "gate": "关（只报不判）"
+ },
+ "headGate": "未开闸",
+ "wrote": "scratch/arms/BROAD-s13.bak",
+ "container": {
+  "v": 92,
+  "arch": "S1o",
+  "gen": 3,
+  "dims": {
+   "seatH": 16,
+   "actH": 8,
+   "hid": 32,
+   "hid2": 24,
+   "input": "obs3b",
+   "inter": 0,
+   "tinter": 0,
+   "gen": 3,
+   "keySplit": 1,
+   "dof": 415
+  },
+  "n": 7993,
+  "seg": [
+   {
+    "name": "seatEnc",
+    "off": 0,
+    "len": 1408,
+    "weight": [
+     0,
+     1392
+    ],
+    "bias": [
+     1392,
+     1408
+    ],
+    "fanIn": 87
+   },
+   {
+    "name": "actEnc",
+    "off": 1408,
+    "len": 488,
+    "weight": [
+     1408,
+     1888
+    ],
+    "bias": [
+     1888,
+     1896
+    ],
+    "fanIn": 60
+   },
+   {
+    "name": "ctx",
+    "off": 1896,
+    "len": 4320,
+    "weight": [
+     1896,
+     6184
+    ],
+    "bias": [
+     6184,
+     6216
+    ],
+    "fanIn": 134
+   },
+   {
+    "name": "cand",
+    "off": 6216,
+    "len": 1752,
+    "weight": [
+     6216,
+     7944
+    ],
+    "bias": [
+     7944,
+     7968
+    ],
+    "fanIn": 72
+   },
+   {
+    "name": "policyHead",
+    "off": 7968,
+    "len": 25,
+    "weight": [
+     7968,
+     7993
+    ],
+    "bias": null,
+    "fanIn": 24
+   }
+  ]
+ }
+}

@@ -1,0 +1,34 @@
+# D4 / D191④ 变异取证 2026-11-04T10:38:06+08:00 ‖ 主仓 HEAD=4521b483
+Preparing worktree (detached HEAD 47b05c06)
+Updating files:  34% (2015/5909)Updating files:  35% (2069/5909)Updating files:  36% (2128/5909)Updating files:  37% (2187/5909)Updating files:  38% (2246/5909)Updating files:  39% (2305/5909)Updating files:  40% (2364/5909)Updating files:  41% (2423/5909)Updating files:  42% (2482/5909)Updating files:  43% (2541/5909)Updating files:  44% (2600/5909)Updating files:  45% (2660/5909)Updating files:  46% (2719/5909)Updating files:  47% (2778/5909)Updating files:  48% (2837/5909)Updating files:  49% (2896/5909)Updating files:  50% (2955/5909)Updating files:  51% (3014/5909)Updating files:  52% (3073/5909)Updating files:  53% (3132/5909)Updating files:  54% (3191/5909)Updating files:  55% (3250/5909)Updating files:  56% (3310/5909)Updating files:  57% (3369/5909)Updating files:  58% (3428/5909)Updating files:  59% (3487/5909)Updating files:  60% (3546/5909)Updating files:  61% (3605/5909)Updating files:  62% (3664/5909)Updating files:  63% (3723/5909)Updating files:  64% (3782/5909)Updating files:  65% (3841/5909)Updating files:  66% (3900/5909)Updating files:  67% (3960/5909)Updating files:  68% (4019/5909)Updating files:  69% (4078/5909)Updating files:  70% (4137/5909)Updating files:  71% (4196/5909)Updating files:  72% (4255/5909)Updating files:  73% (4314/5909)Updating files:  74% (4373/5909)Updating files:  75% (4432/5909)Updating files:  75% (4457/5909)Updating files:  76% (4491/5909)Updating files:  77% (4550/5909)Updating files:  78% (4610/5909)Updating files:  79% (4669/5909)Updating files:  80% (4728/5909)Updating files:  81% (4787/5909)Updating files:  82% (4846/5909)Updating files:  83% (4905/5909)Updating files:  84% (4964/5909)Updating files:  85% (5023/5909)Updating files:  86% (5082/5909)Updating files:  87% (5141/5909)Updating files:  88% (5200/5909)Updating files:  89% (5260/5909)Updating files:  90% (5319/5909)Updating files:  91% (5378/5909)Updating files:  92% (5437/5909)Updating files:  93% (5496/5909)Updating files:  94% (5555/5909)Updating files:  95% (5614/5909)Updating files:  96% (5673/5909)Updating files:  97% (5732/5909)Updating files:  98% (5791/5909)Updating files:  99% (5850/5909)Updating files: 100% (5909/5909)Updating files: 100% (5909/5909), done.
+HEAD is now at 47b05c06 夜账§四十八追记+谱系终版: CB3L泛用性最低格48.1；233节点谱系收CB3L（哈希映射补齐）
+--- 基线：夜班末（47b05c06）的旧腿 + 当时的产品 ⇒ 期望红（门被 if 守卫架空）
+[旧腿/未变异]   ✘ D4 opponent rotation must not depend on individual index (pairing)  → 轮换必须在 `let oi` 或 `oppSeatIndex` 里有一处真身（两处都扫不到 = 这条门已被重构架空，判红）
+--- 对照 0：只换新腿、产品一字不动 ⇒ 期望绿
+[新腿/未变异]   ✔ D4 opponent rotation must not depend on individual index (pairing)
+--- M1：开档那条改用 idx ⇒ 期望红并点名那条分支（旧腿对这条只能报'扫不到真身'）
+[M1 idx]   ✘ D4 opponent rotation must not depend on individual index (pairing)  → rotation must not use idx (breaks same-gen pairing): (idx * 4 + k + gen * 4) % oppsLen
+--- M2：函数改名 ⇒ 期望响亮报'两处都扫不到 = 这条门已被重构架空'
+[M2 改名]   ✘ D4 opponent rotation must not depend on individual index (pairing)  → 轮换必须在 `let oi` 或 `oppSeatIndex` 里有一处真身（两处都扫不到 = 这条门已被重构架空，判红）
+--- M3：摘掉开档那条（回到单 return 老形状）⇒ 期望绿，且形状自证那条不许虚报多条
+[M3 老形状]   ✔ D4 opponent rotation must not depend on individual index (pairing)
+--- worktree 已拆：1 个（应只剩主仓）
+--- D191④ 牙：把已注册过的同权重再抄第三份（band1 的 canonical 侧已在账本里）
+{"groups":16,"files":35,"unregistered":1,"trackedRedundant":8,"missing":[],"worst":[{"w":"3152f877","n":1,"e":["docs/artifacts/MUT-D191-probe.bak"]}],"unregPaths":["docs/artifacts/MUT-D191-probe.bak"],"unregMore":0}
+{"groups":16,"files":34,"unregistered":0,"trackedRedundant":8,"missing":[],"worst":[],"unregPaths":[],"unregMore":0}
+  上面两行 = 有探针（unregistered=1 并点名 MUT-D191-probe）‖ 摘掉后（0）
+⚠ `--group=meta`：**只跑了 15 / 171 条**（跳过 156 条；累计含 meta）⇒ 这不是全量门禁，**不许当整轮全绿引用**。
+
+N人测试：通过 15 / 15
+  GAP       编号 十三 → 十五，中间缺 1 节（行 263→333，cn）
+  GAP       编号 十六 → 十九，中间缺 2 节（行 381→532，cn）
+  → 把被吃掉那一行逐字补回去，连它下面的空行一起核。数标题条数没用（+1 −1 互相抵消）。
+
+### 注解（同一份尺报的两类既有误报，别追）
+- 上面 check.cjs 的 GAP「十三→十五 缺 1」「十六→十九 缺 2」= 中文 numeral 解析没认出 十四/十七/十八；标题在盘上：
+    301:## 十四、冷启动对拍把上一条推断翻掉了：**"宽"与"强"在 2.0 里落在两个盆**
+    470:## 十七、T2 端到端结案 + 2.0 冠军演化可视化（用户裁"这两个都做一下"）
+    490:## 十八、把 2.0 的冠军放回**旧池那张图**：用户读对了，我 §十五 的措辞要收窄
+- DUPID「2.0 重号」= 把标题里的"2.0"当编号；本仓代 3 架构名就叫 2.0。
+- D191④ 那两行 JSON 的差别只在 unregistered 与 unregPaths：探针在场时数 1 并点名，删掉回 0 ⇒ 豁免面对称化没把牙磨掉。
+- worktree 现存 1 个 = 只有主仓；MUT-D191-probe.bak 残留在盘上否：ls: cannot access 'docs/artifacts/MUT-D191-probe.bak': No such file or directory

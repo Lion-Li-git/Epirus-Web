@@ -1,0 +1,99 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/ga-arms/L5-D4a-s13.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "cand",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "oracleDef",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 800,
+  "moved": 0,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "ji": 494,
+   "charge": 155,
+   "railgun": 151
+  }
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.905,
+    "teacherLl": -0.7335553750404519,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.84,
+  "startLl": -0.8749654776478583,
+  "agree": 0.905,
+  "ll": -0.7335553750404519,
+  "wAgree": 0.905,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 122,
+    "hit": 122
+   },
+   {
+    "key": "charge#elec#elec",
+    "n": 39,
+    "hit": 38
+   },
+   {
+    "key": "railgun",
+    "n": 39,
+    "hit": 21
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "dof": 415,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/ga-arms/L5-D4a-s13.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

@@ -1,0 +1,7 @@
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=churn
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=churnSham
+=== shape=[aggro,gunspam,focusfire,deepsaver] arm=asis
+=== shape=[deepsaver,deepsaver,aggro,gunspam] arm=churn
+=== shape=[deepsaver,deepsaver,aggro,gunspam] arm=churnSham
+=== shape=[deepsaver,deepsaver,aggro,gunspam] arm=asis
+GTC2_DONE 14:55:30

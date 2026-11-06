@@ -20,16 +20,22 @@
  * 用法：node champion-map/attach-hshort.mjs [--check]
  *   先跑：node champion-map/feas.mjs --allMulti=1 --shard=k/4 --out=feas-short-sK.tsv   （k=1..4）
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = f => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const CHECK = process.argv.includes('--check');
+/* 目标表（11-05）：以前写死 coords.tsv，而 2.0 那批只在 coords-gen3-1105.tsv / coords-view-20.tsv 里
+ *   ⇒ 挂不上。`--table=` 指哪张写哪张，默认 coords.tsv ⇒ 1.8 那批逐字不变。 */
+const TABLE = (() => { const a = process.argv.find(x => x.indexOf('--table=') === 0); return a ? a.slice(8) : 'coords.tsv'; })();
 
 const OKS = {};
-{ const files = ['feas-short-s1.tsv', 'feas-short-s2.tsv', 'feas-short-s3.tsv', 'feas-short-s4.tsv'].filter(f => existsSync(join(HERE, f)));
-  if (!files.length) { console.error('⛔ 没找到 feas-short-s*.tsv ⇒ 先跑 feas.mjs --allMulti=1 --shard=k/4 --out=feas-short-sK.tsv'); process.exit(2); }
+{ /* 11-05：输入从"写死 s1..s4"改成收 `feas-short-*.tsv` 全族 ⇒ 2.0 那批的分片（feas-short-g3-*.tsv）能进来。
+    *   混片风险由下面两条守卫挡：① 每行 `legsMode` 必须以 all-multi 开头（不是这套腿表整批拒绝）；
+    *   ② 同一枚在两片里判反 ⇒ exit 2（分片重叠不许悄悄合并）。 */
+  const files = readdirSync(HERE).filter(f => /^feas-short-.*\.tsv$/.test(f));
+  if (!files.length) { console.error('⛔ 没找到 feas-short-*.tsv ⇒ 先跑 node champion-map/feas.mjs --allMulti=1 --shard=k/4 --out=feas-short-sK.tsv'); process.exit(2); }
   for (const f of files) {
     const F = rd(f), fh = Object.fromEntries(F[0].map((x, i) => [x, i]));
     if (fh.ok === undefined || fh.legsMode === undefined) { console.error('⛔ ' + f + ' 缺 `ok` 或 `legsMode` 列 ⇒ 不敢挂（三套腿表会混成一列）'); process.exit(2); }
@@ -42,7 +48,7 @@ const OKS = {};
       OKS[r[fh.id]] = { ok: r[fh.ok] === '1' ? 1 : (r[fh.ok] === '0' ? 0 : null), fails: String(r[fh.fails] || '').slice(0, 120) };
     } } }
 
-const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
+const CO = rd(TABLE), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
 const COLS = ['okShort', 'failsShort'];
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
@@ -67,7 +73,7 @@ if (CHECK) {
   console.log('--check ✅ 全 ' + (CO.length - 1) + ' 行都有 okShort');
   process.exit(0);
 }
-writeFileSync(join(HERE, 'coords.tsv'), CO.map(r => r.join('\t')).join('\n') + '\n');
-console.log('coords.tsv 列数 ' + CO[0].length + ' ‖ 挂上 ' + nHit + '/' + (CO.length - 1) + ' 枚 ⇒ 全腿短程过 ' + nOk + ' ‖ 不过 ' + (nHit - nOk));
+writeFileSync(join(HERE, TABLE), CO.map(r => r.join('\t')).join('\n') + '\n');
+console.log(TABLE + ' 列数 ' + CO[0].length + ' ‖ 挂上 ' + nHit + '/' + (CO.length - 1) + ' 枚 ⇒ 全腿短程过 ' + nOk + ' ‖ 不过 ' + (nHit - nOk));
 if (miss.length) console.log('⚠ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）：' + miss.slice(0, 8).join(' ') + (miss.length > 8 ? ' …' : ''));
 if (orphan.length) console.log('⚠ 分片表里有 ' + orphan.length + ' 枚不在 coords 名单上（前 8：' + orphan.slice(0, 8).join(' ') + '）⇒ 图上看不见它们');

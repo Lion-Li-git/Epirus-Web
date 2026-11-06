@@ -141,7 +141,7 @@ if (only.length) {
 if (LIMIT > 0) list = list.slice(0, LIMIT);
 
 /* ---- 续跑：跳过已量过的 id ---- */
-const OUTP = join(HERE, OUT);
+const OUTP = isAbsolute(OUT) || /^[A-Za-z]:[\/\\]/.test(OUT) || OUT[0] === '/' ? OUT : join(HERE, OUT);
 const done = new Set(existsSync(OUTP) ? readFileSync(OUTP, 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]) : []);
 if (!existsSync(OUTP)) writeFileSync(OUTP, COLS.join('\t') + '\n');
 const todo = list.filter((e, i) => i % SH[1] === SH[0] - 1 && !done.has(e.id));

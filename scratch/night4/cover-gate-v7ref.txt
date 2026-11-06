@@ -1,0 +1,61 @@
+== bundled-champion-3p（v7） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 100.8
+   自选: ji=337 gun=78 sword=68 charge=17 railgun=17 reflect=8 bigT=4 guard=3 bagua=3 snipe=2 miniT=2 holo=1
+   防御族份额 2.8% ‖ 质量判定 15 次（有效 0 半 0 白防 15） ⇒ 准确 0%
+   8P long: mine 菜单=32 自选=0 ‖ dualGun 菜单=32 自选=0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== v7wall2-97（v7） ‖ 5P long ×12 ‖ 胜 50% ‖ 局长 93.3
+   自选: ji=356 snipe=144 guard=25 bagua=24 sword=18 reflect=18 gun=10 proto=5 jinshield=4 shift=2 holo=1
+   防御族份额 13.0% ‖ 质量判定 78 次（有效 5 半 2 白防 71） ⇒ 准确 9%
+   8P long: mine 菜单=0 自选=0 ‖ dualGun 菜单=0 自选=0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== D4a（v7） ‖ 5P long ×12 ‖ 胜 8% ‖ 局长 94.6
+   自选: ji=313 snipe=91 gun=67 sword=21 reflect=6 bagua=5 ring=5 guard=4 charge=3 railgun=3
+   防御族份额 2.9% ‖ 质量判定 13 次（有效 0 半 0 白防 13） ⇒ 准确 0%
+   8P long: mine 菜单=3 自选=0 ‖ dualGun 菜单=3 自选=0 ‖ 胜 42%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== e70-out__D02-31（v7） ‖ 5P long ×12 ‖ 胜 33% ‖ 局长 93.2
+   自选: ji=462 sword=88 gun=51 charge=39 railgun=34 bigT=14 reflect=10 guard=10 ring=9 bagua=4 miniT=3 snipe=3
+   防御族份额 3.3% ‖ 质量判定 24 次（有效 1 半 0 白防 23） ⇒ 准确 4%
+   8P long: mine 菜单=51 自选=0 ‖ dualGun 菜单=51 自选=0 ‖ 胜 33%
+   残血开局: drain 自选 0 ‖ 胜 17%
+== T8-s114（v7） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 100.8
+   自选: ji=337 gun=78 sword=68 charge=17 railgun=17 reflect=8 bigT=4 guard=3 bagua=3 snipe=2 miniT=2 holo=1
+   防御族份额 2.8% ‖ 质量判定 15 次（有效 0 半 0 白防 15） ⇒ 准确 0%
+   8P long: mine 菜单=32 自选=0 ‖ dualGun 菜单=32 自选=0 ‖ 胜 25%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== U2-77001（v7） ‖ 5P long ×12 ‖ 胜 25% ‖ 局长 100.6
+   自选: ji=262 gun=75 snipe=56 charge=43 reflect=33 laserEye=17 guard=16 bagua=15 tank=3 holo=1
+   防御族份额 12.5% ‖ 质量判定 63 次（有效 3 半 1 白防 59） ⇒ 准确 6%
+   8P long: mine 菜单=0 自选=0 ‖ dualGun 菜单=0 自选=0 ‖ 胜 33%
+   残血开局: drain 自选 0 ‖ 胜 8%
+== v7beadseed-82（v7） ‖ 5P long ×12 ‖ 胜 8% ‖ 局长 93.4
+   自选: ji=373 snipe=133 gun=30 sword=28 guard=5 reflect=5 bagua=4 holo=4 proto=2 charge=1 jinshield=1
+   防御族份额 3.6% ‖ 质量判定 21 次（有效 3 半 0 白防 18） ⇒ 准确 14%
+   8P long: mine 菜单=0 自选=0 ‖ dualGun 菜单=0 自选=0 ‖ 胜 17%
+   残血开局: drain 自选 0 ‖ 胜 25%
+== v7u1-82（v7） ‖ 5P long ×12 ‖ 胜 17% ‖ 局长 98.7
+   自选: ji=296 snipe=105 gun=25 sword=24 bagua=17 guard=14 reflect=9 ring=1
+   防御族份额 8.1% ‖ 质量判定 39 次（有效 3 半 2 白防 34） ⇒ 准确 13%
+   8P long: mine 菜单=1 自选=0 ‖ dualGun 菜单=1 自选=0 ‖ 胜 58%
+   残血开局: drain 自选 0 ‖ 胜 17%
+
+### 覆盖门判定（池级 = --packs 并集）
+  ✘ 主干[每包] bundled-champion-3p ‖ 缺 tank
+  ✘ 主干[每包] v7wall2-97 ‖ 缺 tank
+  ✘ 主干[每包] D4a ‖ 缺 tank
+  ✘ 主干[每包] e70-out__D02-31 ‖ 缺 tank
+  ✘ 主干[每包] T8-s114 ‖ 缺 tank
+  ✘ 主干[每包] U2-77001 ‖ 缺 sword
+  ✘ 主干[每包] v7beadseed-82 ‖ 缺 tank
+  ✘ 主干[每包] v7u1-82 ‖ 缺 tank
+  ✘ 主干（池内每包必备） ‖ 0/8 包全过
+  ✔ 次级长程 charge（池 ≥50% 成员） ‖ 6/8 成员会
+  ✘ 次级长程 ring（池 ≥50% 成员） ‖ 3/8 成员会
+  ✘ 次级长程 bigT（池 ≥50% 成员） ‖ 3/8 成员会
+  ✔ 次级长程 railgun（池 ≥50% 成员） ‖ 4/8 成员会
+  ✘ 防御原型（存在成员：份额 5-15% ∧ 准确 ≥25%） ‖ 最高份额 13.0% ‖ 池加权 6.0% ‖ 带内成员 无（准确 —）
+  ✘ 地雷（8P 自选 ≥2.4000000000000004） ‖ 8P 自选 0
+  ✘ 摄魂（残血桌自选 ≥2.4000000000000004） ‖ 自选 0
+  ✔ 自发 tank ‖ 5P 3 / 8P 0
+  ✔ 自发 snipe ‖ 5P 536 / 8P 292
+  － 只报不判：dualgun=0 mirror=0 curse=0 firestorm=0 taunt=0 transfer=0 rod=0 purify=0 minit=0

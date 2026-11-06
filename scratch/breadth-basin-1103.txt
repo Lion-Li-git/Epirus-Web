@@ -1,0 +1,2 @@
+BAS-s13.js ‖ 种数 10 ‖ guard 22.9% reflect 20.5% bagua 20.4% holo 3.5% gun 3.0% armor 2.7% curse 2.5% jinshield 1.9% shift 1.6% proto 1.1%
+BAS-s41.js ‖ 种数 8 ‖ reflect 27.4% bagua 17.8% guard 15.4% armor 6.6% holo 4.2% gun 3.7% curse 3.4% jinshield 0.6%

@@ -1,0 +1,432 @@
+/* ring2 实验自跑器：训练 seeds + 两考卷评估 + 生成 ab-analyze 的输入日志
+ *
+ * 为什么要有它（而不是在会话里手搓 bash 循环）：
+ *   HANDOFF §5.1-1 的教训 ——「别把等待写进 tool call」。上次我写了个 15 分钟轮询循环，
+ *   把 DSH 整个卡死、作业被带走。这个脚本把「等待」关在**它自己的进程内**：
+ *     起 server → 逐个 seed 抓 SSE（完成即落产物）→ 关 server → 跑评估 → 写汇总日志。
+ *   会话侧只做「一次看一眼」（job_output 或 tail 状态日志），不再有长等待。
+ *   §5.1-9 的坑（按命令行模式杀进程会杀掉自己）也一并绕开：不改用 kill-by-pattern，
+ *   而是**自动挑一个空闲端口**，残留 server 不冲突；server 是本脚本的子进程，直接 kill。
+ *
+ * 用法（bash 写法；pwsh 用 $env:RING2_XXX='..'）:
+ *   node tools/ring2-run.mjs                      # 训练 32..36 + 评估 12 臂 + 汇总
+ *   RING2_STAGE=eval  node tools/ring2-run.mjs    # 只评估（产物已在时）
+ *   RING2_STAGE=train node tools/ring2-run.mjs    # 只训练
+ *   RING2_SEEDS=32,33 node tools/ring2-run.mjs    # 只跑指定 seed
+ *   RING2_FORCE=1     node tools/ring2-run.mjs    # 已有产物也重跑
+ *   # 高精度复核：环场每臂 400 局（40 局时单跑极差 82.5pt，读不出效应）
+ *   RING2_STAGE=eval RING2_RGAMES=400 RING2_TAG=r400 node tools/ring2-run.mjs
+ *   RING2_ONLY=ring   # 只跑环场（跳标准考卷）
+ *   # 长程（5 血）实验：12 对手池 + 5 血训练，考卷2 = 5 血标准考卷
+ *   RING2_MODE=long RING2_POOL=A RING2_ARM=long RING2_SEEDS=31,32,33,34,35,36 \
+ *     RING2_EXAM2FLAGS='--mode=long' RING2_TAG=long node tools/ring2-run.mjs
+ *
+ * 产物（*.log 与 *.bak 都已被 .gitignore 忽略）:
+ *   docs/artifacts/ring2-<seed>.bak       冠军包
+ *   docs/artifacts/ring2-<seed>.sse.log   原始 SSE（含 error 事件）
+ *   docs/artifacts/ring2-status.log       进度（可 tail）
+ *   docs/artifacts/ring2-eval.log         逐臂逐考卷读数（人读）
+ *   docs/artifacts/ring2-run.log          ab-analyze.mjs 的输入（机器读）
+ *   docs/artifacts/ring2-analyze.log      ab-analyze.mjs 的输出
+ *
+ * 会被还原的副作用：训练每轮都会改写 js/bundled-champion-3p.js，
+ * 并通过 bumpChampionVersion() 刷 index.html 的 ?v= 缓存戳 ⇒ 脚本开头备份字节、结尾原样写回。
+ */
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { readFileSync, writeFileSync, copyFileSync, existsSync, appendFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';   // v1.5.55: 产物串味守卫
+import net from 'node:net';
+
+/* ===== 环境配置（必须在下面用到 TAG / EGAMES 的路径常量之前声明：const 有 TDZ，
+ * node --check 查不出来，只有运行到那一行才炸 —— 本文件第一版就栽在这）===== */
+const STAGE = process.env.RING2_STAGE || 'all';       // all | train | eval
+/* 每考卷局数：§6.4 的预注册口径是 40；RING2_RGAMES 可单独抬高环场局数。
+ * 为什么需要：环场（1 组合 × N 局）在 40 局下单跑极差可达 82.5pt ⇒ 配对统计读不出东西。
+ * 抬局数压低的是**每臂的抽样噪声**（不能压低"每个 seed 落到哪个局部最优"的真实异质性，
+ * 那只能靠加 seed）⇒ 用来区分"指标噪声"与"真效应"。 */
+const EGAMES = Number(process.env.RING2_EGAMES || 40);
+const RGAMES = Number(process.env.RING2_RGAMES || EGAMES);
+const ONLY = process.env.RING2_ONLY || '';            // '' | standard | ring
+const TAG = process.env.RING2_TAG ? '-' + process.env.RING2_TAG : '';
+/* v1.5.0：本工具从「ring2 专用」扩成**通用 seed-sweep**（换池子/换模式/换考卷都是环境变量）。
+ *   RING2_MODE       训练模式（'long' = 5 血长程）；不设 ⇒ URL 里不带 mode ⇒ 旧行为逐位不变
+ *   RING2_POOL       训练池（'A' = 12；默认 'B' = 13 含 ringspam；'C' = 15 再加 reflectspam+guardspam；'D' = 18 再叠 3 席 ringspam）
+ *   RING2_ARM        实验臂产物前缀（默认 ring2 ⇒ ring2-<seed>.bak）
+ *   RING2_CTRL       控制臂前缀（默认 ms2-p12）
+ *   RING2_EXAM2FLAGS 第二考卷参数（默认环场；长程实验传 --mode=long = 5 血标准考卷） */
+const TRAIN_MODE = process.env.RING2_MODE || '';
+const ARM = process.env.RING2_ARM || 'ring2';
+let prevSha = null;   // v1.5.55: 上一个 seed 的产物 sha1（用于抓'不同 seed 拷到同一个包'）
+const CTRL = process.env.RING2_CTRL || 'ms2-p12';
+const EXAM2 = (process.env.RING2_EXAM2FLAGS || '--mode=long --field=ringwall').split(' ').filter(Boolean);
+/* v1.5.2：风格切片（复合适应度）—— 在池子预算之外追加 k 局对风格冠军的局，1st 率按权重并进 fit。 */
+const STYLE_OPPS = process.env.RING2_STYLEOPPS || '';
+const STYLE_W = process.env.RING2_STYLEW || '';
+const STYLE_G = process.env.RING2_STYLEGAMES || '';
+
+/* ===== 路径 ===== */
+const execFileP = promisify(execFile);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = join(__dirname, '..');
+const ART = join(root, 'docs', 'artifacts');
+const BUNDLE_MP = join(root, 'js', 'bundled-champion-3p.js');
+const INDEX = join(root, 'index.html');
+const BASE = join(ART, 'champion-5p-v1.3.58.bak');
+
+/* v1.5.48：**训练隔离** —— 训练服务把产物写到临时路径、热启动也从临时路径读，
+ * **永不覆写线上 `js/bundled-champion-3p.js` 与 `index.html`**（用户两次因此在训练窗口里打到坏包）。
+ * env 传**相对路径**（服务端 resolve(root, ...)）。 */
+const STAGE_IN = join(ART, '.training-in-3p.js');
+const STAGE_OUT = join(ART, '.training-out-3p.js');
+/* qoder-research 0920（RESEARCH-LOG §5 · 谱系事实核查）：**本 runner 历史上把所有外部
+ * `EPIRUS_BUNDLE_IN` 无声覆写掉**（下面那行赋值）⇒ HANDOFF §1.2/§3 里"热启动 = 最新冠军"的
+ * 启动命令其实一直是**从 v1.3.58 旧种子（BASE）长出来的**（近期全部臂与线上包的
+ * `hotstartFrom = d13d3c856c6cff62` 逐字相同 = BASE 的 weightsId，可复核）。
+ * A/B 的可比性没坏（大家同谱系），坏的是那句话说的是另一件事。
+ * 现在给一个**显式开关**：`RING2_HOT=js/bundled-champion-3p.js`（或任意 bundle/.bak 路径）
+ * ⇒ staging 起点改拷该文件；不设 ⇒ 与历史臂逐字同谱系（默认行为一字不变）。
+ * 产物 meta 的 `hotstartFrom` 会跟着变 —— 谱系校验点从"恒等于 e379/d13d"改成"等于所选 HOT 的 weightsId"。 */
+const HOT = process.env.RING2_HOT || '';              // '' = 旧行为（BASE）
+const HOT_SRC = HOT ? resolve(root, HOT) : BASE;
+process.env.EPIRUS_BUNDLE_IN = 'docs/artifacts/.training-in-3p.js';
+process.env.EPIRUS_BUNDLE_OUT = 'docs/artifacts/.training-out-3p.js';   // 热启动起点（与 ms2/ring2-31 同一权重）
+const LOCK = join(ART, '.training.lock');            // v1.5.8：训练锁（见 main() 里的说明）
+/* v1.5.71：**线上包快照** —— 训练隔离的守门真源。
+ * 背景：用户两次被"训练覆写线上包 ⇒ 页面崩"坑过（v1.5.48 才做隔离）。隔离之后自跑器只把热启动
+ * 基线拷到 staging（`.training-in-3p.js`）、产物从 `.training-out-3p.js` 取，**不碰**
+ * `js/bundled-champion-3p.js`。但守门用例 D16 一直沿用隔离**之前**的旧假设（"训练期间线上包
+ * 必须逐字节等于 v1.3.58 基线"）⇒ 每条臂在训练期间都会把 D16 打红（我刚被它挡了一次提交）。
+ * 现在改成**真断言**：臂开始时记下线上包 sha1，臂结束时比对（不等 ⇒ 大声报错，这正是用户踩过的坑）。 */
+const LIVE_SNAP = join(ART, '.training-live.sha1');
+const STATUS = join(ART, 'ring2-status' + TAG + '.log');
+const EVALLOG = join(ART, 'ring2-eval' + TAG + '.log');
+const RUNLOG = join(ART, 'ring2-run' + TAG + '.log');
+const ANALOG = join(ART, 'ring2-analyze' + TAG + '.log');
+/* ⚠ 命名规矩：TAG 必须加在**扩展名之前**（`<名字><TAG>.log`）。
+ * 我踩过一次：状态/服务端日志原本写成 `ring2-status.log-<tag>` ⇒ `.gitignore` 的 `*.log`
+ * 匹配不到 ⇒ `git add -A` 会把它们带进仓库。np-test L5 现在守着这条。 */
+const SERVERLOG = join(ART, 'ring2-server' + TAG + '.log');
+/* 每个臂每个考卷的**完整 stdout**（含出手种类/分布、ep 分带、cost>=3 出手占比、
+ * 前置条件读数）——只解析 1st/top2 会把"技能使用分布变了吗"这类问题丢掉。 */
+const STDOUTLOG = join(ART, 'ring2-stdout' + TAG + '.log');
+
+/* ===== 实验输入 ===== */
+const POOL_A = 'random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver';
+const POOL_B = POOL_A + ',ringspam';
+/* v1.5.29（方案 b）：池 C = B 再加墙对手（反弹墙/盾墙）—— 没有墙对手时破墙奖励永远触发不了。 */
+const POOL_C = POOL_B + ',reflectspam,guardspam';
+/* v1.5.31（用户选 ①）：池 D = C 再加 **3 席 ringspam**（共 4 席）。
+ * 动机：池里只有 1 个环流对手时，冠军绝大多数对局根本碰不到"有人开环"这个处境 ——
+ * 奖励/示范再强也架不住机会太少（v7teach 臂 20 局才 1 次小雷，疑似噪声）。 */
+const POOL_D = POOL_C + ',ringspam,ringspam,ringspam';
+/* v1.5.71（第五轮复核 §4-1）：池 E = C + **1 席会瞄人的对手**（`targeter`：谁在滚环 / 刚放冷枪 /
+ * 攒满大雷就指谁）。动机见 server/opp-pool.mjs 与 js/train/bots.js 的 `pickTargeter`：
+ * 池里没有会瞄人的对手 ⇒ 反狙击、反环、主动清场三条线在训练里都拿不到梯度。
+ * 只放 1 席 —— 要的是"造成威胁会被反制"这件事出现在对局里，不是把整池换成惩罚者。 */
+const POOL_E = POOL_C + ',targeter';
+/* v1.5.0：池子可选 —— 'A' = 12 对手（与 ms2-p12 控制臂同池），默认 'B' = 13（含 ringspam）。
+ * v1.5.2：也可以直接传**自定义名单**（含 `champ:<路径>` 冠军对手），例：
+ *   RING2_POOL='random,defend,champ:docs/artifacts/champion-5p-hA9.bak' */
+const POOL = (function () {
+  const v = String(process.env.RING2_POOL || 'B');
+  const u = v.toUpperCase();
+  if (u === 'A') return POOL_A;
+  if (u === 'B') return POOL_B;
+  if (u === 'C') return POOL_C;
+  if (u === 'D') return POOL_D;
+  if (u === 'E') return POOL_E;
+  return v;   // 当名单用
+})();
+const SEEDS = (process.env.RING2_SEEDS || '32,33,34,35,36').split(',').map(function (s) { return Number(s.trim()); }).filter(Boolean);
+const ALL_SEEDS = Array.from(new Set([31].concat(SEEDS)));   // 31 常备（ring2 上一轮已有；长程实验要新训）
+const GENS = Number(process.env.RING2_GENS || 250), NP = 5, POP = 16, GPO = 8;
+const EN = 5, ESEED = 77000;
+const LBL_C = 'p12', LBL_E = 'r17';                   // ab-analyze 的两个臂名
+const SEED_TIMEOUT_MS = Number(process.env.RING2_SEED_TIMEOUT_MS || 900000);
+
+const T0 = Date.now();
+function say(msg) {
+  const l = '[' + ((Date.now() - T0) / 1000).toFixed(1) + 's] ' + msg;
+  console.log(l);
+  try { appendFileSync(STATUS, l + '\n'); } catch (e) { /* ignore */ }
+}
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+function readMeta(file) {
+  try {
+    const src = readFileSync(file, 'utf8');
+    const m = src.match(/EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\});/);
+    return m ? JSON.parse(m[1]) : null;
+  } catch (e) { return null; }
+}
+
+/* 挑一个空闲端口：不依赖「杀掉残留 server」这种危险动作（§5.1-9）。 */
+function freePort(start) {
+  return new Promise(function (resolve, reject) {
+    let p = start;
+    (function tryOne() {
+      if (p > start + 30) return reject(new Error('8906..8936 全被占用'));
+      const s = net.createServer();
+      s.once('error', function () { p++; tryOne(); });
+      s.once('listening', function () { s.close(function () { resolve(p); }); });
+      s.listen(p, '127.0.0.1');
+    })();
+  });
+}
+async function waitServer(port, ms) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) {
+    try { const r = await fetch('http://127.0.0.1:' + port + '/'); if (r.ok) return true; } catch (e) { /* not up yet */ }
+    await sleep(300);
+  }
+  return false;
+}
+
+/* 一个 seed：热启动 → 抓 SSE 到 done/error → 落产物 */
+async function trainSeed(seed, port) {
+  const out = join(ART, ARM + '-' + seed + '.bak');
+  const sseLog = join(ART, ARM + '-' + seed + '.sse.log');
+  copyFileSync(HOT_SRC, STAGE_IN);
+  /* v1.5.55: snapshot the staged artifact BEFORE training. If the health gate blocks the
+   * candidate, the staged file is not refreshed, so "copying the previous bundle" is a
+   * NORMAL skip -- not a "seed did not take effect" mix-up. */
+  let stageBefore = null;
+  try { stageBefore = createHash('sha1').update(readFileSync(STAGE_OUT)).digest('hex'); } catch (e) { stageBefore = null; }
+  const startMeta = readMeta(STAGE_IN);
+  const url = 'http://127.0.0.1:' + port + '/train?gens=' + GENS + '&n=' + NP + '&pop=' + POP +
+    '&gpo=' + GPO + '&seed=' + seed + '&opps=' + POOL + (TRAIN_MODE ? '&mode=' + TRAIN_MODE : '') +
+    (STYLE_OPPS ? '&styleopps=' + STYLE_OPPS : '') + (STYLE_W ? '&stylew=' + STYLE_W : '') +
+    (STYLE_G ? '&stylegames=' + STYLE_G : '');
+  /* 起点 = BASE（champion-5p-v1.3.58.bak）的权重，或 `RING2_HOT` 指定的包（qoder-research 0920）；
+     产物 meta 的 hotstartFrom 记下其 weightsId —— 谱系校验点 = "等于所选起点的 weightsId"。 */
+  say('seed ' + seed + ' 开跑（起点 = ' + (HOT || 'v1.3.58 权重') + ', meta seed=' + (startMeta && startMeta.seed) + '）: ' + url);
+  const ac = new AbortController();
+  const timer = setTimeout(function () { ac.abort(); }, SEED_TIMEOUT_MS);
+  let sawDone = false, sawErr = null, lastGen = -1, carry = '';
+  writeFileSync(sseLog, '');                     // 清空；下面**边收边追加**，跑中即可 tail
+  try {
+    const res = await fetch(url, { signal: ac.signal });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    for (;;) {
+      const step = await reader.read();
+      if (step.done) break;
+      const s = dec.decode(step.value, { stream: true });
+      try { appendFileSync(sseLog, s); } catch (e) { /* ignore */ }
+      /* 行缓冲：SSE 的一行可能被 TCP 分块切开；不带 carry 就会漏掉 done 事件
+       * ⇒ 然后干等到 SEED_TIMEOUT_MS（15 分钟）。这是"等不到 done"最常见的原因。 */
+      carry += s;
+      const parts = carry.split('\n');
+      carry = parts.pop();
+      for (const l of parts) {
+        if (l.indexOf('"type":"done"') >= 0) sawDone = true;
+        if (l.indexOf('"type":"error"') >= 0) sawErr = l.trim();
+        if (l.indexOf('"type":"gen"') >= 0) {              // 每 50 代报一次进度
+          const g = /"gen":(\d+)/.exec(l), b = /"best":(-?[\d.]+)/.exec(l);
+          if (g) {
+            const gn = Number(g[1]);
+            if (gn % 50 === 0 && gn !== lastGen) { lastGen = gn; say('seed ' + seed + ' 进度 gen ' + gn + '/' + GENS + '  best=' + (b ? b[1] : '?')); }
+          }
+        }
+      }
+      if (sawDone || sawErr) { ac.abort(); break; }
+    }
+  } catch (e) {
+    if (!sawDone && !sawErr) sawErr = 'fetch/stream: ' + String((e && e.message) || e);
+  }
+  clearTimeout(timer);
+  if (!sawDone) throw new Error('seed ' + seed + ' 没有 done 事件: ' + (sawErr || '未知（见 ' + sseLog + '）'));
+  /* v1.5.55: was the staged artifact really refreshed? If not -> health gate blocked it. */
+  let stageAfter = null;
+  try { stageAfter = createHash('sha1').update(readFileSync(STAGE_OUT)).digest('hex'); } catch (e) { stageAfter = null; }
+  if (stageBefore && stageAfter && stageBefore === stageAfter) {
+    say('seed ' + seed + ': staged artifact NOT refreshed => blocked by health gate (see [health] in the server log) -- skipping this seed');
+    return { seed: seed, firstRate: 0, top2Rate: 0, blockedByHealth: true };
+  }
+  try {
+    copyFileSync(STAGE_OUT, out);
+  } catch (e) {
+    /* v1.5.48：产物可能**被健康门槛拦下**（服务端日志里是 `[health] ⚠ 产物未过自对局体检 ⇒ 不写盘`）⇒
+     * 这时没有临时产物，属于**正常结果**（不是错误）⇒ 记一条并跳过该 seed，别让整臂失败退出。 */
+    say('seed ' + seed + ' 产物未落盘（多半被健康门槛拦下：见服务端日志的 [health] 行）—— 跳过该 seed');
+    return { seed: seed, firstRate: 0, top2Rate: 0, blockedByHealth: true };
+  }
+  /* v1.5.55 事故守卫：**不同 seed 若拷到同一个包**，说明 seed 未生效 ——
+   * 本次事故：服务器 `if (!runningN)` 静默丢弃第二个及以后的 /train 请求 ⇒ 12 个 seed 拷到同一个包
+   * （sha1 dfb399dab9 × 12），而一切"多种子对比/偏置验收"看起来都正常、有效样本却恒为 1。
+   * 现在直接抛错：宁可整臂失败，也不要伪造出"多次独立实验"的假象。 */
+  const sha = createHash('sha1').update(readFileSync(out)).digest('hex').slice(0, 12);
+  if (prevSha && sha === prevSha) {
+    throw new Error('seed ' + seed + ' 的产物与上一个 seed **逐字节相同**（sha1=' + sha + '）'
+      + ' —— seed 未生效（服务端是否拒绝了并发 /train 请求？见服务端日志）');
+  }
+  prevSha = sha;
+  say('seed ' + seed + ' 产物 sha1=' + sha);
+  const meta = readMeta(out) || {};
+  say('seed ' + seed + ' DONE  自评=' + Number(meta.firstRate || 0).toFixed(4) +
+    ' top2=' + Number(meta.top2Rate || 0).toFixed(4) + '  → ' + out);
+  return meta;
+}
+
+/* 一次考卷：抓 [主体] 行的 1st / top2 */
+async function evalArm(file, extra, games) {
+  const args = ['tools/eval-5p.mjs', String(games || EGAMES), String(EN), String(ESEED), file].concat(extra || []);
+  const r = await execFileP(process.execPath, args, { cwd: root, maxBuffer: 256 * 1024 * 1024 });
+  const out = String(r.stdout || '');
+  for (const l of out.split(/\r?\n/)) {
+    const m = /^\[[^\]]*\]\s*1st=([\d.]+)%.*top2=([\d.]+)%/.exec(l);
+    if (m) return { first: Number(m[1]), top2: Number(m[2]), out: out };
+  }
+  throw new Error('解析不到读数: ' + file + ' ' + (extra || []).join(' ') + '\n' + out.slice(0, 800));
+}
+
+/* ab-analyze.mjs 的行格式：^  seed 臂 自评 1st=..% … top2=..% 1st=..%$（最后一个是第二考卷） */
+function fmtLine(r) {
+  return '  ' + String(r.seed).padStart(3) + '   ' + r.pool.padEnd(5) + '  ' + r.self.toFixed(4) +
+    '  1st=' + r.stdFirst.toFixed(1) + '%  2nd=--  3rd=--  4th=--  5th=--  | top2=' + r.stdTop2.toFixed(1) +
+    '% top3=--  1st=' + r.ringFirst.toFixed(1) + '%';
+}
+
+async function evalAll() {
+  const rows = [];
+  let elog = '# ring2 逐臂逐考卷读数（eval-5p.mjs ' + EGAMES + '/' + RGAMES + ' ' + EN + ' ' + ESEED + '）\n';
+  elog += '# 控制臂 p12 = ms2-p12-<seed>.bak（12 对手）；实验臂 r17 = ring2-<seed>.bak（12 + ringspam）\n';
+  for (const seed of ALL_SEEDS) {
+    const arms = [
+      { pool: LBL_C, file: join(ART, CTRL + '-' + seed + '.bak') },
+      { pool: LBL_E, file: join(ART, ARM + '-' + seed + '.bak') }
+    ];
+    for (const arm of arms) {
+      if (!existsSync(arm.file)) { say('缺文件，跳过: ' + arm.file); continue; }
+      const meta = readMeta(arm.file) || {};
+      let std = { first: 0, top2: 0, out: '' };
+      if (ONLY !== 'ring') {
+        std = await evalArm(arm.file, [], EGAMES);
+        say('eval ' + arm.pool + ' seed ' + seed + ' 标准考卷: 1st=' + std.first + '%  top2=' + std.top2 + '%');
+        appendFileSync(STDOUTLOG, '\n===== ' + arm.pool + ' seed ' + seed + ' 考卷1(3血标准) ' + arm.file + ' =====\n' + std.out);
+      }
+      let ring = { first: 0, out: '' };
+      if (ONLY !== 'standard') {
+        ring = await evalArm(arm.file, EXAM2, RGAMES);
+        say('eval ' + arm.pool + ' seed ' + seed + ' 考卷2(' + EXAM2.join(' ') + ', ' + RGAMES + '局): 1st=' + ring.first + '%');
+        appendFileSync(STDOUTLOG, '\n===== ' + arm.pool + ' seed ' + seed + ' 考卷2(' + EXAM2.join(' ') + ') ' + arm.file + ' =====\n' + ring.out);
+      }
+      rows.push({ seed: seed, pool: arm.pool, self: Number(meta.firstRate || 0), stdFirst: std.first, stdTop2: std.top2, ringFirst: ring.first });
+      elog += arm.pool + ' seed ' + seed + '  考卷1 1st=' + std.first + '% top2=' + std.top2 +
+        '%  | 考卷2(' + EXAM2.join(' ') + ') 1st=' + ring.first + '%  | 训练自评=' + Number(meta.firstRate || 0).toFixed(4) +
+        '  (opps=' + ((meta.opps || '').split(',').length) + ' 个, mode=' + (meta.mode || 'multi(未记录)') + ')\n';
+      writeFileSync(EVALLOG, elog, 'utf8');
+    }
+  }
+  let out = '# seed-sweep｜池 = ' + POOL + '\n';
+  out += '# 训练模式 = ' + (TRAIN_MODE || 'multi(默认/未传)') + '   臂：' + LBL_C + ' = ' + CTRL + '-<seed>.bak，' + LBL_E + ' = ' + ARM + '-<seed>.bak\n';
+  out += '# 考卷1 = eval-5p.mjs ' + EGAMES + ' ' + EN + ' ' + ESEED + ' <文件>   （35 组合 × ' + EGAMES + ' 局 = ' + (35 * EGAMES) + ' 局）\n';
+  out += '# 考卷2 = 同上 + ' + EXAM2.join(' ') + '   （' + RGAMES + ' 局）\n';
+  out += '# 行格式（ab-analyze.mjs 解析）：seed 臂 训练自评 考卷1-1st=..% … top2=..% 考卷2-1st=..%\n';
+  for (const r of rows) out += fmtLine(r) + '\n';
+  writeFileSync(RUNLOG, out, 'utf8');
+  say('已写 ' + RUNLOG + '（' + rows.length + ' 行）');
+  try {
+    const a = await execFileP(process.execPath, ['tools/ab-analyze.mjs', RUNLOG, LBL_C, LBL_E], { cwd: root, maxBuffer: 64 * 1024 * 1024 });
+    writeFileSync(ANALOG, String(a.stdout || ''), 'utf8');
+    console.log(String(a.stdout || ''));
+    say('已写 ' + ANALOG);
+  } catch (e) {
+    say('ab-analyze 失败: ' + String((e && e.stdout) || '') + String((e && e.stderr) || e));
+  }
+}
+
+async function main() {
+  const bakBundle = existsSync(BUNDLE_MP) ? readFileSync(BUNDLE_MP) : null;
+  const bakIndex = existsSync(INDEX) ? readFileSync(INDEX) : null;
+  /* v1.5.8：训练锁。为什么需要：本脚本每个 seed 前会把 bundle 覆盖成热启动基线（v1.3.58），
+   * 跑完再还原 ⇒ **训练期间读 bundle 的工具会读到临时值**。本轮我因此踩了两次：
+   * ① np-test D16（规则指纹）误报红；② `tools/champ-audit.mjs` 的 bundle 行显示成旧冠军的特征。
+   * 现在两者都会先看这把锁：存在 ⇒ D16 跳过校验并明确说明、体检表给 bundle 行打"训练中"标记。 */
+  try { writeFileSync(LOCK, JSON.stringify({ pid: process.pid, tag: process.env.RING2_TAG || '', at: new Date().toISOString() })); } catch (e) { /* */ }
+  /* v1.5.71：臂首记下线上包 sha1（隔离的**可验证**形式：训练期间线上包不该被任何人改动） */
+  try {
+    writeFileSync(LIVE_SNAP, createHash('sha1').update(readFileSync(BUNDLE_MP)).digest('hex') + '  ' +
+      new Date().toISOString() + '\n');
+  } catch (e) { /* */ }
+  let child = null;
+  try {
+    if (STAGE !== 'eval') {
+      const port = await freePort(Number(process.env.RING2_PORT || 8906));
+      say('启动训练服务 :' + port + '（日志 ' + SERVERLOG + '）');
+      child = spawn(process.execPath, ['server/train-server.mjs', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+      child.stdout.on('data', function (d) { try { appendFileSync(SERVERLOG, d); } catch (e) { /* */ } });
+      child.stderr.on('data', function (d) { try { appendFileSync(SERVERLOG, d); } catch (e) { /* */ } });
+      if (!await waitServer(port, 30000)) throw new Error('训练服务 30s 内没起来（见 ' + SERVERLOG + '）');
+      say('训练服务就绪');
+      for (const s of ALL_SEEDS) {
+        const existing = join(ART, ARM + '-' + s + '.bak');
+        if (existsSync(existing) && process.env.RING2_FORCE !== '1') { say('seed ' + s + ' 已有产物，跳过（RING2_FORCE=1 强制重跑）'); continue; }
+        await trainSeed(s, port);
+      }
+      child.kill();
+      child = null;
+      await sleep(500);
+    }
+    if (STAGE !== 'train') await evalAll();
+    say('全部完成');
+  } finally {
+    if (child) { try { child.kill(); } catch (e) { /* */ } }
+    /* v1.5.117（09-19 复核夜）：**只删自己那把锁**。
+     * 原来是 `rmSync(LOCK,{force:true})` 无条件删 ⇒ 一个**被拒绝的**并发 run（服务端 `已有多人训练在跑` 那条）
+     * 走 finally 时会把**另一个正在训练的 run** 的锁删掉 ⇒ 锁形同不存在，D16 的"训练中跳过"与
+     * `champ-audit` 的"bundle 行不可信"标记全部失效（我这夜实测撞上过一次：批次 7 在跑而 `.training.lock` 消失）。
+     * 锁文件里本来就写了 pid ⇒ 拿它做归属判断；持有者已死（陈旧锁）仍然要清，否则门禁会永远拒绝。 */
+    try {
+      if (existsSync(LOCK)) {
+        const own = (() => { try { return Number(JSON.parse(readFileSync(LOCK, 'utf8')).pid); } catch (e) { return null; } })();
+        const alive = (p) => { if (!p) return false; try { process.kill(p, 0); return true; } catch (e) { return false; } };
+        if (own === process.pid || !alive(own)) rmSync(LOCK, { force: true });
+        else console.log('[lock] 锁的持有者是 pid ' + own + '（还活着）而非本进程 ' + process.pid + ' ⇒ 不删，避免把别人的训练保护标志清掉');
+      }
+    } catch (e) { /* */ }
+    if (bakBundle) writeFileSync(BUNDLE_MP, bakBundle);
+    if (bakIndex) writeFileSync(INDEX, bakIndex);
+    /* v1.5.71：把"训练期间没碰线上包"从**注释里的承诺**变成**可验证的断言**（用户被这个坑过两次） */
+    try {
+      if (existsSync(LIVE_SNAP)) {
+        const want = readFileSync(LIVE_SNAP, 'utf8').trim().split(/\s+/)[0];
+        const got = createHash('sha1').update(readFileSync(BUNDLE_MP)).digest('hex');
+        if (got !== want) {
+          say('⛔ 线上包与臂首快照不一致（训练期间被写坏）：' + want.slice(0, 12) + ' → ' + got.slice(0, 12) +
+            '　⇒ 已用臂首备份还原，请人工核对 js/bundled-champion-3p.js');
+        } else {
+          say('✔ 线上包未被训练改动（sha1 ' + got.slice(0, 12) + ' 与臂首快照一致）');
+        }
+      }
+    } catch (e) { /* */ }
+    say('已还原 js/bundled-champion-3p.js 与 index.html（训练会刷 ?v= 缓存戳）');
+    /* v1.5.36（清理）：① **还原后重新打缓存戳** —— 还原会把 ?v= 退回旧值，浏览器于是在旧 URL 下
+     * 继续用缓存的旧冠军包 ⇒ 页面报"冠军包缺失/不兼容"（v1.5.32 实测踩过）。
+     * ② 收尾**自动跑零提升检测**：产物若等于热启动种子（整臂静默冻结）必须显式报出来，
+     * 不能靠人记得执行。 */
+    try {
+      const html = process.env.EPIRUS_BUNDLE_OUT ? '' : readFileSync(INDEX, 'utf8');   // v1.5.48：隔离模式不碰线上 index.html
+      const fresh = Date.now().toString(36);
+      const bumped = html.replace(/\?v=[0-9a-z]+/g, '?v=' + fresh);
+      if (!process.env.EPIRUS_BUNDLE_OUT && bumped !== html) { writeFileSync(INDEX, bumped, 'utf8'); say('已重打缓存戳 ?v=' + fresh + '（防止浏览器用缓存的旧包）'); }
+    } catch (e) { say('⚠ 重打缓存戳失败：' + e.message); }
+    if (process.env.RING2_ARM) {
+      try {
+        const r = spawnSync(process.execPath, [join(root, 'tools', 'zero-promote-check.mjs'), process.env.RING2_ARM,
+          join(root, 'docs', 'artifacts', 'champion-5p-v1.3.58.bak'), process.env.RING2_SEEDS || '31,32,33,34,35,36'],
+          { stdio: 'inherit' });
+        say(r.status === 0 ? '✅ 零提升检测通过（每个 seed 都有提升）' : '⚠ 零提升检测：有 seed 无提升（见上，status=' + r.status + '）');
+      } catch (e) { say('⚠ 零提升检测没跑起来：' + e.message); }
+    }
+  }
+}
+main().catch(function (e) {
+  say('!! 失败: ' + String((e && e.stack) || e));
+  process.exitCode = 1;
+});

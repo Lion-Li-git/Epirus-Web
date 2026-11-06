@@ -20,7 +20,7 @@
  *   ⚠ `--table` 从 v1.8.27 起**必给**（原来那个缺省表不含全部枚，静默吃它就是把缺枚打回 `-`）。
  *   幂等：列已存在则**原地回写**（不重复加列）。
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -65,8 +65,8 @@ if (bad.length) { console.error('⛔ 源表里有 ' + bad.length + ' 行的档/�
  *   判据同上面那条：`legsMode` 必须是 `all-long` 开头（读错表 = 把混合桌读数当长程读数挂上去），
  *   没有这枚的长程判定就写 `-`（**不是 0、不是"没过"**）。 */
 const OKL = {};
-{ const files = ['feas-long-s1.tsv', 'feas-long-s2.tsv', 'feas-long-s3.tsv', 'feas-long-s4.tsv'].filter(f => existsSync(join(HERE, f)));
-  if (!files.length) console.log('⚠ 没找到 feas-long-s*.tsv ⇒ `okLong/failsLong` 两列本轮不更新（先跑 feas.mjs --allLong=1 --shard=k/4）');
+{ const files = readdirSync(HERE).filter(f => /^feas-long-.*\.tsv$/.test(f));
+  if (!files.length) console.log('⚠ 没找到 feas-long-*.tsv ⇒ `okLong/failsLong` 两列本轮不更新（先跑 feas.mjs --allLong=1 --shard=k/4）');
   for (const f of files) {
     const F = rd(f), fh = Object.fromEntries(F[0].map((x, i) => [x, i]));
     if (fh.ok === undefined || fh.legsMode === undefined) { console.error('⛔ ' + f + ' 缺 `ok` 或 `legsMode` 列 ⇒ 不敢挂（混合桌与长程桌会混成一列）'); process.exit(2); }
@@ -77,7 +77,7 @@ const OKL = {};
     }
   } }
 
-const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
+const CO = rd(arg('table', 'coords.tsv')), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
 const COLS = ['Hlong', 'Hplong', 'Flong', 'okLong', 'failsLong'];
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
@@ -109,8 +109,8 @@ if (CHECK) {
   console.log('✔ 只核不写：考卷/页面量到 ' + nHit + ' 枚 ‖ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）‖ 过线(全腿长程) ' + nOk + ' 枚 ‖ 无 ' + okMiss.length + ' 枚');
   process.exitCode = nHit >= 700 ? 0 : 1;
 } else {
-  writeFileSync(join(HERE, 'coords.tsv'), out, 'utf8');
-  console.log('已写 coords.tsv：五列 ' + COLS.join('/') + '（T=' + T + '）‖ 考卷/页面量到 ' + nHit + ' ‖ 没量到 ' + miss.length +
+  writeFileSync(join(HERE, arg('table', 'coords.tsv')), out, 'utf8');
+  console.log('已写 ' + arg('table', 'coords.tsv') + '：五列 ' + COLS.join('/') + '（T=' + T + '）‖ 考卷/页面量到 ' + nHit + ' ‖ 没量到 ' + miss.length +
     (miss.length ? '（前 8：' + miss.slice(0, 8).join(' ') + '）' : '') +
     ' ‖ 过线(全腿长程) ' + nOk + ' ‖ 无 ' + okMiss.length);
   console.log('⚠ 坐标一列未动 —— 点坐标是**行为轴**（探针列），换桌形不改它们；变的只有颜色与一维排序。');

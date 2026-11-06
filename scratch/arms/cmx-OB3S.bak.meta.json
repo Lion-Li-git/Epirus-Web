@@ -1,0 +1,139 @@
+{
+ "tool": "supfit-gd",
+ "tag": "chainmix",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "chainmix",
+ "keySplit": 1,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 580,
+  "moved": 220,
+  "gone": 0,
+  "keys": 800
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.62,
+    "teacherLl": -15.384837925181332,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "startAgree": 0.365,
+  "startLl": -2.2120122696246804,
+  "agree": 0.62,
+  "ll": -15.384837925181332,
+  "wAgree": 0.17153580278292474,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 112,
+    "hit": 80
+   },
+   {
+    "key": "holo",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "gun",
+    "n": 15,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 23,
+    "hit": 21
+   },
+   {
+    "key": "railgun",
+    "n": 23,
+    "hit": 23
+   },
+   {
+    "key": "jinshield",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "armor",
+    "n": 4,
+    "hit": 0
+   },
+   {
+    "key": "guard",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "curse",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "proto",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "shift",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 4,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

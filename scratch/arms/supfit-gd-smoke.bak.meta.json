@@ -1,0 +1,57 @@
+{
+ "tool": "supfit-gd",
+ "tag": "smoke",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 60,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "label": {
+  "ok": 800,
+  "moved": 0,
+  "gone": 0,
+  "keys": 800
+ },
+ "supfitGd": {
+  "startAgree": 0.22,
+  "startLl": -3.0224942115705336,
+  "agree": 0.98,
+  "ll": -0.023482574366430795,
+  "wAgree": 0.9893956902997758,
+  "nTest": 200,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 124,
+    "hit": 0.32000000000000006
+   },
+   {
+    "key": "charge",
+    "n": 40,
+    "hit": 0.3418803418803421
+   },
+   {
+    "key": "railgun",
+    "n": 36,
+    "hit": 0.33333333333333304
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 91,
+  "input": "obs3b",
+  "dof": 415
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

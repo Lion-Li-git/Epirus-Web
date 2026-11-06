@@ -68,7 +68,7 @@ if (FLAG.topcards != null && !(Number.isInteger(TOPCARDS) && TOPCARDS >= 1 && TO
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
 sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js']) {
   vm.runInNewContext(readFileSync(f, 'utf8'), sb, { filename: f });
 }
 const W = sb.window, P = W.EpirusPolicy, S = W.EpirusState, R = W.EpirusRules, T = W.EpirusTrainer, Bots = W.EpirusBots;
@@ -601,7 +601,14 @@ const FIELDS = {
    * mix4 = **4 个不同风格同时在场**（最接近"人来打"的构造；A 考卷一局只面对 1~2 个脚本 ⇒ 对这类退化完全无感）；
    * farmerwall = **4 席只按ジ**（"面对不还手的对手它自己也不动手"这个从 v1.5.17 就存在的空洞，此前没有任何指标覆盖）。 */
   mix4:       ['aggro', 'defend', 'wall', 'farmer'],
-  farmerwall: ['farmer', 'farmer', 'farmer', 'farmer']
+  farmerwall: ['farmer', 'farmer', 'farmer', 'farmer'],
+  /* 千问 · 11-01（用户命题"纯靠环+大雷的冠军会被短包快速杀掉，等不到用大雷的时候"）：
+   *   gunwall = 4 席主攻枪（`gunspam`：1 ジ 的枪、压血量最高者，v1.5.90 实测能把线上冠军打死 65%）；
+   *   snipegun = 2 席狙击专精 + 2 席主攻枪（两条**短程**线混合，都不需要攒东西）。
+   * 两枚都用已登记脚本（`OPP_SPECS` ⇒ `ALL`），零新代码；这一档量的不是"胜率好不好"，
+   *   而是**死之前那一手有没有轮到**（看输出里的 平均回合 与 出手分布里大雷/环的次数）。 */
+  gunwall:    ['gunspam', 'gunspam', 'gunspam', 'gunspam'],
+  snipegun:   ['snipespam', 'snipespam', 'gunspam', 'gunspam']
 };
 if (FIELD) {
   if (!FIELDS[FIELD]) { console.error('--field 未知: ' + FIELD + '（可选: ' + Object.keys(FIELDS).join(' ') + '）'); process.exit(1); }
@@ -1201,12 +1208,18 @@ const subjectLabel = (RANK && !PAYLOAD && !INJECT && !SMART && !COMBO && !BAN &&
 const champ = runSubject(subjectSel, subjectLabel);
 const ctrl = runSubject(function () { return asChooser(Bots.pickRandom); }, '对照 pickRandom');
 
+/* 名次格按**这张桌实际有几人**印（同 `style-exam.mjs` 里 `N >= 4 ?` 那条口径）。
+ *   旧写法固定印 4th/5th ⇒ 3P 档上 `s.ranks[3]` 是 undefined ⇒ 打成 `4th=NaN%`；
+ *   而 `top3` 在 3P 恒等于 100% —— 一格没有信息量的读数印在表里，比不印更容易被误读。 */
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
 for (const s of [champ, ctrl]) {
+  const rk = [];
+  for (let i = 1; i < Math.min(N, ORD.length); i++) rk.push('  ' + ORD[i] + '=' + s.pct(s.ranks[i], s.total));
   console.log('[' + s.label + '] 1st=' + s.pct(s.ranks[0], s.total) +
     ' 严胜=' + s.pct(s.strictFirst, s.total) + ' 并列=' + s.pct(s.tieOnlyFirst, s.total) +
-    '  2nd=' + s.pct(s.ranks[1], s.total) + '  3rd=' + s.pct(s.ranks[2], s.total) +
-    '  4th=' + s.pct(s.ranks[3], s.total) + '  5th=' + s.pct(s.ranks[4], s.total) +
-    '   | top2=' + s.pct(s.ranks[0] + s.ranks[1], s.total) + ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total));
+    rk.join('') +
+    '   | top2=' + (N >= 3 ? s.pct(s.ranks[0] + s.ranks[1], s.total) : '（2 人桌恒 100%，不印）') +
+    (N >= 4 ? ' top3=' + s.pct(s.ranks[0] + s.ranks[1] + s.ranks[2], s.total) : ''));
   console.log('    各座位 1st 率: ' + s.seatGames.map(function (g, i) { return 'P' + i + '=' + s.pct(s.seatFirst[i], g); }).join(' '));
   console.log('    前置条件: 主体场均承伤=' + s.takenPerGame.toFixed(2) + '  平均回合=' + s.avgRounds.toFixed(1) + '  转移事件=' + s.transferEv + '  火焰伤害事件=' + s.fireEv);
   console.log('    机制: 自己的攻击被弹回=' + s.reflectSelfPerGame.toFixed(2) + ' 次/局  平局率=' + (s.drawRate * 100).toFixed(0) + '%  终局血量=' + s.hpEnd.toFixed(2));

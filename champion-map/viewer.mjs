@@ -97,6 +97,45 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
+/* §G3：三张预置图的初始版本模式。
+ *   ⚠ 11-05 傍晚的实测事故（本班自己造的）：按文件名习惯传了 `--preset=20`，而合法取值是 `all/1.8/2.0`
+ *     ⇒ 原来这一行**静默回落成 'all'** ⇒ 子集页丢掉 SUBSETP 判据域，页内自检从 `74/3/22 SKIP` 变成
+ *     `74/24/1`，读起来像"代码改坏了产品"，其实是烘焙参数没认。
+ *   ⇒ 与仓规「不认识的 `--` 参数必须响亮失败」对齐：取值不认识就点名退出，不许回落成另一档。 */
+{ const bad = ['preset', 'verpages', 'proj', 'projcols'].filter(k => {
+    const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0);
+    if (!a) return false;
+    const v = a.slice(k.length + 3);
+    if (k === 'preset') return ['all', '1.8', '2.0'].indexOf(v) < 0;
+    if (k === 'verpages') return ['0', '1'].indexOf(v) < 0;
+    if (k === 'projcols') return ['0', '1'].indexOf(v) < 0;
+    return ['tsne', 'old'].indexOf(v) < 0;
+  });
+  if (bad.length) {
+    console.error('⛔ ' + bad.join('/') + '= 的取值不认识（preset ∈ all|1.8|2.0 ‖ verpages ∈ 0|1 ‖ proj ∈ tsne|old ‖ projcols ∈ 0|1）。' +
+      '\n   这一行以前会**静默回落默认值** ⇒ 烘出语义不同的页面而判据照跑（11-05 实测踩过）。宁可不出图。');
+    process.exit(2);
+  } }
+const PRESET = arg('preset', 'all');
+/* ===== 单页化（11-06 夜 · 用户点名「三个网页并成一个」）=====
+ * `--projcols=1`：DATA 里带三套投影列（xt/yt = 全库 fit ‖ xt18/yt18 ‖ xt20/yt20，由
+ * `scratch/zcode-1106/attach-projcols.mjs` 挂列），页内"版本"下拉**换投影**而不是换页：
+ *   · 版本切换 = st.batch 过滤（原有页内过滤路）+ 把可见点的 x2/y2 换成那一版的投影列
+ *     + 作废地图侧几何缓存（NBK/FL/壳链拓扑）+ 相机复位（= 重新适配）。
+ *   · 谱系（时间×家族）/ 一维（F 序）/ 三维（x3y3z3 独立列）三张视图**不消费**这组列 ⇒ 不受影响。
+ *   · SUBSETP（子集页判据域）从烘焙常量改成**运行时**：batch=all 判全套，1.8/2.0 走 NA_IN_SUBSET 跳过。
+ * 必须配 `--verpages=0`（换页表为空，下拉才走页内路）；带着默认 verpages=1 烘 projcols 页 = 配置矛盾，
+ * 响亮失败（与 --preset 同一条纪律）。 */
+const PROJCOLS = arg('projcols', '0') === '1';
+if (PROJCOLS && arg('verpages', '1') !== '0') {
+  console.error('⛔ --projcols=1 必须配 --verpages=0（单页模式下拉走页内换投影，换页表必须为空）');
+  process.exit(2);
+}
+
+/* 11-05 上午（用户："选择批次并不是像拉显示范围一样只需要把旧点扣掉就行了"）：投影是**局域性**的 ⇒
+ *   换视图必须连点坐标一起重算 ⇒ 三张页各自从自己的子集表（coords-view-18 / coords-view-20 / 全部）烘出来，
+ *   页面里的"版本"下拉因此**换页**而不是换滤镜。`--verpages=0` 关掉（单独烘一页时用）。 */
+const VERPAGES = arg('verpages', '1') !== '0' ? { '1.8': 'index-2v-18.html', '2.0': 'index-2v-20.html', 'all': 'index.html' } : {};
 /* §E608 路径口径与 `pool-sync.mjs` / `seat-rule.mjs` 同族：带盘符或前导 `/` 的是**绝对路径**，不许再 join 一层。
  *   触发点是 D234⑩c：门从 tmpdir 传 `--out=C:\...\np-d234-rebake.html` 进来 ⇒ 无条件 `join(HERE, OUT)` 拼出歪路径
  *   ⇒ 写盘失败 exit 1，看起来像"烘焙崩了"。这一族今晚是第四次撞（`--seat=`/`--in=`/`--chart=` 都栽过）。 */
@@ -104,11 +143,23 @@ const OUTP = (OUT.indexOf(':') >= 0 || OUT[0] === '/' || /^[A-Za-z]:[\/\\]/.test
 /* E393 DS（丙·投影）：生成侧选定坐标（默认 t-SNE，--proj=old 回旧布局）。
  *   ⚠ 必须在生成侧：浏览器取景范围 PV 是装载时按坐标算的，装载后再换 ⇒ 视口对不上（实测画到右下角）。 */
 const PROJTSNE = arg('proj', 'tsne') !== 'old';
-const CF = join(HERE, 'coords.tsv');
+/* §G3（11-05 上午 · 千问）：`--fit` 的路径口径必须与下面 `OUT` 同族（§E608）——
+ *   原来写死 `join(HERE, arg('fit',…))` ⇒ 传绝对路径会被拼成 `champion-map\D:\code\…` 而"表不存在"，
+ *   看起来像"表坏了/没跑成"。这是本仓第五个栽在同一族上的旗标（`--out/--in/--seat/--chart` 都栽过）。 */
+const FITARG = arg('fit', 'coords.tsv');
+/* 与 `proj-tsne --in` 同一条口径：原样(cwd 相对) → HERE 拼 → 只取文件名；三个都没有 ⇒ 报错列出试过的路径
+ *   （原来只 `join(HERE, FITARG)` ⇒ 传 `champion-map/xxx.tsv` 会拼成双层而报"表不存在"，看着像表坏了）。 */
+const FITCAND = [FITARG, join(HERE, FITARG), join(HERE, FITARG.split(/[\\/]/).pop())];
+const CF = FITCAND.find(p => existsSync(p)) || '';
+if (!CF) { console.error('⛔ --fit=' + FITARG + ' 三个候选路径都不存在：\n   ' + FITCAND.join('\n   ') + '\n   ⇒ 宁可报错，不许退回 coords.tsv 烘另一批点'); process.exit(2); }
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
-if (rows.length < 50) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行'); process.exit(2); }
+/* 行数地板：原来写死 `< 50`，那是"整表 800+ 行"年代的口径 ⇒ 11-05 的**逐视图重投影**（2.0 只有 39 枚）会被它误杀，
+ *   而误杀的形态和"表真的坏了"一模一样（都是 exit 2 + 一句话），所以不能直接删。改成旗标：默认地板降到 20
+ *   （仍然拦得住"join 只写出几行"这类塌方），烘子集页时不必带旗标；要更狠的场合显式传 `--minrows=`。 */
+const MINROWS = Number(arg('minrows', 20)) || 20;
+if (rows.length < MINROWS) { console.error('⛔ 坐标表只有 ' + rows.length + ' 行（地板 ' + MINROWS + '，可用 --minrows= 调）'); process.exit(2); }
 /* ===== §E604 副名 → 主名 的翻译表（10-14 折行之后加的一跳，位置必须在池表读入**之前**）=====
  *   `coords.tsv` 现在**一行 = 一份权重**（用户裁：「同权重只算一枚」），组内其它历史名字搬到 `aliasIds` 列，当引用与指针。
  *   可别的键表仍然按**当年的名字**写：`pool-members.tsv` 里写的是 `SHIPPED-Ldemo`、`lineage.tsv` 的 parentOf 也指它，
@@ -141,8 +192,18 @@ if (PROJTSNE) {
   if (empty.length > rows.length * 0.02) { console.error('⛔ 投影列在，但 ' + empty.length + '/' + rows.length + ' 行是空的' +
     '\n       ⇒ 这些枚会退回旧坐标，与其余的**不在同一套投影里**（同一张图上混两套坐标 = 距离没有意义）。' +
     '\n         空的前 8 枚：' + empty.slice(0, 8).map(r => r.id).join(' ') + '\n         补投影：node champion-map/proj-tsne.mjs'); process.exit(2); }
-  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用 t-SNE 列 xt/yt' +
+  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）' +
     (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
+  /* §G3（11-05 上午 · 千问 · 用户报"团成一块几个点飞出去"）：**投影列不许是主坐标的拷贝**。
+   *   11-05 夜班那份合并器把 `x2/y2`（未投影的线性主坐标）抄进了 `xt/yt`，而上面两条守卫**看不见**这个病
+   *   （列在、值也非空，只是值来自另一套坐标）。后果实测：xt 的范围从 ±1.0 变成 −19.2…8.2
+   *   ⇒ 两枚离群点把视口撑开，**89% 的点落在 ±1.5 的方框里** = 用户说的那个老形态。
+   *   判据用"整表逐字相同"⇒ 单行同值只是巧合（浮点撞车概率极低），全表同值只可能是抄的。 */
+  const copyN = rows.filter(r => String(r.xt) === String(r.x2) && String(r.yt) === String(r.y2)).length;
+  if (copyN === rows.length) { console.error('⛔ 投影列是主坐标的拷贝：' + copyN + '/' + rows.length + ' 行的 xt/yt **逐字等于** x2/y2' +
+    '\n       ⇒ 图上画的其实是没有投影的那两列（这就是"团成一块 + 几个点飞出去"的成因；空列守卫看不见它，因为值非空）。' +
+    '\n         重投影整表：node champion-map/proj-tsne.mjs --in=' + (process.argv.find(a => a.indexOf('--fit=') === 0) || 'coords.tsv').slice(6) + ' ‖ 确实要用主坐标出图：--proj=old'); process.exit(2); }
+  if (copyN > 0) console.log('⚠ ' + copyN + '/' + rows.length + ' 行的 xt/yt 与 x2/y2 逐字相同（少量=浮点巧合；**全表**相同才判死，见上面那条）');
 }
 /* ===== §E491 头号尺有空洞就是**装错货**，比缺投影更狠 =====
  *   下面那句 DATA 取数是 `Hp: +r.Hp` ⇒ 空串变成 **0**，而 `Fv(d) = d.Hp/100 + st.T*d.S` 是图上**所有**排序与
@@ -152,8 +213,11 @@ if (PROJTSNE) {
  *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
  *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
 { const noHp = rows.filter(r => String(r.Hp === undefined ? '' : r.Hp).trim() === '');
-  const noDe = rows.filter(r => String(r.De === undefined ? '' : r.De).trim() === '');
-  if (noHp.length || noDe.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空 ' + noDe.length + ' 枚' +
+  /* §G3（11-05）：De 空洞按**版本分账**——2.0 行是夜班 200 局新测（没有 Δε 配对考卷），De 空 = 真未测，
+   *   走"未测 = null/灰"那支（与 hl2 同规矩）；1.8 行的 De 空洞仍然是装错货，照旧退场。 */
+  const noDe18 = rows.filter(r => r.ver !== '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
+  const noDe = rows.filter(r => r.ver === '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
+  if (noHp.length || noDe18.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空(1.8) ' + noDe18.length + ' 枚' +
     '\n       前 8 枚：' + noHp.concat(noDe).slice(0, 8).map(r => r.id).join(' ') +
     '\n       ⇒ 下面那句 `Hp: +r.Hp` 会把空串变成 0，而 F = Hp/100 + T·S 是图上**所有**排序的底 ⇒ 这几枚会被画成库内倒数（"未测"冒充"0%"）。' +
     '\n         补测：node champion-map/eps-full.mjs --extra=<这批的 extra 表> --onlyExtra --out=eNN-epsfull.tsv' +
@@ -167,7 +231,7 @@ const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [
 /* §E556：`feas-s4.tsv` = 10-09 那 63 枚**代表臂**现跑同一道闸的判定（`feas.mjs --ids=…`，tag 同为 n=20/aggr100/seat100）。
  *   为什么不并进 s1~s3 那张：那三片是 10-08 全库 920 枚的一次性跑批，混写会让"哪一行是哪一批"从文件上消失；
  *   分开一片，代价只是这一行多一个名字，换来的是 §E492 那道 tag 对账仍然指着"每片自己是什么档"说得清。 */
-const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv'].filter(f => existsSync(join(HERE, f)));
+const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv', 'feas-mixed-g3-1105.tsv'].filter(f => existsSync(join(HERE, f)));
 const panelP = join(HERE, 'panel.tsv');
 /* §E304 家族表（`lineage.mjs` 生成）：**家族 = 训练方法/目标配置的等价类**，不是 seed。
  *   为什么必须换：coords 的 seed 列只有 14 个取值（31~36 / 81~96），它就是包名尾部那个数 = META.seed
@@ -179,6 +243,19 @@ if (existsSync(linP)) {
   const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
   for (const l of ll.slice(1)) { const c = l.split('\t'); const o = {}; lh.forEach((k, i) => { o[k] = c[i]; }); LIN[o.id] = o; }
 } else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
+/* ===== §G3（11-05 深夜 · 用户令「2.0 点放进旧演化图」）：2.0 谱系 sidecar 并进 LIN =====
+ *   lineage.tsv 由 lineage.mjs 从 git/面板生成 ⇒ 2.0 节点不在其中（它们没有 v7 面板行）。
+ *   sidecar = `lineage-g3.tsv`（ZCode 维护，列同构：id/fam/famLabel/ts/parent/wid），
+ *   fam 从 900 起（v7 家族号 1~24 ⇒ 不相撞；fam ≥900 = 2.0 的树行）。
+ *   版本判定从此只有一处：`G3IDS` = sidecar 的 id 集 ⇒ DATA.ver / batchOf 都读它。 */
+const g3linP = join(HERE, arg('g3lin', 'lineage-g3.tsv'));
+let G3IDS = new Set();
+if (existsSync(g3linP)) {
+  const gl = readFileSync(g3linP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n'); const gh = gl[0].split('\t');
+  for (const l of gl.slice(1)) { const c = l.split('\t'); const o = {}; gh.forEach((k, i) => { o[k] = c[i]; });
+    LIN[o.id] = Object.assign({}, LIN[o.id] || {}, o); G3IDS.add(o.id); }
+  console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN（fam 900+）');
+} else console.log('⚠ 没有 ' + g3linP + ' ⇒ 2.0 点没有家族/树行（fam 全落 0）');
 let OKM = null, POK = 0, OKSRC = '', OKTAG = '';
 if (FEAS_FILES.length) {
   OKM = {}; const TAGS = {};
@@ -394,7 +471,17 @@ const DATA = rows.map(r => ({
    *   `Hp` = 同一台 `eval-5p`、同一批 35 组合、同 seed，主体席按页面默认档开剂量（§E597 起走 `--eps-tier=lv:regular` = 斜坡 0→0.05→0.1 ‖ k5 ‖ soft；旧写法是常数 ε=0.2，那在今天已经是**简单档**的剂量。局数与 `H` 同档，写在 `examG` 里）；
    *   `H`  = 考卷口径（ε=0 贪心）· **档 = `examG` 列**（自 §E569 起全图 120 局/组合）⇒ 不再并列 30/120 两套数；
    *   `De` = Δε = H − Hp（正 = 开探索就掉）—— 两口径必须**同批同档成对**，否则 Δε 里会混进采样量之差（档差中位就有 0.30pt）。*/
-  id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '', H: +r.H, Hp: +r.Hp, De: +r.De, S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '',
+  /* §G3：H/De 对 2.0 行 = 真未测 ⇒ null（不许 NaN 流进 toFixed）；Hp 全表在册（2.0 行 = 夜班 200 局读数） */
+  H: (r.H === '' || r.H === undefined) ? null : +r.H,
+  Hp: +r.Hp,
+  De: (r.De === '' || r.De === undefined) ? null : +r.De,
+  S: +r.S, Ge: +r.Geff, rk: +r.rank,
+  /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
+   *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
+   *   而 D4a 正是 2.0 树的克隆根（v7 面产物）、V7C/V7M/V7L 六枚是 v7 面的对照臂 ⇒ 全被拉进 2.0。
+   *   版本从此**只读数据列 `ver`**（由合并器按容器 `"v":92` 判定）；sidecar 只供家族与父边（父边允许跨版本）。 */
+  ver: r.ver === '2.0' ? '2.0' : '1.8',
   /* §E566：同枚的 exam=120 档读数。**空必须是 null，不许 `+'' = 0`**（§E491 那条病就是 Hp 空洞被当 0% 画成库内倒数） */
   examG: (String(r.examG === undefined ? '' : r.examG).trim() === '') ? null : +r.examG,
   /* §E373 预留的那个标记现在真的有值了：§E375 把 16 枚旧槽位冠军并进 coords.tsv 之后，
@@ -412,6 +499,12 @@ const DATA = rows.map(r => ({
   /* E393 DS（丙·投影）：坐标由 --proj 选（t-SNE 列 xt/yt/xt3/yt3/zt3 由 proj-tsne.mjs 写进 coords.tsv）。
    *   判据 kNN@10 保住率：旧力导向布局 0.08 → t-SNE 0.52（同一个 12 维招法空间；用户：不用死磕实际意义）。 */
   x2: (PROJTSNE && r.xt) ? +r.xt : +r.x2, y2: (PROJTSNE && r.yt) ? +r.yt : +r.y2,
+  /* 单页化（11-06 夜）：三套投影列按行挂——只在本行所属版本有值（其余版本行在对应过滤下不可见）。
+   * ⚠ 必须是**扁平数组**字段（pj18/pj20），不能是嵌套对象：D234⑪b 用 `"id":"X"[^}]*\}` 截节点，
+   *   嵌套 `}` 会把截断点提前、sh/sv 被切掉 ⇒ 门假红（实测踩过一次）。数组只有中括号，不犯这条。 */
+  pj18: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt18 !== '' && r.xt18 !== undefined && r.xt18 != null && isFinite(+r.xt18)) ? [+r.xt18, +r.yt18] : null,
+  pj20: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt20 !== '' && r.xt20 !== undefined && r.xt20 != null && isFinite(+r.xt20)) ? [+r.xt20, +r.yt20] : null,
+  pjAll: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt) ? +r.xt : +r.x2, (PROJTSNE && r.yt) ? +r.yt : +r.y2] : null,
   x3: (PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, y3: (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3,
   z3: (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3,
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
@@ -626,6 +719,9 @@ var KEXP = 2.5;   /* §E330 IDW 核的指数：1/d^KEXP。**淡出的覆盖度�
                      两处各写一份字面量时，改一处会让"晕有多远"和"核有多硬"悄悄脱钩。*/
 var EDGEK = 8;    /* §E331 位图外沿收口的格数。必须**小于**网格边距折算出来的格数（边距 10% ⇒ 约 19 格），
                      否则会把点云自己的晕切掉一刀 —— 那是"为了藏边而砍数据"。*/
+var COV_MED = 1;  /* 覆盖度按对数密度做平滑 Logistic 映射；p5/p95 只定标，不再把两端夹成平台。
+                     1 = 平滑映射（默认）‖ 0 = 按点间距定尺的旧有理曲线（A/B 用，#cov=0）。 */
+var COV_LO = 0, COV_HI = 0;   /* 有场格子的 wsum 的 p5 / p95（对数尺定标），buildBitmap 每次重算 */
 var OKL = [], POKJ = 0, PV = null;
 /* ===== §E677 绿环的主语 = 当前桌形那把**纯桌**闸（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   默认(3血短程) → oks = 全腿短程（八条腿全在 3 血桌上判）
@@ -667,6 +763,11 @@ var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚�
  *   ELOG = 0 只有一条判据会用（拿固定 alpha 当对照组做 A/B），不是用户开关。 */
 var ELOG = 1;
 var EPROBE = 0;   /* §E467b 页内判据设成"每 N 条留一条"的步长；0 = 不收集探针 */
+/* 探针上限与步长必须**同一个常数**（11-06 实测：只把步长改成 边数/48、上限还留 24 ⇒ 抽中的那批边整体挪到
+ *   前半段，"空地上那 10 个采样点"反而掉到 4 —— 改的是抽样范围，不是覆盖）。
+ *   24 → 48 的理由：2.0 池 20 枚进图后父边变密，稀疏格里的采样点从 ≥12 掉到 10，
+ *   下面那条判据红在样本量地板上而墨本身过了（中位 76 ‖ 线 30）⇒ 加取样密度，判据与地板一字不动。 */
+var PROBE_MAX = 48;
 var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
@@ -765,7 +866,40 @@ var DEF_COLOR = { '1d': 'fam', 'map': 'fam', '3db': 'F', 'tree': 'F' };   /* 三
  *   ③ 颜色分界 = 最强一批的均值（见下面 splitSets/fCol）。
  *   ④ 滚轮放大时点跟着变大（原来刻意不跟，理由写在 §E314 那段"经典统计图约定"里 —— 用户看了实物否掉了）。
  *   ⑤ 冠军一列按**上线时刻**排（ship-scan.mjs 从 git 逐提交算槽文件权重指纹抽的，不是按提交标题点名）。 */
-st.batch = 'all'; st.sel = null; st.cmp = []; st.side = false;
+st.batch = '${PRESET}';   // §G3：--preset 由生成器插值（浏览器段没有 arg）
+/* §G3 之续（11-05 上午 · 用户："选择批次不是像拉显示范围一样把旧点扣掉就行"）：投影是局域性的 ⇒
+ *   换视图必须换一套 fit。三张页各自从自己的子集表烘出来，所以这个下拉**换页**、不是换滤镜。
+ *   VER_PAGES 由生成器插值（--verpages=0 ⇒ 空表 ⇒ 退回页内过滤，单独烘一页时用）。SELF_PAGE 防自己跳自己。 */
+var SELF_PAGE = (location.pathname.split('/').pop() || 'index.html');
+var VER_PAGES = ${JSON.stringify(VERPAGES)};
+/* §G3（11-05 中午 · 千问）自检期间**禁止换页**。页内自检会挨个点下拉（§E338"工具栏接线"那条），
+ *   而"版本"下拉现在的动作是改 location.href ⇒ 子集页在自检里被点了一下就跳回 index.html，
+ *   跳转不带 hash ⇒ 那一页的自检根本没跑 ⇒ dump 读到"0 PASS / 0 FAIL"（实测 index-2v-18/20 都是这个形态）。
+ *   NAVLOCK=1 时下拉退回原来的**页内过滤**分支：那条判据量的是"点下去 st 真的变了"，仍然成立。
+ *   ⚠ 本段注释里**不许出现反引号**：这里在模板字符串内部（§E338 那条老坑，跑一次 --check 才知道）。 */
+var NAVLOCK = 0;
+/* §G3（11-05 中午 · 千问）**单版本子集页**（index-2v-18 / index-2v-20 = 烘这一页时 --preset 点了某一个版本）：
+ *   这一页的 DATA 里**只有那一个版本的枚**（投影也是这批点自己重算的 ⇒ 用户令"换视图必须连坐标一起重算"）。
+ *   于是 §E338 里一批"判的是全库分布 / 池层 / 活槽那 16 枚 / 共父 584 枚 / 过线壳"的判据在本页**取不到样本**——
+ *   它们的 got 串本来就印着 0 条 / 0 个 / 样本不足。原来这些一律算 FAIL ⇒ 子集页 26 条红，
+ *   读的人分不清"图坏了"与"这条判据不在这张图的定义域里"，而下一个人为了消红会把子集页改回"同一套坐标 + 页内过滤"
+ *   ——那正是用户 11-05 上午否掉的形态。⇒ 点名清单内的这些条在子集页走既有的第三态 SKIP（**逐条印名字与理由**，不静默）。
+ *   ⚠ 主图（--preset=all）SUBSETP=0 ⇒ 一个字都不变；不在清单里的（画边/像素/交互）在子集页照判。 */
+var SUBSETP = ${PRESET === 'all' ? 0 : 1};
+/* ===== 单页化（11-06 夜 · ZCode）：三套投影列 + 版本下拉=页内换投影 =====
+ *   PROJCOLS 由生成器插值（--projcols=1）；DATA 的每行带 pj = {'1.8':[x,y]|null, '2.0':[x,y]|null}
+ *   （行映射处挂，见 r.xt18 那支）。版本切换 = st.batch 过滤 + setProj(版本)。
+ *   SUBSETP 在单页模式下是**运行时**的：batch=all 判全套、1.8/2.0 走 NA_IN_SUBSET 跳过 ——
+ *   判据域跟着"当下画的是哪批点"走，不再跟着"烘的是哪一页"走。 */
+var PROJCOLS = ${PROJCOLS ? 1 : 0};
+var PCUR = 'all';                                   /* 当前投影：all | 1.8 | 2.0 */
+function SUBSETP_NOW() { return PROJCOLS ? (st.batch !== 'all' ? 1 : 0) : SUBSETP; }
+var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：抽不到上线时刻', '倒挂假边必须被修掉', '父边来路必须标全',
+  '强度窗口：两端顶到色端', '强度窗口：分界被切掉', '标签：常驻名单', '点大小：上过线那一档', '命中：标签中心不许命中',
+  '那 584 枚共父', '池层：真源表每一枚都在图上', '池层：环数', '融合边：红线必须真画出来', '家族配色要',
+  '壳：带宽滑轨', '壳：带宽真的改场', '连线开关：全开', '沿一条边走一圈', '空地上的单根线', '平移/缩放/旋转一条线的 alpha',
+  '工具栏剩下的都能点', '谱系图：旧包没有 lineage 行'];
+st.sel = null; st.cmp = []; st.side = false;
 /* ===== §E596 分界的锚从"某一枚包"换成"最强那一批的均值"（用户 10-12：「演化图里还标着现役，应该把这些都去掉或者改成最强一批的平均值」）=====
  *   病：颜色的分界、库内百分位、明细里那句"vs 现役"、标签上那颗 ★，原来全都钉在 'SHIPPED-Ldemo' 这一枚上 ——
  *   而它是 v1.6.62 就被 'T8-s114' 换掉的旧冠军，且池上线后**没有任何一枚**是"玩家遇到的那一个"（四席逐席抽）。
@@ -803,8 +937,11 @@ var INC = (function () {
     hpl2: mean(function (d) { return d.hpl2; }),
     H: mean(function (d) { return d.H; }), pt: ANCH_TIER, ts: '', lin: false };
 })();
-function batchOf(d) { return d.ts ? String(d.ts).slice(0, 10) : ''; }
-var BATCH = [];                                    /* [{k:'2026-09-13', n:枚数, no:第几批}] 按日期正序 */
+/* §G3（11-05 · 用户令）：批次选项退役，换成**版本**三模式（1.8及以前 / 2.0系 / 全部点）。
+ *   batchOf 从"训出日期"改成"版本"——st.batch 的全部缓存键/快照/行表机制原样复用（键域变成 {'1.8','2.0'}），
+ *   下拉的分组、排序（'1.8'<'2.0' 字典序恰好对）、"最新一批"按钮全部自动跟着对。 */
+function batchOf(d) { return d.ver || (d.ts ? String(d.ts).slice(0, 10) : ''); }
+var BATCH = [];                                    /* [{k:'1.8'|'2.0', n:枚数, no:第几批}] 按版本正序 */
 (function () { var m = {}; for (var i = 0; i < N; i++) { var k = batchOf(P[i]); if (!k) continue; m[k] = (m[k] || 0) + 1; }
   Object.keys(m).sort().forEach(function (k, ix) { BATCH.push({ k: k, n: m[k], no: ix + 1 }); }); })();
 var VIS = new Uint8Array(N), NVIS = N;
@@ -840,7 +977,9 @@ function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
      *   否则绿红分界（= 现役那一档）与对比表会各自读到不同的分母。 */
-    var keep = st.batch === 'all' || batchOf(d) === st.batch || !!d.lin || st.cmp.indexOf(d.id) >= 0;
+    var keep = st.batch === 'all' || batchOf(d) === st.batch || (st.batch !== '2.0' && !!d.lin) || st.cmp.indexOf(d.id) >= 0;
+    /* §G3：'2.0 系'模式**严格只画 2.0 点**——v7 的冠军记录行（d.lin）不再钉住（用户令"只包含2.0点"；
+     *   '1.8 及以前'与'全部'两模式里冠军钉住的老规矩不变：分界参照物不能被切没）。 */
     if (keep && !inWin(d)) keep = false;   /* §E371 窗口：越界一律不画，冠军也不例外 */
     VIS[i] = keep ? 1 : 0; if (keep) NVIS++; } }
 recomputeVIS();
@@ -1390,9 +1529,13 @@ function buildNB(key, bx, byy) {
   /* §E331 网格边距 3% → 10%：位图铺到"最外一圈点的晕**淡尽**"之外，而不是贴着点云切一刀。
    *   平面态看不出问题（晕外就是底色），立体态那块底板是一整块平行四边形 ⇒ 边缘直接割裂（用户截图）。
    *   底色 = 晕尽处的颜色 ⇒ 板的边界在视觉上不存在了。*/
-  /* E394 DS：网格边距 **10% → 35%**（用户 10-08：把实际画布扩大然后让边缘是自然衰减消失的）。
-   *   场算在一张比视野大得多的画布上 ⇒ 板自己那条矩形边缘（以及 EDGEK 收口）永远落在视野外 ⇒ 不会有割裂。 */
+  /* 先留 35% 边距，再按显示像素把短边补到长边：底图计算域与网格都为正方形，
+   * 旋转后也不会因为纵向计算域较短而提前露出板边。点坐标与相机比例不变。 */
   var mgx = (x1 - x0) * 0.35, mgy = (y1 - y0) * 0.35; x0 -= mgx; x1 += mgx; y0 -= mgy; y1 += mgy;
+  var cx0 = (x0 + x1) / 2, cy0 = (y0 + y1) / 2;
+  var side0 = Math.max((x1 - x0) * bx, (y1 - y0) * byy);
+  x0 = cx0 - side0 / (2 * bx); x1 = cx0 + side0 / (2 * bx);
+  y0 = cy0 - side0 / (2 * byy); y1 = cy0 + side0 / (2 * byy);
   for (i = 0; i < N; i++) { xs[i] = P[i][ax]; ys[i] = P[i][by]; }
   var nn = [], d12 = [];
   for (i = 0; i < N; i++) {
@@ -1409,16 +1552,9 @@ function buildNB(key, bx, byy) {
     nn.push(heap[0] || 1); d12.push(heap[11] || heap[0] || 1);
   }
   var nmed = pct(nn, .5) || 1, d12m = pct(d12, .5) || nmed;
-  /* 网格按屏幕显示跨度分配 ⇒ 显示空间里格子是正方形（26k 格左右），势晕才不会被栅格化成扁的 */
   var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy;
-  /* E390 DS：格子预算跟着**显示跨度**走，不再固定 40000。
-   *   为什么：一枚离群点（blk0t40-s31，y=-20.86 = 20 IQR）把 y 跨度撑到全体 24.0 vs 截尾 4.1 = **5.8 倍** ⇒
-   *   固定预算下每格从 ~15px 涨到 ~50px，而点云只占网格一小块 ⇒ 场被降分辨率 = '灰蒙蒙'的第三个来源。
-   *   ⚠ **不改成截尾范围**：用户 10-04 裁定「背景图要扩散到**所有点**的范围」（截尾框外的离群点脚下空着会看着割裂）。
-   *   ⇒ 保范围、加预算：每格目标 15px，总格数夹在 [40000, 400000]。 */
-  var TOT = Math.max(40000, Math.min(400000, Math.round(dispX * dispY / 225)));
-  var gx = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispX / (dispY || 1)) || 40)));
-  var gy = Math.max(40, Math.min(1200, Math.round(Math.sqrt(TOT * dispY / (dispX || 1)) || 40)));
+  /* 正方形计算域配正方形网格；约 4 显示像素一格，最多 200×200，初始重建不随屏幕尺寸失控。 */
+  var gx = Math.max(40, Math.min(200, Math.round(Math.max(dispX, dispY) / 4) || 40)), gy = gx;
   var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
   /* E388 DS（用户 10-07 第三件）：地板的值从 **H（考卷口径）** 换成 **Hp（页面口径）**。
  *   原来吃 H 而色带/点/图例读 Fv = Hp/100 + T·S ⇒ 两条尺 ⇒ 一收窄范围场值就跑出可见点的 F 区间 ⇒
@@ -1433,9 +1569,9 @@ var SW = new Float32Array(gx * gy);
     var ci = gj * gx + gi, base = ci * KF;
     for (var q = 0; q < KF; q++) { idx[base + q] = -1; dst[base + q] = 1e18; }
     for (var c2 = 0; c2 < N; c2++) {
-      var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, d2 = Math.sqrt(ex2 * ex2 + ey2 * ey2);
-      if (d2 < dst[base + KF - 1]) {
-        var pos = KF - 1;
+      var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, ds2 = ex2 * ex2 + ey2 * ey2;
+      if (ds2 < dst[base + KF - 1] * dst[base + KF - 1]) {
+        var d2 = Math.sqrt(ds2), pos = KF - 1;
         while (pos > 0 && dst[base + pos - 1] > d2) { dst[base + pos] = dst[base + pos - 1]; idx[base + pos] = idx[base + pos - 1]; pos--; }
         dst[base + pos] = d2; idx[base + pos] = c2;
       }
@@ -1545,7 +1681,23 @@ function buildBitmap(key, visSigNow) {
                                                  单点的"实心"范围缩一档 ⇒ 立体态不再糊成一整块熔岩。
                                                  **中间不会因此裂开** —— 覆盖度是各点核权重相加（见下面 fade），
                                                  邻域只要有两三枚，权重和照样过阈 ⇒ 裂开的正是旧版按"最近点距离"才会有的病。*/
+  var EXTW = (nb.bx && nb.byy) ? Math.max((nb.x1 - nb.x0) * nb.bx, (nb.y1 - nb.y0) * nb.byy) : 0;
+  /* 11-05 走过的弯路照记：这里加过「fscale ≤ COVCAP×画面宽（0.06）」+ 给 fade 压幂（FADEP=2.2），
+   * 想治"稀疏区被洗成一片灰"。三方对照（改动前那版页面 / 关掉两个旋钮的本版 / 默认本版）显示：
+   * 云内干净格 4% → 5%、大于 6 格的空洞岛 1 → 3 —— **它自己就是新的病**（把晕与晕之间钳出洞），
+   * 而"洗平"的量级差别不在这里。这正是 §E389 早就否掉的那族"用硬截断藏空处"的形状，已撤回。
+   * ⚠ 11-05 晚再记一条实测：fscale 在这两张表上分别是 104px（39 枚）/ 26px（870 枚），
+   *   而 0.25×画面宽 ≈ 289/301px ⇒ **任何 >0.09 的相对上限都不咬**；咬到它的值（0.06）就正好等于点间距
+   *   ⇒ 必然抠出圆团。所以"动尺度"这条路到此为止，改用循环里那个**全局渐隐遮罩**（与点间距无关）。 */
+
   var kcov = 1 / Math.pow(0.5 * fscale, KEXP);
+  /* 只读诊断（11-05）：本轮两次"改了看不见效果"都出在尺度这条线上 —— 到底是上限没生效（EXTW=0）、
+   * 缓存没跟着旋钮失效，还是**我量的是另一层**（地板位图之外还有壳/场），读一次就知道。
+   * 页面自检不读它，量具/A-B 可以读。covA 记录有遮罩/无遮罩时的那两格。 */
+  var __covAcc = { nPainted: 0, aCorner: -1, aMid: -1, aCornerNoMask: -1, aMidNoMask: -1, midIdx: ((nb.gy >> 1) * nb.gx + (nb.gx >> 1)) };
+  /* 只读诊断（11-05）：本轮两次"改了看不见效果"都出在尺度这条线上 —— 到底是上限没生效（EXTW=0）
+   * 还是缓存没跟着旋钮失效，读一次就知道。页面自检不读它，量具/A-B 可以读。 */
+  if (typeof window !== 'undefined') window.__covBase = { d12m: nb.d12m, EXTW: EXTW, fscale: fscale, kcov: kcov, COV_MED: COV_MED, bx: nb.bx, byy: nb.byy, gx: nb.gx, gy: nb.gy };
   /* E394c DS（用户 10-08 澄清）：**空的地方不需要是底，但不能实心，要有透明度**。
    *   ⇒ 不硬切（场覆盖整片、没有硬边界），改由覆盖度把不透明度压下去；尺度从 fscale 收到 **0.5×fscale**
    *     （等价于把 fade 调得更敏感：点脚下 wsum 远大于 kcov ⇒ 实；离点 fscale 处 wsum 已明显小于 kcov ⇒ 透明）。*/
@@ -1557,6 +1709,7 @@ function buildBitmap(key, visSigNow) {
   var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
   var c = document.createElement('canvas'); c.width = nb.gx; c.height = nb.gy;
   var cg = c.getContext('2d'), img = cg.createImageData(nb.gx, nb.gy), dta = img.data;
+  var CIX9 = new Uint16Array(nb.gx * nb.gy), ALP9 = new Float64Array(nb.gx * nb.gy);
   var BND9 = colBand();
   var nPainted = 0, nOob = 0;   /* §E381 见下面 FL.painted / FL.oob */
   var SHOWN = new Uint8Array(N), nShown = 0;
@@ -1568,6 +1721,23 @@ function buildBitmap(key, visSigNow) {
    *   先烘成一张表：48 万次内循环里只查数组，不重复走函数与分支。 */
   var FV9 = new Float64Array(N);
   for (var f9 = 0; f9 < N; f9++) FV9[f9] = Fv(P[f9]);
+  /* p5/p95 只决定 Logistic 的中心与斜率；两端仍连续趋近 0/1，不产生全透或全实平台。 */
+  if (COV_MED) {
+    var __ws = new Float64Array(nb.gx * nb.gy), __TB0 = VIS_TB || nb;
+    for (var i0 = 0; i0 < nb.gx * nb.gy; i0++) {
+      var b0 = i0 * KF, s0 = 0;
+      for (var u0 = 0; u0 < KF; u0++) { var p0 = __TB0.idx[b0 + u0]; if (p0 < 0) break; if (nShown !== N && !SHOWN[p0]) continue;
+        s0 += 1 / Math.pow(Math.max(__TB0.dst[b0 + u0], 1e-6), KEXP); }
+      __ws[i0] = s0;
+    }
+    var __pos = []; for (var i1 = 0; i1 < __ws.length; i1++) if (__ws[i1] > 0) __pos.push(__ws[i1]);
+    __pos.sort(function (a, b) { return a - b; });
+    if (__pos.length) {
+      COV_LO = __pos[Math.floor(__pos.length * 0.05)] || __pos[0];
+      COV_HI = __pos[Math.floor(__pos.length * 0.95)] || __pos[__pos.length - 1];
+    }
+    if (typeof window !== 'undefined') window.__covMed = { lo: COV_LO, hi: COV_HI, n: __pos.length };
+  }
   /* E389 DS：**不再**把覆盖度基准跟着可见集放大 —— 那会让远处的可见点把场拉成一片平均（用户：「暴力拉到无穷远」）。
    *   覆盖度基准保持全库 d12m 那一把尺 ⇒ 晕有固有尺度；配合下面的截断半径，远处自然回到底色。 */
   for (var i = 0; i < nb.gx * nb.gy; i++) {
@@ -1582,11 +1752,16 @@ function buildBitmap(key, visSigNow) {
      *   nShown === N ⇒ 用 buildNB 缓存好的全库表（两者逐字节相同）；否则现算可见表
      *   ⇒ 不再存在"候选全在窗外 ⇒ wsum=0 ⇒ 留空"的格子。 */
     var TB = VIS_TB || nb;
-    var bs9 = i * KF, wsum = 0, fsum9 = 0;
+    var bs9 = i * KF, wsum = 0, csum9 = 0, fsum9 = 0, fraw9 = 0, nnb9 = 0;
+    while (nnb9 < KF && TB.idx[bs9 + nnb9] >= 0) nnb9++;
+    var d129 = nnb9 ? Math.max(TB.dst[bs9 + nnb9 - 1], 1e-6) : 1;
     for (var u9 = 0; u9 < KF; u9++) { var pi9 = TB.idx[bs9 + u9]; if (pi9 < 0) break;
       if (nShown !== N && !SHOWN[pi9]) continue;
-      var w9 = 1 / Math.pow(Math.max(TB.dst[bs9 + u9], 1e-6), KEXP);
-      wsum += w9; if (isFinite(FV9[pi9])) fsum9 += w9 * FV9[pi9]; }   /* v1.8.27：没读数的点不许把整块底图均值染成 NaN */
+      var dd9 = Math.max(TB.dst[bs9 + u9], 1e-6), w9 = 1 / Math.pow(dd9, KEXP), cw9 = w9;
+      if (nnb9 > 1 && d129 > 1e-6) { var rr9 = Math.min(1, dd9 / d129), tt9 = 1 - rr9 * rr9; cw9 = w9 * tt9 * tt9; }
+      wsum += w9; csum9 += cw9;
+      if (isFinite(FV9[pi9])) { fsum9 += cw9 * FV9[pi9]; fraw9 += w9 * FV9[pi9]; }
+    }
     if (!(wsum > 0)) continue;
     /* §E331 覆盖度换成**核权重和**，不用「到最近点的距离」。旧写法 1/(1+(DM/fscale)^4) 在两枚点中间
      *   必然下凹（DM 在 Voronoi 脊线上取局部极大）⇒ 底图上那一片"凹陷的接缝"就是脊线本身，跟数据无关，
@@ -1596,14 +1771,25 @@ function buildBitmap(key, visSigNow) {
      *     所以再乘一个**贴边收口**：最外 EDGEK 格线性拉到 0 ⇒ 板的边界与底色逐像素相同，边缘不存在。
      *     10% 的网格边距（buildNB）保证这 EDGEK 格全在点云之外的空裙里，不会把晕切一刀。*/
     var gi = i % nb.gx, gj = (i / nb.gx) | 0;
-    var fade = wsum / (wsum + kcov) * Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
+    var fade;
+    if (COV_MED && COV_HI > COV_LO) {
+      var lw = Math.log(wsum), lm = (Math.log(COV_LO) + Math.log(COV_HI)) / 2;
+      fade = 1 / (1 + Math.exp(-6 * (lw - lm) / (Math.log(COV_HI) - Math.log(COV_LO))));
+    } else fade = wsum / (wsum + kcov);
+    fade *= Math.min(1, Math.min(gi, nb.gx - 1 - gi, gj, nb.gy - 1 - gj) / EDGEK);
     /* §E297：地板色一直按 U = F_max − F 上色 ⇒ 与图例（红=阱口/蓝=阱底）和点色**全部反了**
      *   （实测最好那枚脚下是红 [101,64,81]、最差那枚脚下是蓝 [60,109,141]）。改成直接按 F 上色。*/
-    var Fav = fsum9 / wsum;   /* §E672 = 可见点 Fv 的加权平均（原来写的是 (hsum9 + T·ssum9)/wsum，而 hsum9 硬编码 Hp）*/
+    /* 颜色权重在第 12 近邻处连同斜率一起归零：减少密集区平均发灰，也消掉近邻换人的折痕。
+     * 覆盖度仍用未收边的 wsum，避免稀疏外围被尺度补偿重新涂实。 */
+    var Fav = csum9 > 0 ? fsum9 / csum9 : fraw9 / wsum;
     /* §E601：底图只有一条读法（全库分位 + 蓝→灰→红）。原来"只有切到第 6 档 rel 才用发散带 + 淡入"那一支已随整档删除。*/
-    var tt = fCol(Fav);
-    var rgb = rampRGB(tt);
-    var a = (0.92 - 0.5 * tt) * fade;
+    var tt = fCol(Fav), ci9 = Math.max(0, Math.min(255, Math.round(tt * 255)));
+    var rgb = LUT[ci9];
+    var a = 0.82 * fade;
+    CIX9[i] = ci9; ALP9[i] = a;
+    __covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] = (__covAcc['a' + (a < 0.05 ? 0 : a < 0.2 ? 1 : a < 0.5 ? 2 : a < 0.8 ? 3 : 4)] || 0) + 1;
+    if (i === 0) __covAcc.aCorner = a;
+    if (i === __covAcc.midIdx) __covAcc.aMid = a;
     nPainted++;
     if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
     var o = i * 4;
@@ -1613,13 +1799,26 @@ function buildBitmap(key, visSigNow) {
     dta[o + 3] = 255;
   }
   cg.putImageData(img, 0, 0);
-  FL = { c: c, px: dta, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab,
+  __covAcc.nPainted = nPainted;
+  if (typeof window !== 'undefined') (window.__covdbg = window.__covdbg || []).push(__covAcc);
+  FL = { c: c, px: dta, img: img, cg: cg, cix: CIX9, alp: ALP9, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED,
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
     painted: nPainted, oob: nOob, nShown: nShown, cells: nb.gx * nb.gy,
     x0: nb.x0, x1: nb.x1, y0: nb.y0, y1: nb.y1,
     nmed: nb.nmed, ax: nb.ax, by: nb.by, gx: nb.gx, gy: nb.gy };
+}
+function rebgField() {
+  var bR = parseInt(st.bg.slice(1, 3), 16), bG = parseInt(st.bg.slice(3, 5), 16), bB = parseInt(st.bg.slice(5, 7), 16);
+  for (var i = 0; i < FL.cells; i++) {
+    var rgb = LUT[FL.cix[i]], a = FL.alp[i], o = i * 4;
+    FL.px[o] = Math.round(bR + (rgb[0] - bR) * a);
+    FL.px[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
+    FL.px[o + 2] = Math.round(bB + (rgb[2] - bB) * a);
+    FL.px[o + 3] = 255;
+  }
+  FL.cg.putImageData(FL.img, 0, 0); FL.bgc = st.bg;
 }
 function ensureField(key, bx, byy) {
   var k2 = key + '@' + Math.round(bx) + ',' + Math.round(byy);   /* 比例尺进缓存键：窗口尺寸变了才重建 */
@@ -1637,7 +1836,8 @@ function ensureField(key, bx, byy) {
    *   要"顺手改一下点颜色"（col 变了）才更新 ⇒ 用户那句现象一字不差就是这一条。
    *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.vis !== visSig) buildBitmap(k2, visSig);
+  if (FL && FL.key === k2 && FL.tv === st.T && FL.col === st.color && FL.tab === st.ftab && FL.cov === COV_MED && FL.vis === visSig && FL.bgc !== st.bg) rebgField();
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COV_MED || FL.vis !== visSig) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -2241,11 +2441,17 @@ function drawTree(fr) {
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NINF = 0   /* §DS②：路径推断来源的父边条数（与槽位接替/倒挂同型）*/
-var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
+var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
   if (st.edges !== 'off') {
     var EL = [];
     for (i = 0; i < N; i++) { var dd = P[i]; if (!dd.pof || !pos[dd.id] || !pos[dd.pof]) continue;
+      /* 自父不是父：pof === id 时 pa 与 pb2 是同一个坐标 ⇒ 下面那条二次贝塞尔的控制点被抬到
+       * 「中点 − rowH·0.5」，画出来就是用户 11-05 指认的"某个点的父节点垂直向上、什么都不指向"。
+       * 来路是 lineage-g3-build.mjs 用产物 meta 的 hotstartFrom 回解父时，蒸馏根那枚的 seedpack
+       * 指向了它自己的输出（WIDEFIX-s7）⇒ 生成器侧已加守卫，这里再挡一道：任何来路的自环都不许上桌。 */
+      if (dd.pof === dd.id) { NSELF++; continue; }
+
       /* §E373 连线开关：'off' 一条不画；'hash' 只画**父身份可证**那一级（哈希 / 种子文件同权重）。
        *   §E378 的接替边 psrc='slot-chain' 在 'hash' 档**不画**（它不是血统）。
        *   ⚠ 原来这一档写的是 「psrc !== 'hash'” ⇒ 连 「hash-emb”（§E464 那批靠"嵌入后身份"才对上的）都不画，
@@ -2349,7 +2555,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
        *   ⇒ 拿虚线去量它，量到的是**虚线自己的间隔**，不是 §E467a 那种"边被切成不同 alpha 的段"的病。
        *   为什么以前没红：步长 = 边数 / 24，边数一变，被抽中的那 24 条就换一批（10-09 加进 63 枚代表之后
        *   抽到一条 'arm' 级虚线 B5-10-71 就当场红）。**改的是采样范围，不是阈值。** */
-      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
+      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < PROBE_MAX) { var pp = [];
         for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
           var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
           var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
@@ -2435,6 +2641,8 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
     /* §E378 接替边必须自己在图上说一句它是什么：它和血统边画在同一片地方，而两者的意思完全不同
        （'hash' 那一档不画它，所以那句计数跟着 NCHAIN 走，为 0 就整段不出现）*/
     (NCHAIN ? ' ‖ 不确定来源：路径/槽位时间轴推断 ' + NINF + ' + 槽位接替 ' + NCHAIN + ' + 倒挂 ' + NBACK + '，不是身份可证的血统' : '') +
+    /* 自父边被挡掉的条数（用户 11-05 指认"有个点的父垂直向上什么都不指"）：为 0 就整段不出现，不许承诺图上没有的东西 */
+    (NSELF ? ' ‖ 自环已剔除 ' + NSELF + ' 条（父解析成它自己，不是父边）' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
     (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
@@ -2461,16 +2669,15 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0;
   footLine(foot1, h - 32 * devicePixelRatio);
   footLine(foot2, h - 14 * devicePixelRatio);
 }
-/* 「卡住缩放上界 + 背景不要割裂」：缩放的下界 = 场恰好铺满视口（再小就露出虚空）；平移卡到"场始终盖住整个视口"。
- *   由 kmin 的定义可证两个平移区间非空，所以 clamp 不会打架。*/
+/* 场大于视口时限制平移以盖住视口；场较小时居中，不再把它强推到一侧。 */
 function clampView(w, h, nb, bx, byy, cxp, cyp) {
   var kmin = Math.max((nb.px1 - nb.px0) / (0.90 * (nb.x1 - nb.x0)), (nb.py1 - nb.py0) / (0.86 * (nb.y1 - nb.y0)));
   if (st.k < kmin) st.k = kmin;
   if (st.k > 60) st.k = 60;
   var oxLo = w / 2 - (nb.x1 - cxp) * bx * st.k, oxHi = -w / 2 - (nb.x0 - cxp) * bx * st.k;
   var oyLo = h / 2 + (nb.y0 - cyp) * byy * st.k, oyHi = -h / 2 + (nb.y1 - cyp) * byy * st.k;
-  st.ox = Math.max(oxLo, Math.min(oxHi, st.ox));
-  st.oy = Math.max(oyLo, Math.min(oyHi, st.oy));
+  st.ox = oxLo <= oxHi ? Math.max(oxLo, Math.min(oxHi, st.ox)) : (oxLo + oxHi) / 2;
+  st.oy = oyLo <= oyHi ? Math.max(oyLo, Math.min(oyHi, st.oy)) : (oyLo + oyHi) / 2;
 }
 
 /* ---- ②③ 地图模式：平面（俯视）⇄ 立体（势阱）共用一台渲染器 ----
@@ -2482,10 +2689,8 @@ function drawMap(fr) {
   clear(w, h);
   /* 视野按**截尾范围**拟合（默认视图不被离群点压扁），场位图按**全幅范围**铺 ⇒ 每枚点脚下都有地。
    *   基础比例尺（不含 st.k）先于建场算好：场的距离/淡出半径都按这套屏幕度量定义。*/
-  /* E393 DS（丙·投影）：取景系数**保持原值 0.90/0.86**。
-   *   ⚠ 中途我试过留边距（0.74/0.70）想让板的边界露出来 —— 那是反的：等于把铺满放大（用户 10-08 指出）。
-   *   真正该做的是把场的画布扩大（网格边距 10% → 35%，见 buildNB），让板自己的边缘落到视野之外。 */
-  var bx0 = w / (PV.x1 - PV.x0) * 0.90, by0 = h / (PV.y1 - PV.y0) * 0.86;
+  /* 点云与底图共用统一比例：旋转时几何仍是正圆/正方；最小缩放档保留全点可见。 */
+  var bs0 = Math.min(w / (PV.x1 - PV.x0) * 0.90, h / (PV.y1 - PV.y0) * 0.86), bx0 = bs0, by0 = bs0;
   ensureField('x2y2', bx0, by0);
   var nb = NBK[FL.key], cb = cam();
   var bx = bx0, byy = by0;
@@ -3100,9 +3305,9 @@ function drawBody() {
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
-  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 t-SNE（轴无固定含义）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + (N === NHLONG ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3178,7 +3383,7 @@ function paintLegend(fr) {
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 没读数（' + (N - NHP()) + ' 枚） ‖ 尺 = coords.'
       + (st.ftab === 'long' ? 'Hplong（长程桌）' : 'Hp（默认桌）'))   /* 两档同一套取数：见上面 hpNow 那段 */
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
-    : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**，不再对某一枚包取差')
+    : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**（不对某一枚包取差）')
     : (st.color === 'fam' || st.color === 'seed') ? ''   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针那句（顺带让整块变窄）*/
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
   /* §E460/§E461 轴高恢复成固定 150 之后，死空**只许用文字排版去消**（用户原话：「只换字排版」）。
@@ -3318,7 +3523,7 @@ function buildFamBar() {
       var lab = st.color === 'seed' ? ('seed ' + k) : ('家族 ' + k);
       /* E396 DS（用户 10-08）：**只留家族号**（描述与枚数都挪走；枚数进悬停提示，信息不丢）。 */
       b.innerHTML = '<i style="background:' + GRP.col[k] + '"></i>' + lab;
-      b.title = (st.color === 'seed' ? '这一档 RNG 种子被多少枚复用（旧口径）' : (byFam[k] || '')) + ' · ' + GRP.cnt[k] + ' 枚';
+      b.title = (st.color === 'seed' ? '这一档 RNG 种子（包名后缀那个数）被多少枚复用' : (byFam[k] || '')) + ' · ' + GRP.cnt[k] + ' 枚';
       b.onclick = function () { st.hi[k] = !st.hi[k]; b.classList.toggle('on', !!st.hi[k]); req(); };
       el.appendChild(b);
     })(GRP.keys[j]);
@@ -3327,15 +3532,16 @@ function buildFamBar() {
   r.onclick = function () { st.hi = {}; Array.prototype.forEach.call(el.querySelectorAll('.fam'), function (x) { x.classList.remove('on'); }); req(); };
   el.appendChild(r);
   var tipEl = document.createElement('span'); tipEl.className = 'famtip';
-  tipEl.textContent = (st.color === 'seed' ? 'RNG seed（旧口径）' : '家族（训练方法 / 目标大改）') + ' · 点选可高亮，可多选';
+  tipEl.textContent = (st.color === 'seed' ? 'RNG seed（包名后缀）' : '家族（训练方法 / 目标大改）') + ' · 点选可高亮，可多选';
   el.insertBefore(tipEl, el.firstChild);
 }
 /* ===== §E338 批次下拉 / 选中卡 / 冠军序列与对比表 ===== */
 function buildBatchSel() {
   var el = document.getElementById('batch'); if (!el) return; el.innerHTML = '';
-  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部（' + N + ' 枚）'; el.appendChild(o0);
+  var VLBL = { '1.8': '1.8 及以前', '2.0': '2.0 系' };
+  var o0 = document.createElement('option'); o0.value = 'all'; o0.textContent = '全部点（' + N + ' 枚）'; el.appendChild(o0);
   for (var i = 0; i < BATCH.length; i++) { var b = BATCH[i], o = document.createElement('option');
-    o.value = b.k; o.textContent = '第 ' + b.no + ' 批 · ' + b.k.slice(5) + ' · ' + b.n + ' 枚'; el.appendChild(o); }
+    o.value = b.k; o.textContent = (VLBL[b.k] || b.k) + '（' + b.n + ' 枚）'; el.appendChild(o); }
   el.value = st.batch; }
 function nOf(id) { for (var i = 0; i < N; i++) if (P[i].id === id) return i; return -1; }
 /* 「相对现役」那一行（用户 ③ 后半句）。⚠ 三个数一起给，只给一个就会被当成"综合更强"：
@@ -3364,7 +3570,7 @@ function paintCard() {
    *   直接拼进来这张卡会横贯整个画布，把下面的页脚与投影判据全盖住（第一版截图就是这样）。
    *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
-    '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 批次 ' + (batchOf(d) || '无日期') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
+    '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 版本 ' + (batchOf(d) || '—') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
     'F = ' + Ftxt(d) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
      *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
@@ -3417,7 +3623,7 @@ function paintSide() {
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Ftxt(d) + ' ‖ Hp ' + d.Hp.toFixed(1);
     b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
-      '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + d.H.toFixed(1) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De >= 0 ? '+' : '') + d.De.toFixed(1);
+      '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + (d.H == null ? '未测' : d.H.toFixed(1)) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1));
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
       st.sel = d.id; recomputeVIS(); paintCard(); paintSide(); buildFamBar(); req(); };
@@ -3434,8 +3640,8 @@ function paintSide() {
     row('F', function (d) { return Ftxt(d); });
     row('ΔF vs 最强一批', function (d) { return fKnown(d) ? ((Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3)) : '未测'; });
     row('Hp 页面', function (d) { return d.Hp.toFixed(1); });
-    row('H 考卷', function (d) { return d.H.toFixed(1); });
-    row('Δε', function (d) { return (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
+    row('H 考卷', function (d) { return d.H == null ? '未测' : d.H.toFixed(1); });
+    row('Δε', function (d) { return d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
     row('S 广度', function (d) { return d.S.toFixed(2); });
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
     row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
@@ -3449,8 +3655,38 @@ function paintSide() {
     el.appendChild(note);
   }
 }
-document.getElementById('batch').addEventListener('change', function () { st.batch = this.value; recomputeVIS();
+document.getElementById('batch').addEventListener('change', function () {
+  /* 11-05 上午（用户）：版本 = **另一套投影** ⇒ 换版本就换页（页内坐标是本页这批点自己拟合出来的，拿去过滤另一批点是假坐标）。
+   *   目标页就是本页（或 VER_PAGES 为空）时，退回原来的页内过滤，行为与旧版逐字同。
+   *   11-06 夜（单页化）：PROJCOLS 页 = 页内**换投影**（VER_PAGES 必为空 ⇒ 本来就走这支）：
+   *   setProj 把可见点的 x2/y2 换成那一版自己的 fit 列并作废地图侧几何缓存 —— "换视图必须连坐标一起重算"
+   *   这条裁定在页内兑现，不再靠换页。 */
+  var k = this.value, tp = (typeof VER_PAGES !== 'undefined' && VER_PAGES[k]) ? VER_PAGES[k] : '';
+  if (tp && tp !== SELF_PAGE && !NAVLOCK) { location.href = tp; return; }
+  st.batch = k;
+  if (PROJCOLS && typeof setProj === 'function') setProj(k);
+  recomputeVIS();
   buildFamBar(); paintSide(); req(); });
+/* ===== 单页化：换投影 = 换可见点的 x2/y2 + 作废地图侧几何缓存 + 相机复位 =====
+ * 顺序照桌形切换那条路（§E623/§E617 家族）：坐标空间变了 ⇒
+ *   · NBK（每格最近 12 名）是**纯几何**，按 x2/y2 算的 ⇒ 整表作废（ensureField 会按新几何重建）；
+ *   · FL（底图位图）同理置 null；
+ *   · FSRT/_FR/_EPR/_SCR 与壳链拓扑（LCHKEY）跟着桌形切换同款清键；
+ *   · 相机走"复位视图"那支（出厂 = 全量适配）—— 换 fit 后旧缩放没有意义。
+ * 谱系/一维/三维三张视图不消费 x2/y2 ⇒ 不动。 */
+function setProj(kind) {
+  if (!PROJCOLS) return;
+  PCUR = (kind === '1.8' || kind === '2.0') ? kind : 'all';
+  for (var i = 0; i < N; i++) {
+    var q = PCUR === '1.8' ? P[i].pj18 : (PCUR === '2.0' ? P[i].pj20 : P[i].pjAll);
+    if (q) { P[i].x2 = q[0]; P[i].y2 = q[1]; }
+  }
+  for (var kb in NBK) delete NBK[kb];
+  FL = null;
+  FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
+  LCHKEY = '#reset';                     /* 壳/链拓扑缓存随坐标空间作废（与 st.chain 翻转同一招） */
+  document.getElementById('reset').onclick();
+}
 /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）
  *   §E378 换成一根竖轴（用户 10-07：「F窗口用两个独立的轴调很奇怪，你直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）
  *   整根 = 全库 F 值域的比例 [0,1]（顶 = 高 F）‖ 亮段 = 当前窗口 ‖ 两个黄柄 = 窗口的两端，可拖、双击回全范围。
@@ -4023,6 +4259,7 @@ var CHKDETAIL = 0;
       st.edges = kv[1]; document.getElementById('edges').value = kv[1]; }
     if (kv[0] === 'bg') { st.bg = decodeURIComponent(kv[1]); } 
     if (kv[0] === 'chrome') CHROMEVEC = kv[1] === 'bmp' ? 0 : 1;
+    if (kv[0] === 'cov' && isFinite(+kv[1])) COV_MED = (+kv[1] === 0 ? 0 : 1);   /* A/B：#cov=0 回到按点间距定尺的旧法律 */
     if (kv[0] === 'detail') CHKDETAIL = +kv[1] ? 1 : 0;   /* §E605-B 只给页内自检用（#check=1&detail=1）*/
     if (kv[0] === 'gl') { GLISO = (+kv[1] === 1 ? 1 : 0); console.log('PROBE parse gl kv=' + kv[1] + ' => GLISO=' + GLISO); }
     if (kv[0] === 'gfa') GFA = Math.max(0, Math.min(1, +kv[1]));
@@ -4031,7 +4268,10 @@ var CHKDETAIL = 0;
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
     /* §E617 桌形走深链 ⇒ 无头复验能钉住"同一张图换一把 F"这两态分别长什么样（不钉就只能靠人手动切，截图对不上）*/
-    if (kv[0] === 'ftab') st.ftab = (kv[1] === 'long' ? 'long' : 'multi');
+    if (kv[0] === 'ftab') { st.ftab = (kv[1] === 'long' ? 'long' : 'multi');
+      /* 控件必须跟着深链一起改（同 T / labels / color 那三支的写法）：只改 st 的话，
+       *   用 #ftab=long 打开的人看到「桌形 = 默认（3血短程）」而画的是长程桌 ⇒ 控件在说谎。 */
+      var _ft = document.getElementById('ftab'); if (_ft) _ft.value = st.ftab; }
     if (kv[0] === 'dgate') DGATE = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'm0') DM0 = Math.max(0, Math.min(20, +kv[1] || 0)); }
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
@@ -4095,8 +4335,12 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* 自检自己也要有牙：跑挂了必须留下一行红字。空 div 与"0 PASS / 0 FAIL"是同一种假绿
    *   —— 看的人分不清"没跑"与"跑完没写"，而这两件事的处置完全相反。*/
   el0.style.display = 'block'; el0.textContent = 'RUNNING §E338 页内自检…';
+  NAVLOCK = 1;   /* ↑ 自检会点下拉 ⇒ 这段时间禁止"版本=换页"（见上面 NAVLOCK 那段）*/
   try {
-  function T(name, cond, got) { if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
+  function T(name, cond, got) {
+    if (SUBSETP_NOW() && !cond && NA_IN_SUBSET.some(function (s) { return String(name).indexOf(s) >= 0; })) {
+      nskip++; out.push('SKIP ' + name + ' ‖ 单版本子集页（本页 ' + N + ' 枚）取不到这条判据的对象 ‖ 原判读：' + (got === undefined || got === null ? '—' : got)); return; }
+    if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
   /* §E338 的第三态「判不动」（10-21）：**不是**"可以忽略的红"，而是"这个态下量具够不到判据"
    *   —— 判据自己印出够不到的理由，行首 SKIP ⇒ 不进 PASS/FAIL 分母，但 shot.mjs 与页眉都会把
@@ -5019,13 +5263,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('标签：常驻名单（历代上槽 ∪ 池成员）必须全员上名（§E606 换了主语 —— 原来判的是"所有 lineage 非空"，那批里含不给常驻名字的旧槽位冠军）',
     LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
     '常驻名单可见 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
-  /* §E620 这条原来钉 LB.cov <= 110（绝对枚数）—— 与刚被用户否掉的那条同一种坏法：
-     *   "被名字盖住的点"随面板规模线性涨（钉它那天 718 枚，现在 798 枚），线不动就必然越线。
-     *   改成**密度**：按钉它那天实测的 110/718 = 15.3% 换算到当前点数，另给 3 枚的舍入余量。 */
-  var COVL = Math.round(110 / 718 * N) + 3;
+  /* §E620 这条线的**主语**换过两次，11-06 实测前两把都不对：
+     *   第一版钉绝对枚数（110）⇒ 面板一涨就必然越线；第二版按**点数**定标（110/718 × N + 3）⇒ 2.0 池 20 枚进常驻名单那天越线。
+     *   A/B（同一份页面只摘掉新那 10 条池名，原件 scratch/qoder-1106-label-ab.txt）：29 条名 ⇒ 压住 131 枚 ‖ 39 条 ⇒ 172 枚
+     *     ⇒ 每条名压 4.4 枚，与存量那 29 条的 4.5 枚/条同级 —— **密度没变，是条数变了**，而上一版把线绑在点数上。
+     *   现在按条数定标：4.52 枚/条（= 131/29 那次实测）+ 5 枚余量。判的对象一字未动（还是"被别人的名字盖住的点"），
+     *   牙口也没换：标签框变宽 / 避让坏掉 / 同一枚上两遍名 ⇒ 每条压住的枚数上去 ⇒ 照样红。 */
+  var COVL = Math.round(131 / 29 * LB.n) + 5;
   T('标签：默认视图里被别人的名字压住的点只查「被别人名字盖住的点」这一条（矩形重叠那条已按用户裁定删除 §E430）（实测与线见上面那段注释）',
     LB.cov <= COVL,
-    '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 110/718 的密度 × 当前 ' + N + ' 枚 + 3）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
+    '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 4.52 枚/条 × 常驻名单 ' + LB.n + ' 条 + 5 枚余量）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
   st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
   st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
@@ -5673,9 +5920,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
     st.edges = 'all'; st.color = 'fam'; st.labels = 'none'; NOPTS = 1; ELOG = 1;
     /* 步长要**按当下的边数算**（先空跑一帧拿 EDGR.n）：写死 60 在出厂态（726 条）取到 12 条探针，
-     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。 */
+     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。
+     *   分母必须用 PROBE_MAX（与上面收集探针的那道上限同一个数）：11-06 只把这里改成 48、上限还留 24，
+     *   结果是"抽中的 24 条挪到前半段"，稀疏格采样点从 10 掉到 4 —— 量具没加密，只是换了抽样范围。 */
     EPROBE = 0; draw(); var nEd = EDGR.n;
-    var strd = Math.max(1, Math.round(nEd / 24)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
+    var strd = Math.max(1, Math.round(nEd / PROBE_MAX)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
     var amin2 = EDGR.amin, amax2 = EDGR.amax;
     var dOn = grab2();
     st.edges = 'off'; draw(); var dOff = grab2();
@@ -5730,7 +5979,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     st.elaw = 'attr';
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'none';
-    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
+    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / PROBE_MAX));
     draw(); var A0p = EDGR.probe.slice();
     st.tX = -3 * devicePixelRatio; draw(); var A1p = EDGR.probe.slice();
     st.tKx = 1.03; draw(); var A2p = EDGR.probe.slice();
@@ -5930,10 +6179,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     wel.value = wbk; fireEv(wel, 'change');
     if (st[wid] !== wbk) wireBad.push(wid + ' 还原失败（st 是 ' + st[wid] + '，控件是 ' + wbk + '）'); }
   var loT0 = winLo(), r0 = dotR(P[0], 1), wT = document.getElementById('T'), bkT = wT.value;
+  /* 11-06 夜修判据对象（在册旧账"T 滑杆与 F 值域脱钩"的真定性）：链路本身是通的——
+   *   实测 winHi 0.817→1.119 跟着 T 走，而 winLo 不动的原因是**全库 S 的最小值 = 0**：
+   *   下界被那枚 S=0 的点钉死（它的 F = Hp/100 + T·0 与 T 无关）⇒ "winLo 必须动"量的是一个
+   *   T 不变量的量。改量**探针点**：任取一枚 S≠0 的点，它的 F 必须跟着 T 变——
+   *   这才是"F = Hp/100 + T·S 与这根滑杆接通"的直接判据（FR/窗口都从 Fv 派生，探针动 ⇒ 全链通）。 */
+  var tProbe = -1; for (var ti = 0; ti < N; ti++) { if (P[ti].S) { tProbe = ti; break; } }
+  var fProbe0 = tProbe >= 0 ? Fv(P[tProbe]) : null;
   wT.value = '0.25'; fireEv(wT, 'input');
   if (Math.abs(st.T - 0.25) > 1e-9) wireBad.push('T 滑杆拖到 0.25 而 st.T = ' + st.T);
-  if (Math.abs(winLo() - loT0) < 1e-6) wireBad.push('st.T 动了但 F 值域一点没动（winLo 还是 ' + loT0.toFixed(3)
-    + ' ⇒ F = Hp/100 + T·S 与这根滑杆脱钩了）');
+  if (tProbe < 0 || Math.abs(Fv(P[tProbe]) - fProbe0) < 1e-9) wireBad.push('st.T 动了但探针点的 F 一点没动'
+    + '（F = Hp/100 + T·S 与这根滑杆脱钩了 ‖ ' + (tProbe < 0 ? '全库 S 恒 0，探针找不到' : '探针 #' + tProbe + ' S=' + P[tProbe].S) + '）');
   var wS = document.getElementById('size'), bkS = wS.value;
   wS.value = '2'; fireEv(wS, 'input');
   if (Math.abs(st.size - 2) > 1e-9) wireBad.push('点大小滑杆拖到 2 而 st.size = ' + st.size);
@@ -5941,8 +6197,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   if (!(r1 > r0 * 1.5)) wireBad.push('st.size 翻倍而 dotR 没跟着长（' + r0.toFixed(2) + ' → ' + r1.toFixed(2) + '）');
   wS.value = bkS; fireEv(wS, 'input'); wT.value = bkT; fireEv(wT, 'input');
   T('工具栏接线：四个下拉与两根滑杆点下去必须真的改 st，且 T / 点大小要真的改动到画面',
-    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 动 T 之前 winLo = '
-      + loT0.toFixed(3) + '，动完已变 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
+    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 探针点(S≠0)的 F 随 T 已动 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
   /* ② 搜索框：它的可观察效果只有两样 —— 匹配那几枚**上名字** + 在它们外面描一圈墨环（drawMap 里 11·st.size 那一圈）。
    *    所以判据也得读这两样，不能只信 st.q 变了。 */
   /* 片段从**当下看得见的那批点**里现找（4 字一段，优先命中 2~6 枚的那一段），不写死：
@@ -6378,6 +6633,7 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
   })();
   el.style.display = 'block'; el.textContent = '§E338 页内自检：' + nok + ' PASS / ' + nbad + ' FAIL' + (nskip ? ' / ' + nskip + ' SKIP' : '') + '\\n' + out.join('\\n');
   } catch (E) { el0.textContent = 'FAIL 自检中途抛错：' + ((E && E.message) || E) + '\\n已经跑到：\\n' + out.join('\\n'); nbad++; }
+  NAVLOCK = 0;
   st.sel = null; paintCard(); draw();
 })();
 `;
@@ -6452,9 +6708,9 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
-'<label id="batchrow" title="§E338 用户 ①：谱系图 24 个家族一起画，行带只剩 29px、左栏两行字必然互相压。切到某一批就只画这一批碰过的家族（冠军与加进对比的那几枚永远保留，否则分界参照物会被批次切没）。批次 = 训出日期，与横轴同一条时间线">训出批次 <select id="batch"></select></label>' +
+'<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
 '<span id="winpre" style="display:flex;gap:4px;align-items:center"></span>' +
 '<label id="edgerow" title="§E373（用户 10-07：「给一个连线开关不然可能会太多挡住了」）&#10;谱系图的热启动父边：全开 = 四种来路都画（hash/seedpack/arm/slot-at-time）；&#10;只实录 = 只画包自己记下的权重哈希那一级（§E367 之后最硬的一级）；&#10;关掉 = 一条都不画，点云本身不受影响。&#10;默认仍是全开：这一版的图就是按全开验收过的，改默认等于偷偷换读法。">连线 <select id="edges"><option value="all">全开</option><option value="hash">只实录</option><option value="off">关掉</option></select></label>' +

@@ -28,11 +28,59 @@
    * 全部按 'multi'（3 血）建局，"5 血冠军"从来没被训过；产物 meta 里连模式字段都没有，
    * 因为那个值是永远不变的默认值。
    * 这里由**调用方**显式设置 —— 沿用 setWrTol 的模式：引擎内不读 process.env
-   * （np-test L3 守护这条），默认 'multi' ⇒ 既有路径逐位不变。
+   * （np-test L3 守护这条），默认从 11-02 晚起改为 'long'（用户裁：5 人长程；历史默认是 'multi'，旧读数不可与本默认横比）。
    * 反证（np-test D10）：把下面任意一处 mode 传参删掉，D10 立刻红。 */
-  let TRAIN_MODE = 'multi';
+  /* 11-02 晚（用户：「把 TRAIN_MODE 的默认改成 5 人长程」）：产品默认桌 = **5 人 · long（5 血）**。
+    *   历史批次（3 人 multi / 5 人 multi）都是显式或默认 multi 跑出来的，读数不可与本默认横比；
+    *   要回旧口径必须显式 `setTrainMode('multi')` / `EPIRUS_TRAIN_MODE=multi`。
+    *   ⚠ np-test D10 的守护（mode 传参不能删）仍然有效——这里只改**默认值**，不删任何传参。 */
+   let TRAIN_MODE = 'long';
   function setTrainMode(m) { if (m && R.MODES && R.MODES[m]) TRAIN_MODE = m; return TRAIN_MODE; }
   function trainMode() { return TRAIN_MODE; }
+
+  /* =====（ZCode · 11-02 深夜）`MIX8_EVERY`：fitness 里每第 K 局换 **8 人桌**（默认 0 = 关 ⇒ 逐字不变）=====
+   * 用户裁定原话：「地雷在 5P 以上的环境里是极高性价比的伤害和威慑卡（因为我们给地雷搞了 3 回合到期），
+   * 我认为如果训练中加几轮 8p 对局应该很容易学到」。
+   * 证据基线（夜班 mine-8p-quick 探针）：G5-8p-s41（8P 直训臂）mine 菜单 18 → 自选 8（**44% 取用率**）
+   * —— 全仓唯一学会地雷的臂；其余臂菜单 73~160 次自选 0（5P 世界目标函数没为它付账，白班 §七/§八 同判）。
+   * 形状：`g % K === K-1` 的局 nG=8（K≥2 才开）。**8P 局照常进 fit**（IMIT 教训：不进 fit 的经验不进参数）；
+   * 座位轮换/收割席/家族席/经济门槛/场均差全按 nG 走（同一套判据，不另抄第二份）。
+   * ⚠ 与 commit 局（每 3 局 1 局承诺经济）正交：8P 轮恰好落在承诺局时它就是 8 人承诺局，判据同源。 */
+  let MIX8_EVERY = 0;
+  function setMix8Every(v) { const k = Math.floor(Number(v) || 0); MIX8_EVERY = k >= 2 ? k : 0; return MIX8_EVERY; }
+  function mix8Every() { return MIX8_EVERY; }
+  /* =====（ZCode · 11-06 夜）`MIX2_EVERY`：fitness 里每第 K 局换 **2 人桌**（默认 0 = 关 ⇒ 逐字不变）=====
+   * 动机（用户 11-05 夜指令「同代混桌」·DS `STATE-2026-11-05-noon-ds.md` 待办 2）：DS 实测**顺序混训**
+   *   （先 2P 30 代再 5P 30 代）是灾难性干扰，建议改为**同代混桌**。本旋钮 = 同代内逐局混 2P 桌，
+   *   受评席在 2P 切片里按 `(g / K) % 2` 轮换（`g % 2` 会钉死 0 号座）；2P 局照常进 fit。
+   *   与 MIX8 同时设时的优先级：本键的切片赢（都是"训练形状档"，不该叠加）。 */
+  let MIX2_EVERY = 0;
+  function setMix2Every(v) { const k = Math.floor(Number(v) || 0); MIX2_EVERY = k >= 2 ? k : 0; return MIX2_EVERY; }
+  function mix2Every() { return MIX2_EVERY; }
+  /* =====（ZCode · 11-06 夜）`COURSE_EVERY`：课程席——每第 K 代，fitness 局里让一席**脚本对手**上桌 =====
+   * 动因（D-08 主问题 · 千问 `MECHANISM-2026-11-04-training-breadth-qoder.md` §6）：蒸馏开菜单 / GA 选性格
+   *   缺的那一格 = "菜单打开后 GA 不给那张卡付钱 ⇒ 被磨光"。课程席让稀有键**真的有压力源**
+   *   （千问倾向的机制解，对照 FITGW/SEL_KEEP 两个记账解）。
+   * 接线照 `killSeatFor` 的形状（下方）：指定席 + **不吃 ok** ⇒ 其余对手轮换序列与基线逐字同；
+   *   相位乘 5 与 killSeat 的 `(g + gen*3)` 错开；承诺局跳过（与 killSeat 同一条理由：一分不进 fit，注了白注）。
+   * 席上坐谁由 `COURSE_BOT`（Bots 导出的函数名）指定，缺省 `pickToolKit`（杂货铺 = 出手面最宽的脚本，
+   *   给最多稀有键同时施压）。默认 COURSE_EVERY=0 = 关 ⇒ 逐字不变。 */
+  let COURSE_EVERY = 0, COURSE_BOT_NAME = '';
+  function setCourseEvery(v) { const k = Math.floor(Number(v) || 0); COURSE_EVERY = k >= 1 ? k : 0; return COURSE_EVERY; }
+  function courseEvery() { return COURSE_EVERY; }
+  function setCourseBot(v) { COURSE_BOT_NAME = String(v == null ? '' : v).trim(); return COURSE_BOT_NAME; }
+  function courseBotName() { return COURSE_BOT_NAME; }
+
+  /* =====（ZCode · 11-02 深夜）`HP_SEED`：残血开局课程——摄魂双线对照的 (b) 线（用户裁「两个都可以试试」）=====
+   * 把"那一格"造出来：p 比例的局**开局全席对称压到 HP=min(2, modeHp-1)**（long=2）⇒
+   * 自己缺血 ✓、所有敌人 ≤drainHpMax ✓ ⇒ 摄魂窗（引擎门 = 目标 HP≤drainHpMax ∧ 自己缺血 ∧ 3ジ）
+   * 不再依赖"被打到残血还恰好攒着 3 费"这个稀与现实（白班 §七：残血 54% 回合但出得起的比例极低）。
+   * 照 BEAD_SEED 的形状：硬币在**局开始**用本局自己的 rng 抛（同 seed 可复现），0 时短路不消耗随机数。
+   * ⚠ 课程局**照常进 fit**（IMIT 教训：不进 fit 的经验不进参数）——fit 因此含"从低血开局赢"的目标分量，
+   *   属有意的目标修改；验收 = drain 使用率上行 ∧ 5P 四骰（原生世界）不低于同批对照（W0-ctrl）。 */
+  let HP_SEED = 0;
+  function setHpSeed(v) { const n = Number(v); HP_SEED = (isFinite(n) && n > 0) ? Math.min(1, n) : 0; return HP_SEED; }
+  function hpSeedOn() { return HP_SEED; }
 
   /* ===== 风格表现切片：复合适应度（v1.5.2）=====
    * 动机：两次"改对手池"的干预都落空（ring2 加 1 个脚本对手、mix 加 4 个真实风格冠军），
@@ -162,6 +210,24 @@
   }
   function killSeatBot() {
     return (Bots && typeof Bots.pickKillSecure === 'function') ? Bots.pickKillSecure : null;
+  }
+  /* =====（ZCode · 11-06 夜）课程席：判据与统计（唯一真源，消费点只此一处见 scoreMemberN）===== */
+  function courseSeatFor(g, gen, seat, n, hGene) {
+    if (COURSE_EVERY <= 0 || n < 3) return -1;      // 只注多人局（2P 对手唯一，换席 = 换对手，与 killSeat 同理由）
+    if ((gen % COURSE_EVERY) !== 0) return -1;      // 每 K 代上一次课（TPG 全剂量=负的依据：间歇施压，不是常驻）
+    if (hGene > 0 && isCommitGame(g, gen, hGene)) return -1;   // 承诺局一分不进 fit ⇒ 注了也白注（与 killSeatFor 同一条）
+    /* 相位乘 5：与 killSeatFor 的 `(gen + g)` 错开，两个旋钮同开时减少同席对撞；
+     * 对撞时消费点让 killSeat 分支优先（课程席落空一局），统计里看得见。 */
+    return (seat + 1 + ((gen * 5 + g) % (n - 1))) % n;
+  }
+  function courseSeatBot() {
+    const nm = COURSE_BOT_NAME || 'pickToolKit';
+    const fn = Bots ? Bots[nm] : null;
+    return (typeof fn === 'function') ? fn : null;
+  }
+  const COURSE_STAT = { fired: 0, gens: {}, names: {} };
+  function countCourseSeats() {
+    return { fired: COURSE_STAT.fired, gens: Object.assign({}, COURSE_STAT.gens), names: Object.assign({}, COURSE_STAT.names) };
   }
   /* v1.7.158：注入名单里的名字改成**从真被叫到的那个函数反查注册名**（原来 `KILL_STAT.names.killsecure` 那个键是写死的标签）。
    * 动因（10-22 门禁审查第十二批实测）：把 `killSeatBot()` 换成 `pickFarmer` 之后，旧标签照旧印 `killsecure`，
@@ -310,6 +376,18 @@
       { name: 'defend', w: 2.2, sel: BOT_PICKS.defend }
     ];
   }
+  /* ===== 2026-10-28（DS · 2.0 重构前的那一格）：**配对评估**（common random numbers）=====
+   * 病（千问 §E822 实测）：同代内每个个体各自抽桌（`seedOfGen(gen, idx, ...)` 混了 idx）⇒
+   *   两个个体吃的是**不同的局**，适值差里混着「这一桌好不好打」的运气 ⇒ 种群开到 48 时
+   *   名人堂自判「1↔2 名差 0.05pt ‖ 自身极差 7.9pt ⇒ 基本是抽签」。
+   * 修法：`EPIRUS_PAIRED=1` 时种子**只跟代数与局号走、与个体下标无关** ⇒ 同代所有个体面对
+   *   同一批局（同对手、同局面、同随机流），适值差就是权重差。
+   * ⚠ 默认关 ⇒ 逐位回到旧口径（历史臂的读数仍可比）；打开后**跨代**仍换桌，不会把一整轮固定成一张桌。
+   * ⚠ 与 `:2263` 那条「轮换只跟代数走」是同一件事的两个部分：那条配对的是**对手**，这里配对的是**局面随机流**。 */
+  let PAIRED_EVAL = false;
+  function setPairedEval(v) { PAIRED_EVAL = !!v; }
+  function pairedEvalOn() { return PAIRED_EVAL; }
+  function evalSeedOf(gen, idx, tag) { return seedOfGen(gen, PAIRED_EVAL ? 0 : idx, tag || 'n'); }
   function seedOfGen(gen, idx, tag) {
     let h = 17;
     /* ⚠ 已知 bug（2026-10-17 实测，**没修**，理由写在下面）：这里只混 `tag.length` ⇒ `champion` / `breakdef` /
@@ -1103,7 +1181,14 @@ function supportPriorRand(state, pid, salt) {
           }
         }
       }
-      return { key: pick.key, target: shipTarget, target2: pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
+      /* 第二目标：网络在候选里是按**有序目标对**打分的（`js/train/policy.js:645-657`），
+       * 而这一行此前把网络选出的 `pick.target2` 丢掉、换成"索引最小的存活对手"（`pickTarget2N`）
+       * ⇒ 打分的那一手和打出去的那一手不是同一手，第二目标这一维结构性不可达（用户 11-05 裁定：听网络的）。
+       * 只有当网络没给、或给的已经不可用（已死/是自己/与第一目标同一个人）时才回退到旧兜底。 */
+      let shipT2 = pick.target2;
+      if (shipT2 == null || shipT2 === shipTarget || shipT2 === pid ||
+        S.opponentsOf(state, pid).indexOf(shipT2) < 0) shipT2 = null;
+      return { key: pick.key, target: shipTarget, target2: shipT2 != null ? shipT2 : pickTarget2N(state, pid, pick.key, shipTarget), bead: pick.bead };
     };
   }
   /* ===== v1.5.30x（Qoder 09-30 夜 · **默认关**）· 在线对手模型 + 1-ply 引擎重放搜索 =====
@@ -1493,7 +1578,7 @@ function supportPriorRand(state, pid, salt) {
     /* v1.4.0：模式可传（默认 'multi'）—— 5 血长程模式的评测要在这里换考卷 */
     const st = S.createState((opts && opts.mode) || 'multi', { next: mulberry32(seed) }, n, opts);
     st.slotSalt = slotSaltFor(seed);
-    Play.autoGameN(st, choosers, undefined, (opts && opts.onRoundStart) || undefined);
+    Play.autoGameN(st, choosers, undefined, (opts && opts.onRoundStart) || undefined, (opts && opts.onPicks) || undefined);
     const dmg = [];
     for (let i = 0; i < n; i++) dmg.push(0);
     for (const e of st.events) if (e.type === 'damage' && e.to != null) dmg[e.to] += e.amt;
@@ -1788,6 +1873,13 @@ const WIDTH_LAND_STAT = { games: 0, max: 0, paid: 0, blk: 0, blkAttr: 0 };
    * ⚠ 坦克**不算**：它穿防御、不穿反弹（rules.js 的 pierce 字段）—— 这正是本项与 PIERCE_W 的分工。 */
   let WALL_BREAK_W = 0;
   const WALL_BREAK_STAT = { games: 0, max: 0, paid: 0 };
+  /* DS 11-02（用户口径）：两条只进接受分的奖励项，默认 0 ⇒ 逐位不变。
+   *   `DEF_ADAPT_W`：只数「本席用防御族且这一手真挡下 ≥1 伤」（blocked by 防御族 / reflect / transfer），每局帽 2 次；
+   *     —— 防的是「白防/过度防御」（A 案那粒 15.85 手/局、5P 10.5% 的教训），所以只给真挡下的。
+   *   `DRAIN_HEAL_W`：只数「本席 HP≤1 时摄魂命中并列 heal（reason='摄魂'）」，每局帽 2 次。
+   *     —— 摄魂 = 1 伤 + 命中自愈 1、仅 HP≤1 可用；残血翻身牌，现役包 0 次。 */
+  let DEF_ADAPT_W = 0, DRAIN_HEAL_W = 0, DEF_IDLE_W = 0;
+  const DEF_ADAPT_STAT = { games: 0, paid: 0 }, DRAIN_HEAL_STAT = { games: 0, paid: 0 };
   /* 11:5x（千问 · 用户「这几个都可以」· PREREG §二十六 条款 4）：**反射**奖励 `REFLECT_W`（默认 0 ⇒ 逐位不变）。
    * 病（§E805 的 `GB2`）：`3fc020` 的不动点只差 `G4`（long 只枪 84%）与珠两行；`BLOCK_W` 抬到 0.40 会连墙/G5/强一起卖
    *   （它同时给 `blocked` 与 `reflect` 付钱 ⇒ 奖励含混，会把包推向"挡起来"）；`BEAD_W` 抬档反而放大蓄能-花珠循环。
@@ -1938,21 +2030,32 @@ let WALL_GAMES = 3;
    *      （否则产品口径会跟着训练配方一起变 —— 那是 §E87 那族"口径决定结论"的事故）。
    *   ② `policy.js` 在规则指纹名单里（`rules-fingerprint.mjs:31`），它的"槽位每决策打乱"**一字未动**
    *      ⇒ 本开关不试图给网络喂"对手是谁"，只让**整桌行为混合**这个置换不变的量变得有预测力。
-   *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D187** 钉。 */
+   *   ③ 默认关 ⇒ `oppSeatIndex(...,block=false)` 与旧公式 `((gen*3+g)%len + k)%len` 逐位同，由门 **D4** 钉。
+   *   ⚑ 这里原本写"门 D187"：那道门 10-27 随「训练组整组移出产品门禁」（`1efa3a3d`，用户裁定）一起删了，
+   *   引用悬空了 8 天；在册钉这条公式的是 D4 —— 而 D4 恰好被 11-03 那条 `if (OPP_SWEEP) return` 绕过过（11-04 晨班修）。 */
   let OPP_BLOCK = false;
+  /* DS 11-03 晚（Claude review）：`EPIRUS_OPP_SWEEP` —— **每代把整个对手池轮齐**（默认关）。
+   *   病：旧公式 `(gen*3+g+k)` 每代只覆盖 11 个连续位置 ⇒ 17 个对手池里约 6 个每代缺席，
+   *   反制原型可能连续多代不上桌，偏科打法就在那些代被选出来。
+   *   开 ⇒ 用 `(g*4 + (k-1) + gen*4)`：每局 4 席取连续位置 ⇒ 每代 24 局覆盖 96 个位次，
+   *   17 个对手每个至少出现 5 次（每个个体每代都见过全部对手）。
+   *   默认关 ⇒ 与旧公式逐位同（门 D4 钉的路径一字不动）。 */
+  let OPP_SWEEP = false;
   const OPP_BLOCK_STAT = { fitGames: 0, blockedGames: 0, styleGames: 0, styleBlocked: 0 };
   /* 纯函数：第 k 个对手席在该用池子的第几条。关 ⇒ 与旧代码逐字同；开 ⇒ 局内恒等（整桌同原型）。 */
   function oppSeatIndex(gen, g, k, oppsLen, block) {
+    if (OPP_SWEEP) return (g * 4 + k + gen * 4) % oppsLen;   /* k=ok 从 0 起 ⇒ 每局 4 席取连续位置 */
     return (gen * 3 + g + (block ? 0 : k)) % oppsLen;
   }
   function setOppTable(o) {
     if (!o) return oppTable();
-    if (o.reset) { OPP_BLOCK = false; OPP_BLOCK_STAT.fitGames = 0; OPP_BLOCK_STAT.blockedGames = 0; OPP_BLOCK_STAT.styleGames = 0; OPP_BLOCK_STAT.styleBlocked = 0; }
+    if (o.reset) { OPP_BLOCK = false; OPP_SWEEP = false; OPP_BLOCK_STAT.fitGames = 0; OPP_BLOCK_STAT.blockedGames = 0; OPP_BLOCK_STAT.styleGames = 0; OPP_BLOCK_STAT.styleBlocked = 0; }
     if (o.block != null) OPP_BLOCK = !!o.block;
+    if (o.sweep != null) OPP_SWEEP = !!o.sweep;
     return oppTable();
   }
   function oppTable() {
-    return { block: OPP_BLOCK, fitGames: OPP_BLOCK_STAT.fitGames, blockedGames: OPP_BLOCK_STAT.blockedGames,
+    return { block: OPP_BLOCK, sweep: OPP_SWEEP, fitGames: OPP_BLOCK_STAT.fitGames, blockedGames: OPP_BLOCK_STAT.blockedGames,
       styleGames: OPP_BLOCK_STAT.styleGames, styleBlocked: OPP_BLOCK_STAT.styleBlocked };
   }
   /* v1.5.265（qoder §E65b）：**出厂值快照**，给 `reset` 用。
@@ -1989,7 +2092,7 @@ let WALL_GAMES = 3;
     if (o.divRoleW != null) DIV_ROLE_W = Number(o.divRoleW) || 0;
     else if (o.divCatW != null) DIV_ROLE_W = Number(o.divCatW) || 0;
     if (o.divForceGens != null) DIV_FORCE_GENS = Math.max(0, Number(o.divForceGens));
-    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthLandW != null) WIDTH_LAND_W = Math.max(0, Number(o.widthLandW) || 0); if (o.wallBreakW != null) WALL_BREAK_W = Math.max(0, Number(o.wallBreakW) || 0); if (o.reflectW != null) REFLECT_W = Math.max(0, Number(o.reflectW) || 0); if (o.guardHitW != null) GUARD_HIT_W = Math.max(0, Number(o.guardHitW) || 0); if (o.beadWasteW != null) BEAD_WASTE_W = Math.max(0, Number(o.beadWasteW) || 0); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
+    if (o.bigcardW != null) BIGCARD_W = Math.max(0, Number(o.bigcardW)); if (o.widthLandW != null) WIDTH_LAND_W = Math.max(0, Number(o.widthLandW) || 0); if (o.wallBreakW != null) WALL_BREAK_W = Math.max(0, Number(o.wallBreakW) || 0); if (o.defAdaptW != null) DEF_ADAPT_W = Math.max(0, Number(o.defAdaptW) || 0); if (o.drainHealW != null) DRAIN_HEAL_W = Math.max(0, Number(o.drainHealW) || 0); if (o.defIdleW != null) DEF_IDLE_W = Math.max(0, Number(o.defIdleW) || 0); if (o.reflectW != null) REFLECT_W = Math.max(0, Number(o.reflectW) || 0); if (o.guardHitW != null) GUARD_HIT_W = Math.max(0, Number(o.guardHitW) || 0); if (o.beadWasteW != null) BEAD_WASTE_W = Math.max(0, Number(o.beadWasteW) || 0); if (o.costlyW != null) COSTLY_W = Math.max(0, Number(o.costlyW)); if (o.bigtChainW != null) BIGT_CHAIN_W = Math.max(0, Number(o.bigtChainW)); if (o.widthW != null) WIDTH_W = Math.max(0, Number(o.widthW)); if (o.blockW != null) BLOCK_W = Math.max(0, Number(o.blockW));
     if (o.hoardOnLeftover != null) HOARD_LEFTOVER = !!o.hoardOnLeftover; if (o.convRatio != null) CONV_RATIO = !!o.convRatio; if (o.convOffense != null) CONV_OFFENSE = !!o.convOffense;
     if (o.fitCal != null) FIT_CAL_EXCESS = !!(o.fitCal && String(o.fitCal) !== '0' && o.fitCal !== 0);
     /* v1.6.50（用户裁定 B）：把闸的广度折进适应度。两个键一起收口（只给 W 不给下界 ⇒ 用默认下界 3，与闸同线）。 */
@@ -2021,7 +2124,7 @@ let WALL_GAMES = 3;
     if (o.wallGames != null) WALL_GAMES = Math.max(1, Number(o.wallGames));
     if (o.reset) {
       ECO_T = null; ECO_C = null;
-      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; WIDTH_LAND_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0;   /* v1.8.42（DS · 10-27 晚）：WIDTH_LAND_W 是 train-selftest ① 抓出来的漏网（reset 后 0.5 泄漏） */ REFLECT_W = 0; GUARD_HIT_W = 0; BEAD_WASTE_W = 0;
+      HOARD_LEFTOVER = false; CONV_RATIO = false; CONV_OFFENSE = false; HOARD_CAP_MULT = 2; STOCK_BONUS = 0.05; BLOCK_W = 0; WIDTH_W = 0; WIDTH_LAND_W = 0; BIGCARD_W = 0; BIGT_CHAIN_W = 0; WALL_BREAK_W = 0; DEF_ADAPT_W = 0; DRAIN_HEAL_W = 0; DEF_IDLE_W = 0;   /* v1.8.42（DS · 10-27 晚）：WIDTH_LAND_W 是 train-selftest ① 抓出来的漏网（reset 后 0.5 泄漏） */ REFLECT_W = 0; GUARD_HIT_W = 0; BEAD_WASTE_W = 0;
       /* qoder-research 0920：D77 的运行时往返会喂**每个键**的哨兵再 reset —— ringW/s4W 是后加的键，
        * 漏在这里会把 0.5 的哨兵泄漏给后续门（s4W 泄漏 = 后续 scoreMemberN 直接抛错）。
        * ⚠️ D109 第一次跑红还顺带抓出一个**既存泄漏**：`wallFilter` 的哨兵 true 从没被 reset 抹掉
@@ -2059,7 +2162,7 @@ let WALL_GAMES = 3;
       divForceGens: DIV_FORCE_GENS, wallFilter: WALL_FILTER_ON,
       stockBonus: STOCK_BONUS, hoardPen: HOARD_PEN,
       hoardOnLeftover: HOARD_LEFTOVER, convRatio: CONV_RATIO, convOffense: CONV_OFFENSE, hoardCapMult: HOARD_CAP_MULT,
-      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid, blk: WIDTH_LAND_STAT.blk, blkAttr: WIDTH_LAND_STAT.blkAttr }, wallBreakW: WALL_BREAK_W, wallBreakStat: { games: WALL_BREAK_STAT.games, max: WALL_BREAK_STAT.max, paid: WALL_BREAK_STAT.paid }, reflectW: REFLECT_W, reflectStat: { games: REFLECT_STAT.games, max: REFLECT_STAT.max, paid: REFLECT_STAT.paid }, guardHitW: GUARD_HIT_W, guardHitStat: { games: GUARD_HIT_STAT.games, max: GUARD_HIT_STAT.max, paid: GUARD_HIT_STAT.paid }, beadWasteW: BEAD_WASTE_W, beadWasteStat: { games: BEAD_WASTE_STAT.games, max: BEAD_WASTE_STAT.max, paid: BEAD_WASTE_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
+      blockW: BLOCK_W, widthW: WIDTH_W, widthLandW: WIDTH_LAND_W, widthLandStat: { games: WIDTH_LAND_STAT.games, max: WIDTH_LAND_STAT.max, paid: WIDTH_LAND_STAT.paid, blk: WIDTH_LAND_STAT.blk, blkAttr: WIDTH_LAND_STAT.blkAttr }, wallBreakW: WALL_BREAK_W, wallBreakStat: { games: WALL_BREAK_STAT.games, max: WALL_BREAK_STAT.max, paid: WALL_BREAK_STAT.paid }, defAdaptW: DEF_ADAPT_W, defAdaptStat: { games: DEF_ADAPT_STAT.games, paid: DEF_ADAPT_STAT.paid }, drainHealW: DRAIN_HEAL_W, drainHealStat: { games: DRAIN_HEAL_STAT.games, paid: DRAIN_HEAL_STAT.paid }, defIdleW: DEF_IDLE_W, reflectW: REFLECT_W, reflectStat: { games: REFLECT_STAT.games, max: REFLECT_STAT.max, paid: REFLECT_STAT.paid }, guardHitW: GUARD_HIT_W, guardHitStat: { games: GUARD_HIT_STAT.games, max: GUARD_HIT_STAT.max, paid: GUARD_HIT_STAT.paid }, beadWasteW: BEAD_WASTE_W, beadWasteStat: { games: BEAD_WASTE_STAT.games, max: BEAD_WASTE_STAT.max, paid: BEAD_WASTE_STAT.paid }, bigcardW: BIGCARD_W, costlyW: COSTLY_W, costlyHits: COSTLY_HITS, fitCal: FIT_CAL_EXCESS, bigtChainW: BIGT_CHAIN_W, wallGames: WALL_GAMES, ringW: RING_W, s4W: S4_W,
       fitTailW: FIT_TAIL_W, fitTailQ: FIT_TAIL_Q,   // 09-26 §E49：ECON_REWARD_KEYS 里每个键都要"设得进、读得回"（D77 往返）
       /* v1.5.141（DS）：`beadW` 必须能从读回接口看到 —— D77 的运行时往返要求 `ECON_REWARD_KEYS` 的
        * 每个键都"设得进、读得回"（np-test.mjs:3289 的 `f in back`）；只接 setter 不接读回 ⇒ 门红。 */
@@ -2218,7 +2321,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0, defAdaptHits = 0, drainHeals = 0, defHands = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
     let voidWins = 0, voidIdeal = 0;
@@ -2241,7 +2344,7 @@ let WALL_GAMES = 3;
       BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || WALL_BREAK_W > 0 || REFLECT_W > 0 || GUARD_HIT_W > 0 || BEAD_WASTE_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
       /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
        * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
-      VOID_W > 0 || VOID_IDEAL_W > 0;
+      VOID_W > 0 || VOID_IDEAL_W > 0 || DEF_ADAPT_W > 0 || DRAIN_HEAL_W > 0 || DEF_IDLE_W > 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
      * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
@@ -2257,8 +2360,14 @@ let WALL_GAMES = 3;
     const spUse = {};   // 该个体的动作直方图（跨局汇总：脚本对手局 + **自对局**）
     let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
-      const seat = g % n;                                   // 座位轮换
-      const seed = seedOfGen(gen, idx, 'n') + g * 7919;
+      /*（ZCode · 11-02 深夜）逐局人数轮换：每第 K 局（K=MIX8_EVERY）换 8 人桌；默认 0 ⇒ nG===n 逐字同。
+       * 8P 局照常进 fit（IMIT 教训）；本局内座位/收割/家族/经济门槛/场均差全部按 nG 取。
+       *（ZCode · 11-06 夜）MIX2_EVERY：每第 K 局换 2 人桌（同代混桌，DS 待办 2）。
+       *   2P 切片的受评席按 `(g / K) % 2` 轮换 —— `g % 2` 在 K=2 时会钉死 0 号座（座位偏置同族病）。 */
+      const mix2Game = (MIX2_EVERY >= 2 && g % MIX2_EVERY === 0);
+      const nG = mix2Game ? 2 : ((MIX8_EVERY >= 2 && g % MIX8_EVERY === MIX8_EVERY - 1) ? 8 : n);
+      const seat = mix2Game ? ((g / MIX2_EVERY) % nG) : (g % nG);   // 座位轮换（8P/2P 轮按各自 nG 取）
+      const seed = evalSeedOf(gen, idx, 'n') + g * 7919;
       const choosers = [];
       /* v1.4.1 修正（我 v1.3.60 改错了）：轮换**必须与个体下标无关**。
        * v1.3.60 我用 `(g*5 + idx) % opps.length` 去解决"池子大于窗口时尾部对手轮不到"，
@@ -2270,15 +2379,17 @@ let WALL_GAMES = 3;
       let ok = 0;   // v1.5.279：局内第几个对手席（取代旧的 `oi` 累加器）；索引式见 `oppSeatIndex`
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = isCommitGame(g, gen, hGene);   // (c) 承诺局：每 3 局 1 局，h 来自基因（v1.5.186：相位按代旋转，判据单一来源）
-      const killSeatPid = killSeatFor(g, gen, seat, n, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
+      const killSeatPid = killSeatFor(g, gen, seat, nG, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
+      /*（ZCode · 11-06 夜）课程席：每 K 代让一席脚本对手上桌（D-08 机制解；判据单一来源 courseSeatFor） */
+      const coursePid = courseSeatFor(g, gen, seat, nG, hGene);
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
       /* §E798：本局的家族席（默认关 ⇒ null ⇒ 下面那支一行都不跑） */
-      const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, n, seat, FAMILY_FIELD) : null;
+      const famSet = FAMILY_FIELD > 0 ? familySeatSet(g, gen, nG, seat, FAMILY_FIELD) : null;
       if (famSet && famSet.size) FAM_STAT.games++;
       let econ = null;
-      for (let pid = 0; pid < n; pid++) {
+      for (let pid = 0; pid < nG; pid++) {
         if (pid === seat) {
           // (c) 承诺级 ε：h 取自**个体基因**，不再是每局随机抽的噪声
           const h = commitGame ? hGene : 0;
@@ -2306,6 +2417,16 @@ let WALL_GAMES = 3;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
           const kbName = botRegisteredName(kb);
           KILL_STAT.names[kbName] = (KILL_STAT.names[kbName] || 0) + 1;
+        } else if (coursePid >= 0 && pid === coursePid && pid !== killSeatPid && courseSeatBot()) {
+          /*（ZCode · 11-06 夜）课程席：这一席换成脚本对手（缺省杂货铺）⇒ 稀有键有压力源。
+           *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字同（与家族席同一条纪律）；
+           *   与 killSeat 同局对撞时 killSeat 分支已先接走（上面 `pid !== killSeatPid` 只是把意图写明）。 */
+          const cb = courseSeatBot();
+          choosers.push(wrapBotN(cb));
+          COURSE_STAT.fired++;
+          COURSE_STAT.gens[gen] = (COURSE_STAT.gens[gen] || 0) + 1;
+          const cbName = botRegisteredName(cb);
+          COURSE_STAT.names[cbName] = (COURSE_STAT.names[cbName] || 0) + 1;
         } else if (famSet && famSet.has(pid)) {
           /* §E798 家族副本席：同一个 `params` 走适应度用的那个 chooser（不吃补贴/强迫/模仿 ⇒ 它是"副本"不是"另一个被喂的个体"）。
            *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字相同（否则等于偷偷改了对手份额，读数就说不清是谁施压）。 */
@@ -2333,6 +2454,15 @@ let WALL_GAMES = 3;
       } : undefined;
       /* v1.5.143：状态分布塑形（**只在非补贴局**、**只在开局那一回合**、**全席对称**）—— 见 setBeadSeed 的长注释。
        * 抛硬币用**本局自己的 rng**（不是 Math.random）⇒ 同一 seed 序列可复现；`BEAD_SEED=0` 时短路 ⇒ 不消耗随机数、逐字不变。 */
+      /*（ZCode · 11-02 深夜）残血开局课程（HP_SEED>0）：形状照 BEAD_SEED——硬币只在 round1 抛、本局 rng、0 短路。 */
+      const hpSeedHook = (!subBeadHook && HP_SEED > 0)
+        ? function (state) {
+          if (state.round !== 1) return;
+          if (state.rng.next() >= HP_SEED) return;
+          const hp0 = Math.min(2, (state.mode && state.mode.hp) || 3);
+          for (let i = 0; i < state.p.length; i++) { const q = state.p[i]; if (q && q.hp > 0) q.hp = hp0; }
+        }
+        : undefined;
       const beadSeedHook = (!subBeadHook && BEAD_SEED > 0)
         ? function (state) {
           if (state.round !== 1) return;
@@ -2345,7 +2475,7 @@ let WALL_GAMES = 3;
           }
         }
         : undefined;
-      const r = oneGameN(choosers, seed, n, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook });
+      const r = oneGameN(choosers, seed, nG, { regen: regen, mode: TRAIN_MODE, onRoundStart: subBeadHook || beadSeedHook || hpSeedHook });
       /* v1.5.189：局末把"教师替受评席下的手"标记出来（**只记账，不改 fit、不改 rng**）
        * ⇒ 示范开着时，`bigUses`/链率这类臂内读数第一次能拆开"是包自己会，还是教师替它打的"。
        * ⚠️ **每一局都要过一遍**（不能只在"本局有注入"时过）：退火窗口之后注入恒 0，而那正是"学没学会"要看的段落
@@ -2356,7 +2486,7 @@ let WALL_GAMES = 3;
       const aliveEnd = r.state.p.filter(function (q) { return q.hp > 0; }).length;
       const base = rankCredit(rank, aliveEnd, r.state.p.length);   // N19：3 人局里第二名也算输；v1.5.8 起哨声局打折（v1.5.299 起带上人数：口径对齐要用它）
       const others = r.dmg.reduce(function (a, b) { return a + b; }, 0) - r.dmg[seat];
-      const diff = r.dmg[seat] - others / Math.max(1, n - 1);
+      const diff = r.dmg[seat] - others / Math.max(1, nG - 1);
       // "立刻出手"的权重下调（原来在惩罚攒钱）；腾出的权重给经济两项
       const proact = 0.02 * Math.max(-1, Math.min(1, diff / 6));
       const deal = DEAL_W * Math.min(1, r.dmg[seat] / 4);
@@ -2387,7 +2517,7 @@ let WALL_GAMES = 3;
       const gLeft = r.state && r.state.p && r.state.p[seat] ? (r.state.p[seat].ep || 0) : 0;
       const gSpent = Math.max(0, gGain - gLost - gLeft);
       leftEpSum += gLeft; spentEpSum += gSpent; gainEpSum += gGain;
-      const stock = economyStock(mEp, n, TRAIN_MODE, gLeft);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
+      const stock = economyStock(mEp, nG, TRAIN_MODE, gLeft);   // 门槛按 (人数, 模式)：3 人→3/10、5 人 5 血→5/20
       stockSum += stock;
       deepSum += econ ? econ.rec.heavy4 : 0;
 
@@ -2414,6 +2544,13 @@ let WALL_GAMES = 3;
       /* v1.8.42（A 案）：打在**正在摆防御的目标**身上的落地伤害（谁打谁拿）。 */
       const guardHitBonus = GUARD_HIT_W > 0 ? (GUARD_HIT_W * Math.min(1, guardHitAmt / 2)) : 0;
       if (GUARD_HIT_W > 0) { GUARD_HIT_STAT.games++; if (guardHitAmt > GUARD_HIT_STAT.max) GUARD_HIT_STAT.max = guardHitAmt; if (guardHitBonus > 0) GUARD_HIT_STAT.paid++; }
+      /* DS 11-02：两条只进接受分的项（默认 0；形状 min(1,hits/2)）。 */
+      const defAdaptBonus = DEF_ADAPT_W > 0 ? (DEF_ADAPT_W * Math.min(1, defAdaptHits / 2)) : 0;
+      if (DEF_ADAPT_W > 0) { DEF_ADAPT_STAT.games++; if (defAdaptBonus > 0) DEF_ADAPT_STAT.paid++; }
+      const drainHealBonus = DRAIN_HEAL_W > 0 ? (DRAIN_HEAL_W * Math.min(1, drainHeals / 2)) : 0;
+      if (DRAIN_HEAL_W > 0) { DRAIN_HEAL_STAT.games++; if (drainHealBonus > 0) DRAIN_HEAL_STAT.paid++; }
+      /* 白防罚：防御手数越多扣越多（防的是「零费刷防御」——11-02 首臂实测 68.5% 出手是防御、白防 91~94%）。 */
+      const defIdlePenalty = DEF_IDLE_W > 0 ? (DEF_IDLE_W * Math.min(1, defHands / 4)) : 0;
       /* 过期珠 = 纯损失：给负分（形状 min(1, 事件数/4)，与其它窄项同尺度）。 */
       const beadWastePenalty = BEAD_WASTE_W > 0 ? (BEAD_WASTE_W * Math.min(1, beadExpired / 4)) : 0;
       if (BEAD_WASTE_W > 0) { BEAD_WASTE_STAT.games++; if (beadExpired > BEAD_WASTE_STAT.max) BEAD_WASTE_STAT.max = beadExpired; if (beadWastePenalty > 0) BEAD_WASTE_STAT.paid++; }
@@ -2489,7 +2626,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus + defAdaptBonus + drainHealBonus - defIdlePenalty - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2521,6 +2658,9 @@ let WALL_GAMES = 3;
         if (DOSE_ON && GUARD_HIT_W > 0) guardHitAmt += countGuardHits(r.state.events, seat).amt;
         if (DOSE_ON && BEAD_WASTE_W > 0) beadExpired += countBeadExpiredEvents(r.state.events, seat);
         if (DOSE_ON) wallBreakDmg += wallBreakDamage(r.state.events, seat);
+        if (DOSE_ON) defAdaptHits += countDefAdaptHits(r.state.events, seat);
+        if (DOSE_ON) defHands += countDefenseHands(r.state.events, seat);
+        if (DOSE_ON) drainHeals += countDrainHeals(r.state.events, seat);
         /* v1.5.76（P1，用户实测"蓄能 100% 浪费"逼出来的）：**珠子闭环**奖励。 */
         if (DOSE_ON) beadSpent += countBeadSpent(r.state.events, seat);
         /* v1.8.37 夜班续（§E763）：同一趟事件里另数"花掉的**爆珠**"（只在开了那根杠杆时扫，关着零成本）。 */
@@ -2587,7 +2727,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     const mirDec = seatDec;
     if (MIRROR_GAMES > 0) {
       for (let g = 0; g < MIRROR_GAMES; g++) {
-        const seed = seedOfGen(gen, idx, 'mir') + g * 6151;
+        const seed = evalSeedOf(gen, idx, 'mir') + g * 6151;
         const chs = [];
         for (let pid = 0; pid < n; pid++) chs.push(makeEconChooser(fitChooser(params), agg, null, 0));
         const rm = oneGameN(chs, seed, n, { regen: 0, mode: TRAIN_MODE });
@@ -2925,11 +3065,13 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   /* 从已有冠军热启动种群（持续训练：围绕冠军变异，而不是全部随机重开） */
   function seedChampion(t, params) {
     if (!params) return;
-    t.seedParams = params.slice();   // v1.5.19：兜底用（健康门槛可能拒掉第一次提升 ⇒ champion 会短暂为空）
+    /* v1.8.45（11-06 夜，C4-1）：两处 `.slice()` 改 `P.copyParams`——旧包的 `legacyFrom` 标记
+     * 否则在热启动第一代就丢（isLegacyChooser 读不到 ⇒ 旧包按 v7 候选口径评分/选拔）。 */
+    t.seedParams = P.copyParams ? P.copyParams(params) : params.slice();   // v1.5.19：兜底用（健康门槛可能拒掉第一次提升 ⇒ champion 会短暂为空）
     const mk = function (p, sigma) {
       return { params: p, score: 0, attackGames: 0, attackRate: 0, attackChoices: 0, totalChoices: 0, attackShare: 0 };
     };
-    t.pop[0] = mk(params.slice(), 0);
+    t.pop[0] = mk(P.copyParams ? P.copyParams(params) : params.slice(), 0);
     for (let i = 1; i < t.popSize; i++) {
       const sig = i < t.elite ? t.sigma * 0.6 : t.sigma;
       t.pop[i] = mk(P.mutatePolicy(params, sig), sig);
@@ -3397,6 +3539,41 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     for (const e of (events || [])) { if (e.type === 'damage' && e.source === seat && e.via && wk.indexOf(e.via) >= 0) d += (e.amt || 0); }
     return d;
   }
+  /* DS 11-02（用户口径：多血要适度防御、残血要摄魂）：只数**真挡下**的与**摄魂回血**。 */
+  function isDefenseKey(k) { const d = R.byKey && R.byKey[k]; return !!(d && d.cat === R.CAT.DEFENSE); }
+  /* qoder 11-02 复核（§十一②）：引擎发 `blocked` 事件时 `by` 带的是**中文牌名**
+   *   （`resolve.js:512-538`：'防御' / '八卦阵' / '原型制御' / '金刚盾' / '藤甲' / '反弹'），
+   *   `R.byKey[中文名]` 不存在 ⇒ 原写法下"普通防御真挡下"**恒不计分**，这根杠杆实际只给 reflect/transfer 付钱。
+   *   名牌表按引擎自己的 `cat` 生成（不硬写名单——§八"防御族名单硬写"那次同族）。 */
+  let DEF_NAME_SET = null;
+  function isDefenseName(s) {
+    if (!s) return false;
+    if (!DEF_NAME_SET) {
+      DEF_NAME_SET = new Set((R.skills || []).filter((q) => q && q.cat === R.CAT.DEFENSE).map((q) => q.name));
+    }
+    return DEF_NAME_SET.has(s);
+  }
+  function countDefAdaptHits(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) {
+      if (!e || e.to !== seat) continue;
+      if (e.type === 'blocked' && e.by && (isDefenseKey(e.by) || isDefenseName(e.by))) n++;
+      else if (e.type === 'reflect') n++;
+      else if (e.type === 'transfer') n++;
+    }
+    return n;
+  }
+  function countDefenseHands(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) { if (e && e.type === 'action' && e.pid === seat && e.key && isDefenseKey(e.key)) n++; }
+    return n;
+  }
+  function countDrainHeals(events, seat) {
+    let n = 0;
+    for (const e of (events || [])) { if (e && e.type === 'heal' && e.pid === seat && String(e.reason || '') === '摄魂') n++; }
+    return n;
+  }
+  function defAdaptReward() { return { w: DEF_ADAPT_W, drainHealW: DRAIN_HEAL_W, defAdaptStat: { games: DEF_ADAPT_STAT.games, paid: DEF_ADAPT_STAT.paid }, drainHealStat: { games: DRAIN_HEAL_STAT.games, paid: DRAIN_HEAL_STAT.paid } }; }
   /* 纯函数：数我用穿透卡**落地命中**的次数（便于守门做行为断言） */
   function countLaserHits(events, seat) {
     let n = 0;
@@ -3988,14 +4165,14 @@ function countVariety(events, seat) {
     setRingReward, ringReward, countRingBreaks, setRingRamp, ringWeightAt,
     setPressReward, pressReward, countPressRounds,
     setPierceReward, pierceReward, countPierceHits, pierceKeyList,
-    setWallBreakReward, wallBreakReward, countWallBreakHits, wallBreakDamage, wallBreakKeyList, reflectReward, countReflectAmt, guardHitReward, countGuardHits, beadWasteReward, countBeadExpiredEvents,
+    setWallBreakReward, wallBreakReward, countWallBreakHits, wallBreakDamage, wallBreakKeyList, reflectReward, countReflectAmt, guardHitReward, countGuardHits, defAdaptReward, countDefAdaptHits, countDrainHeals, countDefenseHands, beadWasteReward, countBeadExpiredEvents,
     setBeadReward, beadReward, countBeadSpent,
     /* v1.8.37 夜班续（§E763）：补贴局的珠种（枚举 setter，非法值响亮拒）+ 按珠种拆的珠奖励 setter。
      * `beadBoomW` 的值走 `economyReward()` 读回（D77 的往返契约只认那条路），这里不另开一个 getter。 */
     setSubBeadKind, subBeadKind, setBeadBoomW,
     setKillField, killField, countKillSeats, killSeatFor, botRegisteredName,   // v1.5.160 收割席注入（含**开火计数**，§N12 教训）‖ v1.7.158 反查注册名（注入名单从"标签"变成"测量"）
     setFamilyField, familyField, countFamilyField, familySeatSet,   // §E798（10-27 夜班）：训练桌形状（k 席家族副本 + 其余脚本）‖ 同样带**作用计数**，注了 0 局要响亮失败
-    setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D187 直接判它）
+    setOppTable, oppTable, oppSeatIndex,   // v1.5.279 §E124：整桌同原型（默认关；`oppSeatIndex` 是纯函数，门 D4 直接判它）
     setTargetReward, targetReward, countThreatHits, threatKeyList, setLaserReward, laserReward, countLaserHits,
     /* v1.8.29：失效成功定价（计数是纯函数 ⇒ 门可以直接喂事件序列断言，不必跑一整局）。 */
     setVoidReward, setVoidIdealReward, voidReward, countVoidWins, countVoidIdeal, voidScan,
@@ -4005,7 +4182,12 @@ function countVariety(events, seat) {
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）
     allAliveTied, setRingForceEps, ringForceEps, ringForceTarget, setRingForceUntil, ringForceUntil, ringForceEpsAt,
     scoreMemberN, oneGameN, evalN, policyChooserN, policyChooser, pickChampion, econBase, hasPurgeable, wrapBotN, pickTargetN, pickTarget2N, rankOf, seqLockedTurn,
+  setPairedEval, pairedEvalOn, evalSeedOf,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
+    setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
+    setMix2Every, mix2Every,   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌（同代混桌，DS 待办 2；默认 0=关）
+    setCourseEvery, courseEvery, setCourseBot, courseBotName, courseSeatFor, courseSeatBot, countCourseSeats,   //（ZCode · 11-06 夜）课程席（D-08 机制解；默认 0=关）
+    setHpSeed, hpSeedOn,   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）
     /* v1.8.33（§E712）：序列窗锁的"窄锁"档（默认 0 ⇒ 出厂逐字不变）。`chainKeysOf` 是纯函数 ⇒ 门/量具可直读，
