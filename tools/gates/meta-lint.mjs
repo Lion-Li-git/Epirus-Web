@@ -93,17 +93,37 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
   };
   /* 不扫门文件自己：它里面就写着 grab(src, "arg('" ) 这类字面量，会把门自己的源码当读数扫进来（首版就栽在这）。 */
   const files = readdirSync('tools').filter(function (f) { return f.slice(-4) === '.mjs' && f !== 'np-test.mjs'; });   /* v1.7.8 拆分后：readdirSync 不递归 ⇒ tools/gates/** 不在名单里，这是**对的**：门体文件不是量具（没有命令行旗标），混进量具名单只会改变这条门的语义 */
+  /* v2.0.1：名字判子从量具那一支**提到顶上**（两支扫描现在共用同一个，不再各写一遍），
+   *   且它是纯 charCode 判断 —— 本门的风格是不在门体里写反斜杠（写过一次 `\d` 被吞成"整支不匹配"，见下面 grabRe 的注释）。 */
+  const isFlagName = function (v) {
+    if (v.length < 2 || v.charAt(0) === '-') return false;
+    return v.split('').every(function (c) { const o = c.charCodeAt(0); return (o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95 || o === 45; });
+  };
+  /* v2.0.1（11-06 夜）：抽第三种写法 —— **正则字面量**里读旗标（`/^--cdp-wait=/`）。
+   *   病（实测）：`tools/battle-test.mjs` 一直用这一形读 `--cdp-wait` 却没登记，那天给 CI 传这个旗标被自家
+   *   消毒层挡在入口，而这条门连着几轮门禁都绿 ⇒ 旧针脚只认 `arg('` / `flag('` / `=== '--` / `startsWith('--` /
+   *   `indexOf('--` / `includes('--`，正则那一形是**瞎的**。针脚 = 斜杠 + 脱字符 + 两横（不用反斜杠，沿用本门风格）。 */
+  const grabRe = function (src, needle) { const out = []; let i = -1;
+    while ((i = src.indexOf(needle, i + 1)) >= 0) { let j = i + needle.length, s = '';
+      while (j < src.length) { const o = src.charCodeAt(j);
+        if ((o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95 || o === 45) { s += src.charAt(j); j++; } else break; }
+      if (s) out.push(s); } return out; };
+  const RE_NEEDLE = '/' + '^--';
   const offenders = []; let scanned = 0;
   for (let fi = 0; fi < files.length; fi++) {
     const src = readFileSync('tools/' + files[fi], 'utf8');
-    const a0 = src.indexOf('rejectUnknownFlags(argv, [');
-    if (a0 < 0) continue;
+    /* v2.0.1（11-06 夜）：原来这一格用字面量锚 `rejectUnknownFlags(argv, [` ⇒ **凡是写成
+     *   `rejectUnknownFlags(process.argv.slice(2), [...])` 的工具整台跳过**（`tools/battle-test.mjs` 就是这么从这条腿上
+     *   漏掉的：它读 `--cdp-wait` 却没登记，那天给 CI 传这个旗标被自家消毒层挡在入口，而门连着几遍绿）。
+     *   现在两种调用形式都走同一个 `flagListSpan` 名单解析器（与下面量具那一支同源，不写两遍）。 */
+    const span = flagListSpan(src);
+    if (!span) continue;                       /* 没有消毒层 / 名单是变量形式 ⇒ 跳过（宁可跳过也不误报） */
     scanned++;
-    const a1 = src.indexOf(']', a0);
-    const listed = {}; quoted(src.slice(a0, a1)).forEach(function (x) { listed[x] = 1; });
+    const listed = {}; span.listed.forEach(function (x) { listed[x] = 1; });
     const used = {};
     grab(src, "arg('").concat(grab(src, "flag('")).concat(grab(src, "=== '--")).concat(grab(src, "startsWith('--"))
-      .forEach(function (x) { const v = x.replace('=', ''); const isName = v.length > 0 && v.split('').every(function (c) { const o = c.charCodeAt(0); return (o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95; }); if (isName) used[v] = 1; });
+      .concat(grab(src, "indexOf('--")).concat(grab(src, "includes('--")).concat(grabRe(src, RE_NEEDLE))
+      .forEach(function (x) { const v = x.replace('=', ''); if (isFlagName(v)) used[v] = 1; });
     const miss = Object.keys(used).filter(function (x) { return !listed[x]; });
     if (miss.length) offenders.push(files[fi] + ' -> ' + miss.join(','));
   }
@@ -155,12 +175,6 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
     '工具根下的 probe-*.mjs 台数必须等于**递归**数到的台数（实测 ' + probes.length + ' vs ' + probeAll.length
     + '）—— 多了说明有探针被搬出了扫描根（那台量具的门会**静默变瞎**，而台数看着还够）');
   eq(noLayer.length, 0, '每一台研究量具都必须带 rejectUnknownFlags（实测缺口：' + (noLayer.join(', ') || '无') + '）');
-  /* 登记一致性**覆盖两种调用形式**：原版只认 `rejectUnknownFlags(argv, [` ⇒
-   * 用 `process.argv.slice(2)` 的那批工具从来没被这条腿扫到过（同一个"名单写两遍"家族）。 */
-  const isFlagName = function (v) {
-    if (v.length < 2 || v.charAt(0) === '-') return false;
-    return v.split('').every(function (c) { const o = c.charCodeAt(0); return (o >= 48 && o <= 57) || (o >= 65 && o <= 90) || (o >= 97 && o <= 122) || o === 95 || o === 45; });
-  };
   /* 自检（**防这条腿再空转**）：在夹具上抽，必须**恰好**抽到这三个名字。
    * 为什么必须有它：抽取函数原先有 **off-by-one** —— 针脚 `arg('` 自己就含开引号，名字应从「针脚之后」到
    * 「下一个引号」；原实现从「下一个引号之后再下一个引号」取 ⇒ 抽到的是 `, ` 这种垃圾，
@@ -173,6 +187,16 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
     .forEach(function (x) { const v = x.replace('=', ''); if (isFlagName(v)) fxNames[v] = 1; });
   eq(Object.keys(fxNames).sort().join(','), 'games,json,self-test',
     '旗标抽取自检：夹具上必须恰好抽到 games,json,self-test（实测 ' + (Object.keys(fxNames).sort().join(',') || '空') + '）—— 抽不到说明这条腿又空转了');
+  /* 正则那一形的**同款自检**（同一条纪律：抽取器必须能在夹具上咬住，否则新加的针脚是装饰）。
+   *   注意它**不该**被旧针脚抽到 —— 抽不到才证明"旧口径确实是瞎的"，这条腿补的是真覆盖面。 */
+  const fxRe = "const t = process.argv.find(a => /^--cdp-wait=/.test(a)) || process.argv.find(a => /^--max-ms=/.test(a));";
+  const fxReNames = {};
+  grabRe(fxRe, RE_NEEDLE).forEach(function (x) { if (isFlagName(x)) fxReNames[x] = 1; });
+  eq(Object.keys(fxReNames).sort().join(','), 'cdp-wait,max-ms',
+    '正则字面量抽取自检：夹具上必须恰好抽到 cdp-wait,max-ms（实测 ' + (Object.keys(fxReNames).sort().join(',') || '空') + '）—— 抽不到说明这个新针脚是装饰');
+  const fxReOld = {};
+  grab(fxRe, "arg('").concat(grab(fxRe, "flag('")).concat(grab(fxRe, "=== '--")).forEach(function (x) { if (isFlagName(x.replace('=', ''))) fxReOld[x] = 1; });
+  eq(Object.keys(fxReOld).length, 0, '反向对照：正则那一形**必须**是旧针脚抽不到的（抽到了 ' + Object.keys(fxReOld).join(',') + ' ⇒ 新针脚冗余，该摘）');
   const misreg = [];
   for (let pi = 0; pi < probes.length; pi++) {
     const src2 = readFileSync('tools/' + probes[pi], 'utf8');
@@ -184,7 +208,7 @@ t('D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的�
     span2.listed.forEach(function (x) { listed2[x] = 1; });
     const used2 = {};
     grab(src2, "arg('").concat(grab(src2, "flag('")).concat(grab(src2, "=== '--"))
-      .concat(grab(src2, "startsWith('--")).concat(grab(src2, "indexOf('--")).concat(grab(src2, "includes('--"))
+      .concat(grab(src2, "startsWith('--")).concat(grab(src2, "indexOf('--")).concat(grab(src2, "includes('--")).concat(grabRe(src2, RE_NEEDLE))
       .forEach(function (x) { const v = x.replace('=', ''); if (isFlagName(v)) used2[v] = 1; });
     const m2 = Object.keys(used2).filter(function (x) { return !listed2[x]; });
     if (m2.length) misreg.push(probes[pi] + ' -> ' + m2.join(','));
