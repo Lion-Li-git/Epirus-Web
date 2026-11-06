@@ -110,8 +110,17 @@ if (!before.nDrift) { say('✔ 无需同步（逐枚一致）'); process.exit(0)
 const OUT = arg('out', 'index.html');                       /* viewer 的 `--out` 按 champion-map/ 解析 */
 const bak = CHART + '.bak';
 copyFileSync(CHART, bak);
-say('重烘中：node champion-map/viewer.mjs --out=' + OUT + '（原图备份 ' + bak + '）');
-try { execFileSync(process.execPath, [join(HERE, 'viewer.mjs'), '--out=' + OUT], { cwd: ROOT, stdio: QUIET ? 'pipe' : 'inherit' }); }
+/* v1.8.45（11-06 夜）：重烘旗标从**裸默认**改为读 `bake-flags.txt`（D234⑩c 的单一真源）。
+ * ⚒ 实测踩坑：这里原先 spawn `viewer.mjs --out=` 不带旗标 ⇒ 单页化（--projcols=1）的 index.html
+ *   被同步池层这一步**静默打回裸默认页**（体积 1231→1157 KB、pj18 列丢失）——
+ *   "两个烘焙口径各写一遍"正是规矩 134 那一族。旗标文件不在 ⇒ 退回裸默认并响亮说一句。 */
+const BF = join(HERE, 'bake-flags.txt');
+let FLAGS = [];
+try { FLAGS = readFileSync(BF, 'utf8').trim().split(/\s+/).filter(Boolean); } catch (e) { FLAGS = []; }
+if (FLAGS.length) say('重烘旗标（bake-flags.txt）：' + FLAGS.join(' '));
+else say('⚠ bake-flags.txt 不在 ⇒ 退回裸默认旗标重烘（规范链断了，先修旗标文件）');
+say('重烘中：node champion-map/viewer.mjs ' + FLAGS.join(' ') + ' --out=' + OUT + '（原图备份 ' + bak + '）');
+try { execFileSync(process.execPath, [join(HERE, 'viewer.mjs')].concat(FLAGS, ['--out=' + OUT]), { cwd: ROOT, stdio: QUIET ? 'pipe' : 'inherit' }); }
 catch (e) { console.error('⛔ 烘焙失败：' + e.message + '（原图已备份在 ' + bak + '）'); process.exit(2); }
 
 const html2 = readFileSync(CHART, 'utf8');

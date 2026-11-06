@@ -102,20 +102,35 @@ const OUT = arg('out', 'index.html');
  *     ⇒ 原来这一行**静默回落成 'all'** ⇒ 子集页丢掉 SUBSETP 判据域，页内自检从 `74/3/22 SKIP` 变成
  *     `74/24/1`，读起来像"代码改坏了产品"，其实是烘焙参数没认。
  *   ⇒ 与仓规「不认识的 `--` 参数必须响亮失败」对齐：取值不认识就点名退出，不许回落成另一档。 */
-{ const bad = ['preset', 'verpages', 'proj'].filter(k => {
+{ const bad = ['preset', 'verpages', 'proj', 'projcols'].filter(k => {
     const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0);
     if (!a) return false;
     const v = a.slice(k.length + 3);
     if (k === 'preset') return ['all', '1.8', '2.0'].indexOf(v) < 0;
     if (k === 'verpages') return ['0', '1'].indexOf(v) < 0;
+    if (k === 'projcols') return ['0', '1'].indexOf(v) < 0;
     return ['tsne', 'old'].indexOf(v) < 0;
   });
   if (bad.length) {
-    console.error('⛔ ' + bad.join('/') + '= 的取值不认识（preset ∈ all|1.8|2.0 ‖ verpages ∈ 0|1 ‖ proj ∈ tsne|old）。' +
+    console.error('⛔ ' + bad.join('/') + '= 的取值不认识（preset ∈ all|1.8|2.0 ‖ verpages ∈ 0|1 ‖ proj ∈ tsne|old ‖ projcols ∈ 0|1）。' +
       '\n   这一行以前会**静默回落默认值** ⇒ 烘出语义不同的页面而判据照跑（11-05 实测踩过）。宁可不出图。');
     process.exit(2);
   } }
 const PRESET = arg('preset', 'all');
+/* ===== 单页化（11-06 夜 · 用户点名「三个网页并成一个」）=====
+ * `--projcols=1`：DATA 里带三套投影列（xt/yt = 全库 fit ‖ xt18/yt18 ‖ xt20/yt20，由
+ * `scratch/zcode-1106/attach-projcols.mjs` 挂列），页内"版本"下拉**换投影**而不是换页：
+ *   · 版本切换 = st.batch 过滤（原有页内过滤路）+ 把可见点的 x2/y2 换成那一版的投影列
+ *     + 作废地图侧几何缓存（NBK/FL/壳链拓扑）+ 相机复位（= 重新适配）。
+ *   · 谱系（时间×家族）/ 一维（F 序）/ 三维（x3y3z3 独立列）三张视图**不消费**这组列 ⇒ 不受影响。
+ *   · SUBSETP（子集页判据域）从烘焙常量改成**运行时**：batch=all 判全套，1.8/2.0 走 NA_IN_SUBSET 跳过。
+ * 必须配 `--verpages=0`（换页表为空，下拉才走页内路）；带着默认 verpages=1 烘 projcols 页 = 配置矛盾，
+ * 响亮失败（与 --preset 同一条纪律）。 */
+const PROJCOLS = arg('projcols', '0') === '1';
+if (PROJCOLS && arg('verpages', '1') !== '0') {
+  console.error('⛔ --projcols=1 必须配 --verpages=0（单页模式下拉走页内换投影，换页表必须为空）');
+  process.exit(2);
+}
 
 /* 11-05 上午（用户："选择批次并不是像拉显示范围一样只需要把旧点扣掉就行了"）：投影是**局域性**的 ⇒
  *   换视图必须连点坐标一起重算 ⇒ 三张页各自从自己的子集表（coords-view-18 / coords-view-20 / 全部）烘出来，
@@ -484,6 +499,12 @@ const DATA = rows.map(r => ({
   /* E393 DS（丙·投影）：坐标由 --proj 选（t-SNE 列 xt/yt/xt3/yt3/zt3 由 proj-tsne.mjs 写进 coords.tsv）。
    *   判据 kNN@10 保住率：旧力导向布局 0.08 → t-SNE 0.52（同一个 12 维招法空间；用户：不用死磕实际意义）。 */
   x2: (PROJTSNE && r.xt) ? +r.xt : +r.x2, y2: (PROJTSNE && r.yt) ? +r.yt : +r.y2,
+  /* 单页化（11-06 夜）：三套投影列按行挂——只在本行所属版本有值（其余版本行在对应过滤下不可见）。
+   * ⚠ 必须是**扁平数组**字段（pj18/pj20），不能是嵌套对象：D234⑪b 用 `"id":"X"[^}]*\}` 截节点，
+   *   嵌套 `}` 会把截断点提前、sh/sv 被切掉 ⇒ 门假红（实测踩过一次）。数组只有中括号，不犯这条。 */
+  pj18: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt18 !== '' && r.xt18 !== undefined && r.xt18 != null && isFinite(+r.xt18)) ? [+r.xt18, +r.yt18] : null,
+  pj20: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt20 !== '' && r.xt20 !== undefined && r.xt20 != null && isFinite(+r.xt20)) ? [+r.xt20, +r.yt20] : null,
+  pjAll: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt) ? +r.xt : +r.x2, (PROJTSNE && r.yt) ? +r.yt : +r.y2] : null,
   x3: (PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, y3: (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3,
   z3: (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3,
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
@@ -860,6 +881,14 @@ var NAVLOCK = 0;
  *   ——那正是用户 11-05 上午否掉的形态。⇒ 点名清单内的这些条在子集页走既有的第三态 SKIP（**逐条印名字与理由**，不静默）。
  *   ⚠ 主图（--preset=all）SUBSETP=0 ⇒ 一个字都不变；不在清单里的（画边/像素/交互）在子集页照判。 */
 var SUBSETP = ${PRESET === 'all' ? 0 : 1};
+/* ===== 单页化（11-06 夜 · ZCode）：三套投影列 + 版本下拉=页内换投影 =====
+ *   PROJCOLS 由生成器插值（--projcols=1）；DATA 的每行带 pj = {'1.8':[x,y]|null, '2.0':[x,y]|null}
+ *   （行映射处挂，见 r.xt18 那支）。版本切换 = st.batch 过滤 + setProj(版本)。
+ *   SUBSETP 在单页模式下是**运行时**的：batch=all 判全套、1.8/2.0 走 NA_IN_SUBSET 跳过 ——
+ *   判据域跟着"当下画的是哪批点"走，不再跟着"烘的是哪一页"走。 */
+var PROJCOLS = ${PROJCOLS ? 1 : 0};
+var PCUR = 'all';                                   /* 当前投影：all | 1.8 | 2.0 */
+function SUBSETP_NOW() { return PROJCOLS ? (st.batch !== 'all' ? 1 : 0) : SUBSETP; }
 var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：抽不到上线时刻', '倒挂假边必须被修掉', '父边来路必须标全',
   '强度窗口：两端顶到色端', '强度窗口：分界被切掉', '标签：常驻名单', '点大小：上过线那一档', '命中：标签中心不许命中',
   '那 584 枚共父', '池层：真源表每一枚都在图上', '池层：环数', '融合边：红线必须真画出来', '家族配色要',
@@ -3623,11 +3652,36 @@ function paintSide() {
 }
 document.getElementById('batch').addEventListener('change', function () {
   /* 11-05 上午（用户）：版本 = **另一套投影** ⇒ 换版本就换页（页内坐标是本页这批点自己拟合出来的，拿去过滤另一批点是假坐标）。
-   *   目标页就是本页（或 VER_PAGES 为空）时，退回原来的页内过滤，行为与旧版逐字同。 */
+   *   目标页就是本页（或 VER_PAGES 为空）时，退回原来的页内过滤，行为与旧版逐字同。
+   *   11-06 夜（单页化）：PROJCOLS 页 = 页内**换投影**（VER_PAGES 必为空 ⇒ 本来就走这支）：
+   *   setProj 把可见点的 x2/y2 换成那一版自己的 fit 列并作废地图侧几何缓存 —— "换视图必须连坐标一起重算"
+   *   这条裁定在页内兑现，不再靠换页。 */
   var k = this.value, tp = (typeof VER_PAGES !== 'undefined' && VER_PAGES[k]) ? VER_PAGES[k] : '';
   if (tp && tp !== SELF_PAGE && !NAVLOCK) { location.href = tp; return; }
-  st.batch = k; recomputeVIS();
+  st.batch = k;
+  if (PROJCOLS && typeof setProj === 'function') setProj(k);
+  recomputeVIS();
   buildFamBar(); paintSide(); req(); });
+/* ===== 单页化：换投影 = 换可见点的 x2/y2 + 作废地图侧几何缓存 + 相机复位 =====
+ * 顺序照桌形切换那条路（§E623/§E617 家族）：坐标空间变了 ⇒
+ *   · NBK（每格最近 12 名）是**纯几何**，按 x2/y2 算的 ⇒ 整表作废（ensureField 会按新几何重建）；
+ *   · FL（底图位图）同理置 null；
+ *   · FSRT/_FR/_EPR/_SCR 与壳链拓扑（LCHKEY）跟着桌形切换同款清键；
+ *   · 相机走"复位视图"那支（出厂 = 全量适配）—— 换 fit 后旧缩放没有意义。
+ * 谱系/一维/三维三张视图不消费 x2/y2 ⇒ 不动。 */
+function setProj(kind) {
+  if (!PROJCOLS) return;
+  PCUR = (kind === '1.8' || kind === '2.0') ? kind : 'all';
+  for (var i = 0; i < N; i++) {
+    var q = PCUR === '1.8' ? P[i].pj18 : (PCUR === '2.0' ? P[i].pj20 : P[i].pjAll);
+    if (q) { P[i].x2 = q[0]; P[i].y2 = q[1]; }
+  }
+  for (var kb in NBK) delete NBK[kb];
+  FL = null;
+  FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
+  LCHKEY = '#reset';                     /* 壳/链拓扑缓存随坐标空间作废（与 st.chain 翻转同一招） */
+  document.getElementById('reset').onclick();
+}
 /* ===== §E371 强度窗口（用户："默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示"）
  *   §E378 换成一根竖轴（用户 10-07：「F窗口用两个独立的轴调很奇怪，你直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）
  *   整根 = 全库 F 值域的比例 [0,1]（顶 = 高 F）‖ 亮段 = 当前窗口 ‖ 两个黄柄 = 窗口的两端，可拖、双击回全范围。
@@ -4276,7 +4330,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   NAVLOCK = 1;   /* ↑ 自检会点下拉 ⇒ 这段时间禁止"版本=换页"（见上面 NAVLOCK 那段）*/
   try {
   function T(name, cond, got) {
-    if (SUBSETP && !cond && NA_IN_SUBSET.some(function (s) { return String(name).indexOf(s) >= 0; })) {
+    if (SUBSETP_NOW() && !cond && NA_IN_SUBSET.some(function (s) { return String(name).indexOf(s) >= 0; })) {
       nskip++; out.push('SKIP ' + name + ' ‖ 单版本子集页（本页 ' + N + ' 枚）取不到这条判据的对象 ‖ 原判读：' + (got === undefined || got === null ? '—' : got)); return; }
     if (cond) { nok++; out.push('PASS ' + name + (CHKDETAIL && got !== undefined && got !== null ? ' ‖ ' + got : '')); }
     else { nbad++; out.push('FAIL ' + name + (got === undefined || got === null ? '' : ' ‖ 实测 ' + got)); } }
@@ -6112,10 +6166,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     wel.value = wbk; fireEv(wel, 'change');
     if (st[wid] !== wbk) wireBad.push(wid + ' 还原失败（st 是 ' + st[wid] + '，控件是 ' + wbk + '）'); }
   var loT0 = winLo(), r0 = dotR(P[0], 1), wT = document.getElementById('T'), bkT = wT.value;
+  /* 11-06 夜修判据对象（在册旧账"T 滑杆与 F 值域脱钩"的真定性）：链路本身是通的——
+   *   实测 winHi 0.817→1.119 跟着 T 走，而 winLo 不动的原因是**全库 S 的最小值 = 0**：
+   *   下界被那枚 S=0 的点钉死（它的 F = Hp/100 + T·0 与 T 无关）⇒ "winLo 必须动"量的是一个
+   *   T 不变量的量。改量**探针点**：任取一枚 S≠0 的点，它的 F 必须跟着 T 变——
+   *   这才是"F = Hp/100 + T·S 与这根滑杆接通"的直接判据（FR/窗口都从 Fv 派生，探针动 ⇒ 全链通）。 */
+  var tProbe = -1; for (var ti = 0; ti < N; ti++) { if (P[ti].S) { tProbe = ti; break; } }
+  var fProbe0 = tProbe >= 0 ? Fv(P[tProbe]) : null;
   wT.value = '0.25'; fireEv(wT, 'input');
   if (Math.abs(st.T - 0.25) > 1e-9) wireBad.push('T 滑杆拖到 0.25 而 st.T = ' + st.T);
-  if (Math.abs(winLo() - loT0) < 1e-6) wireBad.push('st.T 动了但 F 值域一点没动（winLo 还是 ' + loT0.toFixed(3)
-    + ' ⇒ F = Hp/100 + T·S 与这根滑杆脱钩了）');
+  if (tProbe < 0 || Math.abs(Fv(P[tProbe]) - fProbe0) < 1e-9) wireBad.push('st.T 动了但探针点的 F 一点没动'
+    + '（F = Hp/100 + T·S 与这根滑杆脱钩了 ‖ ' + (tProbe < 0 ? '全库 S 恒 0，探针找不到' : '探针 #' + tProbe + ' S=' + P[tProbe].S) + '）');
   var wS = document.getElementById('size'), bkS = wS.value;
   wS.value = '2'; fireEv(wS, 'input');
   if (Math.abs(st.size - 2) > 1e-9) wireBad.push('点大小滑杆拖到 2 而 st.size = ' + st.size);
@@ -6123,8 +6184,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   if (!(r1 > r0 * 1.5)) wireBad.push('st.size 翻倍而 dotR 没跟着长（' + r0.toFixed(2) + ' → ' + r1.toFixed(2) + '）');
   wS.value = bkS; fireEv(wS, 'input'); wT.value = bkT; fireEv(wT, 'input');
   T('工具栏接线：四个下拉与两根滑杆点下去必须真的改 st，且 T / 点大小要真的改动到画面',
-    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 动 T 之前 winLo = '
-      + loT0.toFixed(3) + '，动完已变 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
+    wireBad.length === 0, wireBad.join(' ‖ ') || ('下拉 ' + WSEL.length + ' 个 + 滑杆 2 根都接上了 ‖ 探针点(S≠0)的 F 随 T 已动 ‖ dotR ' + r0.toFixed(2) + ' → ' + r1.toFixed(2)));
   /* ② 搜索框：它的可观察效果只有两样 —— 匹配那几枚**上名字** + 在它们外面描一圈墨环（drawMap 里 11·st.size 那一圈）。
    *    所以判据也得读这两样，不能只信 st.q 变了。 */
   /* 片段从**当下看得见的那批点**里现找（4 字一段，优先命中 2~6 枚的那一段），不写死：

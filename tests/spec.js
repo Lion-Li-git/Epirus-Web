@@ -337,10 +337,63 @@
     eq(st2.p[1].hp, 3, '原型制御挡天火');
   });
 
+  t('R63 天火可被转移（2026-11-06 用户裁定）：持有者声明转移伤害 ⇒ 自己那份转给指定目标', function () {
+    /* R33 一直写"含爆头等额外伤害"，但旧引擎只在 deliverDamage 主伤害路径接转移拦截，
+     * 天火/爆头走 rawDamage 实际转不走。这里走**完整 resolveActions 路径**直测天火那份。 */
+    const st = game(); setEp(st, 5, 5);
+    st.p[0].hp = 5; st.p[1].hp = 5;
+    st.p[1].stickers = [{ owner: 0, age: 0 }];
+    play(st, SK.FIRESTORM, SK.TRANSFER);
+    eq(st.p[1].hp, 5, '被击方转走了自己那份（单跳）');
+    eq(st.p[0].hp, 4, '落点吃 1 点火伤');
+    eq(st.p[1].stickers.length, 1, '符咒仍存（R37 不变）');
+  });
+
+  t('R63 天火转移落点摆原型制御 ⇒ 照挡且不反（无来源）；3 人组反证"转给指定目标≠弹回"', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 5; st.p[1].ep = 5; st.p[2].ep = 5;
+    st.p[0].hp = 5; st.p[1].hp = 5; st.p[2].hp = 5;
+    st.p[1].stickers = [{ owner: 0, age: 0 }];
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.FIRESTORM, null);
+    S.attemptAction(st, 1, SK.TRANSFER, { target: 2 });   // P1 把自己那份转给 P2（不是天火主人 P0）
+    S.attemptAction(st, 2, SK.PROTO, null);               // 落点 P2 摆原型制御
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].hp, 5, 'P1 转走了');
+    eq(st.p[2].hp, 5, '落点原型制御照挡（R36 口径不变）');
+    eq(st.p[0].hp, 5, '无来源 ⇒ 计入 P2 待反总数但不反（protoReflectAll 总 1 < 3）');
+    ok(st.events.some(function (e) { return e.type === 'transfer' && e.via === 'firestorm' && e.to === 1 && e.dest === 2; }), '必须有 firestorm 转移事件');
+  });
+
+  t('R63 爆头/无来源伤害的单跳转移 helper（spec 直测；完整狙击路径里该分支是极窄边角，见 R63 可达性注）', function () {
+    // ① 声明了转移 ⇒ 转给指定目标
+    const st = game(); setEp(st, 5, 5);
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 1, SK.TRANSFER, null);
+    X.extraHitWithTransfer(st, 1, 1, '爆头', 'headshot', { from: 0 });
+    eq(st.p[1].hp, 3, '爆头那份被转走');
+    eq(st.p[0].hp, 2, '落点（狙击手本人）吃 1 点');
+    // ② 没声明转移 ⇒ 原地落地（与旧 rawDamage 行为逐字同）
+    const st2 = game();
+    st2.events = []; X.startTurn(st2);
+    S.attemptAction(st2, 1, SK.JI, null);
+    X.extraHitWithTransfer(st2, 1, 1, '爆头', 'headshot', { from: 0 });
+    eq(st2.p[1].hp, 2, '无转移 ⇒ 原地落地');
+    eq(st2.p[0].hp, 3, '攻击者无事');
+    // ③ 天火变体：落点原型制御照挡（respectProto）
+    const st3 = game(); setEp(st3, 5, 5);
+    st3.events = []; X.startTurn(st3);
+    S.attemptAction(st3, 0, SK.PROTO, null);
+    S.attemptAction(st3, 1, SK.TRANSFER, null);
+    X.extraHitWithTransfer(st3, 1, 1, '天火', 'firestorm', { type: R.DMG.FIRE, respectProto: true, from: 0 });
+    eq(st3.p[1].hp, 3, '转走了');
+    eq(st3.p[0].hp, 3, '落点原型制御挡下');
+  });
+
   t('R62 天火阶梯计价：首下 1ジ ‖ 连续使用 2ジ ‖ 隔开重置 1ジ', function () {
     const st = game(); setEp(st, 9, 9);
     st.p[1].hp = 9; st.p[0].hp = 9;                      // 抬血防提前死亡干扰
-    st.p[1].stickers = [{ owner: 0, age: 0 }];           // 有符咒可引（也验：无符时同样按阶梯扣费）
+    st.p[1].stickers = [{ owner: 0, age: 0 }];           // 有符咒可引（R64 起：无符时天火条件不满足，见 R64 用例）
     play(st, SK.FIRESTORM, SK.JI);
     eq(st.p[0].ep, 8, '首下扣 1（9→8）');
     play(st, SK.FIRESTORM, SK.JI);                       // 上一手也是天火 ⇒ 连用价
@@ -357,6 +410,29 @@
     X.startTurn(st2);
     const r = S.attemptAction(st2, 0, SK.FIRESTORM, {});
     eq(r.outcome, 'insufficient', '只有 1ジ 时连用价 2ジ 必须买不起（不静默按首下价放行）');
+  });
+
+  t('R64 天火无符咒不可发动（2026-11-06 用户裁定）：条件不满足 ⇒ 不扣费不结算；贴在已死持有者身上的不算数', function () {
+    const Play = window.EpirusPlay;
+    // ① 场上没有自己贴的符咒 ⇒ ok=false、合法表里没有、attemptAction 拒绝且 1 ジ 不扣
+    const st = game(); setEp(st, 5, 9);
+    st.p[0].hp = 9; st.p[1].hp = 9;
+    eq(S.computeCost(st, 0, SK.FIRESTORM).ok, false, '无符咒 ⇒ computeCost ok=false（R64）');
+    ok(Play.legalActions(st, 0).every(function (l) { return l.key !== SK.FIRESTORM; }), '合法动作表里没有天火');
+    st.events = []; X.startTurn(st);
+    const r = S.attemptAction(st, 0, SK.FIRESTORM, {});
+    eq(r.outcome, 'invalid', '无符咒的天火必须被拒（不静默放行）');
+    eq(st.p[0].ep, 5, '1 ジ 未扣（条件不满足 ≠ 无效出招惩罚）');
+    // ② 对手的符咒 / 贴在已死持有者身上的 ⇒ 都不算数（与 resolve 引爆清单同口径）
+    const st2 = game(); setEp(st2, 5, 9);
+    st2.p[1].stickers = [{ owner: 1, age: 0 }];          // 自己贴给自己的（owner=1）不算 0 号的
+    eq(S.computeCost(st2, 0, SK.FIRESTORM).ok, false, '只有别人贴的符咒 ⇒ 仍不可发动');
+    const st3 = S.createState('multi', noJudge(), 3);
+    st3.p[0].ep = 5; st3.p[1].hp = 0; st3.p[2].ep = 5;   // P1 已死
+    st3.p[1].stickers = [{ owner: 0, age: 0 }];          // 死人身上的符咒不可引爆
+    eq(S.computeCost(st3, 0, SK.FIRESTORM).ok, false, '符咒贴在已死持有者身上 ⇒ 不算数');
+    st3.p[1].hp = 3;
+    eq(S.computeCost(st3, 0, SK.FIRESTORM).ok, true, '同一枚符咒、持有者活着 ⇒ 可发动（反证 ② 的判定点是 hp）');
   });
 
   t('R54 挑衅：不攻击则回合末-1；攻击则无事', function () {

@@ -56,7 +56,16 @@ if (existsSync('champion-map/extra-g3-1105.tsv')) {
   }
 }
 const g3ruler = tsv('scratch/night6/ruler-g3.tsv');
-for (const r of g3ruler.rows) if (r.path) addPath(norm(r.id), r.path);
+/* 11-06 晨（Qoder）：池内图外那 10 枚的 12 维读数。文件名带 `-only-` 是有原因的——
+ *   第一版跑成 `--set=layer`（会去量整个层级面板）中途停掉，那份残表已删；重跑用
+ *   `--set=champ --extra=champion-map/pool-only-1106.tsv --ids=<10 枚> --exam=120`，落盘就只有这 10 行。
+ *   ⚠ 这里写错文件名不会报错：下面有 existsSync 兜底 ⇒ 那 10 枚**静默不进表** ⇒ 下一次整条链重跑会把
+ *   今天补进图的池成员又丢掉（D234 池环两条当场回红）。所以缺文件必须响亮。 */
+const POOLR = 'scratch/night6/ruler-pool-only-1106.tsv';
+if (!existsSync(POOLR)) { console.error('⛔ 缺池内图外那 10 枚的 ruler 表 ' + POOLR + ' ⇒ 它们不会进表，池环判据会回红（重测：见本行注释）'); process.exit(2); }
+const poolRuler = tsv(POOLR);
+const RULER_ROWS = g3ruler.rows.concat(poolRuler.rows);
+for (const r of RULER_ROWS) if (r.path) addPath(norm(r.id), r.path);
 const VERCACHE = {};
 function verOf(id) {
   const p = PATHOF.get(id); if (!p) return '';
@@ -71,7 +80,7 @@ function verOf(id) {
  *     epsfull-g3-1105.tsv = 39 枚精选点 ‖ -g3b- = 克隆根 CLONE-D4a ‖ -g3c- = 补进来的 3 个父节点 */
 const HPG3 = new Map();
 const GSET = new Set();
-for (const f of ['champion-map/epsfull-g3-1105.tsv', 'champion-map/epsfull-g3b-1105.tsv', 'champion-map/epsfull-g3c-1105.tsv', 'champion-map/epsfull-g3d-1105.tsv']) {
+for (const f of ['champion-map/epsfull-g3-1105.tsv', 'champion-map/epsfull-g3b-1105.tsv', 'champion-map/epsfull-g3c-1105.tsv', 'champion-map/epsfull-g3d-1105.tsv', 'champion-map/epsfull-r64-multi-1106.tsv']) {
   if (!existsSync(f)) continue;
   for (const r of tsv(f).rows) {
     if (String(r.page === undefined ? '' : r.page).trim() !== '' && Number.isFinite(+r.page)) {
@@ -117,7 +126,7 @@ for (const j of joint.rows) {                                    /* ② 代 3 �
   emit(r);
 }
 let nSkipDim = [];
-for (const [id0, n] of new Map(g3ruler.rows.map(r => [norm(r.id), r]))) {   /* ③ 精选 2.0 点：12 维来自 ruler-g3 */
+for (const [id0, n] of new Map(RULER_ROWS.map(r => [norm(r.id), r]))) {   /* ③ 精选 2.0 点：12 维来自 ruler-g3 */
   /* 12 维不齐 ⇒ **不许进表**：`proj-tsne` 要求每一维都是数（它自己会 exit 2），而"读不出"的枚一旦带着空维进来，
    *   整张图就烘不出来。典型来源：装载闸拒绝的代 2 产物（v:91）在 ruler-g3 里留的是 ERR 行。 */
   if (DIMS.some(d => !Number.isFinite(Number(n[d])))) { nSkipDim.push(id0 + '（12 维不齐）'); continue; }

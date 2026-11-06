@@ -488,7 +488,16 @@
     for (let i = 0; i < p.length; i++) p[i] = randn() * (scale || 0.25);
     return p;
   }
-  function mutatePolicy(p, sigma) { const q = p.slice(); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
+  /* v1.8.45（11-06 夜，C4-1）：**复制权重必须连 `legacyFrom` 一起带**。
+   * `Float64Array.slice()` 只拷数值 ⇒ 旧包的形状标记在训练管线第一代就丢
+   * （`isLegacyChooser` 读不到 ⇒ 旧包被按 v7 候选口径评分/选拔——v1.5.64 建 `lv` 防线要防的就是这个）。
+   * 复制点（本函数 / embedLegacy / evo 的 seedChampion）都走这里；新增复制点也必须走它。 */
+  function copyParams(p) {
+    const q = p.slice();
+    if (p && p.legacyFrom != null) q.legacyFrom = p.legacyFrom;
+    return q;
+  }
+  function mutatePolicy(p, sigma) { const q = copyParams(p); for (let i = 0; i < q.length; i++) q[i] += randn() * sigma; return q; }
   function crossover(a, b) { const c = new Float64Array(a.length); for (let i = 0; i < c.length; i++) c[i] = __rng() < 0.5 ? a[i] : b[i]; return c; }
 
   /* ---- (s,a) 值网络：value(state,pid,key,params[,sh][,cand]) ----
@@ -849,7 +858,7 @@
   function embedLegacy(params) {
     const sh = shapeOf(params);
     if (!sh) return null;
-    if (!sh.legacy) return params.slice();
+    if (!sh.legacy) return copyParams(params);   // v1.8.45：连 legacyFrom 一起带（见 copyParams 注）
     const q = new Float64Array(paramCount());
     for (let j = 0; j < HID; j++) {
       const o = j * sh.featN, n = j * FEAT_N;
@@ -860,6 +869,7 @@
     for (let i = 0; i < HID; i++) q[nB1 + i] = params[oB1 + i];                 // b1
     for (let i = 0; i < HID; i++) q[nB1 + HID + i] = params[oB1 + HID + i];     // W2
     q[q.length - 1] = params[params.length - 1];                                // b2
+    if (params && params.legacyFrom != null) q.legacyFrom = params.legacyFrom;  // v1.8.45：嵌入后的旧包仍是旧口径
     return q;
   }
 
@@ -909,6 +919,6 @@
     /* §E340 全息屏障→原型制御 的映射档（默认 off）：量具/评测用它成对读同一枚包的两个玩法 */
     setHolo2Proto, holo2Proto, remapHolo,
     EFFECTS, PLAYER_SLOTS, VER_SHAPES, paramsOf, embedLegacy, loadAny,
-    paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack
+    paramCount, makePolicy, mutatePolicy, crossover, pack, unpack, checkPack, copyParams
   };
 })(typeof window !== 'undefined' ? window : globalThis);

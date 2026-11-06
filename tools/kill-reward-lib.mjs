@@ -38,10 +38,13 @@ export function patchResolve(txt) {
     "    ev(state, { type: 'damage', to, amt: hit, reason, via: via || reason, source: (opts.source != null ? opts.source : null)," +
     ' mineFrom: (opts.mineFrom != null ? opts.mineFrom : null), fireFrom: (opts.fireFrom != null ? opts.fireFrom : null),' +
     ' transferBy: (opts.transferBy != null ? opts.transferBy : null) });');
-  /* ② 天火：引爆者记进 `fireFrom` */
-  const fireAnchor = "if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });";
-  must(txt, fireAnchor, 'resolve.js 的天火伤害');
-  txt = txt.replace(fireAnchor, "if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE, fireFrom: i });");
+  /* ② 天火：引爆者记进 `fireFrom`。
+   * ⚠ R63（11-06 夜）后天火的落点走 `extraHitWithTransfer`（可被转移），直击 rawDamage 的旧行不存在了。
+   *   锚迁到 helper 的落地行：extraHitLand 的 opts 里带 `from`（引爆者）⇒ 这里把它透传成 `fireFrom`；
+   *   转移过的那份（extraHitWithTransfer 里 dest 落地）同样带 from ⇒ 归因不丢。 */
+  const fireAnchor = "rawDamage(state, to, amt, reason, via, { type: opts.type, source: null });";
+  must(txt, fireAnchor, 'resolve.js 的天火落点（extraHitLand）');
+  txt = txt.replace(fireAnchor, "rawDamage(state, to, amt, reason, via, { type: opts.type, source: null, fireFrom: (opts.from != null ? opts.from : null) });");
   /* ③ 转移：把"转移者"带进被转走的那一份 */
   const trAnchor = "const redir = Object.assign({}, dmg, { redirected: true, noMine: true });";
   must(txt, trAnchor, 'resolve.js 的转移伤害');

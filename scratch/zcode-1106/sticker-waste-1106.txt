@@ -1,0 +1,22 @@
+packId                 贴出 引燃 天火次数 空放 被挡 净化 引燃覆盖I/A
+GD3ALL-NGA2R-s41        89    1      1   0  11   0 0.01
+G5DEF-s41               48    2      2   0  11   0 0.04
+LE-s13                   3    1      1   0   0   0 0.33
+L5-1200-s13              0    0      0   0   0   0 null
+D1200-s13                0    0      0   0   0   0 null
+DSTR4-s13                0    0      0   0   0   0 null
+EFFG-s41                 0    0      0   0   0   0 null
+EFFG-s5                  0    0      0   0   0   0 null
+EFFG-s7                  0    0      0   0   0   0 null
+GD3ALL-G5-8p-s41         0    0      0   0   0   0 null
+GD3ALL-PUSHON-s41        0    0      0   0   0   0 null
+GD3ALL-POPP-s17          0    0      0   0   0   0 null
+GD3ALL-POPP-s41          0    0      0   0   0   0 null
+GD3ALL-PUSHON-s13        0    0      0   0   0   0 null
+D-b-hpseed-s13           0    0      0   0   0   0 null
+D-a-s13                  0    0      0   0   0   0 null
+GD3ALL-PLAIN-s13         0    0      0   0   0   0 null
+DDEF-s13                 0    0      0   0   2   0 null
+DSTR-s13                 0    0      0   0   0   0 null
+GD3ALL-G5-s13            0    0      0   0   0   0 null
+合计：贴出 140 ‖ 引燃 4 ‖ 覆盖 0.03 ‖ 空放 0/4 （R64 后应为 0）

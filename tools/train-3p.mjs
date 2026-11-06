@@ -162,6 +162,9 @@ const SELF_ENV_KEYS = [
   'EPIRUS_FAMILY_FIELD',   // §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
+  'EPIRUS_MIX2_EVERY',   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌——同代混桌（DS 待办 2；默认 0=关）
+  'EPIRUS_COURSE_EVERY',   //（ZCode · 11-06 夜）课程席：每第 K 代 fitness 局注一席脚本对手（D-08 机制解；默认 0=关）
+  'EPIRUS_COURSE_BOT',     //（ZCode · 11-06 夜）课程席坐谁：Bots 导出的函数名（缺省 pickToolKit）
   'EPIRUS_HPSEED',   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
   'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
@@ -787,6 +790,8 @@ const DEPLOY_REC = {};
   const KN = [['EPIRUS_BIGT_PUSH', 'setBigTPush', 'bigTPushOn'], ['EPIRUS_DRAIN_PUSH', 'setDrainPush', 'drainPushOn'],
     ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn'],
     ['EPIRUS_MIX8', 'setMix8Every', 'mix8Every'],   /*（ZCode · 11-02 深夜）训练形状档（非干预档）：每第 K 局 8 人桌，地雷的 8P 课；记录器自动落 requested/effective */
+    ['EPIRUS_MIX2_EVERY', 'setMix2Every', 'mix2Every'],   /*（ZCode · 11-06 夜）同代混桌：每第 K 局 2 人桌（DS 待办 2）；记录器自动落 requested/effective */
+    ['EPIRUS_COURSE_EVERY', 'setCourseEvery', 'courseEvery'],   /*（ZCode · 11-06 夜）课程席：每第 K 代注一席脚本对手（D-08 机制解） */
     ['EPIRUS_HPSEED', 'setHpSeed', 'hpSeedOn']];   /*（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（p 比例局全席对称 HP=min(2,modeHp-1)，课程局照常进 fit） */
   const unset = [];
   for (const [envName, setter, getter] of KN) {
@@ -814,6 +819,25 @@ const DEPLOY_REC = {};
    *   过去这里一行都不印 ⇒ "忘了关"和"故意不关"同形（11-02 §三 那对孪生包的差异就是从这儿起的）。 */
   if (unset.length) console.log('[部署档] ⚠ 未下达 ⇒ 走引擎默认档：' + unset.join(' ‖ ') + '（已回读并写进产物 meta.deployKnobs）');
 })();
+
+/* =====（ZCode · 11-06 夜）课程席脚本名：字符串档，不走上面的数值 KN 表 =====
+ * 那张表按 `Number()` 回执比对，函数名会变 NaN ⇒ NaN !== NaN 恒真 ⇒ 合法下达被误拒。
+ * 单独块：下达 → 字符串回执比对 → 当场验「Bots 里真解得出这个函数」（解不出 ⇒ 课程席每局静默落空，
+ *   与「缺省 pickToolKit 恒可解」不符 ⇒ 只有显式写错才会红，exit 7 响亮失败）。 */
+if (process.env.EPIRUS_COURSE_BOT != null && process.env.EPIRUS_COURSE_BOT !== '') {
+  const want = String(process.env.EPIRUS_COURSE_BOT).trim();
+  if (typeof T.setCourseBot !== 'function') { console.error('⛔ EPIRUS_COURSE_BOT 下达了，但引擎没有 setCourseBot ⇒ 黑键，拒跑'); process.exit(6); }
+  T.setCourseBot(want);
+  const back = (typeof T.courseBotName === 'function') ? T.courseBotName() : null;
+  if (back !== want) { console.error('⛔ EPIRUS_COURSE_BOT=' + want + ' 没生效：读回 ' + back + ' ⇒ 拒静默空转'); process.exit(7); }
+  if (typeof T.courseSeatBot !== 'function' || !T.courseSeatBot()) {
+    console.error('⛔ EPIRUS_COURSE_BOT=' + want + ' 在 Bots 导出里解不出函数 ⇒ 课程席会静默落空，拒跑'); process.exit(7);
+  }
+  console.log('[部署档] EPIRUS_COURSE_BOT ⇒ ' + want + ' 已下达（读回一致，脚本可解）');
+  DEPLOY_REC.EPIRUS_COURSE_BOT = { requested: want, effective: back };
+} else if (typeof T.courseBotName === 'function') {
+  DEPLOY_REC.EPIRUS_COURSE_BOT = { requested: null, effective: T.courseBotName() };
+}
 
 /* ===== v1.5.262（DS · §24 的根因修复）：**通用 econ 下达**（名单驱动 + 强制逐键回执）=====
  * 病（本班三族实验全部逐字节相同才查出来）：本文件对 econ 旋钮是**逐个键各写一块**下达代码
@@ -3243,6 +3267,20 @@ if (KILL_REQ > 0) {
   }
   if (seatKeys.length < 2) {
     console.error('[train-3p] ⛔ 注入只覆盖 ' + seatKeys.length + ' 个受评座位 ⇒ 座位偏置未消（用户 09-22 裁定）⇒ 本臂作废');
+    process.exit(8);
+  }
+}
+
+/* =====（ZCode · 11-06 夜）课程席收据：下达了就必须真的上过桌 =====
+ * 与 killSeat 同一条纪律（横幅读回证明不了作用点发生）：EPIRUS_COURSE_EVERY>0 而开火计数为 0
+ * ⇒ 判据没接上（比如 ALL 局都是承诺局/人数恒 <3）⇒ 本臂作废，不许静默空转。 */
+if (Number(process.env.EPIRUS_COURSE_EVERY || 0) > 0) {
+  const cs = (typeof T.countCourseSeats === 'function') ? T.countCourseSeats() : { fired: -1, gens: {}, names: {} };
+  console.log('[course] 开火计数：注入 ' + cs.fired + ' 局 · 覆盖 ' + Object.keys(cs.gens || {}).length + ' 个世代' +
+    ' · 脚本名单 ' + Object.keys(cs.names || {}).join(',') + '（courseEvery=' + process.env.EPIRUS_COURSE_EVERY +
+    ' ‖ bot=' + (typeof T.courseBotName === 'function' ? (T.courseBotName() || 'pickToolKit') : '?') + '）');
+  if (!(cs.fired > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_COURSE_EVERY=' + process.env.EPIRUS_COURSE_EVERY + ' 却**一局未注** ⇒ 本臂作废');
     process.exit(8);
   }
 }

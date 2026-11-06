@@ -49,6 +49,27 @@
   let MIX8_EVERY = 0;
   function setMix8Every(v) { const k = Math.floor(Number(v) || 0); MIX8_EVERY = k >= 2 ? k : 0; return MIX8_EVERY; }
   function mix8Every() { return MIX8_EVERY; }
+  /* =====（ZCode · 11-06 夜）`MIX2_EVERY`：fitness 里每第 K 局换 **2 人桌**（默认 0 = 关 ⇒ 逐字不变）=====
+   * 动机（用户 11-05 夜指令「同代混桌」·DS `STATE-2026-11-05-noon-ds.md` 待办 2）：DS 实测**顺序混训**
+   *   （先 2P 30 代再 5P 30 代）是灾难性干扰，建议改为**同代混桌**。本旋钮 = 同代内逐局混 2P 桌，
+   *   受评席在 2P 切片里按 `(g / K) % 2` 轮换（`g % 2` 会钉死 0 号座）；2P 局照常进 fit。
+   *   与 MIX8 同时设时的优先级：本键的切片赢（都是"训练形状档"，不该叠加）。 */
+  let MIX2_EVERY = 0;
+  function setMix2Every(v) { const k = Math.floor(Number(v) || 0); MIX2_EVERY = k >= 2 ? k : 0; return MIX2_EVERY; }
+  function mix2Every() { return MIX2_EVERY; }
+  /* =====（ZCode · 11-06 夜）`COURSE_EVERY`：课程席——每第 K 代，fitness 局里让一席**脚本对手**上桌 =====
+   * 动因（D-08 主问题 · 千问 `MECHANISM-2026-11-04-training-breadth-qoder.md` §6）：蒸馏开菜单 / GA 选性格
+   *   缺的那一格 = "菜单打开后 GA 不给那张卡付钱 ⇒ 被磨光"。课程席让稀有键**真的有压力源**
+   *   （千问倾向的机制解，对照 FITGW/SEL_KEEP 两个记账解）。
+   * 接线照 `killSeatFor` 的形状（下方）：指定席 + **不吃 ok** ⇒ 其余对手轮换序列与基线逐字同；
+   *   相位乘 5 与 killSeat 的 `(g + gen*3)` 错开；承诺局跳过（与 killSeat 同一条理由：一分不进 fit，注了白注）。
+   * 席上坐谁由 `COURSE_BOT`（Bots 导出的函数名）指定，缺省 `pickToolKit`（杂货铺 = 出手面最宽的脚本，
+   *   给最多稀有键同时施压）。默认 COURSE_EVERY=0 = 关 ⇒ 逐字不变。 */
+  let COURSE_EVERY = 0, COURSE_BOT_NAME = '';
+  function setCourseEvery(v) { const k = Math.floor(Number(v) || 0); COURSE_EVERY = k >= 1 ? k : 0; return COURSE_EVERY; }
+  function courseEvery() { return COURSE_EVERY; }
+  function setCourseBot(v) { COURSE_BOT_NAME = String(v == null ? '' : v).trim(); return COURSE_BOT_NAME; }
+  function courseBotName() { return COURSE_BOT_NAME; }
 
   /* =====（ZCode · 11-02 深夜）`HP_SEED`：残血开局课程——摄魂双线对照的 (b) 线（用户裁「两个都可以试试」）=====
    * 把"那一格"造出来：p 比例的局**开局全席对称压到 HP=min(2, modeHp-1)**（long=2）⇒
@@ -189,6 +210,24 @@
   }
   function killSeatBot() {
     return (Bots && typeof Bots.pickKillSecure === 'function') ? Bots.pickKillSecure : null;
+  }
+  /* =====（ZCode · 11-06 夜）课程席：判据与统计（唯一真源，消费点只此一处见 scoreMemberN）===== */
+  function courseSeatFor(g, gen, seat, n, hGene) {
+    if (COURSE_EVERY <= 0 || n < 3) return -1;      // 只注多人局（2P 对手唯一，换席 = 换对手，与 killSeat 同理由）
+    if ((gen % COURSE_EVERY) !== 0) return -1;      // 每 K 代上一次课（TPG 全剂量=负的依据：间歇施压，不是常驻）
+    if (hGene > 0 && isCommitGame(g, gen, hGene)) return -1;   // 承诺局一分不进 fit ⇒ 注了也白注（与 killSeatFor 同一条）
+    /* 相位乘 5：与 killSeatFor 的 `(gen + g)` 错开，两个旋钮同开时减少同席对撞；
+     * 对撞时消费点让 killSeat 分支优先（课程席落空一局），统计里看得见。 */
+    return (seat + 1 + ((gen * 5 + g) % (n - 1))) % n;
+  }
+  function courseSeatBot() {
+    const nm = COURSE_BOT_NAME || 'pickToolKit';
+    const fn = Bots ? Bots[nm] : null;
+    return (typeof fn === 'function') ? fn : null;
+  }
+  const COURSE_STAT = { fired: 0, gens: {}, names: {} };
+  function countCourseSeats() {
+    return { fired: COURSE_STAT.fired, gens: Object.assign({}, COURSE_STAT.gens), names: Object.assign({}, COURSE_STAT.names) };
   }
   /* v1.7.158：注入名单里的名字改成**从真被叫到的那个函数反查注册名**（原来 `KILL_STAT.names.killsecure` 那个键是写死的标签）。
    * 动因（10-22 门禁审查第十二批实测）：把 `killSeatBot()` 换成 `pickFarmer` 之后，旧标签照旧印 `killsecure`，
@@ -2322,9 +2361,12 @@ let WALL_GAMES = 3;
     let mirrorRan = 0;                  // v1.5.19：本个体实际跑了多少局自对局（可观测）
     for (let g = 0; g < games; g++) {
       /*（ZCode · 11-02 深夜）逐局人数轮换：每第 K 局（K=MIX8_EVERY）换 8 人桌；默认 0 ⇒ nG===n 逐字同。
-       * 8P 局照常进 fit（IMIT 教训）；本局内座位/收割/家族/经济门槛/场均差全部按 nG 取。 */
-      const nG = (MIX8_EVERY >= 2 && g % MIX8_EVERY === MIX8_EVERY - 1) ? 8 : n;
-      const seat = g % nG;                                  // 座位轮换（8P 轮按 8 取模）
+       * 8P 局照常进 fit（IMIT 教训）；本局内座位/收割/家族/经济门槛/场均差全部按 nG 取。
+       *（ZCode · 11-06 夜）MIX2_EVERY：每第 K 局换 2 人桌（同代混桌，DS 待办 2）。
+       *   2P 切片的受评席按 `(g / K) % 2` 轮换 —— `g % 2` 在 K=2 时会钉死 0 号座（座位偏置同族病）。 */
+      const mix2Game = (MIX2_EVERY >= 2 && g % MIX2_EVERY === 0);
+      const nG = mix2Game ? 2 : ((MIX8_EVERY >= 2 && g % MIX8_EVERY === MIX8_EVERY - 1) ? 8 : n);
+      const seat = mix2Game ? ((g / MIX2_EVERY) % nG) : (g % nG);   // 座位轮换（8P/2P 轮按各自 nG 取）
       const seed = evalSeedOf(gen, idx, 'n') + g * 7919;
       const choosers = [];
       /* v1.4.1 修正（我 v1.3.60 改错了）：轮换**必须与个体下标无关**。
@@ -2338,6 +2380,8 @@ let WALL_GAMES = 3;
       const imitB = imitBetaForGen(gen);   // C 方案：脚本教师模仿奖励（退火，后期为 0）
       const commitGame = isCommitGame(g, gen, hGene);   // (c) 承诺局：每 3 局 1 局，h 来自基因（v1.5.186：相位按代旋转，判据单一来源）
       const killSeatPid = killSeatFor(g, gen, seat, nG, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
+      /*（ZCode · 11-06 夜）课程席：每 K 代让一席脚本对手上桌（D-08 机制解；判据单一来源 courseSeatFor） */
+      const coursePid = courseSeatFor(g, gen, seat, nG, hGene);
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
@@ -2373,6 +2417,16 @@ let WALL_GAMES = 3;
           KILL_STAT.seats[seat] = (KILL_STAT.seats[seat] || 0) + 1;
           const kbName = botRegisteredName(kb);
           KILL_STAT.names[kbName] = (KILL_STAT.names[kbName] || 0) + 1;
+        } else if (coursePid >= 0 && pid === coursePid && pid !== killSeatPid && courseSeatBot()) {
+          /*（ZCode · 11-06 夜）课程席：这一席换成脚本对手（缺省杂货铺）⇒ 稀有键有压力源。
+           *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字同（与家族席同一条纪律）；
+           *   与 killSeat 同局对撞时 killSeat 分支已先接走（上面 `pid !== killSeatPid` 只是把意图写明）。 */
+          const cb = courseSeatBot();
+          choosers.push(wrapBotN(cb));
+          COURSE_STAT.fired++;
+          COURSE_STAT.gens[gen] = (COURSE_STAT.gens[gen] || 0) + 1;
+          const cbName = botRegisteredName(cb);
+          COURSE_STAT.names[cbName] = (COURSE_STAT.names[cbName] || 0) + 1;
         } else if (famSet && famSet.has(pid)) {
           /* §E798 家族副本席：同一个 `params` 走适应度用的那个 chooser（不吃补贴/强迫/模仿 ⇒ 它是"副本"不是"另一个被喂的个体"）。
            *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字相同（否则等于偷偷改了对手份额，读数就说不清是谁施压）。 */
@@ -3011,11 +3065,13 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   /* 从已有冠军热启动种群（持续训练：围绕冠军变异，而不是全部随机重开） */
   function seedChampion(t, params) {
     if (!params) return;
-    t.seedParams = params.slice();   // v1.5.19：兜底用（健康门槛可能拒掉第一次提升 ⇒ champion 会短暂为空）
+    /* v1.8.45（11-06 夜，C4-1）：两处 `.slice()` 改 `P.copyParams`——旧包的 `legacyFrom` 标记
+     * 否则在热启动第一代就丢（isLegacyChooser 读不到 ⇒ 旧包按 v7 候选口径评分/选拔）。 */
+    t.seedParams = P.copyParams ? P.copyParams(params) : params.slice();   // v1.5.19：兜底用（健康门槛可能拒掉第一次提升 ⇒ champion 会短暂为空）
     const mk = function (p, sigma) {
       return { params: p, score: 0, attackGames: 0, attackRate: 0, attackChoices: 0, totalChoices: 0, attackShare: 0 };
     };
-    t.pop[0] = mk(params.slice(), 0);
+    t.pop[0] = mk(P.copyParams ? P.copyParams(params) : params.slice(), 0);
     for (let i = 1; i < t.popSize; i++) {
       const sig = i < t.elite ? t.sigma * 0.6 : t.sigma;
       t.pop[i] = mk(P.mutatePolicy(params, sig), sig);
@@ -4129,6 +4185,8 @@ function countVariety(events, seat) {
   setPairedEval, pairedEvalOn, evalSeedOf,
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
+    setMix2Every, mix2Every,   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌（同代混桌，DS 待办 2；默认 0=关）
+    setCourseEvery, courseEvery, setCourseBot, courseBotName, courseSeatFor, courseSeatBot, countCourseSeats,   //（ZCode · 11-06 夜）课程席（D-08 机制解；默认 0=关）
     setHpSeed, hpSeedOn,   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`
     setDrainPush, drainPushOn, drainPushWants, drainPushSalt,              // v1.5.334 §E275：摄魂"残血只在探索里软提升"（默认 0=关，门 D225 钉）

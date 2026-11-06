@@ -1,0 +1,1 @@
+{"main":{"file":"champion-map/coords-gen3-1105.tsv","added":10,"total":880},"view20":{"file":"champion-map/coords-view-20.tsv","added":10,"total":49}}

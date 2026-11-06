@@ -34,3 +34,38 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-04T06:03:15.428Z	f681313eba6a0902	docs/artifacts/CB3-s13-band5.bak	scratch/ga-arms/ACOV-ZER.js	train-3p	本臂零改包：产物 = 起点那一粒
 2026-11-04T06:07:53.042Z	f681313eba6a0902	docs/artifacts/CB3-s13-band5.bak	scratch/ga-bands/ACOV-WID/ACOV-WID-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-04T06:07:53.049Z	f681313eba6a0902	docs/artifacts/CB3-s13-band5.bak	scratch/ga-arms/ACOV-WID.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-05T16:30:50.158Z	d2046df0147eb4a9	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-CR-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-05T16:30:50.162Z	d2046df0147eb4a9	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-CR-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-05T16:32:17.788Z	d4a7cf2cb5519439	docs/artifacts/SMOKE-CR-band1.bak	docs/artifacts/SMOKE-MX-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-05T16:32:17.793Z	d4a7cf2cb5519439	docs/artifacts/SMOKE-CR-band1.bak	docs/artifacts/SMOKE-MX-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-05T16:32:17.806Z	d4a7cf2cb5519439	docs/artifacts/SMOKE-CR-band1.bak	scratch/zcode-1106/smoke-mx.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-05T16:33:31.135Z	c080388e3dec6bb3	docs/artifacts/P2A-s13-band1.bak	scratch/ga-arms/P2A-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-05T16:34:46.906Z	de85af8599a8b789	docs/artifacts/P2A-s41-band4.bak	docs/artifacts/P2A-s41-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-05T16:34:46.912Z	5c41ff967034fbed	docs/artifacts/P2A-s41-band1.bak	scratch/ga-arms/P2A-s41.js	train-3p	未复制：同一粒权重已有真身
+2026-11-05T16:42:50.828Z	d4a7cf2cb5519439	docs/artifacts/SMOKE-CR-band2.bak	docs/artifacts/P8-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-05T16:53:01.945Z	d4a7cf2cb5519439	docs/artifacts/P8-s13-band3.bak	docs/artifacts/MX25-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-05T22:40:44.134Z	55733305467f1fd9	docs/artifacts/CTRL2-s13-band1.bak	docs/artifacts/NOINJ-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-05T22:40:44.138Z	108fdacc9d417ddb	docs/artifacts/CTRL2-s13-band2.bak	docs/artifacts/NOINJ-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-05T22:40:44.142Z	231f60c7838fa82c	docs/artifacts/CTRL2-s13-band3.bak	docs/artifacts/NOINJ-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-05T22:40:44.148Z	e881780df7cc5241	docs/artifacts/CTRL2-s13-band4.bak	docs/artifacts/NOINJ-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-05T22:40:44.154Z	7ea9bbc3365717a1	docs/artifacts/CTRL2-s13-band5.bak	docs/artifacts/NOINJ-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-05T22:40:44.158Z	34fec53658e06b42	docs/artifacts/CTRL2-s13-band6.bak	docs/artifacts/NOINJ-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-05T22:40:44.161Z	e881780df7cc5241	docs/artifacts/CTRL2-s13-band4.bak	scratch/ga-arms/NOINJ-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-05T22:53:36.515Z	108fdacc9d417ddb	docs/artifacts/CTRL2-s13-band2.bak	docs/artifacts/CR8R-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-05T22:53:36.519Z	7ea9bbc3365717a1	docs/artifacts/CTRL2-s13-band5.bak	docs/artifacts/CR8R-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-05T22:56:55.519Z	108fdacc9d417ddb	docs/artifacts/CR8R-s13-band3.bak	docs/artifacts/CR8K16-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-05T22:56:55.523Z	7ea9bbc3365717a1	docs/artifacts/CR8R-s13-band4.bak	docs/artifacts/CR8K16-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-05T23:23:56.375Z		docs/artifacts/ALLON-s13-band4.bak	docs/artifacts/ALLON-s13-band6.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-3/4 产物）
+2026-11-05T23:23:56.377Z		docs/artifacts/MIX8-s13-band1.bak	docs/artifacts/MIX8-s13-band5.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-3/4 产物）
+2026-11-05T23:28:37.823Z	d4a7cf2cb5519439	docs/artifacts/MX25-s13-band5.bak	docs/artifacts/MIX8-s15-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-05T23:28:37.827Z	d4a7cf2cb5519439	docs/artifacts/MX25-s13-band5.bak	docs/artifacts/MIX8-s15-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-05T23:39:27.039Z		docs/artifacts/CR8-s16-band1.bak	docs/artifacts/CR8-s16-band2.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-5 产物）
+2026-11-05T23:39:27.040Z		docs/artifacts/CR8-s16-band2.bak	docs/artifacts/CR8-s16-band2.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-5 产物）
+2026-11-05T23:39:27.040Z		docs/artifacts/MIX8-s17-band2.bak	docs/artifacts/MIX8-s17-band4.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-5 产物）
+2026-11-05T23:39:27.040Z		docs/artifacts/MIX8-s17-band4.bak	docs/artifacts/MIX8-s17-band4.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-06 晨 · queue-5 产物）
+2026-11-05T23:56:07.035Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s15-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T00:00:06.713Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T00:00:06.719Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T00:00:06.726Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T00:00:06.729Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T00:00:06.732Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	scratch/ga-arms/MUTFLAT-s16.js	train-3p	本臂零改包：产物 = 起点那一粒

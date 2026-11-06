@@ -157,6 +157,19 @@
       return { ok: true, ep: 2, hp: 0, beads: { elec: 1 } };
     }
     if (key === R.SK.FIRESTORM) {
+      /* R64（2026-11-06 用户裁定）：**先查有没有自己贴出的、可引爆的符咒**，一枚都没有 ⇒ 条件不满足。
+       * 口径与 resolve `case SK.FIRESTORM` 的引爆清单逐字同款（owner=自己 && age≤3 && 持有者存活 && 非自己）；
+       * 实锤动因：results/2.0 的 8P 长程局第 14 回合，冠军在无一枚自己符咒时"空放"天火（1 ジ 纯浪费）。
+       * legalActions / UI 置灰 / AI 候选 / 脚本 mpAff 全走本函数 ⇒ 一处改、四处一致；
+       * 示范层 evo.js 的 `myLiveStickers > 0` 原就同口径（belt & suspenders，保留）。 */
+      let live = 0;
+      for (let v = 0; v < state.p.length; v++) {
+        if (v === pid) continue;
+        const h = state.p[v];
+        if (!h || h.hp <= 0) continue;
+        for (const st of h.stickers) if (st.owner === pid && st.age <= 3) live++;
+      }
+      if (live < 1) return { ok: false, reason: '天火需有自己贴出的符咒可引爆' };
       /* R62（2026-10-25 用户裁定）：首下 1ジ；连续使用（上一手也是天火）2ジ；隔开（出过任何别的招）重置 1ジ。
        * 连续的判定与 R32 激光眼同一支 lastSkill。 */
       return { ok: true, ep: p.lastSkill === R.SK.FIRESTORM ? 2 : 1, hp: 0, beads: null };

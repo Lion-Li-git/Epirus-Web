@@ -357,6 +357,44 @@
   /* 可触发地雷的伤害来源；狙击豁免 R38 */
   const MINE_TRIGGER = [SK.GUN, SK.SWORD, SK.TANK, SK.DRAIN, SK.RAILGUN, SK.BIG_T, SK.LASER_EYE, SK.CANNON];
 
+  /* ===== R63（2026-11-06 用户裁定）：无来源/额外伤害的**单跳转移** =====
+   * 「转移伤害又不在乎伤害是否有来源」⇒ 爆头与天火这些走 `rawDamage`（绕过 deliverDamage 转移拦截）的
+   * 伤害同样可被受害者当场声明的【转移伤害】转走。单一真源 helper：天火与爆头两个落点都走它，
+   * spec 直测也走它（导出见文件尾）。
+   * 口径（与 mineHit/N6、N20⑥ 同族）：
+   *   · **单跳**：落点不能再转（`noReRedirect` 由结构保证 —— 落点直接走 `land`，不再查转移）；
+   *   · **落点的架势照常判**：天火落点摆原型制御照挡（且无来源 ⇒ 计入待反总数但不反，R36/R57 直击同款）；
+   *     爆头本就绕开架势（额外伤害），落点同样绕开；
+   *   · **铁索**：直击路径维持 rawDamage 默认（R45 爆头共享 / 天火现状）；转走 = 被击方没实际吃到 ⇒ 不从它共享。 */
+  function extraHitLand(state, to, amt, reason, via, opts) {
+    opts = opts || {};
+    if (state.p[to].hp <= 0) return;
+    if (opts.respectProto) {
+      const pg = guardOf(state, to);
+      if (pg && pg.kind === 'proto') {
+        protoNote(state, to, null, amt, opts.type || R.DMG.FIRE, via);
+        ev(state, { type: 'blocked', to, by: '原型制御', amt, via });
+        return;
+      }
+    }
+    rawDamage(state, to, amt, reason, via, { type: opts.type, source: null });
+  }
+  /* 转移查检查 + 落地：受害者声明了转移伤害且有有效目标 ⇒ 转给目标；否则原地落地。 */
+  function extraHitWithTransfer(state, victim, amt, reason, via, opts) {
+    opts = opts || {};
+    if (state.p[victim].hp <= 0) return;
+    const tAct = actionOf(state, victim);
+    if (tAct && tAct.key === SK.TRANSFER) {
+      const dest = targetOf(state, victim);
+      if (dest != null && dest !== victim && state.p[dest].hp > 0) {
+        ev(state, { type: 'transfer', to: victim, from: (opts.from != null ? opts.from : null), dest, amt, via });
+        extraHitLand(state, dest, amt, reason, via, opts);
+        return;
+      }
+    }
+    extraHitLand(state, victim, amt, reason, via, opts);
+  }
+
   /* 地雷连锁（至多2次）R38/R39 —— 反击绕过一切架势 */
   /* ===== N20 地雷 AoE（用户裁定 2026-09-11）=====
    * 旧实现是 2 人时代口径（只让"攻击者"受 1 火伤），而 2 人局里「全场其他角色」
@@ -1109,18 +1147,12 @@
             if (v === i) continue;
             const holder = state.p[v];
             if (!holder || holder.hp <= 0) continue;
-            const pg = guardOf(state, v);
-            const protoBlock = pg && pg.kind === 'proto';
             for (const st of holder.stickers.slice()) {
               if (st.owner === i && st.age <= 3) {
                 n++;
-                if (!protoBlock) rawDamage(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE });
-                else {
-                  /* v1.5.117：天火的伤害**无来源**（R57/用户裁定）⇒ 按用户口径它**计入原型制御的"伤害总数"**
-                   * （"可以生效且会被挡住的伤害"），但**决算时不会被反**（没得可反）。 */
-                  protoNote(state, v, null, 1, R.DMG.FIRE, 'firestorm');
-                  ev(state, { type: 'blocked', to: v, by: '原型制御', amt: 1, via: 'firestorm' });
-                }
+                /* R63（2026-11-06）：这份火伤可被持有者当场声明的【转移伤害】转走（单跳）；
+                 * 落点的原型制御照挡（无来源 ⇒ 计入待反总数但不反，与原直击分支逐字同款）。 */
+                extraHitWithTransfer(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE, respectProto: true, from: i });
               }
             }
           }
@@ -1237,7 +1269,12 @@
         const ta = actionOf(state, t);
         const affect = !!ta && (ta.key === SK.TRANSFER || R.ATK_EFFECT.indexOf(ta.key) >= 0) && targetOf(state, t) === i;
         if (!affect && judge3(state)) {
-          rawDamage(state, t, 1, '爆头', 'headshot', {});   // R45：铁索共享爆头（文档口径）
+          /* R63（2026-11-06 用户裁定）：爆头这 1 点属可转移伤害 ⇒ 被击方当场声明的【转移伤害】可把它转走（单跳）。
+           * 落点绕开架势（爆头本来就是额外伤害，与直击口径一致）；没转走时照旧 rawDamage 默认共享（R45 不动），
+           * 转走了 = 被击方没实际吃到 ⇒ 不从它共享（extraHitLand 落点身上的铁索照常）。
+           * ⚠ 可达性边界（诚实记录，见 RULES-2P R63）：完整狙击路径里"活转移+有效目标"会先把主弹转走
+           *   （res !== 'land' ⇒ 爆头本就不掷）⇒ 本分支在实战里只剩极窄边角可达；规则性质以 spec 直测 helper 钉住。 */
+          extraHitWithTransfer(state, t, 1, '爆头', 'headshot', { from: i });
           ev(state, { type: 'headshot', pid: i, to: t });
         }
       }
@@ -1437,6 +1474,7 @@
     oppOf, saltPick,                                            // v1.5.54: 同上（默认作用者的可测入口）
     rawDamage, deliverDamage, guardOf, judge, judge3, actionOf, setVoid,
     protoNote, protoReflectAll,   // v1.5.117：原型制御"≥3 各自转移"的记账与决算（供 spec 直测）
+    extraHitLand, extraHitWithTransfer,   // R63（2026-11-06）：无来源/额外伤害的单跳转移（天火/爆头共用真源；供 spec 直测）
     /* v1.5.19：把"技能→架势种类"的两个真源也导出 —— 特征侧（js/train/policy.js）要看
      * "自己身上是什么架势 / 对手镜面反射复制到了什么"。**不许在 policy.js 里重写一遍 switch**：
      * 本项目"两处各写一遍"已栽过四次（见 docs/METHODOLOGY.md 第 13 条）。 */

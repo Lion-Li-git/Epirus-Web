@@ -25,8 +25,11 @@ node champion-map/proj-tsne.mjs --in=champion-map/coords-gen3-1105.tsv >> "$LOG"
 node champion-map/proj-tsne.mjs --in=champion-map/coords-view-18.tsv >> "$LOG" 2>&1
 node champion-map/proj-tsne.mjs --in=champion-map/coords-view-20.tsv >> "$LOG" 2>&1
 
-echo "── ⑤ 烘四页（子集页必须带**自己那一版**的 preset：下拉初始值=本页真实内容，且避免自检里被点一下又跳回 index.html） $(date +%H:%M)" | tee -a "$LOG"
-node champion-map/viewer.mjs --fit=coords-gen3-1105.tsv --preset=all --out=index.html >> "$LOG" 2>&1
+echo "── ④b 单页化挂列（11-06 夜 · ZCode）：三套投影按 id 并成一份 DATA（规范命令 bake-flags.txt 的输入） $(date +%H:%M)" | tee -a "$LOG"
+node champion-map/attach-projcols.mjs >> "$LOG" 2>&1
+
+echo "── ⑤ 烘四页（index.html = 单页版：--projcols=1 --verpages=0，版本下拉=页内换投影，旗标单源 bake-flags.txt；子集页必须带**自己那一版**的 preset） $(date +%H:%M)" | tee -a "$LOG"
+node champion-map/viewer.mjs --fit=coords-projcols.tsv --preset=all --projcols=1 --verpages=0 --out=index.html >> "$LOG" 2>&1
 node champion-map/viewer.mjs --fit=coords-gen3-1105.tsv --preset=all --out=index-2v-all.html >> "$LOG" 2>&1
 node champion-map/viewer.mjs --fit=coords-view-18.tsv --preset=1.8 --out=index-2v-18.html >> "$LOG" 2>&1
 node champion-map/viewer.mjs --fit=coords-view-20.tsv --preset=2.0 --out=index-2v-20.html >> "$LOG" 2>&1

@@ -38,6 +38,16 @@ GA-ration-s41	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-01T05:05:12.648Z		s41	G
 WIDEFIX-s7	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T13:18:55.752Z		s7				559a8105e849		product
 KDFULL2	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T12:01:38.394Z			KD-V7	KD-V7	KD-V7	1529c10b509c	arm	mtime
 KD-V7	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T11:16:40.504Z			L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	61164b09cac4	arm	mtime
+DSTR4-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:46:57.183Z		s13	wid:7e5247918994			80e3486ccc4d		product
+EFFG-s5	15	gen-3 实验臂（11-01 era：起点=热启动权重 id）	2026-11-03T16:06:31.396Z		s5	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	789f16ba247d	seedpack-wid	product
+EFFG-s7	15	gen-3 实验臂（11-01 era：起点=热启动权重 id）	2026-11-05T17:21:14.512Z		s7	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	3c1040bf7bbb	seedpack-wid	mtime
+GD3ALL-POPP-s41	15	gen-3 实验臂（11-01 era：起点=热启动权重 id）	2026-11-01T18:57:16.011Z		s41	GD3-SWORD	GD3-SWORD	GD3-SWORD	cc9bf7e50f96	seedpack-wid	product
+GD3ALL-PUSHON-s13	15	gen-3 实验臂（11-01 era：起点=热启动权重 id）	2026-11-01T23:48:30.585Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	93b11437bafb	seedpack-wid	product
+D-b-hpseed-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T16:05:43.028Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	e882bc170d6d	seedpack-wid	product
+DDEF-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:20:11.246Z		s13	wid:ec6eee25c35c	D-a-s13	D-a-s13	ccd075761423	hash	product
+DSTR-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:32:06.973Z		s13	wid:ec6eee25c35c	D-a-s13	D-a-s13	5c0f7b54832d	hash	product
+LE-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T23:10:55.101Z		s13	wid:0290df82ac5e			c318e3dc096a		product
+GD3ALL-G5-s13	15	gen-3 实验臂（11-01 era：起点=热启动权重 id）	2026-11-01T16:40:32.793Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	13327686160d	seedpack-wid	product
 OB3S-C2-s7	14	2.0 蒸馏根与 L5/CB/D 产线			s7	arch2随机					
 wid:792f3caacf06	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:3554dce2e90f	14	2.0 蒸馏根与 L5/CB/D 产线									
@@ -45,3 +55,5 @@ wid:22f1014a39c2	14	2.0 蒸馏根与 L5/CB/D 产线
 wid:ec6eee25c35c	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:0db60b97fc25	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:3489c16057e7	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:7e5247918994	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:0290df82ac5e	14	2.0 蒸馏根与 L5/CB/D 产线									

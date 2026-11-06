@@ -33,7 +33,7 @@
   /* v1.5.18：删掉 `fast` / `lucky` 两个标签 —— 它们对应的模式已从 `MODES` 里删除（用户裁定）。 */
   const MODE_NM = { standard: '标准(2人·3血)', multi: '多人(3血)', multi4: '4 血', long: '长程(5血)' };
   /* ===== v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交，4 血也可以上，实现连续性」）=====
-   * 原来页面有一根「模式」下拉，它其实**同时**决定了人数与血量（standard=2人3血 / multi=3~5人3血 / long=3~5人5血），
+   * 原来页面有一根「模式」下拉，它其实**同时**决定了人数与血量（standard=2人3血 / multi=多人3血 / long=多人5血），
    * 于是「2 人 · 5 血」「任意人数 · 4 血」这类组合在页面上点不出来。现在两根轴各自一个下拉（`#sel-players` / `#sel-hp`），
    * **模式键由这两根轴查出来** —— 下面这张表是唯一的映射来源：
    *   · 门 D28（本版重写）钉"这张表 + 2 人 3 血那一格的像必须恰好等于 `R.MODES` 的全部 key"：
@@ -87,7 +87,18 @@
     } catch (e) { /* ignore */ }
   }
   function saveSd() {
-    try { localStorage.setItem(SD_KEY, JSON.stringify(sdOpts() || {})); } catch (e) { /* ignore */ }
+    /* v1.8.45（11-06 夜）：非法输入（负数等 ⇒ sdOpts() 为 null）时**不许覆盖已存的好值**——
+     * 旧实现把 `{}` 写进去，下次进页面静默回到默认 100，而输入框里显示的还是那个非法值（显示与行为分叉）。
+     * 现在非法 ⇒ 不写盘（保留旧值），只把输入框拉回当前生效值。 */
+    const o = sdOpts();
+    if (!o) {
+      try {
+        const j = JSON.parse(localStorage.getItem(SD_KEY) || 'null');
+        $('inp-sd').value = (j && typeof j.suddenDeath === 'number') ? j.suddenDeath : 100;
+      } catch (e) { $('inp-sd').value = 100; }
+      return;
+    }
+    try { localStorage.setItem(SD_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
   }
   /* ===== v1.5.333（用户 10-03 晚裁定「你把 p=8 默认开吧」）：大雷的"看得见"档**已经是默认行为** =====
    * 这一行**不再是开关**：值写在唯一的来源 `js/train/evo.js` 的 `BIGT_PUSH`（现值以那里为准 ⇒ 这里不复制数字，复制了就会腐烂；
@@ -102,7 +113,7 @@
   function newGame() {
     applyAxes();   // v1.6.5：人数 × 血量 → 模式键（旧版这根叫 `syncModeOptions`，它按人数把"标准"置灰）
     const n = B.players || 2;
-    /* v1.6.6：这根旗标**只管版式**（2 人 = 左右两块面板；3~5 人 = 右栏堆叠），不再决定"走哪条 AI 路"
+    /* v1.6.6：这根旗标**只管版式**（2 人 = 左右两块面板；3~8 人 = 右栏堆叠），不再决定"走哪条 AI 路"
      * —— 以前它还兼管"2 人用 `doPick`/`chooseAI`、多人用 `doPickMulti`/`chooseAIMulti`"，那两条已合成一条。
      * ⇒ 读代码的人注意：`B.multi === false` **不表示**"这局用的是 v1.0 那套 AI"，只表示座位是 2 个。 */
     B.multi = n > 2;
@@ -117,7 +128,7 @@
      * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。
      * 现在它由本局种子派生（乘一个固定混数取低 32 位），不再单独抽一次 ⇒ 登记了种子就复现了盐。 */
     B.state.slotSalt = (Math.imul(B.matchSeed, 2654435761)) >>> 0;
-    B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null;
+    B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null; B.resolvePending = false;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     closeOverlay();
@@ -132,6 +143,18 @@
     B.diffLabel = diffName(B.diff);            /* 与 `对手=` 同一时刻的快照：中途换档时这两格必须说的是同一档 */
     logClear('新对局：' + n + ' 人 · ' + (MODE_NM[B.modeKey] || B.modeKey) + ' · 难度=' + diffName(B.diff) +
       ' · 对手AI=' + B.oppInfo + ' · 每人初始 ' + B.state.mode.hp + ' 血');
+    /* v1.8.45（11-06 晨，用户报"刚进入时 3P 未加载静默回退"）：defer 池 bundle 与首局点击的竞态窗口
+     * 已从结构上关死（index.html 里 ui.js 也 defer 且排在两份池 bundle 之后 ⇒ 绑定事件时池必然已执行），
+     * 但"降级不许静默"是契约 §4 —— 真落进回退（这一档要池而池状态非 ok）就在开局日志响亮记一笔，
+     * 不再只留在席位小字里（旧路径：用户首局打到一半才发现对手是弱回退，且下一局才恢复）。 */
+    (function () {
+      const t0 = tierOf(B.diff);
+      if (!t0 || !t0.pool) return;
+      const pst = POOLS[n > 2 ? 'p3' : 'p2'].st.status;
+      if (pst === 'ok' || !pst || pst === 'init') return;
+      log('⚠ 冠军池还没就绪（' + (pst === 'not-yet' ? 'bundle 还没执行到，脚本顺序问题' : pst === 'no-bundle' ? 'bundle 未加载/形状不对' : pst) +
+        '）⇒ **本局对手是回退装配**（' + B.oppInfo + '）。池就绪后新开一局即恢复池装配。');
+    })();
     hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
 
@@ -185,12 +208,26 @@
   function renderSide(pid) {
     if (B.multi) {
       if (pid === 0) { $('side-0').innerHTML = panelHtml(0); return; }
+      /* v1.8.45（11-06 晨，用户报"8 人局把窗口挤到下面了"）：≥6 人时对手栏改**双列网格** + 战场加宽
+       * （css 的 `.opp2col` / `.battle.wide` / `#app.wide`）——旧版 N 个对手在 250px 侧栏里竖着堆，
+       * 7 个对手 ≈ 630px+ 高，把整页顶出视口。2~5 人维持原竖排（那些人数本来放得下）。 */
+      const wide = B.state.p.length >= 6;
+      const s1 = $('side-1');
+      s1.classList.toggle('opp2col', wide);
+      const app = document.getElementById('app');
+      if (app) app.classList.toggle('app-wide', wide);
       let h = '';
       for (let i = 1; i < B.state.p.length; i++) {
         h += '<div class="mpanel' + (B.state.p[i].hp <= 0 ? ' dead' : '') + '">' + panelHtml(i) + '</div>';
       }
-      $('side-1').innerHTML = h;
+      s1.innerHTML = h;
       return;
+    }
+    if (pid === 1) {
+      /* v1.8.45：2 人局要摘掉 ≥6 人局的宽版类（上一局 8 人留下的不摘会一直占着） */
+      $('side-1').classList.remove('opp2col');
+      const app = document.getElementById('app');
+      if (app) app.classList.remove('app-wide');
     }
     $('side-' + pid).innerHTML = panelHtml(pid);
   }
@@ -225,13 +262,19 @@
       const modeOk = S.canUseSkillInMode(st, s.key);
       const cd = (st.p[0].cooldown[s.key] || 0);
       const multiOnly = R.MULTI_ONLY.indexOf(s.key) >= 0 && !S.canUseSkillInMode(st, s.key);
+      /* v1.8.45（11-06 夜）：multiOnly 的两种成因要分开说——2 人局是"多人模式不开放"，
+       * 多人残局（存活 ≤2，state.js canUseSkillInMode）是"残局人数不足"。旧文案统一写"多人模式"，
+       * 玩家在 3 人局残局里会误读成"这局不是多人"。 */
+      let aliveCount = 0;
+      for (let ai = 0; ai < st.p.length; ai++) if (st.p[ai].hp > 0) aliveCount++;
+      const multiOnlyResidual = multiOnly && st.p.length > 2 && aliveCount <= 2;
       const la = legalMap[s.key];
       const unaffordable = !multiOnly && modeOk && cd <= 0 && !st.over && (!la || !la.affordable);
       const btn = document.createElement('button');
       btn.className = 'skillbtn c-' + s.cat;
       const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = s.name;
       const ct = document.createElement('span'); ct.className = 'ct';
-      ct.textContent = multiOnly ? '多人模式' : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
+      ct.textContent = multiOnly ? (multiOnlyResidual ? '残局≤2人' : '多人模式') : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
       btn.appendChild(nm); btn.appendChild(ct);
       /* v1.5.173（用户实测报"摄魂 bug 没解决"追到的真凶）：**卡面文案与引擎门槛不同源**。
        * `SK.DRAIN` 的 `desc` 把窗口写死成"HP 小于等于 1"（R25 原口径），而长程按 `state.mode.drainHpMax=3` 放行（`RULES-NP.md` N24）
@@ -240,9 +283,13 @@
        * 且 `rules.js` 是指纹五件套之一、不能为一个显示字符串换代），这样门 D131 能 headless 直接跑它。 */
       btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + Tip.of(R, st, s);
       btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable;
-      if (multiOnly) btn.title += '\n（多人专用（2 人局不开放），见 docs/RULES-NP.md N14）';
+      if (multiOnly) btn.title += multiOnlyResidual
+        ? '\n（多人专用卡在残局（存活 ≤2）不可用，见 docs/RULES-NP.md N14）'
+        : '\n（多人专用（2 人局不开放），见 docs/RULES-NP.md N14）';
       else if (!modeOk) btn.title += '\n（本模式不可用）';
-      else if (unaffordable) btn.title += '\n（ジ/珠子不足或条件不满足，本回合无法发动）';
+      else if (unaffordable) btn.title += s.key === R.SK.FIRESTORM && !la
+        ? '\n（场上没有你贴出的可引爆符咒，天火不可发动 —— R64，2026-11-06）'
+        : '\n（ジ/珠子不足或条件不满足，本回合无法发动）';
       btn.onclick = function () { pickSkill(s.key); };
       grid.appendChild(btn);
     }
@@ -347,7 +394,7 @@
    * ⇒ 2 人走 N 人那条路：`doPickMulti` 在"只有一个对手"时不弹目标框（`opps.length > 1` 才弹），
    *   座位名仍是 `你/电脑`（`state.js:defaultNames(2)`），回合行由 `roundLineParts` 打出 `你=【…】 电脑=【…】`。
    * 反证：这条合并的可玩性不是靠"我看代码觉得等价"，是 smoke 的 12 格扫描 + battle 真打（2 人 × 三档血量各起一局）。 */
-  /* ---------- 多人（3-5）对局 ---------- */
+  /* ---------- 多人（3~8）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
   let multiChampCache, multiChampFrom;   // v1.5.10：multiChampFrom ∈ 'local'（本机自训/导入）| 'builtin'（内置包）
   function resetMultiChampCache() { multiChampCache = undefined; multiChampFrom = undefined; }
@@ -394,7 +441,7 @@
   function poolOffReasonOf(k, tier) {
     const slot = POOLS[k], S = slot.st;
     loadPoolOf(k);
-    const back = k === 'p2' ? '退回单包（那一枚 2P 冠军）' : '四席同一枚（内置槽）';
+    const back = k === 'p2' ? '退回单包（那一枚 2P 冠军）' : aiSeatWord() + '同一枚（内置槽）';
     if (S.status === 'no-bundle') return slot.name + ' bundle 未加载 ⇒ ' + back;
     /* §E621：走到这里说明"这一次还没拿到全局"（bundle 的 defer 脚本还没执行），**不是**坏了；
      *   单独一句是为了下次有人读到它不会又去查 bundle 在不在（我这晚就是这么绕了一圈的）。 */
@@ -505,7 +552,7 @@
     const p = m && P2.params[m.id];
     if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
     return { params: p, from: (plan.two ? 'pool2:' : 'pool:') + m.id, poolDraw: draw, seatId: m.id,
-      poolNote: (draw.allSame && !plan.two) ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ 四席全同（降级，已明说）' : null };
+      poolNote: (draw.allSame && !plan.two) ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ ' + aiSeatWord() + '全同（降级，已明说）' : null };
   }
   /** 池到底生不生效，**只这一处判**（v1.6.63 内的一次修正，未另起版本号）。
    *   为什么要有这个函数：`champForSeat`（真决策）先查了"本机导入优先"，而 `aiInfo`（席位标签的回显）**没查**就报"池·mid 本局=…"
@@ -517,7 +564,7 @@
     if (!tier || !tier.pool) return { on: false, local: false, two: false, why: null, draw: null };
     const two = !(n > 2);
     const single = champForCount(n);
-    if (single.from === 'local') return { on: false, local: true, two: two, why: '本机导入优先 ⇒ 池不生效（' + (two ? '对手用你这枚' : '四席都用你这枚') + '）', draw: null };
+    if (single.from === 'local') return { on: false, local: true, two: two, why: '本机导入优先 ⇒ 池不生效（' + (two ? '对手用你这枚' : aiSeatWord() + '都用你这枚') + '）', draw: null };
     const draw = poolDrawFor(state, tier, n);
     if (!draw || !draw.seats.length) {
       return { on: false, local: false, two: two, draw: null,
@@ -579,6 +626,21 @@
     return null;
   }
   function tierIsChamp(id) { const t = tierOf(id); return !!t && t.kind === 'champ'; }
+  /* v1.8.45（11-06 夜）：剂量档文案**单一真源**。此前两处直接印 `tier.eps`，而 2 人桌实际吃的是
+   * `eps2`（`bots.js` 的 `tierEpsAt`；困难档 eps2=0 = 全贪心）⇒ 状态行说 ε=0.1/soft·斜坡、
+   * 实际 ε=0 恒定（11-05 夜实测 2P 困难复现）。文案跟着 `tierEpsAt` 的分支走。 */
+  function tierEpsLabel(tier) {
+    if ((B.players || 2) <= 2 && tier && typeof tier.eps2 === 'number') {
+      return ' ε=' + tier.eps2 + '（2人桌常数' + (tier.eps2 === 0 ? '·全贪心' : '') + '）';
+    }
+    return ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : '');
+  }
+  /* v1.8.45（11-06 夜）：AI 席位词单一真源——此前降级/池注里写死「四席」（5 人桌口径），
+   * 3 人局首屏（池 bundle 未执行到的降级态）会显示"四席同一枚"，人数对不上。 */
+  function aiSeatWord() {
+    const k = Math.max(1, (B.players || 2) - 1);
+    return ['一席', '两席', '三席', '四席', '五席', '六席', '七席'][k - 1] || (k + '席');
+  }
   /* 难度下拉：**全人数同一张阶梯**（v1.6.6 起不再按人数换列表；旧"简单/中等/困难"三档按用户裁定作废）。
    * 组一 = 剂量档（含"极限·猎队"那一档脚本）；组二 = 其余风格，明确标"强度随桌形漂，不是难度档"。 */
   function syncDiffOptions() {
@@ -655,9 +717,9 @@
             (d.bands ? ' 带比 ' + d.bands : '') +
             (d.mixNote ? ' ⚠' + d.mixNote : '') +
             (d.bandNote ? ' ⚠' + d.bandNote : '') +
-            (d.allSame && !plan.two ? ' ⚠四席全同:该档成员不足' : '') +
+            (d.allSame && !plan.two ? ' ⚠' + aiSeatWord() + '全同:该档成员不足' : '') +
             (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
-            ' · ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : ''),
+            ' · ' + tier.name + tierEpsLabel(tier),
           champ: true, from: 'pool', tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode,
           ramp: !!tier.ramp, poolDraw: d, allSame: !!d.allSame
         };
@@ -667,10 +729,10 @@
     const from = cf.from === 'local' ? '本机自训/导入' : cf.from === 'builtin' ? '内置' : String(cf.from);
     const poolOff = tier.pool
       ? (cf.from === 'local'
-        ? '（池未生效：本机导入优先 ⇒ ' + ((B.players || 2) > 2 ? '四席用你这枚' : '对手用你这枚') + '）'
+        ? '（池未生效：本机导入优先 ⇒ ' + ((B.players || 2) > 2 ? aiSeatWord() + '用你这枚' : '对手用你这枚') + '）'
         : '（' + (((B.players || 2) > 2) ? poolOffReason(tier) : poolOffReason2(tier)) + '）') : '';
     return {
-      source: packLabel + ' 冠军（' + from + '）· ' + tier.name + ' ε=' + tier.eps + '/k' + tier.epsK + '/' + tier.epsMode + (tier.ramp ? '·斜坡' : '') + poolOff,
+      source: packLabel + ' 冠军（' + from + '）· ' + tier.name + tierEpsLabel(tier) + poolOff,
       champ: true, from: cf.from, tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode, ramp: !!tier.ramp
     };
   }
@@ -841,6 +903,26 @@
       const idx0 = B.state.events.length;
       X.startTurn(B.state);
       if (B.state.over) break;
+      /* v1.8.45（11-06 夜 · 用户点名）：回魂复活（R48）在 startTurn 里把玩家拉回来（hp=1、无限能量）。
+       * 旧循环入口判过 hp<=0 就一路只替 AI 席出手 ⇒ 复活回合玩家永远拿不到出招权，回合末又按 R48 死回去
+       * —— 回魂对人类玩家等于完全失效，且该回合日志把玩家伪印成【ジ】（roundLineParts 对"活着没出手"的兜底）。
+       * 修：startTurn 之后玩家活着（= 刚复活的这一回合）⇒ 补齐与 ensureRound 相同的簿记
+       * （startTurn 事件入日志、roundStarted、按无限能量重建技能格），把出招权交还玩家。 */
+      if (B.state.p[0].hp > 0) {
+        const evs = B.state.events;
+        if (B.evCursor < evs.length) logEvents(evs.slice(B.evCursor));
+        B.evCursor = evs.length;
+        B.roundStarted = true;
+        /* ⚠ 悔一步：本回合**不可悔**（置 null）。快照/transcript 的配对不变量是"快照 = transcript 头一条
+         * 的回合开始前"，而复活回合的 startTurn 已在观战循环里发生过 ⇒ 取不到"回合开始前"的合法快照
+         * （取此刻=事后快照会让 undo 双跑 startTurn；不置 null 会让 undo 悔到上上回合）。下一回合开始时
+         * doPickMulti 会照常重设快照 ⇒ 只损失复活回合这一下的悔棋权。 */
+        B.roundStartSnapshot = null;
+        B.locked = false;
+        buildSkillGrid(); renderSide(0); renderSide(1);
+        hint('回魂复活（R48）—— 本回合由你出招（无限能量，回合结束即消散）。');
+        return;
+      }
       const preState = S.cloneState(B.state);
       const N = B.state.p.length;
       const picks = [];
@@ -872,12 +954,20 @@
     const opps = S.opponentsOf(B.state, 0).filter(function (o) { return o !== t1; });
     const title = key === R.SK.MIRROR ? '选择输出对象（目标 2/2）' : '选择目标 2/2';
     if (!opps.length) return doPickMulti(key, bead, t1, null);
-    openModal('<h3>' + title + '：' + R.byKey[key].name + '</h3>', opps.map(function (o) {
+    /* v1.8.45（11-06 夜 · 用户点名）：第二段弹窗此前**没有取消项、也没设 `B.picking`**
+     * ⇒ Esc 与点遮罩全部失效（它们的取消都以 `B.picking` 非空为前提），玩家被迫在剩余对手里硬选一个
+     * —— 与第一步弹窗"可取消"的既有契约矛盾（实测 3 人局双枪复现）。补齐：设 picking + 取消项。
+     * 取消语义与第一步一致：整手放弃（两段一起作废），回到出招前。 */
+    B.picking = { key: key, bead: bead };
+    const opts2 = opps.map(function (o) {
       return {
         label: '👉 ' + B.state.p[o].name + '（HP ' + B.state.p[o].hp + '）',
-        fn: function () { closeModal(); doPickMulti(key, bead, t1, o); }
+        fn: function () { B.picking = null; closeModal(); doPickMulti(key, bead, t1, o); }
       };
-    }));
+    });
+    opts2.push({ label: '↩ 取消', fn: function () { cancelPick(); } });
+    openModal('<h3>' + title + '：' + R.byKey[key].name + '</h3>', opts2);
+    hint('请为【' + R.byKey[key].name + '】选择' + (key === R.SK.MIRROR ? '输出对象' : '目标 2') + '（Esc 或「取消」可放弃整手）。');
   }
 
   function doPickMulti(key, bead, target, target2) {
@@ -920,7 +1010,19 @@
     }
     S.attemptAction(B.state, 0, key, { bead: bead, target: target, target2: target2 });
     hint('你选择了【' + skillName(key) + (target != null ? ' → ' + B.state.p[target].name : '') + '】，对手思考中…');
+    /* v1.8.45（11-06 夜 · 用户实测复现）：结算在 160~280ms 的 setTimeout 里补交 AI 出招并 resolve。
+     * 这个窗口内点「新对局」/换人数/换血量 ⇒ newGame 换掉 `B.state` 与 `B.transcript`，
+     * 旧闭包会把**旧局算好的 AI 出招打到新局上**（实测：新局日志出现"第 0 回合"伪记录、AI 白得收入，
+     * 此后悔棋栈错位；新局人数更少时还会对越界 pid 抛 TypeError）。
+     * 修：闭包捕获**本局的身份**（state 与 transcript 的对象引用），结算时对不上 ⇒ 整体作废（新局自会渲染自己）。 */
+    const myState = B.state, myTranscript = B.transcript;
+    /* v1.8.45（11-06 夜）：结算窗口旗标——AI 本回合的出招已在上面按**旧档**算死 ⇒ 换档若发生在这个
+     * 窗口内，新档实际从下一回合才生效，导出记录的"第 N 回合起改"要按 N+1 记（旧实现差一）。
+     * 回魂交回（A2）那种 roundStarted=true 但**还没算** AI 的场合则按当回合记。 */
+    B.resolvePending = true;
     setTimeout(function () {
+      if (B.state !== myState || B.transcript !== myTranscript) return;   // 已换局 ⇒ 本份结算作废
+      B.resolvePending = false;
       for (let pid = 1; pid < N; pid++) {
         if (!picks[pid - 1]) continue;
         const b = B.state.p[pid];
@@ -986,13 +1088,15 @@
     persistBattle();
     buildSkillGrid();
     const w = B.state.winner;
+    /* v1.8.45（11-06 夜）：`cls` 原来算了从没用（死代码），内联判的是 `w === 'red'`
+     *（w 取值只有 0/'draw'/席位号 ⇒ 恒 false）⇒ AI 获胜/平局全显示金色。改为按同一 cls 渲染。 */
     let title, cls = 'gold';
-    if (w === 0) { title = '🎉 你赢了！'; }
-    else if (w === 'draw') { title = '🤝 平局'; }
+    if (w === 0) { title = '🎉 你赢了！'; cls = 'green'; }
+    else if (w === 'draw') { title = '🤝 平局'; cls = 'gold'; }
     else { title = '💀 ' + (B.state.p[w] ? B.state.p[w].name : '电脑') + ' 获胜'; cls = 'red'; }
     const lines = ['共进行 ' + B.state.round + ' 回合'];
     for (const pp of B.state.p) lines.push(pp.name + ' HP ' + pp.hp);
-    openOverlay('<h2 style="color:var(--' + (w === 0 ? 'green' : w === 'red' ? 'red' : 'gold') + ')">' + title + '</h2>' +
+    openOverlay('<h2 style="color:var(--' + cls + ')">' + title + '</h2>' +
       '<p>' + lines.join(' · ') + '</p>',
       [{ label: '📜 查看本局复盘', fn: showRecap }, { label: '再来一局', fn: newGame }]);
   }
@@ -1210,6 +1314,7 @@
   let lastTrainer = null;
   let stats = { swaps: 0 };
   function renderChampState() {
+    applyPackTypeLock();   /* v1.8.45：本机 3P 包的代际决定人数下拉锁 —— 所有会改本机包的路径（导入/还原内置/远训写回）最终都走这里 */
     /* v1.5.131：**原先"内置包"也会被标成"已保存本地冠军"** —— 因为 `store.load()` 在本地缺失时会回退内置，
      * `c` 照样是真值 ⇒ "当前冠军"永远显示成"已保存本地冠军"（handoff §4-10 的第 3 个症状：
      * 2P 用户既看不出自己在打哪个包，也看不到"用内置冠军"到底有没有生效）。
@@ -1513,6 +1618,47 @@
   }
 
   /* ---------- 导出/导入 ---------- */
+  /* ===== v1.8.45（11-06 晨，用户裁定）：导入包按容器版本识别代际，v7/1.8 包锁死 6~8 人桌 =====
+   * 背景：6~8 人桌只对 **2.0 池装配**验证过（11-06 夜的 PASS 考卷全是池 compose）；v7 包的逐槽
+   * 特征 OPP_SLOTS=4 在 6 人以上桌会截断对手信息（在册已知现状），而且"本机导入优先 ⇒ 池不生效"
+   * （`champForSeat`）⇒ 一枚 v7 本机包会把**全场**的对手信息都截断。
+   * 用户原话「识别到 v7 包要在选人数页面禁止 5 人以上对局」。落点阈值取 **6**（禁 6/7/8、保留 2~5）：
+   * 5 人桌是 v7 的原生考卷桌——全库 825 枚 1.8 包的读数全部是 5P 量的、导入提示原文也是"3~5 人场"，
+   * 连 5 一起禁会把现有功能砍掉。**要连 5 也禁：改 `V7_MAX_PLAYERS` 这一个常数即可**（用户一句话的事）。
+   * 判据单一真源 = 容器版本号：2.0 代容器从 `"v":92` 起（`policy2.js` / train-3p 的 P2ONLY），v7 及更早 ≤ 91。 */
+  const V7_MAX_PLAYERS = 5;
+  function packGenOf(pack) {
+    const v = pack && typeof pack.v === 'number' ? pack.v : null;
+    if (v == null) return null;
+    return v >= 92 ? '2.0' : 'v7';
+  }
+  function localPackGen() {
+    /* "本机导入"的真源 = localStorage（与 `loadMultiChamp` 同一份键）；window 全局是内置/远训包
+     * ——那两条路池照常在管 ⇒ 不锁。解析失败按"没有"处理（锁错人比不锁更糟）。 */
+    try {
+      const raw = localStorage.getItem('epirus.champion3p');
+      if (!raw) return null;
+      return packGenOf(JSON.parse(raw));
+    } catch (e) { return null; }
+  }
+  function applyPackTypeLock() {
+    const pl = $('sel-players');
+    if (!pl) return;
+    const gen = localPackGen();
+    for (const opt of pl.options) {
+      const v = parseInt(opt.value, 10);
+      const lock = gen === 'v7' && v > V7_MAX_PLAYERS;
+      if (lock && !opt.dataset.label0) opt.dataset.label0 = opt.textContent;   // 幂等：先存原标签
+      opt.textContent = lock ? (opt.dataset.label0 + '（v7 包锁）') : (opt.dataset.label0 || opt.textContent);
+      opt.disabled = lock;
+    }
+    /* 本机换成 v7 包时若当前人数已越界：回落到阈值并把模式同步掉（与用户手动换人数同一条路）。 */
+    if (gen === 'v7' && (B.players || 2) > V7_MAX_PLAYERS) {
+      pl.value = String(V7_MAX_PLAYERS);
+      applyAxes();
+      if (B.state) newGame();                                  // 局中导入 ⇒ 按换人数同款重开
+    }
+  }
   function exportChamp() {
     const c = Champ.store.load();
     if (!c) { alert('还没有冠军可导出'); return; }
@@ -1526,6 +1672,8 @@
   function importChamp(file) {
     if (!file) return;
     const rd = new FileReader();
+    /* v1.8.45（11-06 夜）：读文件失败（权限/被占用/编码）此前静默无任何提示——onerror 补上。 */
+    rd.onerror = function () { alert('导入失败：文件读取出错（' + (rd.error && rd.error.message ? rd.error.message : 'FileReader error') + '）'); };
     rd.onload = function () {
       /* v1.5.141（用户要求"给界面加一个选冠军包的功能"）：先剥外壳 —— 训练产物 `docs/artifacts/*.bak`
        * 是 `window.EPIRUS_CHAMPION[_3P] = {…};`（不是纯 JSON），原来会被 `JSON.parse` 打回。
@@ -1547,8 +1695,12 @@
         window.EPIRUS_CHAMPION_3P = ex.pack;
         try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { /* 隐私模式等 */ }
         resetMultiChampCache();
-        renderChampState();
-        alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n对局「困难」档即时生效（3~5 人场）。\n想还原内置冠军：点「用内置冠军」。');
+        renderChampState();                                    /* 里面会调 applyPackTypeLock ⇒ 人数下拉即时锁/解锁 */
+        const gen = packGenOf(ex.pack);
+        alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n包代：' + (gen === '2.0'
+          ? '2.0 代（v:' + ex.pack.v + '）——2~8 人桌全可用'
+          : 'v7 / 1.8 代（v:' + ex.pack.v + '）——6/7/8 人桌已锁定（该代包只对 ≤5 人桌验证过；连 5 禁用是另一个裁定，改 V7_MAX_PLAYERS）') +
+          '\n对局「困难」档即时生效。\n想还原内置冠军：点「用内置冠军」。');
         return;
       }
       /* 2P 槽：维持原路径（`importJSON` 做版本/维度校验），只是喂**剥壳后**的 JSON。 */
@@ -1576,6 +1728,16 @@
       case 'hidden': return '隐藏层维度不符（' + got + want + '）';
       case 'no-version': return '缺少版本号，无法确认是否兼容';
       case 'parse-error': return 'JSON 解析失败';
+      /* v1.8.45（11-06 夜）：补齐 policy2（2.0 代 3 容器）与训练侧的失败原因——原来统一落到
+       * "不是有效的冠军 JSON"，与上面四条的详细中文提示不对齐。 */
+      case 'action-feature': return '动作特征段不符（' + got + want + '），可能是旧口径的包';
+      case 'dof': return '自由度不符（' + got + want + '）';
+      case 'gen': return '训练代际容器不符（' + got + want + '），代 1 容器不能进代 3 页面槽';
+      case 'input': return '输入规格（spec）不符（' + got + want + '）';
+      case 'layout': return '网络布局不符（' + got + want + '）';
+      case 'arch': return '架构档不符（' + got + want + '）';
+      case 'empty': return '文件为空或没有可解出的权重';
+      case 'shell': return '外壳不认（既不是纯 JSON 也不是 window.EPIRUS_CHAMPION* 赋值）';
       default: return '不是有效的冠军 JSON（' + (reason || 'unknown') + '）';
     }
   }
@@ -1618,7 +1780,7 @@
         /* 池档的逐席标签不含剂量，补一段；非池档时 `seatOppLabel` 返回的就是 `source`，它自己已经带 ε ⇒ 不再追加 */
         const dose = (oi.poolDraw && oi.eps != null)
           ? ' ε=' + oi.eps + '/k' + oi.epsK + '/' + oi.epsMode + (oi.ramp ? '·斜坡' : '') : '';
-        B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? B.state.round : B.state.round + 1) +
+        B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? (B.resolvePending ? B.state.round + 1 : B.state.round) : B.state.round + 1) +
           ' 回合起改 ' + diffName(B.diff) + '：' + seatOppLabel(oi) + dose]);
       }
       hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）');

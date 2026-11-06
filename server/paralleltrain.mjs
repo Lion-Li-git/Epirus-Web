@@ -27,12 +27,21 @@ export function makeAsyncStep(T, opts) {
   }
   let reqId = 0;
   function runOne(worker, msg) {
-    return new Promise((resolve) => {
+    /* v1.8.45（11-06 夜，C4-2c）：原来只挂 `message` ⇒ worker 内一次未捕获异常（`error` 事件）或
+     * 进程直接死掉（`exit` 事件）都会让这个 Promise **永不结算** ⇒ `Promise.all` 挂死、
+     * `runningN` 锁死、墙上时钟检查永远走不到（它在 await 之后）。现在两条路都 reject。 */
+    return new Promise((resolve, reject) => {
       const id = ++reqId;
+      let done = false;
+      const finish = (fn, v) => { if (!done) { done = true; worker.off('message', h); worker.off('error', he); worker.off('exit', hx); fn(v); } };
       const h = (m) => {
-        if (m && m.type === 'evalResult' && m.id === id) { worker.off('message', h); resolve(m.results); }
+        if (m && m.type === 'evalResult' && m.id === id) finish(resolve, m.results);
       };
+      const he = (e) => finish(reject, new Error('worker 异常: ' + String(e && e.message || e)));
+      const hx = (code) => { if (!done && code !== 0) finish(reject, new Error('worker 退出码 ' + code)); };
       worker.on('message', h);
+      worker.on('error', he);
+      worker.on('exit', hx);
       worker.postMessage(Object.assign({}, msg, { id: id }));
     });
   }
