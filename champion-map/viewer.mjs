@@ -107,12 +107,14 @@ const OUT = arg('out', 'index.html');
     if (!a) return false;
     const v = a.slice(k.length + 3);
     if (k === 'preset') return ['all', '1.8', '2.0'].indexOf(v) < 0;
-    if (k === 'verpages') return ['0', '1'].indexOf(v) < 0;
+    if (k === 'verpages') return v !== '0';
     if (k === 'projcols') return ['0', '1'].indexOf(v) < 0;
     return ['tsne', 'old'].indexOf(v) < 0;
   });
   if (bad.length) {
-    console.error('⛔ ' + bad.join('/') + '= 的取值不认识（preset ∈ all|1.8|2.0 ‖ verpages ∈ 0|1 ‖ proj ∈ tsne|old ‖ projcols ∈ 0|1）。' +
+    console.error('⛔ ' + bad.join('/') + '= 的取值不认识（preset ∈ all|1.8|2.0 ‖ verpages 只剩 0 ‖ proj ∈ tsne|old ‖ projcols ∈ 0|1）。' +
+      '\n   verpages=1 这个能力 11-06 已退役：三张分页图（index-2v-18 / -20 / -all）文件已删，' +
+      '要给页面加回"版本=换页"得先恢复那三页并补一条"三页与单页同源"的判据，而不是这里放个开关。' +
       '\n   这一行以前会**静默回落默认值** ⇒ 烘出语义不同的页面而判据照跑（11-05 实测踩过）。宁可不出图。');
     process.exit(2);
   } }
@@ -124,18 +126,15 @@ const PRESET = arg('preset', 'all');
  *     + 作废地图侧几何缓存（NBK/FL/壳链拓扑）+ 相机复位（= 重新适配）。
  *   · 谱系（时间×家族）/ 一维（F 序）/ 三维（x3y3z3 独立列）三张视图**不消费**这组列 ⇒ 不受影响。
  *   · SUBSETP（子集页判据域）从烘焙常量改成**运行时**：batch=all 判全套，1.8/2.0 走 NA_IN_SUBSET 跳过。
- * 必须配 `--verpages=0`（换页表为空，下拉才走页内路）；带着默认 verpages=1 烘 projcols 页 = 配置矛盾，
- * 响亮失败（与 --preset 同一条纪律）。 */
+ * 换页那条路（--verpages=1）已随三张分页图一起退役，见下面 VERPAGES 那一行的说明。 */
 const PROJCOLS = arg('projcols', '0') === '1';
-if (PROJCOLS && arg('verpages', '1') !== '0') {
-  console.error('⛔ --projcols=1 必须配 --verpages=0（单页模式下拉走页内换投影，换页表必须为空）');
-  process.exit(2);
-}
 
 /* 11-05 上午（用户："选择批次并不是像拉显示范围一样只需要把旧点扣掉就行了"）：投影是**局域性**的 ⇒
- *   换视图必须连点坐标一起重算 ⇒ 三张页各自从自己的子集表（coords-view-18 / coords-view-20 / 全部）烘出来，
- *   页面里的"版本"下拉因此**换页**而不是换滤镜。`--verpages=0` 关掉（单独烘一页时用）。 */
-const VERPAGES = arg('verpages', '1') !== '0' ? { '1.8': 'index-2v-18.html', '2.0': 'index-2v-20.html', 'all': 'index.html' } : {};
+ *   换视图曾要连点坐标一起重算 ⇒ 当时是三张页各自从自己的子集表（coords-view-18 / coords-view-20 / 全部）烘出来，
+ *   页面里的"版本"下拉因此**换页**而不是换滤镜。11-06 单页化把三套投影列挂进同一份 DATA 之后这条路作废：
+ *   三张分页图 11-06 夜删除（`3a90b845`，3.4 MB），这里换成**空表**——下拉走页内换投影（`VER_PAGES` 空 ⇒ 页内过滤分支）。
+ *   ⚠ 空表不等于"忘了配"：页面里那条 `NAVLOCK` 与页内自检的 SKIP 口径都按"单页"算，别再把开关加回来。 */
+const VERPAGES = {};
 /* §E608 路径口径与 `pool-sync.mjs` / `seat-rule.mjs` 同族：带盘符或前导 `/` 的是**绝对路径**，不许再 join 一层。
  *   触发点是 D234⑩c：门从 tmpdir 传 `--out=C:\...\np-d234-rebake.html` 进来 ⇒ 无条件 `join(HERE, OUT)` 拼出歪路径
  *   ⇒ 写盘失败 exit 1，看起来像"烘焙崩了"。这一族今晚是第四次撞（`--seat=`/`--in=`/`--chart=` 都栽过）。 */

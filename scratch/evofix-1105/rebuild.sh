@@ -28,11 +28,11 @@ node champion-map/proj-tsne.mjs --in=champion-map/coords-view-20.tsv >> "$LOG" 2
 echo "── ④b 单页化挂列（11-06 夜 · ZCode）：三套投影按 id 并成一份 DATA（规范命令 bake-flags.txt 的输入） $(date +%H:%M)" | tee -a "$LOG"
 node champion-map/attach-projcols.mjs >> "$LOG" 2>&1
 
-echo "── ⑤ 烘四页（index.html = 单页版：--projcols=1 --verpages=0，版本下拉=页内换投影，旗标单源 bake-flags.txt；子集页必须带**自己那一版**的 preset） $(date +%H:%M)" | tee -a "$LOG"
+echo "── ⑤ 烘一页（index.html = 单页版：--projcols=1 --verpages=0，版本下拉=页内换投影，旗标单源 bake-flags.txt） $(date +%H:%M)" | tee -a "$LOG"
 node champion-map/viewer.mjs --fit=coords-projcols.tsv --preset=all --projcols=1 --verpages=0 --out=index.html >> "$LOG" 2>&1
-node champion-map/viewer.mjs --fit=coords-gen3-1105.tsv --preset=all --out=index-2v-all.html >> "$LOG" 2>&1
-node champion-map/viewer.mjs --fit=coords-view-18.tsv --preset=1.8 --out=index-2v-18.html >> "$LOG" 2>&1
-node champion-map/viewer.mjs --fit=coords-view-20.tsv --preset=2.0 --out=index-2v-20.html >> "$LOG" 2>&1
+# 11-06 夜摘掉三行：原来这里还各烘一页 index-2v-all / -18 / -20（共 3.4 MB）。那三页已被删除退役，
+#   而且没有任何门比对它们（PROBLEMS 第 10 条）——留着这三行，下一次跑完整链就会把"能漂移而全绿"的页面重新长回仓库。
+#   viewer.mjs 那边 --verpages=1 现在也会响亮拒绝，两处一起才算退干净。
 
 echo "── 收尾 $(date +%H:%M)" | tee -a "$LOG"
 grep -E "^⇒|投影列|版本按容器|Hp 统一|无 path|撞车|12 维不齐|家族 |父边|待进图|起点只拿到|t-SNE\(|已写" "$LOG" | tail -26

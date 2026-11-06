@@ -66,6 +66,8 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 
 - **删掉作废的分页图**：`index-2v-18.html` / `index-2v-20.html` / `index-2v-all.html`（共 3.4 MB）。三合一之后只有 `index.html` 是产物；
   页面自检四视图仍 99 PASS / 0 FAIL。要读旧版：`git show <old-commit>:champion-map/index-2v-18.html`。
+  ⚠ 退役当夜只删了产物、没拆生成器（`--verpages=1` 与 `rebuild.sh` 还各烘一遍 ⇒ 跑完整链会把这三页和那条覆盖缺口一起长回来）。
+  11-06 深夜拆干净：`VERPAGES` 恒为空表、`--verpages=1` 响亮拒绝（exit=2），`rebuild.sh` 那三行删除；拆前后各烘一遍产物**逐位相同**，所以这条不动页面。
 - **搬走 25 份零代码引用的数据回执** → `docs/research/archive/2026-11-06-champion-map-cleanup/`（`INDEX.tsv` 是逐份对照表）。
 - **原地没动的**：所有 `.mjs`（脚本是别条链的入口）‖ `*epsfull*` / `*ruler*`（`rebuild-coords.mjs` 按名字反推口径表）‖
   `feas-*`（`attach-hlong/hshort` 通配读）‖ `coords*` / `point-data*` / `lineage*` / `pool-*`（页面与池的真源表）。
