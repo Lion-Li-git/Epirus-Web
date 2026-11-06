@@ -27,10 +27,10 @@
   `localStorage['epirus.champion3p']`，取不到再回退内嵌全局 `window.EPIRUS_CHAMPION_3P`（由 `index.html:149` 的 script 标签带来）。
 
 ⇒ **契约决定**：池 = 一个 committed 的 `<script>` 文件 `js/bundled-champion-pool.js`，把成员包**内嵌**进去。
-体积账（实测）：一枚 ≈110 KB，困难档 9 枚 ≈ **965 KB**。缓解：
+体积账（11-06 实测）：多人池 20 枚 = **3.1 MB**（`js/bundled-champion-pool.js` 3,234,914 字节 ‖ 一枚 ≈160 KB，2.0 代 3 的 7993 参数比 v7 的 5689 大一档）‖ 2P 原生池 9 枚 = **960 KB**。缓解：
 ① 独立 `<script defer>`，不阻塞首屏；② `?v=` 缓存戳由 `bumpChampionVersion()`（`server/train-server.mjs:110-121`）
 统一刷新（它把 index.html 里**所有**脚本引用的 `?v=` 换成同一个构建标记 ⇒ 新标签自动被覆盖，不必另写机制）；
-③ 池成员少而精（困难档就是 7~10 枚），中/低档主要靠脚本与低 Hp 包，不必全量入池。
+③ 池成员少而精：多人两带各 10 枚（`hard` 10 ‖ `soft` 10）‖ 2P 侧 `hard` 5 ‖ `soft` 4，低档主要靠脚本与低 Hp 包，不必全量入池。
 
 ## 2. 真源与派生物（派生物不许手改）
 
@@ -48,7 +48,7 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 | `id` | 池里的名字（与 `champion-map/coords.tsv` 同口径；**必须全等 join，不许子串**） | `D234` ① |
 | `wid` | 权重指纹 = `champion-map/pack-id.mjs` 的 `widOf`（sha1(权重数组) 前 16 位） | `D234` ②（bundle 里每条目的 wid 必须与表一致） |
 | `path` | 包文件相对路径 | `D234` ①：**必须 `git ls-files` 查得到**（否则 CI 与干净克隆里这枚根本不存在） |
-| `tier` | `hard` \| `mid` \| `soft`（§E596 起**三带**，与难度三档一一对应；⚠ 这里原写「三带 7/6/7」，那是 §E596 当时的形状 —— v1.7.1 现测真源 `champion-map/pool-members.tsv` 以 `pool-add --audit` 现读为准（2026-10-21：`members:29, tiers:{hard:13,mid:0,soft:16}` —— `mid` 带在 §E609 拆带后清空；10-12 夜名册 20→27 时是 9/7/11）；分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数——理由与读数在 `docs/research/logs/2026-10-12-e596-three-tier.md`。名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:POOL_COL`，两处必须同时改） | 抽签按带取；页面池环按带着色 |
+| `tier` | 取值域 `hard` \| `mid` \| `soft`（名单在 `tools/pool-add.mjs:TIERS`，环色在 `champion-map/viewer.mjs:346 POOL_COL`，两处必须同时改）。**11-06 在册池实际用两带**：`hard` 10 ‖ `soft` 10（2P 侧 hard 5 ‖ soft 4），`mid` 成员为零 ⇒ 那一档的环不画。分带的键是"这一组凑到桌上的实测强度"，不是逐枚分数；现读用 `node tools/pool-add.mjs --audit`（历史三带时期的读数与理由在 `docs/research/logs/2026-10-12-e596-three-tier.md`） | 抽签按带取；页面池环按带着色 |
 | `invited` | `1` = 用户点名（可越过行为门槛，但必须标警） ‖ `0` = 自动成员 | 沿用 DS 的分档门槛裁定（`docs/research/logs/2026-10-11-pool-screen-ds.md` §8） |
 | `promoteVerdict` | `pass` \| `block` \| `untested`（进池体检：送盾/G4/G5，真源 `champion-map/promote.tsv`） | `D234` ③：自动成员不许 `block`，`untested` 必须显式印出来 |
 | `seatKill` | 人席否决的格数（`两批同号 ≥20pt`，判据在 `champion-map/seat-rule.mjs`，`seatgap.mjs`/`pool-add`/`pool-screen` 共用这一份）；**`-1` = 没量过（不是干净）**，`0` = 真量过且零格 | `D234` ③ 同上；⑧ 钉"喂进去的批表必须带基准行"；引用时必须带 §E587 的检出力脚注 |
