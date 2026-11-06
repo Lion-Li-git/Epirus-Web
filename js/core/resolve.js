@@ -582,14 +582,7 @@
     // ---- 落点 ----
     // R47/N18：吸血鬼光伤 +1 与藤甲火伤 +1 统一在 rawDamage 处理
     const amt = dmg.amt;
-    /* v2.0.1（R65）：把 `dmg.chain` 透传给 rawDamage —— 此前`deliverDamage` 只认 fromChain，
-     * 于是"要关掉铁索共享"的调用方（终局收缩）**没有路可走**，环境伤照样被链共享、
-     * 并把那条一次性连边用掉（实测 P0↔P1 铁索 + 第 45 回合收缩：3,3,3 → 2,1,2）。
-     * 缺省 true ⇒ 除显式传 `chain:false` 者外，所有既有路径逐字不变。 */
-    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, {
-      fromChain: dmg.fromChain, type: dmg.type, source: (dmg.source != null ? dmg.source : null),
-      chain: (dmg.chain !== false)
-    });
+    rawDamage(state, to, dmg.amt, ctx.reason || via || '', via, { fromChain: dmg.fromChain, type: dmg.type, source: (dmg.source != null ? dmg.source : null) });
     // 地雷联动（直接攻击动作伤害落地才触发；反弹/转移/天火等不触发）
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {
@@ -1358,15 +1351,22 @@
     /* v1.5.11：每回合扣多少血也可调（模式 `suddenDeathDmg` → 全局 `SUDDEN_DEATH_DMG`） */
     const sdDmg = (state.mode && state.mode.suddenDeathDmg != null) ? state.mode.suddenDeathDmg : (R.SUDDEN_DEATH_DMG || 1);
     if (sdOn > 0 && state.round >= sdOn) {
+      /* R65（2026-11-06 用户裁定「修一下铁索的问题」）：场地收缩**不是攻击** ⇒ 不共享铁索连边，也不消耗它。
+       * 实现：收缩这一波之前把**全部连边临时摘下来**、结算完原样挂回。
+       * 为什么不给 `deliverDamage` 加 `chain` 形参：它下面那行 `rawDamage(...)` 是 `tools/kill-reward-lib.mjs` /
+       * `guard-cost-lib.mjs` / `seq-reward-lib.mjs` 的**补丁锚**（按整行文本往内部调用点打补丁，锚找不到就抛错）
+       * ⇒ 改那一行 = 三把量具同时失效（D158 当场红），而收益只是换个写法。
+       * 挂回放在 `铁索解除`（本函数后段）之前 —— 那里会按死亡把 pid 从各人的 chains 里剔掉。
+       * 反证：删掉下面那两行摘/挂 ⇒ spec 的 R65 用例与 D6 的链断言当场红（修前实测 3,3,3 → 2,1,2）。 */
+      const _chainsHold = [];
+      for (let i = 0; i < playerCount(state); i++) { _chainsHold.push(state.p[i].chains); state.p[i].chains = []; }
       for (let i = 0; i < playerCount(state); i++) {
         const p = state.p[i];
         if (p.hp <= 0) continue;
         if (state.round === sdOn && i === 0) ev(state, { type: 'hidden', name: '终局收缩' });
-        /* R65（2026-11-06 用户裁定「修一下铁索的问题」）：场地收缩**不是攻击** ⇒ 不共享铁索连边，
-         * 也不消耗它。`reason`/`source` 不变（量具按 reason 认哨兵，见 D98）。
-         * 反证：把 chain:false 去掉 ⇒ spec 的 R65 用例与 D6 的链断言当场红。 */
-        deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true, chain: false }, i, { reason: '终局收缩' });
+        deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
       }
+      for (let i = 0; i < playerCount(state); i++) state.p[i].chains = _chainsHold[i];
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）
     for (let i = 0; i < playerCount(state); i++) {
