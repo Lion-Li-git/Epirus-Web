@@ -1,0 +1,9 @@
+success | Set up job
+success | Run actions/checkout@v5
+success | Run actions/setup-node@v5
+success | 页面冒烟（CDP 真 Chrome）
+success | 多人页面对战（CDP 真 Chrome）
+success | 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
+success | Post Run actions/setup-node@v5
+success | Post Run actions/checkout@v5
+success | Complete job
