@@ -1,0 +1,17 @@
+# CI run 42230413895 ‖ gates.yml 逐作业：plan/11 part/gates/browser 全 success
+## browser 步骤结论
+4 页面冒烟（CDP 真 Chrome） => success
+5 多人页面对战（CDP 真 Chrome） => success
+6 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"） => success
+## 关键读数行（原样，从 job log 摘）
+SUMMARY: SMOKE OK
+PASS P0 能持续出招（真打，不是摆烂）   [推进 12 回合（日志里读到的）‖ 无攻击技可打 12 次 ‖ 就绪等待超时 0 次 ‖ 弹窗已答 4 次 ‖ 墙上 5s]
+SUMMARY: BATTLE OK
+^[[36;1m#   10-12 实测：run #153 第 6 步 4 秒红，日志里连一行"视图 mode=… ‖ … ‖ exit=" 都没有，^[[0m
+^[[36;1m  echo "视图 mode=$m ‖ ${line} ‖ exit=${st}" >> /tmp/shot-all.log^[[0m
+^[[36;1m  echo; echo "退出码口径：0=全过 ‖ 1=有 FAIL ‖ 2=浏览器没跑出结果或一条断言都没跑（宁可红也不许假绿）。"; } >> "$GITHUB_STEP_SUMMARY"^[[0m
+视图 mode=tree ‖ 断言：99 PASS ‖ 0 FAIL ‖ exit=0
+视图 mode=1d ‖ 断言：99 PASS ‖ 0 FAIL ‖ exit=0
+视图 mode=3db ‖ 断言：99 PASS ‖ 0 FAIL ‖ exit=0
+视图 mode=map ‖ 断言：99 PASS ‖ 0 FAIL ‖ exit=0
+## ⚠ 全文原样 = scratch/qoder-1106-night-ci2-browser.log（*.log 被 gitignore ⇒ 只在本机，这份摘要才是进仓的那一份）
