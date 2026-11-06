@@ -250,8 +250,24 @@ async function main() {
    * 而 P0 随便打个什么（balanced/aggro 脚本）冠军立刻正常开打（13~14 伤害/局、0 平局）。
    * ⇒ 测试必须让人类座**真的进攻**，否则量的是退化均衡而不是对战质量。 */
   const ATK = ['枪', '激光剑', '坦克', '狙击枪', '电磁炮', '真正的落雷', '摄魂指法'];
-  let rounds = 0, idle = 0;
-  for (let i = 0; i < 80 && !(await over()); i++) {
+  /* 11-06 修的是**量具自己猜时机**这件事（CI 红出来的，不是引擎红出来的）：
+   *   CI（windows-latest 的 headless Chrome）实测 80 次尝试里 **77 次连一个可点的攻击技都没有**，
+   *   而本地同一份代码 21 回合就出覆盖层 ⇒ 那句固定 `sleep(230)` 在慢机器上等不到"轮到人类"，
+   *   按钮还是禁用态，`click()` 一律返回 false ⇒ 游戏几乎没推进 ⇒ 回合上限 60 到不了 ⇒ "没终局"。
+   *   另外原来"打完 80 次就干等 120 秒"那段本身就不可能等到终局：**人类座不再出手，回合就不往前走**。
+   *   改法三条：① 出手前先等到"有可点的技能按钮"（按状态，不按秒表）；
+   *   ② 回合数从日志里读（`第 N 回合`），只有**真的前进了**才计入 rounds，不再把"我点了 80 次"当成"打了 80 回合"；
+   *   ③ 终局段继续出手而不是干等，并给整段一个墙上时间上限 + 连续就绪超时就把 stall 报出来（不许静默）。 */
+  const btnReady = () => evalJS(`[...document.querySelectorAll('.skillbtn')].some((x) => !x.disabled)`);
+  const waitReady = async (ms) => { const t0 = Date.now(); for (;;) { if (await btnReady()) return true; if (Date.now() - t0 > ms) return false; await sleep(60); } };
+  const roundNo = async () => { const t = String(await logText() || ''); let last = 0, m; const re = /第 (\d+) 回合/g; while ((m = re.exec(t))) { if (+m[1] > last) last = +m[1]; } return last; };
+  let rounds = 0, idle = 0, stalled = 0, stallRun = 0;
+  const tDrive = Date.now();
+  let lastRound = await roundNo();
+  for (let i = 0; i < 240 && !(await over()); i++) {
+    if (Date.now() - tDrive > 150000) break;                     /* 整段上限：宁可红得快，不要把 CI 拖死 */
+    if (!(await waitReady(4000))) { stalled++; stallRun++; if (stallRun >= 8) break; await sleep(150); continue; }
+    stallRun = 0;
     let acted = false;
     for (const nm of ATK) {
       if (!(await click(nm))) continue;
@@ -261,25 +277,23 @@ async function main() {
       acted = true; break;
     }
     if (!acted) { if (!(await click('蓄能'))) await click('ジ'); idle++; }
-    rounds++;
-    await sleep(230);
+    await sleep(120);
+    const r = await roundNo();
+    if (r > lastRound) { lastRound = r; rounds++; }
   }
   const txt0 = await logText();
   const seatNames = (function () { const s = new Set(); const re = /玩家(\d)/g; let m; while ((m = re.exec(txt0))) s.add(m[1]); return s.size; })();
   check('日志里出现 ' + PLAYERS + ' 名玩家', seatNames >= PLAYERS, '出现 ' + seatNames + ' 名');
   await shot(join(OUT, 'battle-02-mid.png'));
-  check('P0 能持续出招（真打，不是摆烂）', rounds > 0, '出招 ' + rounds + ' 回合，其中无攻击技可打 ' + idle + ' 回合');
+  const driveExtra = '推进 ' + rounds + ' 回合（日志里读到的）‖ 无攻击技可打 ' + idle + ' 次 ‖ 就绪等待超时 ' + stalled + ' 次 ‖ 墙上 ' + Math.round((Date.now() - tDrive) / 1000) + 's';
+  check('P0 能持续出招（真打，不是摆烂）', rounds > 0, driveExtra);
 
-  /* ── 等终局 ── */
-  let ended = false;
-  for (let i = 0; i < 300; i++) {
-    if (await over()) { ended = true; break; }
-    await sleep(400);
-  }
+  /* ── 终局判定：上面那段是"边打边看"，这里只补一次确认（不再干等 120 秒 —— 人类不出手，回合不会自己走）── */
+  const ended = await over();
   const txt = await logText();
   await shot(join(OUT, 'battle-03-end.png'));
 
-  check('对局跑到终局（出现结果覆盖层）', ended);
+  check('对局跑到终局（出现结果覆盖层）', ended, ended ? undefined : driveExtra);
   /* ⚠️ v1.5.8 加的三条"打架活跃度"断言（原来的考卷口径看不出"摆烂"）：
    * long-33 自对局 20/20 局零伤害、60 回合平局，但它在脚本对手考卷上还能拿 41~45% ⇒
    * 只看考卷分会把"熬到哨声"当成强度。这里直接量真对局的伤害与盾 spam。 */

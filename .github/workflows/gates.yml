@@ -156,6 +156,10 @@ jobs:
       - name: 多人页面对战（CDP 真 Chrome）
         run: node tools/battle-test.mjs
       - name: 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
+        # 11-06 加 `if: always()`：这一档原来排在 battle-test 后面且没有该条件 ⇒ battle 一红它就被 **skipped**，
+        #   于是"browser 作业红了"这一件事只说出了一半（今天真实踩到：红的是 battle，而我第一反应以为还是那四条自检腿）。
+        #   观察档之间不该互相遮蔽 ⇒ 每一步自己报自己的成败。
+        if: always()
         # 为什么放这一档而不是阻断档：它要真 Chrome，而本机认证的 np/spec 那两跑在 ubuntu。
         #   判据 = 页内自检总结论那一行（PASS 条数会变、"0 FAIL"不许变）。
         #   ⚠️ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**。
