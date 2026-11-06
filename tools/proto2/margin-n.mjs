@@ -1,4 +1,4 @@
-/* margin-n.mjs —— ZCode 10-29 深夜小探针（2.0 容量分析供数，详见 docs/research/PROTO2-CAPACITY-N-2026-10-29-zcode.md）：
+/* margin-n.mjs —— ZCode 10-29 深夜小探针（2.0 容量分析供数，详见 docs/research/archive/2026-11-06-october-sweep/PROTO2-CAPACITY-N-2026-10-29-zcode.md）：
  * 同一枚包在 n=3/5/8 上逐决策记录 logit 的归一化间隔（top1−top2)/std、softmax 置信度 maxp、熵占比 H/log(nc)、候选数。
  * 判读：间隔随 N 塌掉 ⇒ 校准/尺度问题（修温度/归一化即可，与容量无关）；间隔稳而打不过 ⇒ 表示/推理问题。
  * 装配照抄 matrix2（对手表种子 20261029 同源）；v7 用独立沙箱（arch2 覆盖 P 的方法 ⇒ v7 必须在任何 install 之前量）。

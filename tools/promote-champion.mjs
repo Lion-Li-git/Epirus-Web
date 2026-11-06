@@ -433,7 +433,7 @@ console.log('     角色占比：' + Object.keys(brd.roleShares).map(function (r
  *   （锚 `scratch/ladder-anchor.json` ‖ `node tools/proto2/ladder.mjs --guard=…` 现在正确红，exit 4）。
  *   ⚠ DS 原注释写 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，那是**我的归因错**：
  *     同一枚尺上 reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，引用要带剂量。
- * 但"60% 这条线当阻断"现在站不住，两条都是这一次量出来的（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）：
+ * 但"60% 这条线当阻断"现在站不住，两条都是这一次量出来的（`docs/research/archive/2026-11-06-october-sweep/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）：
  *   ① **池里就有人在上面**：全池 30 枚同口径（long ‖ multi 各 20 局）扫，≥60% 的有 **5 枚**
  *      `G12H1 66.4‖72.3 · R-s123 71.0 · N5L-30 66.6 · v7l2c-101 63.0‖63.1 · SHIPPED-Ldemo 63.0`
  *      ⇒ 门一上就否掉 1/6 个在册成员。而"只会一招"属哪一层，是你 10-28 那句裁度（单包只判"任何风格都不该有的缺陷"、能力覆盖归整池），不是我能从数里推的。

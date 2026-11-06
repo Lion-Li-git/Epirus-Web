@@ -985,7 +985,7 @@ export function aggressionProfile(W, params, GAMES, opts) {
  *   G_eff     = exp(S)  —— 与历史的 `G 有效技能数` **同值**（口径不变 ⇒ 历史读数仍可比）
  *   maxCardShare = 出现最多的那张卡的占比（**反 spam 守卫**）
  *     ‖ 10-29 现状：`degeneracyVerdict` 吃它，`promote` 里**只打印不阻断**（升阻断等用户裁，理由见下面那只函数的注释）
- *     ‖ ⚠ 它比 S/G_eff 更**剂量敏感**：同一枚包 20 局 63.0% ‖ 60 局 51.9%（`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）
+ *     ‖ ⚠ 它比 S/G_eff 更**剂量敏感**：同一枚包 20 局 63.0% ‖ 60 局 51.9%（`docs/research/archive/2026-11-06-october-sweep/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）
  *   catsUsed  = 占比 ≥1% 的类数（给人读的"覆盖了几类"）
  * ⚠️ 样本敏感（`docs/METHODOLOGY.md` 规则 22）：同一个包 n5=3.08 / n10=2.99 / n20=4.24 / n40=4.54
  *   ⇒ 返回值**必须带 N 与 games**，打印时一起报；小样本之间的 S 差**不可比**。
@@ -1090,7 +1090,7 @@ export function breadthProfile(W, params, mode, GAMES) {
  *   ② arenaGuardVerdict(anchor)：任何一枚固定单技能打法的夺1 ≥ 参照包 ⇒ 这套 arena 不能当强度尺。
  * ⚑ **接线现状（10-29 改）**：② 走研究侧硬失败（`ladder --guard` exit 4）✔；① 在产品侧 `promote` **只记录不阻断**——
  *   理由量出来了两条：全池 30 枚同口径有 **5 枚 ≥60%**（含硬档 `G12H1`、`R-s123`），且 20 局那一档同一枚包跨到 60 局能摆 12.6pt
- *   （`docs/research/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）⇒ 阈值+剂量都还没定，升阻断等用户点名。
+ *   （`docs/research/archive/2026-11-06-october-sweep/REVIEW-STRENGTH-RULER-2026-10-29-qoder.md §附录`）⇒ 阈值+剂量都还没定，升阻断等用户点名。
  *   ⇒ 返回值里 `maxShare` / `minN` **每一格都带**（早先只在正常路径带 ⇒ 打印方一判 underpowered 就拿到 undefined，显示成 NaN%）。 */
 export function degeneracyVerdict(brd, opts) {
   const o = opts || {};

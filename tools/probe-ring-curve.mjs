@@ -1,6 +1,6 @@
 /* probe-ring-curve.mjs —— 「聚能环连开几手才回本」的**实测**曲线（DS 10-20）
  *
- * 解析曲线（`docs/research/FINDING-2026-10-20-ring-payoff-ds.md`）：首手 3 ep 成本、之后免费；
+ * 解析曲线（`docs/research/archive/2026-11-06-october-sweep/FINDING-2026-10-20-ring-payoff-ds.md`）：首手 3 ep 成本、之后免费；
  *   收益 g = min(streak,3) ⇒ 净 −2 / +2 / +3 / +3… ⇒ **回本在第 2 手末、赚钱在第 3 手起**。
  * 这里做**实测**：一旦这枚包自己决定开环（`ringStreak===0` 且选了环），强制它**连开 K 手**（K=1 即原样），
  *   看 K 变大时胜率怎么走。干预只在 chooser 外层，**不碰 js/core、不碰训练**。

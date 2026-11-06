@@ -242,7 +242,7 @@ t('D67 G4/G5 行为门：量具可跑 + 只有 G4/G5 进阻断 + 退出码契约
   /* v1.7.165 **删**：原来这条 `ok(gsrc.indexOf('在位包自己在 G4[long] 就是 65%') >= 0)` 钉的是 `gate-drafts.mjs` 里的一句**注释**
    *   （实测：剥掉注释后该串 0 次，全文 1 次）⇒ 判据的标题写"必须写明标定理由"，它实际判的是"那段注释不许被顺手删"，
    *   而标定数值本身由门 G4 的阈值 + D107 的 `EXPECT` 读数管着。按用户口径（门禁目标是功能实现，不是判文本）删；
-   *   想留住这句理由请写在文档里（`docs/research/GATE-AUDIT-2026-10-22-qoder.md`），不要靠一条门去守注释。 */
+   *   想留住这句理由请写在文档里（`docs/research/archive/2026-11-06-october-sweep/GATE-AUDIT-2026-10-22-qoder.md`），不要靠一条门去守注释。 */
   ok(gsrc.indexOf('距理想线') >= 0, '过闸但未达理想线时，判词必须显式写出差距（别让绿灯冒充"已达理想"）');
   /* §删（10-23 夜班 · 同上门禁口径）：原来这里还有一条 `ok(/PASS\s+G5\[线上包\/(long|multi)\]/, '线上包 G5 必须 PASS')`
    *   —— 主语是**现任包的考卷成绩**（产品事实），入池/换包侧已判：`tools/pool-add.mjs:182-186` 按上线档取 ≤40 的同一条闸，
@@ -276,7 +276,7 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   *   `audit-lib.mjs` 的**块注释**里（剥注释后各 0 次）⇒ 它是"把上一班不采纳复核意见的理由钉住"那种形状，
   *   判的是散文不是行为：把那整段注释删掉它会红，而**把代码写坏它不红**。
   *   删它不丢覆盖：`DENSITY_BLOCK` 被翻成 `true` 这一刀，本门另有值钉 `export const DENSITY_BLOCK = false;` 接着
-  *   （那条才是这一格的牙），拒绝复核的**理由**改记在 `docs/research/GATE-AUDIT-2026-10-22-qoder.md`，不靠门守注释。 */
+  *   （那条才是这一格的牙），拒绝复核的**理由**改记在 `docs/research/archive/2026-11-06-october-sweep/GATE-AUDIT-2026-10-22-qoder.md`，不靠门守注释。 */
   /* v1.5.94（第九轮复核 §5-1）：**退化包**（自对局从不出手）必须能被判负，且走 fails */
   ok(al.indexOf('zeroAtkRate') >= 0 && al.indexOf('自对局零攻击局') >= 0 &&
     al.indexOf("fails.push('自对局零攻击局") >= 0,
@@ -415,7 +415,7 @@ t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且
    *   `promote-champion2p.mjs:23` 就在用），字符串键保持插入序 ⇒ 表尾是**读得出来的数据**。
    *   换成两条运行时判据：登记在不在（且指的必须是这条线自己的名字）‖ 是不是末项。
    *   ⇒ 换行/加注释/改缩进都不再误红，而"插到中间"仍然当场红。
-   *   牙测（`docs/research/GATE-AUDIT-2026-10-22-qoder.md` §二 14)）：把 beadburst 挪到表中间 ⇒ 末项那条红（实测读成 `defreflectgun`）；
+   *   牙测（`docs/research/archive/2026-11-06-october-sweep/GATE-AUDIT-2026-10-22-qoder.md` §二 14)）：把 beadburst 挪到表中间 ⇒ 末项那条红（实测读成 `defreflectgun`）；
    *   整条不登记 ⇒ 第一条红（实测 `undefined`）；值指到别家 `pickAggro` ⇒ 第一条红（实测读到 `"pickAggro"`）；
    *   **只改排版**（`"beadburst":` 拆两行 + 加注释，语义一字不变）⇒ 仍绿，而旧那两条正则**必然红**（它们要求 `beadburst: 'pickBeadBurst'` 逐字相邻再紧跟 `};`）。 */
   ok(P2_FNAME.beadburst === 'pickBeadBurst', '2P 考卷必须登记 beadburst 且指向 `pickBeadBurst`（实测 ' + JSON.stringify(P2_FNAME.beadburst) + '）');

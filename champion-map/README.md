@@ -61,3 +61,12 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 ```
 
 > 数据在哪：**产物本体在 `docs/artifacts/`**（多数被 `.gitignore` 挡，只在本机）；这个目录只放**表与页面**。
+
+## 七、2026-11-06 清理（260 → 221 份）
+
+- **删掉作废的分页图**：`index-2v-18.html` / `index-2v-20.html` / `index-2v-all.html`（共 3.4 MB）。三合一之后只有 `index.html` 是产物；
+  页面自检四视图仍 99 PASS / 0 FAIL。要读旧版：`git show <old-commit>:champion-map/index-2v-18.html`。
+- **搬走 25 份零代码引用的数据回执** → `docs/research/archive/2026-11-06-champion-map-cleanup/`（`INDEX.tsv` 是逐份对照表）。
+- **原地没动的**：所有 `.mjs`（脚本是别条链的入口）‖ `*epsfull*` / `*ruler*`（`rebuild-coords.mjs` 按名字反推口径表）‖
+  `feas-*`（`attach-hlong/hshort` 通配读）‖ `coords*` / `point-data*` / `lineage*` / `pool-*`（页面与池的真源表）。
+- 判据写在 `docs/research/archive/README.md` 的 2026-11-06 那两节（含一次如实记录的事故：第一遍判据太宽，11 份未跟踪文件被误删且不可恢复）。

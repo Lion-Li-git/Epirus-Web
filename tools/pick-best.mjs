@@ -197,7 +197,7 @@ export function gridPickByRarity(entries, tolPt, sigOf) {
   };
 }
 
-/** §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md`，**默认关** ⇒ `EPIRUS_SEL_GIFT_VETO` 不设时没人调它）：
+/** §E650（千问 · 预注册 `docs/research/archive/2026-11-06-october-sweep/PREREG-2026-10-19-gift-veto-qoder.md`，**默认关** ⇒ `EPIRUS_SEL_GIFT_VETO` 不设时没人调它）：
  * **把"裸包送盾超线"从"不许参与带内换人"升成"不许当选"**。
  * 为什么不在这儿再写一个数：阈值已有单一来源（`audit-lib.HOLO_GIFT_MAX`，**现值 = 1.5/席 × 5 席 = 7.5**；
  *   旧值 6 在 10-20 由用户裁定换掉，见 `117c9028` 与 `audit-lib.mjs:561` 的说明 —— `train-econ` 的门钉着 `1.5`），

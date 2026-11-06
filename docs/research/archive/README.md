@@ -153,6 +153,32 @@
 发现后把 140 份**全部退回**、`git reset`，再用"引用检查 + 排除脚本 + 排除通配约定"重做 ⇒ 最终这 67 份。
 搬完重烘一次并跑四视图页内自检（`tree / 1d / 3db / map` 各 99 PASS / 0 FAIL）才敢说没打断东西。
 
+
+## 2026-11-06（夜 · 用户：「仓库里似乎还有一些东西没有清理」）
+
+### A. `docs/research/` 顶层十月流水 → **`archive/2026-11-06-october-sweep/`**（49 份）
+
+判据：文件名或 mtime 的日期 **≤ 2026-10-31**，且不在保留名单（`LIVE-LINES.md` / `DECISIONS.md` / `PROBLEMS-2026-11-06.md` / 当天新增的 FINDING）。
+搬完顶层只剩 **11-01 起的流水 + 三份常驻**（`LIVE-LINES` / `DECISIONS` / `PROBLEMS`）。
+**活引用同步改了**：`docs/README.md` 三处（`CHAMPION-2.0-RESEARCH` / `ACCEPTANCE-LINES` / `CHAMPION-2.0-ARCH`）、
+`docs/GATE-SHIFTS.md` 三处（`GATE-AUDIT-2026-10-22`）、以及 **13 处源码注释**（`tools/*.mjs`、`js/train/bots.js`、`champion-map/k8arms.mjs`）
+—— 判据是 D230「活引用面里的 `docs/**.md` 指针必须真在盘上」，搬完它当场红了 18 处、逐处改到绿。
+
+### B. `champion-map/` 清理
+
+| 动作 | 数量 | 说明 |
+|---|---|---|
+| **删除**（作废的分页图） | 3 份 / **3.4 MB** | `index-2v-18.html`（1.3 MB）‖ `index-2v-20.html`（633 KB）‖ `index-2v-all.html`（1.39 MB）—— 三合一之后由单页 `index.html` 取代，且已无门比对它们 |
+| **搬进 `archive/2026-11-06-champion-map-cleanup/`** | 25 份 / 114 KB | 只搬**数据回执**（`seat-*` / `k8*` / `opphuman-verdict-*` / `e641-arms` / `g4scan-*` / `holo-e649-*` / `pool12/pool-only/poolts` 等），对照表在 `INDEX.tsv` |
+| 原地保留 | — | 所有 `.mjs`（脚本是别条链的入口）‖ `*epsfull*` 与 `*ruler*`（`rebuild-coords.mjs` 按名字反推口径表）‖ `feas-*`（`attach-hlong/hshort` 通配读）‖ `coords*` / `point-data*` / `lineage*` / `pool-*`（页面与池的真源） |
+| 删除（根目录） | 1 个目录 / 340 KB | `d180-bands/`（3 份 9-28 的 `.bak`，未被跟踪、零引用） |
+
+⚠ **本班的一次事故（如实记）**：第一遍用了宽松判据（「代码没点名就搬」），把 **34 个 `.mjs` 与 `*epsfull*`/`*ruler*` 通配表一起搬走了** ——
+那正是上一节自己写下的第 ③ 条禁令（「脚本一律原地留」）。回退时 `git mv` 只还原得了 tracked 的那些，
+**11 份从未入过库的未跟踪文件（`_breadth.tsv` / `_clone-report.json` / `_pf-*.tsv` / `e470/e493/e497/e518/e529-*`）随临时目录一起被删掉，无法恢复**。
+它们的共同点是：0 代码引用、全部是 10-05～10-08 的一次性回执、其中 4 份还是 `.gitignore` 挡着的 `_` 临时件。
+教训与上一节那条同族：**判据要先写成「只碰 tracked + 只碰数据回执 + 排除通配约定」，再执行**。
+
 ## 怎么找回全文
 
 ```bash

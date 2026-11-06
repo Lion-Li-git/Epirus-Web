@@ -33,11 +33,11 @@
 
 顶层另有一张**跨班状态表**（不是流水，不参与"收工搬 `archive/`"）：[`research/LIVE-LINES.md`](research/LIVE-LINES.md) —— 谁在哪条线、在哪个工作树、动的是哪一面、状态是活/parked/已并，以及"主工作树常驻 `main`、实验自开 worktree"这四条规矩。
 
-当前专题交接：[`research/CHAMPION-2.0-RESEARCH-2026-10-27.md`](research/CHAMPION-2.0-RESEARCH-2026-10-27.md) —— 规则基线、v7 包结构、跨 2–10 人/血量的瓶颈与 2.0 研究方向（研究记录，非实施裁定）。
+当前专题交接（**已归档** —— 2.0 线已并进 main / v2.0.0，归档于 2026-11-06）：[`research/archive/2026-11-06-october-sweep/CHAMPION-2.0-RESEARCH-2026-10-27.md`](research/archive/2026-11-06-october-sweep/CHAMPION-2.0-RESEARCH-2026-10-27.md) —— 规则基线、v7 包结构、跨 2–10 人/血量的瓶颈与 2.0 研究方向（研究记录，非实施裁定）。
 
-冠军验收线的**人话版**（同一话题的另一半：门槛本身怎么写、每条量的是哪种能力、哪些该摘哪些该加）：[`research/ACCEPTANCE-LINES-2026-10-28-qoder.md`](research/ACCEPTANCE-LINES-2026-10-28-qoder.md)。判据分层 = 单包只判「任何风格都不该有的缺陷」，能力覆盖归整池。
+冠军验收线的**人话版**（同一话题的另一半：门槛本身怎么写、每条量的是哪种能力、哪些该摘哪些该加）：[`research/archive/2026-11-06-october-sweep/ACCEPTANCE-LINES-2026-10-28-qoder.md`](research/archive/2026-11-06-october-sweep/ACCEPTANCE-LINES-2026-10-28-qoder.md)。判据分层 = 单包只判「任何风格都不该有的缺陷」，能力覆盖归整池。
 
-**冠军架构 2.0 研究（分支 `research/champion-2.0-repr-2026-10-28`，未并进 main）**：[`research/CHAMPION-2.0-ARCH-2026-10-28-qoder.md`](research/CHAMPION-2.0-ARCH-2026-10-28-qoder.md) —— 现形状底账（5689 = `W1(24×235)‖b1‖W2‖b2` 单隐层标量头）+ 两把新尺的实测（§E815 隐元利用率与组内判别力 ‖ §E816 哪些"后果量"是当前输入的真空）+ 表示层/层数/训练的草案。**研究记录，非实施裁定**；台账在 [`research/logs/2026-10-28-afternoon-arch-qoder.md`](research/logs/2026-10-28-afternoon-arch-qoder.md)。
+**冠军架构 2.0 研究（原分支 `research/champion-2.0-repr-2026-10-28` —— 该分支 2026-11-06 已并进 main 并删除；本文档**已归档**）**：[`research/archive/2026-11-06-october-sweep/CHAMPION-2.0-ARCH-2026-10-28-qoder.md`](research/archive/2026-11-06-october-sweep/CHAMPION-2.0-ARCH-2026-10-28-qoder.md) —— 现形状底账（5689 = `W1(24×235)‖b1‖W2‖b2` 单隐层标量头）+ 两把新尺的实测（§E815 隐元利用率与组内判别力 ‖ §E816 哪些"后果量"是当前输入的真空）+ 表示层/层数/训练的草案。**研究记录，非实施裁定**；台账在 [`research/logs/2026-10-28-afternoon-arch-qoder.md`](research/logs/2026-10-28-afternoon-arch-qoder.md)。
 
 还有三个**产物目录**不属于"文档"：`docs/artifacts/`（臂产物 `.bak` 与仪器脚本 —— 门 D82 读它）‖ `docs/debug/` ‖ `docs/screenshots/`。
 
@@ -64,6 +64,9 @@
 | `CHANGELOG.md` 里 **v1.6.69 及更早**的逐字条目 | `docs/research/archive/CHANGELOG-v1.5.320-v1.6.69-full.md`；根文件保留 v1.7.0 起正文、v1.5.320～333 门边界与索引 | 10-27（v1.8 收尾；沿用 v1.7.0 的压缩边界） |
 | `CHANGELOG.md` 里 **v1.5.319 及更早**的逐字条目 | 同一文件末尾那份「历史版本索引」里的一行摘要（全文 `git log -p CHANGELOG.md`） | 10-13（v1.7.0 · 用户要求「把旧的 changelog 压缩一下」；**界限抬到 v1.5.320 是为了保住 `## v1.5.` 这道门自己在用的抽取式边界** —— `D224⑩a` ‖ `D205④`） |
 | `CHANGELOG.md` 里 v1.5.129 及更早的逐字条目 | 同上（第一次压缩留下的那一段索引，现在并成一份 384 行） | v1.5.145（DS） |
+| `docs/research/` 顶层 **2026-10-31 及更早**的 49 份过程账 | `docs/research/archive/2026-11-06-october-sweep/` 同名文件 | 11-06（v2.0.1 收尾；16 处活引用已同步改：`docs/README` 三处、`GATE-SHIFTS` 三处、源码注释 13 处） |
+| `champion-map/index-2v-18.html` ‖ `index-2v-20.html` ‖ `index-2v-all.html`（3.4 MB） | **已删除** —— 三合一后由单页 `champion-map/index.html` 取代；要读旧版从 git 历史取 | 11-06 |
+| `champion-map/` 里 25 份**零代码引用**的数据回执（`seat-*` / `k8*` / `opphuman-verdict-*` 等） | `docs/research/archive/2026-11-06-champion-map-cleanup/`（对照表 `INDEX.tsv`） | 11-06 |
 | `champion-map/*.tsv` ‖ `*.txt` 里**没有任何人按文件名点名**的 77 张点数据表 | 同一目录下那份单文件容器 `champion-map/point-data.tsv`（读法：`node champion-map/point-data.mjs` 的 `rows(batch)` / `valueOf(batch,id,metric)` / `reconstruct('<旧表名>')`） | 10-13（v1.7.4 · §E593 夜班 S1；**判据在 v1.7.6 改过一次** —— "文件名被源码点名"的表**一律留盘，注释里点名也算**，所以 `epsfull-tier-*`、`cont1200-*` 这 6 张又回到了盘上） |
 
 ⚠️ 这一行的读法与上面几条不同：搬动是把**正文**挪到别处，而 CHANGELOG 的压缩只留摘要 —— 历史文本里"见 CHANGELOG v1.5.x"这类句子仍然成立，

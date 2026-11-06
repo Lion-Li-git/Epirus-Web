@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* skill-mastery.mjs — 长程技能"会 X"事件级审计尺（ZCode · 2026-10-30 深夜，P1）
  *
- * PREREG：docs/research/PREREG-2026-10-30-LONGSKILL-zcode.md（判据先于训练臂，d3acd1be）
+ * PREREG：docs/research/archive/2026-11-06-october-sweep/PREREG-2026-10-30-LONGSKILL-zcode.md（判据先于训练臂，d3acd1be）
  * 骑 arena2 v2 的 playOne（对手表/坐席轮换/种子公式同源，每局 resetBotMem；wantEvents=1 拿事件流）；
  * **包装被测席 chooser** 在决策时刻记录 round/key/target/ep/hp/珠/全场 lastSkill + 事件流游标，
  * 局后按窗口回放：成功 = action.ok ∧ 无 voided（与 resolve.js:1272 的 ringStreak 保活口径一致）。

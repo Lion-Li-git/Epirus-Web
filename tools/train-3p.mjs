@@ -382,7 +382,7 @@ function wideMetricsOf(params) {
 }
 let GA_INC;   // undefined = 还没量；null = 没有参照（无热启动）
 let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
-/* ===== §E650（千问 · 预注册 `docs/research/PREREG-2026-10-19-gift-veto-qoder.md` · **默认 0 ⇒ 行为逐字不变**）=====
+/* ===== §E650（千问 · 预注册 `docs/research/archive/2026-11-06-october-sweep/PREREG-2026-10-19-gift-veto-qoder.md` · **默认 0 ⇒ 行为逐字不变**）=====
  * 送盾 veto：把"裸包送盾超线"从**只挡带内换人**（`bandPickByLand` 吃 `gateOk`）升成**也挡当选**。
  * 为什么不算新加阈值：判定与那个数都已有单一来源（`audit-lib.HOLO_GIFT_MAX = 6` + `e.gateOk`，:1624 那行算的就是它）；
  *   本开关只多一个**消费点**，函数体里没有第二个数（`tools/probe-gift-veto.mjs` 腿⑤ 钉这件事）。
@@ -1662,7 +1662,7 @@ if (HUMAN_N > 0) {
 
 /* ===== §E631（v1.7.83 · 千问 10-17 白班）：**把冠军池放上训练桌** `EPIRUS_POOL_OPPS=<k>`（默认关）=====
  * 用户裁定（10-17 逐字）：「把冠军池本身当做一个新判据也可以参与训练，并且新冠军总是能进冠军池，这样永远不会碰到区分度低的问题」。
- * 为什么是**混进 `OPPS`** 而不是"换成池桌"：`docs/research/TRAINING-METHOD-CONCLUSIONS-2026-10-17-ds.md:67` 那条实测——
+ * 为什么是**混进 `OPPS`** 而不是"换成池桌"：`docs/research/archive/2026-11-06-october-sweep/TRAINING-METHOD-CONCLUSIONS-2026-10-17-ds.md:67` 那条实测——
  *   **对固定对手做 RL 必然练出 exploiter**（E1 臂就是标本：对手是四份冻结的自己，回收 −27.6/−43.0pt），
  *   而标准解法写的就是「混合对手池（池成员 + 脚本 + 自己的历史快照，**轮换**）」。
  *   轮换这里**已经是现成的**：`js/train/evo.js` 的 `oppSeatIndex(gen,g,k,len,block) = (gen*3+g+(block?0:k)) % len`

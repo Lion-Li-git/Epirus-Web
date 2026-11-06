@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* §E572 K=8 臂内 `trainFit` ↔ 验收尺配对实验的**跑臂**那一半（设计在 docs/research/EXAM-FIT-MATCH-2026-10-10.md §四）。
+/* §E572 K=8 臂内 `trainFit` ↔ 验收尺配对实验的**跑臂**那一半（设计在 docs/research/archive/2026-11-06-october-sweep/EXAM-FIT-MATCH-2026-10-10.md §四）。
  *
  * 病（§二 的 P1 为什么"算不出"）：`trainFit` 只有 **1 臂 × 6 带**可比，其余臂各留 1 带；
  *   跨臂那 23 枚因为"配方换了题"不可合并（METHODOLOGY 877 那条：两臂的 bestFit 不可比）。
