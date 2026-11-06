@@ -69,3 +69,5 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-06T00:00:06.726Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-06T00:00:06.729Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/MUTFLAT-s16-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-06T00:00:06.732Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	scratch/ga-arms/MUTFLAT-s16.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-06T04:25:46.673Z	206a93fabfa23653	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band5.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（真身 = band1）；07:56 那批跑完没登记是 widIndex 每进程只扫一遍、收尾写盘时看不见本进程先落的 band（pack-guard.mjs:110 那段没补缓存的已知后果）⇒ 按规矩②补登记，文件一字未动
+2026-11-06T04:25:46.681Z	206a93fabfa23653	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band6.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（真身 = band1）；07:56 那批跑完没登记是 widIndex 每进程只扫一遍、收尾写盘时看不见本进程先落的 band（pack-guard.mjs:110 那段没补缓存的已知后果）⇒ 按规矩②补登记，文件一字未动

@@ -763,6 +763,11 @@ var NRBASE = 0;   /* §E464 父指针仍然解析不到图上任何一枚的枚�
  *   ELOG = 0 只有一条判据会用（拿固定 alpha 当对照组做 A/B），不是用户开关。 */
 var ELOG = 1;
 var EPROBE = 0;   /* §E467b 页内判据设成"每 N 条留一条"的步长；0 = 不收集探针 */
+/* 探针上限与步长必须**同一个常数**（11-06 实测：只把步长改成 边数/48、上限还留 24 ⇒ 抽中的那批边整体挪到
+ *   前半段，"空地上那 10 个采样点"反而掉到 4 —— 改的是抽样范围，不是覆盖）。
+ *   24 → 48 的理由：2.0 池 20 枚进图后父边变密，稀疏格里的采样点从 ≥12 掉到 10，
+ *   下面那条判据红在样本量地板上而墨本身过了（中位 76 ‖ 线 30）⇒ 加取样密度，判据与地板一字不动。 */
+var PROBE_MAX = 48;
 var EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
 /* ===== §E363 / §E367 时间倒挂的父边（用户 10-06 点名：e35prod807 比现役还早，父却写着现役）=====
  *   §E363 当时我给的诊断是"槽位节点的 ts 是进槽时刻，边是真的" —— **那个诊断是错的**，§E367 查翻了：
@@ -2550,7 +2555,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
        *   ⇒ 拿虚线去量它，量到的是**虚线自己的间隔**，不是 §E467a 那种"边被切成不同 alpha 的段"的病。
        *   为什么以前没红：步长 = 边数 / 24，边数一变，被抽中的那 24 条就换一批（10-09 加进 63 枚代表之后
        *   抽到一条 'arm' 级虚线 B5-10-71 就当场红）。**改的是采样范围，不是阈值。** */
-      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < 24) { var pp = [];
+      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < PROBE_MAX) { var pp = [];
         for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
           var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
           var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
@@ -3302,7 +3307,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚' + (N === NHLONG ? ' ⇒ 这张图没混尺' : ' ⇒ 这些枚在当前档**不画**，明细写"未测"（旧行为是静默退回默认桌 = 混两把尺，v1.8.27 已废）') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（旧口径）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + (N === NHLONG ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3378,7 +3383,7 @@ function paintLegend(fr) {
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 没读数（' + (N - NHP()) + ' 枚） ‖ 尺 = coords.'
       + (st.ftab === 'long' ? 'Hplong（长程桌）' : 'Hp（默认桌）'))   /* 两档同一套取数：见上面 hpNow 那段 */
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
-    : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**，不再对某一枚包取差')
+    : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**（不对某一枚包取差）')
     : (st.color === 'fam' || st.color === 'seed') ? ''   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针那句（顺带让整块变窄）*/
     : ('蓝 = 地板（F 底 ' + CB.lo.toFixed(2) + (CB.mode === 'win' ? ' = 窗内最低' : ' ‖ 灰 = 库内中位') + '）');
   /* §E460/§E461 轴高恢复成固定 150 之后，死空**只许用文字排版去消**（用户原话：「只换字排版」）。
@@ -3518,7 +3523,7 @@ function buildFamBar() {
       var lab = st.color === 'seed' ? ('seed ' + k) : ('家族 ' + k);
       /* E396 DS（用户 10-08）：**只留家族号**（描述与枚数都挪走；枚数进悬停提示，信息不丢）。 */
       b.innerHTML = '<i style="background:' + GRP.col[k] + '"></i>' + lab;
-      b.title = (st.color === 'seed' ? '这一档 RNG 种子被多少枚复用（旧口径）' : (byFam[k] || '')) + ' · ' + GRP.cnt[k] + ' 枚';
+      b.title = (st.color === 'seed' ? '这一档 RNG 种子（包名后缀那个数）被多少枚复用' : (byFam[k] || '')) + ' · ' + GRP.cnt[k] + ' 枚';
       b.onclick = function () { st.hi[k] = !st.hi[k]; b.classList.toggle('on', !!st.hi[k]); req(); };
       el.appendChild(b);
     })(GRP.keys[j]);
@@ -3527,7 +3532,7 @@ function buildFamBar() {
   r.onclick = function () { st.hi = {}; Array.prototype.forEach.call(el.querySelectorAll('.fam'), function (x) { x.classList.remove('on'); }); req(); };
   el.appendChild(r);
   var tipEl = document.createElement('span'); tipEl.className = 'famtip';
-  tipEl.textContent = (st.color === 'seed' ? 'RNG seed（旧口径）' : '家族（训练方法 / 目标大改）') + ' · 点选可高亮，可多选';
+  tipEl.textContent = (st.color === 'seed' ? 'RNG seed（包名后缀）' : '家族（训练方法 / 目标大改）') + ' · 点选可高亮，可多选';
   el.insertBefore(tipEl, el.firstChild);
 }
 /* ===== §E338 批次下拉 / 选中卡 / 冠军序列与对比表 ===== */
@@ -4263,7 +4268,10 @@ var CHKDETAIL = 0;
     if (kv[0] === 'perf') PERFON = (+kv[1] || 0);   /* 2 = 跑一次性基准（原来写成 ===1 ? 1 : 0 ⇒ #perf=2 被吞成 0）*/
     if (kv[0] === 'sort') st.sortBy = (kv[1] === 'time' ? 'time' : 'F');
     /* §E617 桌形走深链 ⇒ 无头复验能钉住"同一张图换一把 F"这两态分别长什么样（不钉就只能靠人手动切，截图对不上）*/
-    if (kv[0] === 'ftab') st.ftab = (kv[1] === 'long' ? 'long' : 'multi');
+    if (kv[0] === 'ftab') { st.ftab = (kv[1] === 'long' ? 'long' : 'multi');
+      /* 控件必须跟着深链一起改（同 T / labels / color 那三支的写法）：只改 st 的话，
+       *   用 #ftab=long 打开的人看到「桌形 = 默认（3血短程）」而画的是长程桌 ⇒ 控件在说谎。 */
+      var _ft = document.getElementById('ftab'); if (_ft) _ft.value = st.ftab; }
     if (kv[0] === 'dgate') DGATE = (+kv[1] === 0 ? 0 : 1);
     if (kv[0] === 'm0') DM0 = Math.max(0, Math.min(20, +kv[1] || 0)); }
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
@@ -5255,13 +5263,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   T('标签：常驻名单（历代上槽 ∪ 池成员）必须全员上名（§E606 换了主语 —— 原来判的是"所有 lineage 非空"，那批里含不给常驻名字的旧槽位冠军）',
     LB.nch > 0 && LB.missing.length === 0 && LB.lbC === LB.nch,
     '常驻名单可见 ' + LB.nch + ' 枚 ‖ 上了名字 ' + LB.lbC + ' ‖ 没上的：' + (LB.missing.length ? LB.missing.join(',') : '无'));
-  /* §E620 这条原来钉 LB.cov <= 110（绝对枚数）—— 与刚被用户否掉的那条同一种坏法：
-     *   "被名字盖住的点"随面板规模线性涨（钉它那天 718 枚，现在 798 枚），线不动就必然越线。
-     *   改成**密度**：按钉它那天实测的 110/718 = 15.3% 换算到当前点数，另给 3 枚的舍入余量。 */
-  var COVL = Math.round(110 / 718 * N) + 3;
+  /* §E620 这条线的**主语**换过两次，11-06 实测前两把都不对：
+     *   第一版钉绝对枚数（110）⇒ 面板一涨就必然越线；第二版按**点数**定标（110/718 × N + 3）⇒ 2.0 池 20 枚进常驻名单那天越线。
+     *   A/B（同一份页面只摘掉新那 10 条池名，原件 scratch/qoder-1106-label-ab.txt）：29 条名 ⇒ 压住 131 枚 ‖ 39 条 ⇒ 172 枚
+     *     ⇒ 每条名压 4.4 枚，与存量那 29 条的 4.5 枚/条同级 —— **密度没变，是条数变了**，而上一版把线绑在点数上。
+     *   现在按条数定标：4.52 枚/条（= 131/29 那次实测）+ 5 枚余量。判的对象一字未动（还是"被别人的名字盖住的点"），
+     *   牙口也没换：标签框变宽 / 避让坏掉 / 同一枚上两遍名 ⇒ 每条压住的枚数上去 ⇒ 照样红。 */
+  var COVL = Math.round(131 / 29 * LB.n) + 5;
   T('标签：默认视图里被别人的名字压住的点只查「被别人名字盖住的点」这一条（矩形重叠那条已按用户裁定删除 §E430）（实测与线见上面那段注释）',
     LB.cov <= COVL,
-    '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 110/718 的密度 × 当前 ' + N + ' 枚 + 3）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
+    '盖住的点 ' + LB.cov + ' 枚 ‖ 线 ' + COVL + '（= 4.52 枚/条 × 常驻名单 ' + LB.n + ' 条 + 5 枚余量）‖ 矩形重叠 ' + LB.ov + ' 对（**只报不判**，那条腿按用户裁定删了 §E430）‖ 标签 ' + LB.n + ' 个 ‖ 避让 ' + LB.push + ' 次');
   st.mode = SNAPL.mode; st.elev = SNAPL.elev; st.labels = SNAPL.labels; st.batch = SNAPL.batch;
   st.flo = SNAPL.flo; st.fhi = SNAPL.fhi; st.sel = SNAPL.sel; recomputeVIS(); draw(); paintWin();
   st.mode = SNAPA.mode; st.elev = SNAPA.elev; st.batch = SNAPA.batch;
@@ -5909,9 +5920,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1;
     st.edges = 'all'; st.color = 'fam'; st.labels = 'none'; NOPTS = 1; ELOG = 1;
     /* 步长要**按当下的边数算**（先空跑一帧拿 EDGR.n）：写死 60 在出厂态（726 条）取到 12 条探针，
-     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。 */
+     *   而 #flo=0.3 那一态只剩 184 条 ⇒ 只收到 4 条，红的是"探针不够"不是"线断了"。
+     *   分母必须用 PROBE_MAX（与上面收集探针的那道上限同一个数）：11-06 只把这里改成 48、上限还留 24，
+     *   结果是"抽中的 24 条挪到前半段"，稀疏格采样点从 10 掉到 4 —— 量具没加密，只是换了抽样范围。 */
     EPROBE = 0; draw(); var nEd = EDGR.n;
-    var strd = Math.max(1, Math.round(nEd / 24)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
+    var strd = Math.max(1, Math.round(nEd / PROBE_MAX)); EPROBE = strd; draw(); var pb = EDGR.probe.slice();
     var amin2 = EDGR.amin, amax2 = EDGR.amax;
     var dOn = grab2();
     st.edges = 'off'; draw(); var dOff = grab2();
@@ -5966,7 +5979,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     st.elaw = 'attr';
     st.mode = 'tree'; st.elev = 0; st.yaw = FLAT.yaw; st.pit = FLAT.pit;
     st.tX = 0; st.tY = 0; st.tKx = 1; st.tKy = 1; st.edges = 'all'; st.color = 'fam'; st.labels = 'none';
-    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / 24));
+    NOPTS = 1; ELOG = 1; EPROBE = Math.max(1, Math.round(EDGR.n / PROBE_MAX));
     draw(); var A0p = EDGR.probe.slice();
     st.tX = -3 * devicePixelRatio; draw(); var A1p = EDGR.probe.slice();
     st.tKx = 1.03; draw(); var A2p = EDGR.probe.slice();
@@ -6695,7 +6708,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（旧口径）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
 '<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
