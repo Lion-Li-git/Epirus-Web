@@ -12,6 +12,10 @@
  *   node tools/gate-all.mjs --np --no-browser    # 本地近似"无浏览器"那一档：np 整轮 + spec
  *   ⚠ **CI 的阻断档不是这个形状**（v1.7.67 更正）：CI 走 `.github/workflows/gates.yml` 的 **16 路 `--part=` 矩阵**
  *     （每部分一台机），`--no-browser` 只是本机想复现"摘掉浏览器那三道"时的近似。
+ * ⛔ **默认不跑整轮**（用户 2026-11-06 裁定：「禁止随意跑整轮」）—— 整轮 = `--np` 那一遍 = 171 条。
+ *   只在三种场合跑：① CI（`.github/workflows/gates.yml` 的 `--part` 矩阵，自动）；② 用户点名；
+ *   ③ 你改了**注册面本身**（`np-test.mjs` 的 GRP/PARTS、`gate-parts-check`、`gates/_ctx.mjs`）且确实要复核。
+ *   其余一律 `--auto` / `--group=` / `--part=` / `--only=`；怎么挑门看 `tools/gates/README.md`（该文件的 §3 是判定表）。
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
  * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
  * ⚠ 带 `--no-browser` 的那遍**也不是"全绿"**：总结论会点名"本轮缺哪几道"。

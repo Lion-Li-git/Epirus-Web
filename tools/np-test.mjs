@@ -6,7 +6,7 @@
  *   · runner 自己留着 t/PASS/FAIL/__skipped/__KEYS/ONLY/GROUP/RUNSET/GRP/CUM/KEY2G/gateKey 与收尾块。
  *
  * 用法（`--only=` / `--group=` / `--list-groups` 与拆前逐字相同）：
- *   node tools/np-test.mjs                    整轮（278 条）
+ *   node tools/np-test.mjs                    整轮（现数见 --list-parts --json 的 total；171）——⛔ **默认不跑**，见 tools/gates/README.md
  *   node tools/np-test.mjs --group=meta       只跑仓库纪律那一组（含累计依赖）
  *   node tools/np-test.mjs --part=train-evo   只跑**那一个部分文件**里的门（2026-10-14 DS 加；见下"两个轴"）
  *      ⚠ 与 `--group` **不是同一个轴**：`--group` 是**累计深度轴**（meta ⊂ ship ⊂ train/ui ⊂ probe ⊂ engine=全部，
