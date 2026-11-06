@@ -873,7 +873,8 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   ③ **牙** = FAIL 那句本身就是"没打到终局"报出来的；新增读数 `弹窗已答 N 次` 在变异那遍跟着涨（未答时根本不前进，答了才前进），还原后正常路径 11 次。
 - **CI 收口（run `42230413895`，逐作业逐步骤读，不看 run 级结论）**：`plan` ‖ 11 个 part ‖ `gates` ‖ **browser 第 4/5/6 步全 success**
   = `SMOKE OK` ‖ `BATTLE OK（推进 12 回合 ‖ 兜底 12 次）` ‖ 四视图 `tree/1d/3db/map` 各 **99 PASS / 0 FAIL**（进仓的那一份 = `scratch/qoder-1106-night-ci1-browser.txt` ‖ `…-ci2-browser.txt` 摘要 + `…-ci2-watch.txt`；job log 原文 `*.log` 被 gitignore ⇒ 只在本机）。
-  ⚠ 引用口径：这是**观察档**（`continue-on-error: true`）‖ "连续 5 次绿"的转正计数从这一遍起算 = 当前 1。
+  ⚠ 引用口径：这是**观察档**（`continue-on-error: true`）⇒ 连绿计数会变，引用前现读，别抄这里的数：
+  `gh api repos/Lion-Li-Git/Epirus-Web/actions/runs?per_page=8` 取 run id ‖ 再 `…/runs/<id>/jobs` 读 browser 的 **step 4/5/6**（10-01 定的"连续 5 次绿才转阻断"此刻的读数：`42230413895` ‖ `42231633308` 两遍三步全 success）。
 - **工作树收尾**：`scratch/_cleanup-2026-11-06/README.md` 那笔**删而未提交**（tracked 文件在 HEAD 里又活了 8 小时 ⇒ 本地与干净克隆两个形状）提交掉 ‖
   DS 的 `scratch/ds-1106-review/` 26 份现场进仓（`FINDING-…-ds.md` §5 的复现命令点的就是这些脚本，原来"未进仓"⇒ 干净克隆一条都跑不出来；文档那句已改口）‖
   `scratch/duel-behavior.mjs` 仍是别的班的 `M`，不动（PROBLEMS 第 21 条）。
