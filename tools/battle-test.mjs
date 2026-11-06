@@ -33,7 +33,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("battle-test.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['max-ms', 'out', 'players'], "battle-test");
+  rejectUnknownFlags(process.argv.slice(2), ['max-ms', 'out', 'players', 'cdp-wait'], "battle-test");
 }
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
