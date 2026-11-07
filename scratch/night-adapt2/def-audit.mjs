@@ -61,13 +61,16 @@ async function audit(lab, f) {
     + ' ‖ 键分布 ' + JSON.stringify(defKeysUsed));
 }
 
-for (const [lab, f] of [
-  ['Q-s47(v7教师)', 'docs/artifacts/e507-out/Q-s47.js'],
-  ['T8-s114(v7现役)', 'js/bundled-champion-3p.js'],
-  ['KD-Qg(克隆种子)', 'scratch/night-adapt2/KD-Qg.bak'],
-  ['CTRL2-Q(裸跑)', 'docs/artifacts/night-adapt/CTRL2-Q-s13.js'],
-  ['ADAPT2-Q(课程+credit)', 'docs/artifacts/night-adapt/ADAPT2-Q-s13.js'],
-]) {
+const PACKS = process.argv.slice(3).length
+  ? process.argv.slice(3).map(x => [x.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''), x])
+  : [
+    ['Q-s47(v7教师)', 'docs/artifacts/e507-out/Q-s47.js'],
+    ['T8-s114(v7现役)', 'js/bundled-champion-3p.js'],
+    ['KD-Qg(克隆种子)', 'scratch/night-adapt2/KD-Qg.bak'],
+    ['CTRL2-Q(裸跑)', 'docs/artifacts/night-adapt/CTRL2-Q-s13.js'],
+    ['ADAPT2-Q(课程+credit)', 'docs/artifacts/night-adapt/ADAPT2-Q-s13.js'],
+  ];
+for (const [lab, f] of PACKS) {
   try { await audit(lab, f); } catch (e) { console.log(lab + ' 失败: ' + e.message.slice(0, 60)); }
 }
 process.exit(0);
