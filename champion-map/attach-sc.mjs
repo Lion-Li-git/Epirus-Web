@@ -122,8 +122,8 @@ const rowsN = out.length - 1;
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const c = lines[i].split('\t'); if (!c[0] || !OUT[c[0]] || c[0] === (ALIAS[INCP] || INCP)) continue;
-    if (OUT[c[0]].Scd === undefined || c[head.indexOf('Hp')] === '' || c[head.indexOf('Hp')] === undefined) continue;
-    rows.push({ id: c[0], scd: +OUT[c[0]].Scd, hp: +c[head.indexOf('Hp')], de: +c[head.indexOf('De')] });
+    if (OUT[c[0]].Scd === undefined || c[head.indexOf('Hp5')] === '' || c[head.indexOf('Hp5')] === undefined) continue;
+    rows.push({ id: c[0], scd: +OUT[c[0]].Scd, hp: +c[head.indexOf('Hp5')], de: +c[head.indexOf('De5')] });
   }
   if (rows.length < 10) { console.log('相关摘要：样本只有 ' + rows.length + ' 枚 ⇒ 不印（免得拿噪声当方向）'); return; }
   const A = rows.map(r => r.scd), B = rows.map(r => r.hp), C = rows.map(r => r.de);

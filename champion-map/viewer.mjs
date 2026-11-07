@@ -205,23 +205,23 @@ if (PROJTSNE) {
   if (copyN > 0) console.log('⚠ ' + copyN + '/' + rows.length + ' 行的 xt/yt 与 x2/y2 逐字相同（少量=浮点巧合；**全表**相同才判死，见上面那条）');
 }
 /* ===== §E491 头号尺有空洞就是**装错货**，比缺投影更狠 =====
- *   下面那句 DATA 取数是 `Hp: +r.Hp` ⇒ 空串变成 **0**，而 `Fv(d) = d.Hp/100 + st.T*d.S` 是图上**所有**排序与
+ *   下面那句 DATA 取数是 `Hp: +r.Hp5` ⇒ 空串变成 **0**，而 `Fv(d) = d.Hp5/100 + st.T*d.S` 是图上**所有**排序与
  *   颜色的底（名次、F 窗口、绿红分界、色标定标全读它）。于是"没测过"被画成"线上口径夺1率 0%"。
  *   实测踩过：三枚融合粒没跑 attach-hp 那张 --more ⇒ Hp 空 ⇒ 图上名次 728/732，悬停卡还写着
  *   「Hp 线上口径夺1率 = 0.0%（图上的尺就是它）」；补测之后是 51.8 / 52.8 / 53.0（现役 47.3）⇒ 完全反过来。
  *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
  *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
-{ const noHp = rows.filter(r => String(r.Hp === undefined ? '' : r.Hp).trim() === '');
+{ const noHp = rows.filter(r => String(r.Hp5 === undefined ? '' : r.Hp5).trim() === '');
   /* §G3（11-05）：De 空洞按**版本分账**——2.0 行是夜班 200 局新测（没有 Δε 配对考卷），De 空 = 真未测，
    *   走"未测 = null/灰"那支（与 hl2 同规矩）；1.8 行的 De 空洞仍然是装错货，照旧退场。 */
-  const noDe18 = rows.filter(r => r.ver !== '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
-  const noDe = rows.filter(r => r.ver === '2.0' && String(r.De === undefined ? '' : r.De).trim() === '');
-  if (noHp.length || noDe18.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp 空 ' + noHp.length + ' 枚 ‖ De 空(1.8) ' + noDe18.length + ' 枚' +
+  const noDe18 = rows.filter(r => r.ver !== '2.0' && String(r.De5 === undefined ? '' : r.De5).trim() === '');
+  const noDe = rows.filter(r => r.ver === '2.0' && String(r.De5 === undefined ? '' : r.De5).trim() === '');
+  if (noHp.length || noDe18.length) { console.error('⛔ coords.tsv 的头号尺有空洞：Hp5 空 ' + noHp.length + ' 枚 ‖ De5 空(1.8) ' + noDe18.length + ' 枚' +
     '\n       前 8 枚：' + noHp.concat(noDe).slice(0, 8).map(r => r.id).join(' ') +
-    '\n       ⇒ 下面那句 `Hp: +r.Hp` 会把空串变成 0，而 F = Hp/100 + T·S 是图上**所有**排序的底 ⇒ 这几枚会被画成库内倒数（"未测"冒充"0%"）。' +
+    '\n       ⇒ 下面那句 `Hp: +r.Hp5` 会把空串变成 0，而 F = Hp/100 + T·S 是图上**所有**排序的底 ⇒ 这几枚会被画成库内倒数（"未测"冒充"0%"）。' +
     '\n         补测：node champion-map/eps-full.mjs --extra=<这批的 extra 表> --onlyExtra --out=eNN-epsfull.tsv' +
     '\n         然后重跑：node champion-map/rebuild-coords.mjs（第③步会把 eNN-epsfull.tsv 一起喂给 attach-hp）'); process.exit(2); }
-  console.log('头号尺口径 ✅ ' + rows.length + ' 枚的 Hp/De 全部在册（空值会让 F 把"未测"当 0 算）'); }
+  console.log('头号尺口径 ✅ ' + rows.length + ' 枚的 Hp5/De5 全部在册（空值会让 F 把"未测"当 0 算）'); }
 const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
@@ -398,7 +398,7 @@ if (existsSync(epsP)) {
   const el = readFileSync(epsP, 'utf8').replace(/\r?\n$/, '').split(/\r?\n/); const eh = el[0].split('\t');
   const iId = eh.indexOf('id'), iE = eh.indexOf('exam'), iP = eh.indexOf('page'), iD = eh.indexOf('de');
   /* §E571 这张表也必须**自带档**：v1.6.55 全图换到 exam=120 后，这张由 eps-scan 旧硬编码 30 档产出的表
-   *   与 coords 不同档 ⇒ 卡片上「Δε 两seed」与「Δε 单批」不是同一把卷量出来的（图上混画，§E566 那一族）。
+   *   与 coords 不同档 ⇒ 卡片上「Δε 两seed」与「Δε5 单批」不是同一把卷量出来的（图上混画，§E566 那一族）。
    *   列缺失 ⇒ 下面那条页内判据红（不许"读不到就跳过"）。 */
   const iG = eh.indexOf('examG');
   for (const l of el.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
@@ -472,9 +472,9 @@ const DATA = rows.map(r => ({
    *   `De` = Δε = H − Hp（正 = 开探索就掉）—— 两口径必须**同批同档成对**，否则 Δε 里会混进采样量之差（档差中位就有 0.30pt）。*/
   id: r.id, lin: r.lineage || '', kin: r.kin || '', seed: r.seed || '',
   /* §G3：H/De 对 2.0 行 = 真未测 ⇒ null（不许 NaN 流进 toFixed）；Hp 全表在册（2.0 行 = 夜班 200 局读数） */
-  H: (r.H === '' || r.H === undefined) ? null : +r.H,
-  Hp: +r.Hp,
-  De: (r.De === '' || r.De === undefined) ? null : +r.De,
+  H5: (r.H5 === '' || r.H5 === undefined) ? null : +r.H5,
+  Hp5: +r.Hp5,
+  De5: (r.De5 === '' || r.De5 === undefined) ? null : +r.De5,
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
    *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
@@ -543,11 +543,11 @@ const DATA = rows.map(r => ({
   /* §E313 部署口径：`hp` = 页面（默认档 lv:regular 的剂量）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
   hp: r.id in EPS ? EPS[r.id].h : null, he: r.id in EPS ? EPS[r.id].e : null, de: r.id in EPS ? EPS[r.id].d : null,
   /* §E615 长程桌那一档（`eps-full --mode=long` 同 seed 同档重测，由 `attach-hlong.mjs` 挂进表）：
-   *   `hl2` = 考卷 ‖ `hpl2` = 页面 ‖ `fl` = Flong = Hplong + T·S（与 F 同式，只差桌形）。
+   *   `hl2` = 考卷（Hlong5） ‖ `hpl2` = 页面（Hplong5） ‖ `fl` = Flong = Hplong5 + T·S（与 F 同式，只差桌形）。
    *   ⚠ 表里的 `-` / 空 = **没量到** ⇒ null，走"未测 = 灰"那支；**不许当 0**（0 会被色标读成"最差"，而它是缺测）。 */
-  hl2: (r.Hlong === undefined || r.Hlong === '-' || r.Hlong === '') ? null : +r.Hlong,
-  hpl2: (r.Hplong === undefined || r.Hplong === '-' || r.Hplong === '') ? null : +r.Hplong,
-  fl: (r.Flong === undefined || r.Flong === '-' || r.Flong === '') ? null : +r.Flong,
+  hl2: (r.Hlong5 === undefined || r.Hlong5 === '-' || r.Hlong5 === '') ? null : +r.Hlong5,
+  hpl2: (r.Hplong5 === undefined || r.Hplong5 === '-' || r.Hplong5 === '') ? null : +r.Hplong5,
+  fl: (r.Flong5 === undefined || r.Flong5 === '-' || r.Flong5 === '') ? null : +r.Flong5,
   /* §E616 全腿长程版的过线（`feas.mjs --allLong=1`）：`okl` = 1/0/null（null = 没量，**不是没过**）‖ `flongs` = 阻断原话。
    *   §E677 全腿短程版（`feas.mjs --allMulti=1`，用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）：
    *   `oks` / `fshorts` 同形。环的主语跟着桌形换，出口只有一个 `RSUBJ()` —— 而**两把都是纯桌**：
@@ -930,11 +930,11 @@ var INC = (function () {
     if (typeof v === 'number' && isFinite(v)) { s += v; n++; } } return n ? s / n : null; }
   ANCHN = mem.length;
   return { id: '@cohort:' + ANCH_TIER, name: '最强一批均值（池 ' + ANCH_TIER + ' 带 ' + mem.length + ' 枚）',
-    Hp: mean(function (d) { return d.Hp; }), S: mean(function (d) { return d.S; }),
+    Hp5: mean(function (d) { return d.Hp5; }), S: mean(function (d) { return d.S; }),
     rk: Math.round(mean(function (d) { return d.rk; })), hp: mean(function (d) { return d.hp; }),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     hpl2: mean(function (d) { return d.hpl2; }),
-    H: mean(function (d) { return d.H; }), pt: ANCH_TIER, ts: '', lin: false };
+    H: mean(function (d) { return d.H5; }), pt: ANCH_TIER, ts: '', lin: false };
 })();
 /* §G3（11-05 · 用户令）：批次选项退役，换成**版本**三模式（1.8及以前 / 2.0系 / 全部点）。
  *   batchOf 从"训出日期"改成"版本"——st.batch 的全部缓存键/快照/行表机制原样复用（键域变成 {'1.8','2.0'}），
@@ -1011,7 +1011,7 @@ var FLAT = { yaw: -Math.PI / 2, pit: Math.PI / 2 }, SOLID = { yaw: -Math.PI / 2,
 var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 
 /* §E314 势 = **线上口径**的 H + T·S（用户裁定把整张图换成玩家真正拿到的那个数）。
- *   旧写法是 d.H / 100（考卷口径 · ε=0 贪心）。两口径**排名同构**：§E571 在**同一档（exam=120）**下重测的
+ *   旧写法是 d.H5 / 100（考卷口径 · ε=0 贪心）。两口径**排名同构**：§E571 在**同一档（exam=120）**下重测的
  *   图上 794 枚给 ρ(H, Hp) = 0.966（986 行加权口径 0.967）—— 比当年 30 档"新页面 vs 旧考卷"的 0.947 更高。
  *   但**电平**不同构：120 档全库 Δε 中位 1.00pt ‖ p90 3.70 ‖ max 9.50 ‖ min −7.80，现役 2.40pt = 第 75.9 百分位；
  *   两 seed 那张表（121 枚）给现役 1.95pt = 第 75.2 百分位 —— 两个独立仪器同向。
@@ -1040,7 +1040,7 @@ function Fl(d) { return (d.hpl2 === null || d.hpl2 === undefined || !isFinite(d.
  *   ⚑ 这段注释里不许出现反引号：本文件的注释嵌在模板字符串里，一个反引号就把生成器打断（v1.8.27 第一次生成就挂在这也）。 */
 function Fv(d) {
   if (st.ftab === 'long') { var f = Fl(d); return f === null ? NaN : f; }
-  return d.Hp / 100 + st.T * d.S; }
+  return d.Hp5 / 100 + st.T * d.S; }
 function fKnown(d) { var v = Fv(d); return v !== null && isFinite(v); }
 function Ftxt(d) { return fKnown(d) ? Fv(d).toFixed(3) : '未测'; }
 /* ===== 页面口径那一档（颜色 'hp'）：两个桌形**必须同一套取数**（用户 10-20 裁定）=====
@@ -1051,7 +1051,7 @@ function Ftxt(d) { return fKnown(d) ? Fv(d).toFixed(3) : '未测'; }
  *   页面里 "hp" 出现 803 次其中 null=692 ‖ "hpl2" null=0 ‖ coords.Hp 全库有值）。
  *   epsagg 那份"**两 seed 配对均值**"仍然只服务 Δε 那条腿（de）—— 它必须同批成对，不能换成 coords 的单批值。 */
 function hpNow(d) {
-  const v = (st.ftab === 'long') ? d.hpl2 : d.Hp;
+  const v = (st.ftab === 'long') ? d.hpl2 : d.Hp5;
   return (v === null || v === undefined || !isFinite(v)) ? null : v;
 }
 /* 当前桌形这一档"有读数"的枚数：图例与页头都读它，**不再拿 NEPS 顶替**（NEPS 管的是 Δε 那条腿的分母）。 */
@@ -1396,7 +1396,7 @@ function pfmt(kind, v) {
   return v.toFixed(1);
 }
 /* 剖面那张表：卡片与页内自检读**同一份**（维名在两处各列一遍，早晚漂移 —— 白名单同族病） */
-var PROF = [['Hp', '页面夺1', '%'], ['H', '考卷夺1', '%'], ['De', 'Δε 单批', 'sgn'], ['de', 'Δε 两seed', 'sgn'],
+var PROF = [['Hp5', 'Hp5 页面夺1（参照）', '%'], ['H5', 'H5 考卷夺1（参照）', '%'], ['De5', 'Δε5 单批（参照）', 'sgn'], ['de', 'Δε 两seed', 'sgn'],
   ['Ge', '广度', 'f2'], ['gl', '长程广度', 'f2'], ['sc', '当选键', 'f1'], ['seat', '座位极差', 'pt'],
   ['dmg', '伤害/局', 'f1'], ['heavy', '重击/局', 'f1'], ['holo', '护盾/局', 'f1'], ['rounds', '回合', 'f1'],
   ['keys', '技能种类', 'f0'], ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0']];
@@ -1428,7 +1428,7 @@ function tip(d) {
         : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
           : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
     (d.hpl2 === null ? '\\n长程桌 未量' : '\\n长程桌 ' + d.hl2.toFixed(1) + '% ‖ 页面 ' + d.hpl2.toFixed(1) + '% ‖ F ' + Fl(d).toFixed(2)
-      + (isFinite(d.Hp) ? '（ΔHp ' + (d.hpl2 - d.Hp >= 0 ? '+' : '') + (d.hpl2 - d.Hp).toFixed(1) + 'pt）' : '')) +
+      + (isFinite(d.Hp5) ? '（ΔHp ' + (d.hpl2 - d.Hp5 >= 0 ? '+' : '') + (d.hpl2 - d.Hp5).toFixed(1) + 'pt）' : '')) +
     '\\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')
@@ -2088,7 +2088,7 @@ function draw1(fr) {
   g.beginPath(); g.moveTo(pad, base); g.lineTo(w - pad, base); g.stroke();
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
   g.fillText(st.sortBy === 'time' ? '训出时刻（旧 → 新）→' : ('名次（当前可见集内 · 已顶满两头 · ' + (st.ftab === 'long' ? '长程桌 F' : '默认桌 F') + '）→'), pad, base + 46 * devicePixelRatio);
-  g.fillText('纵轴 = F = Hp + T·S（Hp = 线上口径夺1率 · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
+  g.fillText('纵轴 = F = Hp5 + T·S（Hp5 = 线上口径夺1率·参照 · F 越高越好）：' + (st.goodTop ? '越高 = 越好，贴基线 = 最差' : '贴基线 = 最好（冠军在底），越高 = 越差'), w * 0.34, band - 10 * devicePixelRatio);
   scr = new Array(N);
   var dx = (w - 2 * pad) / Math.max(1, ordV.length - 1);
   for (i = 0; i < ordV.length; i++) {
@@ -2120,10 +2120,10 @@ function draw1(fr) {
     if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
       g.beginPath(); g.arc(x, y, rr1 + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
     /* 分解条：蓝 = Hp（线上口径夺1率），黄 = T·S（广度）。谁靠哪一头站在这上面一眼可见。
-       §E314：必须用 Hp 而不是 H —— 纵轴位置已经是 Hp + T·S，蓝条若还画 H 就变成"位置与分解两个口径"，
+       §E314：必须用 Hp5 而不是 H5 —— 纵轴位置已经是 Hp5 + T·S，蓝条若还画 H5 就变成"位置与分解两个口径"，
        那正是本仓反复踩的"图上画一个数、旁边一行另一个口径的数"。*/
-    var hNow = hpNow(d);   /* §E672 分解条必须拆**当下这一档的 F**：原来两档都拆 Hp ⇒ 长程档那两条加起来不等于点所在的那个 F */
-    var hh = ((hNow === null || !isFinite(hNow)) ? d.Hp : hNow) / 100, ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
+    var hNow = hpNow(d);   /* §E672 分解条必须拆**当下这一档的 F**：原来两档都拆 Hp5 ⇒ 长程档那两条加起来不等于点所在的那个 F */
+    var hh = ((hNow === null || !isFinite(hNow)) ? d.Hp5 : hNow) / 100, ss = st.T * d.S, tot = hh + Math.abs(ss) || 1;
     var bh = 9 * devicePixelRatio;
     g.globalAlpha = al * 0.9;
     g.fillStyle = '#4c9ff5'; g.fillRect(x - dx * 0.42, base + 8 * devicePixelRatio, Math.max(1, dx * 0.84 * hh / tot), bh);
@@ -2136,7 +2136,7 @@ function draw1(fr) {
   for (i = 0; i < ls.length; i++) { var p = scr[ls[i].i]; if (!p) continue;
     putLabel(labOf(P[ls[i].i]), p[0], p[1], mustLabel(P[ls[i].i]), true, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : (st.ftab === 'long' ? '长程桌 F 名次' : 'F 名次')) + '（下方蓝条 = ' + (st.ftab === 'long' ? 'Hplong 长程桌夺1率' : 'Hp 线上口径夺1率') + '，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
+  g.fillText('一维：位置 = ' + (st.sortBy === 'time' ? '训出时刻' : (st.ftab === 'long' ? '长程桌 F 名次' : 'F 名次')) + '（下方蓝条 = ' + (st.ftab === 'long' ? 'Hplong5 长程桌夺1率(参照)' : 'Hp5 线上口径夺1率(参照)') + '，黄条 = T·S）· 悬停看明细 · 点一枚 = 选中（点空白取消）· 点家族图例可高亮', pad, h - 14 * devicePixelRatio);
 }
 
 /* §E332 把谱系图的**版式**（车道带 + 左栏家族名/统计 + 左右分界 + 日期竖线与刻度）烘成一张离屏画布。
@@ -3249,7 +3249,7 @@ function draw3b(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel(labOf(P[ls[i].i]), pp[0], pp[1], mustLabel(P[ls[i].i]), false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp + T·S）⇒ 第三轴是行为不是深度' +
+  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 颜色 = F（线上口径势 = Hp5 + T·S）⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
      *   只报一列就会被骗（iso-sweep.mjs 实测两列差一倍）⇒ 这也回答"壳到底有没有用"：留一塌到 0 就说明这层壳是自我照亮。*/
     (isoInfo ? ' ‖ 壳[' + (isoInfo.field === 'pot' ? '势' : '过线概率') + '] 阈值 ' + Math.round(st.isoT * 100) +
@@ -3306,7 +3306,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + (N === NHLONG ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong' : '默认桌 Hp') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + (N === NHLONG ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'hp' ? ('页面口径夺1率（实测 ' + NHP() + ' 枚 · ' + (st.ftab === 'long' ? '长程桌 Hplong5(参照)' : '默认桌 Hp5(参照)') + '）') : st.color === 'de' ? ('部署脆弱性 Δε（实测 ' + NEPS + ' 枚 · 脆 ' + NBRIT + '）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */
@@ -3380,7 +3380,7 @@ function paintLegend(fr) {
   var s2 = document.createElement('div'); s2.textContent = st.color === 'gl' ? ('G(long) 低 ' + GLR[0].toFixed(1) + '（蓝）· 闸要求 ≥3')
     : st.color === 'pm' ? ('⛔ 栽桩 ' + (NPRM - NPPASS) + ' 枚（红）· 灰 = 未测（' + (N - NPRM) + ' 枚）')
     : st.color === 'hp' ? ('页面 1st 低 ' + EPR()[0].toFixed(1) + '%（蓝）· 灰 = 没读数（' + (N - NHP()) + ' 枚） ‖ 尺 = coords.'
-      + (st.ftab === 'long' ? 'Hplong（长程桌）' : 'Hp（默认桌）'))   /* 两档同一套取数：见上面 hpNow 那段 */
+      + (st.ftab === 'long' ? 'Hplong5（长程桌·参照）' : 'Hp5（默认桌·参照）'))   /* 两档同一套取数：见上面 hpNow 那段 */
     : st.color === 'de' ? ('Δε −6pt（蓝 = 开了探索反而强）· 白 = 不敏感 · 灰 = 未测（' + (N - NEPS) + '）‖ 脆（≥3.41）' + NBRIT + ' 枚 ‖ 吃探索（<0）' + NSTRONG + ' 枚')
     : st.color === 'sc' ? ('当选键 低 ' + SCR()[0].toFixed(1) + '（蓝）· 灰 = 未测（' + (N - NSEL) + ' 枚）‖ 这一档画的是**绝对值**（不对某一枚包取差）')
     : (st.color === 'fam' || st.color === 'seed') ? ''   /* §E431 用户 10-08：删掉「下 = 地板 ‖ 上 = 好」这种没用的说明，只留黄针那句（顺带让整块变窄）*/
@@ -3481,7 +3481,7 @@ function paintLegend(fr) {
     /* §E434 DS：§E432 那笔把 s1 整行清空了（用户当时说顶部有选项框、这行是重复），但**颜色的含义**也跟着没了 ——
      *   用户 10-08：「你刚才删的太多，现在图例颜色是啥没掉了，至少要保留这玩意是 F = Hp + T·S」。
      *   ⇒ 恢复简短版（不写点色 = 家族，那是选项框的事），正好填掉左上那块空白。 */
-    s1.textContent = '底图 = F（Hp + T·S）· 蓝 = 低 → 红 = 高';
+    s1.textContent = '底图 = F（Hp5 + T·S）· 蓝 = 低 → 红 = 高';
   }
   /* §E436 DS（用户 10-08：「你把两个·隔开的地方都直接改成换行好了」/「谱系图这里的图例怎么没有跟着改成新的」）：
    *   上一版我只在 fam/seed 那一档写死换行，而谱系图用的是 F/rel 那几档（走别的分支）⇒ 没跟上。
@@ -3570,7 +3570,7 @@ function paintCard() {
    *   §E449 之后卡会自己折行 ⇒ "撑宽"这件事已经不会发生，但 700 字符折出来是二十行，所以总结式照用。*/
   var body = [head,
     '家族 ' + d.fam + '（' + (famSummary(famLab(d)) || '—') + '）· 版本 ' + (batchOf(d) || '—') + ' · 训出 ' + (d.ts || '—') + (d.sh ? ' ‖ 上线 ' + d.sh + ' ' + d.sv : ''),
-    'F = ' + Ftxt(d) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp.toFixed(1) + ' · H考卷 = ' + d.H.toFixed(1) + ' · S = ' + d.S.toFixed(2),
+    'F = ' + Ftxt(d) + '（' + BANDLBL + ' ' + Fv(INC).toFixed(3) + '）· Hp = ' + d.Hp5.toFixed(1) + ' · H考卷 = ' + d.H5.toFixed(1) + ' · S = ' + d.S.toFixed(2),
     /* §E449 这两处原来写 slice(0, 90) / slice(0, 60)：卡是 white-space:pre（不折行），长句会把卡撑到横贯画布，
      *   当时拿截断挡住那件事。现在卡改成 pre-wrap（400px 内自己折行、超高滚），截断就只剩坏处了：
      *   实测全库 why 最长 131 字符（R391）‖ pb 最长 128（v7tgt4-63）⇒ 折行后最多 4 行，装得下；
@@ -3620,9 +3620,9 @@ function paintSide() {
     b.textContent = (d.sh ? '' : '⚠') + labOf(d) +   /* §E463 序列里也标版本号（原来 16 枚全是 SLOT-8位哈希，读不懂）*/
       /* §E463 标签已经换成版本号的那几枚，第二栏就别再把同一个版本号抄一遍 ⇒ 让位给全 id（身份还在，只是排在可读名后面）*/
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
-      ' ‖ F ' + Ftxt(d) + ' ‖ Hp ' + d.Hp.toFixed(1);
+      ' ‖ F ' + Ftxt(d) + ' ‖ Hp5(参照) ' + d.Hp5.toFixed(1);
     b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
-      '\\n名次 第 ' + d.rk + ' ‖ H考卷 ' + (d.H == null ? '未测' : d.H.toFixed(1)) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1));
+      '\\n名次 第 ' + d.rk + ' ‖ H5考卷(参照) ' + (d.H5 == null ? '未测' : d.H5.toFixed(1)) + ' ‖ S ' + d.S.toFixed(2) + ' ‖ Δε ' + (d.De5 == null ? '未测' : (d.De5 >= 0 ? '+' : '') + d.De5.toFixed(1));
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
       st.sel = d.id; recomputeVIS(); paintCard(); paintSide(); buildFamBar(); req(); };
@@ -3638,9 +3638,9 @@ function paintSide() {
     row('名次', function (d) { return '第' + d.rk; });
     row('F', function (d) { return Ftxt(d); });
     row('ΔF vs 最强一批', function (d) { return fKnown(d) ? ((Fv(d) - Fv(INC) >= 0 ? '+' : '') + (Fv(d) - Fv(INC)).toFixed(3)) : '未测'; });
-    row('Hp 页面', function (d) { return d.Hp.toFixed(1); });
-    row('H 考卷', function (d) { return d.H == null ? '未测' : d.H.toFixed(1); });
-    row('Δε', function (d) { return d.De == null ? '未测' : (d.De >= 0 ? '+' : '') + d.De.toFixed(1); });
+    row('Hp5 页面（参照）', function (d) { return d.Hp5.toFixed(1); });
+    row('H 考卷', function (d) { return d.H5 == null ? '未测' : d.H5.toFixed(1); });
+    row('Δε5（参照）', function (d) { return d.De5 == null ? '未测' : (d.De5 >= 0 ? '+' : '') + d.De5.toFixed(1); });
     row('S 广度', function (d) { return d.S.toFixed(2); });
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
     row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
@@ -4582,7 +4582,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     DATA.length > 0 && gHas === DATA.length && gKeys.length === 1,
     '带档 ' + gHas + '/' + DATA.length + ' ‖ 出现过的档 = ' + (gKeys.join(',') || '（无）') +
     ' ⇒ 漏档／半挂／混档都会让"离最强一批均值多远"这类读法失去意义');
-  /* §E571 部署口径表（epsagg）与考卷必须**同档**。卡片上「Δε 单批」取自 coords（v1.6.55 已换 120 档），
+  /* §E571 部署口径表（epsagg）与考卷必须**同档**。卡片上「Δε5 单批」取自 coords（v1.6.55 已换 120 档），
    *   「Δε 两seed」取自 epsagg —— 那张历史上由 eps-scan 硬编码 30 档产出 ⇒ 两维不同档就是图上混画（§E566 那一族）。
    *   旧表根本没有 examG 列 ⇒ 这条**判红**（读不到档不算通过），跑 eps2seed --phase=agg 换上新表才绿。*/
   T('§E571 部署口径表必须自带档且与 coords 同档（否则剖面的两维 Δε 不是同一把卷量出来的）',
@@ -6219,7 +6219,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   wT.value = '0.25'; fireEv(wT, 'input');
   if (Math.abs(st.T - 0.25) > 1e-9) wireBad.push('T 滑杆拖到 0.25 而 st.T = ' + st.T);
   if (tProbe < 0 || Math.abs(Fv(P[tProbe]) - fProbe0) < 1e-9) wireBad.push('st.T 动了但探针点的 F 一点没动'
-    + '（F = Hp/100 + T·S 与这根滑杆脱钩了 ‖ ' + (tProbe < 0 ? '全库 S 恒 0，探针找不到' : '探针 #' + tProbe + ' S=' + P[tProbe].S) + '）');
+    + '（F = Hp5/100 + T·S 与这根滑杆脱钩了 ‖ ' + (tProbe < 0 ? '全库 S 恒 0，探针找不到' : '探针 #' + tProbe + ' S=' + P[tProbe].S) + '）');
   var wS = document.getElementById('size'), bkS = wS.value;
   wS.value = '2'; fireEv(wS, 'input');
   if (Math.abs(st.size - 2) > 1e-9) wireBad.push('点大小滑杆拖到 2 而 st.size = ' + st.size);
@@ -6737,7 +6737,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
-'<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp/F，796 行历史引用都指着它。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong = Hplong/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
+'<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp5(参照·旧5P卷)/F，历史引用都指着它；新四格卷(X2/X3/X5/X8)上线后旧 H5 系列整列退出。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong5 = Hplong5/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
 '<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
 '<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +

@@ -78,7 +78,7 @@ const OKL = {};
   } }
 
 const CO = rd(arg('table', 'coords.tsv')), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
-const COLS = ['Hlong', 'Hplong', 'Flong', 'okLong', 'failsLong'];
+const COLS = ['Hlong5', 'Hplong5', 'Flong5', 'okLong', 'failsLong'];   // 11-07 改名：H 系列 → H5 参照名
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
   if (CHECK) { console.error('⛔ coords.tsv 还没有这三列 ⇒ 先不带 --check 跑一次'); process.exit(2); }

@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const multi = rd('champion-map/epsfull-r64-multi-1106.tsv'), mh = Object.fromEntries(multi[0].map((x, i) => [x, i]));
-const lng = rd('champion-map/epsfull-r64-long-1106.tsv'), lh = Object.fromEntries(lng[0].map((x, i) => [x, i]));
+const lng = rd('champion-map/build-1105/epsfull-r64-long-1106.tsv'), lh = Object.fromEntries(lng[0].map((x, i) => [x, i]));
 const MP = {}, MD = {}, ME = {}, LE = {}, LP = {};
 for (const r of multi.slice(1)) { if (!r[mh.id]) continue; MP[r[mh.id]] = r[mh.page]; MD[r[mh.id]] = r[mh.d]; ME[r[mh.id]] = r[mh.exam]; }
 for (const r of lng.slice(1)) { if (!r[lh.id]) continue; LE[r[lh.id]] = r[lh.exam]; LP[r[lh.id]] = r[lh.page]; }
@@ -21,14 +21,14 @@ for (let r = 1; r < co.length; r++) {
   const id = co[r][h.id];
   if (!id || !(id in MP)) continue;
   if (co[r][h.ver] !== '2.0') { missing.push(id + '(ver=' + co[r][h.ver] + ')'); continue; }
-  const oldHp = co[r][h.Hp], oldHpl = co[r][h.Hplong];
+  const oldHp = co[r][h.Hp5], oldHpl = co[r][h.Hplong5];
   co[r][h.Hp] = MP[id];
   co[r][h.De] = MD[id];
-  co[r][h.Hlong] = LE[id] !== undefined ? LE[id] : '-';
-  co[r][h.Hplong] = LP[id] !== undefined ? LP[id] : '-';
+  co[r][h.Hlong5] = LE[id] !== undefined ? LE[id] : '-';
+  co[r][h.Hplong5] = LP[id] !== undefined ? LP[id] : '-';
   const S = parseFloat(co[r][h.S]);
-  if (isFinite(S) && LP[id] !== undefined) co[r][h.Flong] = (parseFloat(LP[id]) / 100 + T * S).toFixed(4);
-  else { noS.push(id); co[r][h.Flong] = '-'; }
+  if (isFinite(S) && LP[id] !== undefined) co[r][h.Flong5] = (parseFloat(LP[id]) / 100 + T * S).toFixed(4);
+  else { noS.push(id); co[r][h.Flong5] = '-'; }
   upd++;
   report.push(id.padEnd(22) + ' Hp ' + oldHp + '→' + MP[id] + ' ‖ Hplong ' + (oldHpl || '-') + '→' + (LP[id] !== undefined ? LP[id] : '-'));
 }

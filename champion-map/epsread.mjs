@@ -97,7 +97,7 @@ for (const k of ids.sort()) {
  *   而 `epsagg.tsv` 现在是查看器吃的那张、由 `eps2seed.mjs`（§E597 那批 120 局 · 8 列 · 剂量走 `tier:lv:regular`）产出
  *   ⇒ 谁跑一遍本尺这个**§E313 的 30 局 · ε=0.2 常数**旧表，就会把活跃表连列带数一起覆掉（实测覆了 122 行，靠 `git checkout` 复原）。
  *   一台仪器的产物不许 squat 另一台的活跃路径 —— 改成本尺自己的名字，历史读数要再看还看得着。 */
-const AGG = 'eps313-agg.tsv';
+const AGG = 'archive/eps313-agg.tsv';   // 11-07 整理：冻结中间件归档（epsagg.tsv 产物在顶层）
 writeFileSync(join(HERE, AGG), lines.join('\n') + '\n', 'utf8');
 console.log('\n已写 champion-map/' + AGG + '（' + (lines.length - 1) + ' 枚，两 seed 齐的才收）'
   + ' ‖ ⚠ 这不是查看器吃的那张（那张 = eps2seed 产的 epsagg.tsv，120 局 · tier:lv:regular 剂量）');

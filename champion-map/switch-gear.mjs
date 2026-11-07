@@ -57,8 +57,8 @@ if (existsSync(R120)) {
   let n = 0, diff = 0, worst = 0; const names = [];
   for (const r of A.slice(1)) {
     const id = r[ah.id]; if (!id || EX[id] === undefined) continue;
-    n++; const d = Math.abs(EX[id] - Number(r[ah.H]));
-    if (d > 0.05) { diff++; if (names.length < 8) names.push(id + ' 本次 ' + EX[id].toFixed(2) + ' ‖ 量具表 ' + r[ah.H]); }
+    n++; const d = Math.abs(EX[id] - Number(r[ah.H5]));
+    if (d > 0.05) { diff++; if (names.length < 8) names.push(id + ' 本次 ' + EX[id].toFixed(2) + ' ‖ 量具表 ' + r[ah.H5]); }
     if (d > worst) worst = d;
   }
   const rate = n ? diff / n : 1;
@@ -67,8 +67,8 @@ if (existsSync(R120)) {
 } else { console.error('⛔ 守卫② 无从执行：' + R120 + ' 不在盘上 ⇒ 不许换（本笔的凭据要求两台仪器互相复现）'); process.exit(2); }
 
 const CO = rd(join(HERE, 'coords.tsv')), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
-const iId = ch.id, iH = ch.H, iHp = ch.Hp, iDe = ch.De, iF = ch.F, iS = ch.S;
-if ([iId, iH, iHp, iDe, iF, iS].some((x) => x === undefined)) { console.error('⛔ coords 缺 id/H/Hp/De/F/S 某一列'); process.exit(2); }
+const iId = ch.id, iH = ch.H5, iHp = ch.Hp5, iDe = ch.De5, iF = ch.F, iS = ch.S;
+if ([iId, iH, iHp, iDe, iF, iS].some((x) => x === undefined)) { console.error('⛔ coords 缺 id/H5/Hp5/De5/F/S 某一列'); process.exit(2); }
 const iH120 = ch.H120, iExamG = ch.examG;
 
 /* 守卫 ③ 覆盖 */

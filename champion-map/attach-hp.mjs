@@ -52,7 +52,7 @@ for (const f of String(arg('more', '')).split(',').map(s => s.trim()).filter(Boo
 /* 守卫：本次考卷读数必须与 coords 里的 H 逐字相同；不同就是"两把尺"，必须当场报出来而不是悄悄换 */
 let mismatch = [];
 for (const r of CO.slice(1)) { const id = r[ch.id]; if (!id || !(id in HP)) continue;
-  if (Math.abs(EX[id] - +r[ch.H]) > 1e-9) mismatch.push(id + ' 本次 ' + EX[id] + ' ‖ coords ' + r[ch.H]); }
+  if (Math.abs(EX[id] - +r[ch.H5]) > 1e-9) mismatch.push(id + ' 本次 ' + EX[id] + ' ‖ coords ' + r[ch.H5]); }
 console.log('复现守卫：' + (mismatch.length ? '⚠ ' + mismatch.length + ' 枚不一致 ⇒ 前 8 条：\n  ' + mismatch.slice(0, 8).join('\n  ')
   : '✅ 全部逐字相同 ⇒ 换尺不是换仪器'));
 
@@ -65,10 +65,10 @@ if (filled < 700) { console.error('⛔ 覆盖不足 700 ⇒ 按跑前判据不�
 /* ⚠ 幂等：这一步重跑过就会在表尾**多一对** Hp/De（实测连跑三次 → 40 列里 3 对同名列，
  *   下游按表头查列的人拿到的是第一对，而最后一对才是新读的数 ⇒ 静默读到旧尺）。
  *   表头已有这两列时**原位覆盖**，不再追加。 */
-const H0 = CO[0], iHp = H0.indexOf('Hp'), iDe = H0.indexOf('De');
+const H0 = CO[0], iHp = H0.indexOf('Hp5'), iDe = H0.indexOf('De5');   // 11-07 改名：旧 5P 系列挂 H5 参照名（用户令），仪器表 page/d 不变
 const app = iHp < 0 && iDe < 0;
 if ((iHp < 0) !== (iDe < 0)) { console.error('⛔ 表头里只有 Hp 或只有 De（' + H0.join('\t') + '）⇒ 这份表被别的步骤改坏了，别接着写'); process.exit(2); }
-const H = app ? H0.concat(['Hp', 'De']) : H0.slice();
+const H = app ? H0.concat(['Hp5', 'De5']) : H0.slice();
 const out = [H.join('\t')];
 for (const r of CO.slice(1)) { const id = r[ch.id];
   const hp = id in HP ? HP[id].toFixed(2) : '', de = id in HP ? DE[id].toFixed(2) : '';
@@ -78,7 +78,7 @@ for (const r of CO.slice(1)) { const id = r[ch.id];
   if (badW) { console.error('⛔ ' + badW + ' 行的宽度 ≠ 表头 ' + H.length + ' 列 ⇒ 不写文件（列错位是静默病，修好上游再来）'); process.exit(2); } }
 if (process.argv.includes('--check')) { console.log('--check：未写文件'); process.exit(0); }
 writeFileSync(join(HERE, 'coords.tsv'), out.join('\n') + '\n');
-console.log('已写 coords.tsv（新增两列：Hp = 线上口径夺1率 ‖ De = Δε = 考卷 − 页面；原 26 列一字未动）');
+console.log('已写 coords.tsv（新增两列：Hp5 = 页面夺1率·参照（旧5P卷） ‖ De5 = Δε5 = 考卷 − 页面；原列名一字未动）');
 const ds = Object.values(DE).sort((a, b) => a - b);
 console.log('Δε 分位 p50 ' + ds[ds.length >> 1].toFixed(2) + ' ‖ p90 ' + ds[Math.floor(ds.length * .9)].toFixed(2) +
   ' ‖ 吃探索(Δε<0) ' + ds.filter(v => v < 0).length + '/' + ds.length);

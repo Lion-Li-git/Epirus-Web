@@ -62,7 +62,7 @@ const EOL = raw.indexOf('\r\n') >= 0 ? '\r\n' : '\n';
 const L = raw.split(/\r?\n/);
 while (L.length && L[L.length - 1].trim() === '') L.pop();      // 只剥行尾空行，不 trim 正文（§E303 那课：末行的空单元格会被连着制表符削掉）
 const head = L[0].split('\t'), H = Object.fromEntries(head.map((c, i) => [c, i]));
-for (const need of ['id', 'path', 'lineage', 'H', 'S', 'seed', 'examG', 'dupN', 'dupOf']) {
+for (const need of ['id', 'path', 'lineage', 'H5', 'S', 'seed', 'examG', 'dupN', 'dupOf']) {
   if (H[need] === undefined) { console.error('⛔ coords.tsv 没有 ' + need + ' 列 ⇒ 输入不是预期那张表'); process.exit(2); }
 }
 const rows = L.slice(1).filter(r => r.trim()).map(r => r.split('\t'));
@@ -109,7 +109,7 @@ const refOf = id => (CACHE_R[id] !== undefined ? CACHE_R[id] : (CACHE_R[id] = re
 
 const picked = [], warn = [], clash = [], carried = [];
 const DIFF = new Map();                       // 副名 id → 与主名不同、且副名表那五列没记到的测量列
-const RECD = { H: 1, S: 1, seed: 1, examG: 1, lineage: 1 };   // 副名表已单列记录的，不在 aliasDiff 里重复
+const RECD = { H5: 1, S: 1, seed: 1, examG: 1, lineage: 1 };   // 副名表已单列记录的，不在 aliasDiff 里重复
 /* HEAD 那一版面板：既给"主名不许被重排换掉"当锚，也给副名指针账当结转来源（两件事都要它，所以一次读出来）。 */
 const HEADINFO = (function () {
   try {

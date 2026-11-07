@@ -11,11 +11,11 @@
 | **某枚包的送盾体检** | `holo.tsv` | 列：`id ok H rank holoPerGame holoOther giftShare overCap` ‖ **`holoOtherPrior2` = 开档 2 的口径**（页面默认，`promscan` 优先用它） |
 | **某枚包能不能上槽** | `promote.tsv` | `--run-promote` 的落盘结果（`pass` / `block` + 原因） |
 | **某个包打起来是什么风格** | `e588-usage-*.tsv` | **每局出手次数**：`snipe defense defenseShare holo guard reflect bigT miniT gun railgun charge ring ji atkShare rounds`；四张 = `multi/long` × `ε=0/0.2` |
-| **池成员谁广、谁刷盾**（选池界面看不见的两列） | `pool-traits.tsv` | 每枚一行：`Hplong Geff distinctKeys holo裸包 holo开档2 charges(蓄能，不是环) rounds noThreatStance 广度过线 送盾偏高`。由 `node champion-map/pool-traits.mjs` 生成。**两列 holo 都印**（coords 的 `holo` 是裸包，产品开档 2 后走 `holoOtherPrior2`）—— 只印裸包会把 `v7beadseed-82` 读成 16 次/局（它开档后 5.4） |
-| **攒 ep 的时机**（环/ジ 在什么局面用） | `usage-buckets-2026-10-20.tsv` | 四格 = **能不能开环（自己 ep≥3）× 这一回合挨没挨打**（挨打从事件流事后读，不猜）；每格给环/ジ 占比。由 `behavior-profile --buckets=1` 生成。**key 读数：long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`，但对官方尺 `Hplong` 只有 +0.11（见 `FINDING-2026-10-20-ring-payoff-ds.md` §十的口径更正）** |
-| **考卷/尺的读数** | `eNNN-epsfull.tsv`、`eNNN-ruler*.tsv` | 按实验编号命名，**编号 = 研究日志里的 §E 编号** |
+| **池成员谁广、谁刷盾**（选池界面看不见的两列） | `archive/pool-traits.tsv`（11-07 归档；需要时按 README 命令再生） | 每枚一行：`Hplong Geff distinctKeys holo裸包 holo开档2 charges rounds noThreatStance 广度过线 送盾偏高` |
+| **攒 ep 的时机**（环/ジ 在什么局面用） | `archive/usage-buckets-2026-10-20.tsv`（归档；`behavior-profile --buckets=1` 再生） | 四格 = 能不能开环 × 这一回合挨没挨打；long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`（`FINDING-2026-10-20-ring-payoff-ds.md` §十） |
+| **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 时代的 per-experiment 尺表+考卷表，信息已并入 `coords.tsv`；`e328-*`/`e370-*`/`e287-ruler` 因仍是链上缺省参数留在顶层 |
 | **对打结果** | `duel*.tsv` | `duel-run.mjs` 产出 |
-| **谱系图上的坐标与各列** | `coords.tsv` | 803 行级别的宽表（含 `Hp/Hplong` 等）；**由九步链生成，别手改** |
+| **谱系图上的坐标与各列** | `coords.tsv`（1.8 面板）‖ `coords-gen3-1105.tsv`（2.0 系 884，现役真源）‖ `coords-projcols.tsv`（烘焙 fit 表） | 宽表（H 系列读数**已改名 H5 参照系**：`H5/Hp5/De5/Hlong5/Hplong5/Flong5` = 旧 5P 单卷读数，新四格卷上线后整列退出）；**由链生成，别手改** |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |
 
@@ -72,3 +72,12 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 - **原地没动的**：所有 `.mjs`（脚本是别条链的入口）‖ `*epsfull*` / `*ruler*`（`rebuild-coords.mjs` 按名字反推口径表）‖
   `feas-*`（`attach-hlong/hshort` 通配读）‖ `coords*` / `point-data*` / `lineage*` / `pool-*`（页面与池的真源表）。
 - 判据写在 `docs/research/archive/README.md` 的 2026-11-06 那两节（含一次如实记录的事故：第一遍判据太宽，11 份未跟踪文件被误删且不可恢复）。
+
+## 八、2026-11-07 整理（229 → ~100 项）+ H 系列改名 H5 参照系
+
+- **归档**：`archive/`（103 份：已并入联合表的历史批次 e608~e825 对、一次性探针、退役分页图、旧考卷快照；`archive/README.md` 有逐组"信息现居地"对照表）。
+- **建造源归拢**：`build-1105/`（9 份 = `coords-gen3-1105.tsv` 的 night6-join 冻结输入；join 路径已同步，重放前先核头注）。
+- **留下的判据**：活脚本 + 活表全在顶层；`pool-seat-ml2-*`（ship 门读）、`holo.tsv`（promscan 读）、`panel.tsv`（viewer 读）、`oldpacks.tsv`（dedupe 门读）等真活件逐一核过引用才留。
+- **H 系列改名（用户令）**：旧 5P 单卷读数整族改参照名 —— `H→H5 ‖ Hp→Hp5 ‖ De→De5 ‖ Hlong→Hlong5 ‖ Hplong→Hplong5 ‖ Flong→Flong5`，
+  五张 coords 表 + viewer（字段/图例/tooltip/页检）+ attach-hp/hlong/sc + switch-gear/fold/dups/rebuild/repair + night6-join/r64-attach 全链同步；
+  仪器 `eps-full` 的 `page/d` 输出 schema 不变（历史考卷表保持可比）。**等新四格卷（X2/X3/X5/X8）上线后，H5 参照列整列退出图**。

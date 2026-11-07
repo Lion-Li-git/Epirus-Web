@@ -58,5 +58,5 @@ if (CHECK) { console.log('--check：未写文件'); process.exit(0); }
 if (!miss.length) {
   writeFileSync(join(HERE, 'coords.tsv'), C.h.join('\t') + '\n' +
     out.map(r => C.h.map(k => r[k]).join('\t')).join('\n') + '\n');
-  console.log('已写 coords.tsv（几何列与 H/S/Geff/F/rank 原样保留）');
+  console.log('已写 coords.tsv（几何列与 H5/S/Geff/F/rank 原样保留）');
 } else console.error('⛔ 有 ' + miss.length + ' 枚接不到量具记录 ⇒ 不写，先补 ' + 'e287-measure.mjs');

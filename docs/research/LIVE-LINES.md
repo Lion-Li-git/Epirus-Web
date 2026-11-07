@@ -990,3 +990,11 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   对局形状）——无害，v3 落地时再定。
 - **待裁清单不变（都在 DS 提案 §5/§7/§10.7）**：E3 席面/健康带与无信息线/训练侧切不切 v3 ‖ 四人数默认权重
   5P.45/3P.25/2P.15/8P.15 ‖ v7 包 8P 格算不算产品环境 ‖ 全息屏障仍是零覆盖（只有 toolkit 碰）。
+
+## 追记 57（11-07 午后 · ZCode）——champion-map 整理（229→~100）+ 旧 H 系列改名 H5 参照系
+
+- **用户令**：跑全图新读数之前先把 champion-map 收拾干净（"信息都汇总一下，之前做过这个工作"），并顺手把旧 H 系列改成参照用 H5、等新 H 系列上线后退出图。
+- **分类器两版**（`scratch/zcode-1106/cm-classify{,2}.mjs`）：v1 被活脚本注释里的历史文件名污染；v2 剥注释后按引用判定，38 SCRIPT-LIVE / 77 DATA-LIVE（带证据行）/ 111 ARCHIVE?。
+- **搬迁 82 份**：`archive/`（103 份含 README 的"信息现居地"对照表）+ `build-1105/`（1105 联合表 9 份建造源，`night6-join`/`r64-attach` 路径同步）。全库断引扫描抓到 3 处真断引当场修：**`pool-seat-ml2-*` 是 ship 门（`tools/gates/ship-pool.mjs`）读的**（第一版分类器没扫 tools/gates，差点搬走）、`holo.tsv`（promscan 读）恢复顶层、`epsread` 的 AGG 路径改指 archive。
+- **H 系列改名**：`H/Hp/De/Hlong/Hplong/Flong → H5/Hp5/De5/Hlong5/Hplong5/Flong5`（旧 5P 单卷=参照系，新四格卷 X2/X3/X5/X8 上线后整列退出）。五张 coords 表表头 + viewer 全链（字段构建/头号尺守卫/长程映射/图例/tooltip/页内公式串）+ attach-hp（挂列名与幂等检测）/attach-hlong/attach-sc + switch-gear/fold-coords/dups/rebuild/repair + night6-join/r64-attach。仪器 `eps-full` 的 `page/d` schema **不动**（历史考卷表可比性）。
+- **门**：lint-viewer ✅ ‖ 重烘 884 枚（页字段 H5/Hp5/De5，旧 `"Hp":` 零残留）‖ 页检 **99/0** ‖ pool-sync 23/23 ‖ spec 61/61 ‖ meta 门 15/15 + 四道（如实标注：**非整轮认证**；改动面 = champion-map + docs，按 GATE-SHIFTS 就是 meta 组，没跑整轮）。

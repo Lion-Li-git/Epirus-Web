@@ -110,7 +110,7 @@ const HPMORE = ['e328-epsfull.tsv'];
     if (HPMORE.indexOf(t) < 0 && existsSync(join(HERE, t))) HPMORE.push(t);
     else if (HPMORE.indexOf(t) < 0) missMore.push(t + '（来自 --extra 的 ' + fn + '；盘上同族候选：' + (all.slice(0, 8).join(' ') || '一张都没有') + '）'); }
   if (missMore.length) { console.error('⛔ 这批 ruler 表没有配对的线上口径表：' + missMore.join(' ‖ ') +
-    '\n       ⇒ 这些枚会**没有 Hp**，而 Hp 是图上头号尺（空值在查看器里当 0 算 ⇒ 名次直接掉到倒数）。' +
+    '\n       ⇒ 这些枚会**没有 Hp5**，而 Hp5 是图上头号尺（空值在查看器里当 0 算 ⇒ 名次直接掉到倒数）。' +
     '\n         补测：node champion-map/eps-full.mjs --extra=<那个 extra 表> --onlyExtra --out=<上面那张表名>' +
     '\n         或者用 --hp=<已有那张线上口径表> 直接点名（本台的 Hp 来源缺省 = ' + HPBASE + '）。'); process.exit(2); } }
 /* §E605-A（用户 10-14 裁 A）：`relabel-lineage` 与 `attach-kin` **不在这里跑了**，挪到折行之后（第⑧⑨步）。
@@ -220,14 +220,14 @@ console.log('身份分布 ' + Object.entries(cls).map(([k, v]) => k + ' ' + v).j
 /* §E491 头号尺不许有空洞：`Hp` 空 = 查看器按 0 算 F = "线上口径夺1率 0%"，一枚没测过的包会被画成库内倒数。
  *   本轮实测踩过：三枚融合粒 Hp 空 ⇒ 名次 728/732，而补测之后是 51.8/52.8/53.0（现役 47.3）。
  *   `De`（Δε）同源同判 —— 它俩都来自 attach-hp 那一步。 */
-{ const noHp = []; for (const c of ['Hp', 'De']) { const i = h.indexOf(c);
+{ const noHp = []; for (const c of ['Hp5', 'De5']) { const i = h.indexOf(c);
     if (i < 0) { console.error('⛔ 表里没有 ' + c + ' 列 ⇒ 第③步没跑成'); process.exit(2); }
     const n = rows.filter(r => String(r[i]).trim() === '').map(r => r[0]);
     if (n.length) noHp.push(c + ' 空 ' + n.length + ' 枚：' + n.slice(0, 8).join(' ')); }
   if (noHp.length) { console.error('⛔ 头号尺有空洞 ⇒ ' + noHp.join(' ‖ ') +
-    '\n       空 Hp 在查看器里当 0 算（F = Hp/100 + T·S），那几枚会被画成库内倒数 —— 这不是"弱"，是"没测"。' +
+    '\n       空 Hp5 在查看器里当 0 算（F = Hp5/100 + T·S），那几枚会被画成库内倒数 —— 这不是"弱"，是"没测"。' +
     '\n       补测：node champion-map/eps-full.mjs --extra=<这批的 ruler 对应的 extra 表> --onlyExtra --out=<eNN-epsfull.tsv>，再重跑本链。'); process.exit(2); }
-  console.log('头号尺自证 ✅ Hp/De 两列 ' + rows.length + ' 行无一为空（空值会被查看器当 0 ⇒ 名次假倒数）'); }
+  console.log('头号尺自证 ✅ Hp5/De5 两列 ' + rows.length + ' 行无一为空（空值会被查看器当 0 ⇒ 名次假倒数）'); }
 /* §E605 第④条的收尾账：`examG` 必须**在册、齐全、只有一个值** —— 这条以前没人钉，
  *   所以链子跑完把这一列整列弄丢时，只有等页面自测（读的是烘好的图）才响，晚了两步。 */
 { const iG = h.indexOf('examG');

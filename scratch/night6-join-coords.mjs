@@ -31,7 +31,7 @@ const tsv = (f) => { const L = readFileSync(f, 'utf8').replace(/\r\n/g, '\n').sp
 const norm = (id) => String(id || '').replace(/__final$/, '');   // ⑤ 别名归一
 
 const old = tsv('champion-map/coords.tsv');                 // 825 行全列（1.8 面板）
-const joint = tsv('champion-map/coords-gen3-1103.tsv');     // 927 行联合表（短 schema，代 3 臂在这里）
+const joint = tsv('champion-map/build-1105/coords-gen3-1103.tsv');   // 11-07 整理：建造源归入 build-1105/（信息已并进 1105 联合表，此链只作溯源重放）     // 927 行联合表（短 schema，代 3 臂在这里）
 const oldIds = new Set(old.rows.map(r => norm(r.id)));
 
 /* ②③ 容器版本与产物路径：单一来源 = 真文件（不是 sidecar 的名单，也不是文件名猜）
@@ -80,7 +80,7 @@ function verOf(id) {
  *     epsfull-g3-1105.tsv = 39 枚精选点 ‖ -g3b- = 克隆根 CLONE-D4a ‖ -g3c- = 补进来的 3 个父节点 */
 const HPG3 = new Map();
 const GSET = new Set();
-for (const f of ['champion-map/epsfull-g3-1105.tsv', 'champion-map/epsfull-g3b-1105.tsv', 'champion-map/epsfull-g3c-1105.tsv', 'champion-map/epsfull-g3d-1105.tsv', 'champion-map/epsfull-r64-multi-1106.tsv']) {
+for (const f of ['champion-map/build-1105/epsfull-g3-1105.tsv', 'champion-map/build-1105/epsfull-g3b-1105.tsv', 'champion-map/build-1105/epsfull-g3c-1105.tsv', 'champion-map/build-1105/epsfull-g3d-1105.tsv', 'champion-map/build-1105/epsfull-r64-multi-1106.tsv']) {
   if (!existsSync(f)) continue;
   for (const r of tsv(f).rows) {
     if (String(r.page === undefined ? '' : r.page).trim() !== '' && Number.isFinite(+r.page)) {
@@ -105,12 +105,12 @@ function emit(raw) {
   if (PATHOF.has(r.id)) r.path = PATHOF.get(r.id);              // ③ 路径随行
   r.xt = ''; r.yt = ''; r.xt3 = ''; r.yt3 = ''; r.zt3 = '';      // ① 投影交回 proj-tsne
   if (r.ver === '2.0') {                                     // ④ 2.0 行**只认** eps-full：没测到就留空（"未测"），不许拿 200 局的数冒充头号尺
-    const h = HPG3.get(r.id); r.Hp = h ? h.Hp : ''; r.De = h ? h.De : '';
+    const h = HPG3.get(r.id); r.Hp5 = h ? h.Hp : ''; r.De5 = h ? h.De : '';   // 11-07 改名：H 系列 → H5 参照名
     r.examG = h ? (h.examG || EXAMG) : '';                   // 哪一把卷量的就记哪个档（§E569 判"全图只能一个档"）
-  } else if (String(r.Hp === undefined ? '' : r.Hp).trim() === '') {
+  } else if (String(r.Hp5 === undefined ? '' : r.Hp5).trim() === '') {
     /* 面板外的 1.8 行（如 V7C/V7M/V7L 这六枚 v7 面对照臂）：容器把它们判回 1.8，但它们不在 coords.tsv 面板里 ⇒ 没有 Hp。
      *   同一台 eps-full 已经量过它们 ⇒ 照实填，**不许**空着让 viewer 的头号尺守卫报"装错货"。 */
-    const h = HPG3.get(r.id); if (h) { r.Hp = h.Hp; r.De = h.De; r.examG = h.examG || EXAMG; }
+    const h = HPG3.get(r.id); if (h) { r.Hp5 = h.Hp; r.De5 = h.De; r.examG = h.examG || EXAMG; }
   }
   recs.push(r);
   lines.push(outHead.map(k => (r[k] === undefined || r[k] === null) ? '' : r[k]).join('\t'));
@@ -154,7 +154,7 @@ if (ONLY === '18') picked = recs.filter(r => r.ver !== '2.0');
 else if (ONLY === '20') { const set = new Set(); for (const r of recs) if (r.ver === '2.0') { set.add(r.id); for (const p of parentChain(r.id)) set.add(p); } picked = recs.filter(r => set.has(r.id)); }
 
 /* ---- 名次按**本视图挑出来的这批行**重算（Fv = Hp/100 + 0.1·S；viewer 点大小 = f(rank)，空 rank = 点不可见） ---- */
-const iRk = outHead.indexOf('rank'), iHp = outHead.indexOf('Hp'), iS = outHead.indexOf('S');
+const iRk = outHead.indexOf('rank'), iHp = outHead.indexOf('Hp5'), iS = outHead.indexOf('S');
 const idxOf = new Map(recs.map((r, i) => [r.id, i]));
 const chosen = picked.map(r => lines[idxOf.get(r.id)]);
 const fv = chosen.map(l => { const c = l.split('\t'); return (Number(c[iHp]) || 0) / 100 + 0.1 * (Number(c[iS]) || 0); });
@@ -164,7 +164,7 @@ const finalLines = chosen.map((l, i) => { const c = l.split('\t'); c[iRk] = Stri
 
 const OUT = arg('out', ONLY === 'all' ? 'champion-map/coords-gen3-1105.tsv' : 'champion-map/coords-view-' + ONLY + '.tsv');
 writeFileSync(OUT, [outHead.join('\t')].concat(finalLines).join('\n') + '\n');
-const t20 = picked.filter(r => r.ver === '2.0'), noHp = t20.filter(r => String(r.Hp) === '');
+const t20 = picked.filter(r => r.ver === '2.0'), noHp = t20.filter(r => String(r.Hp5) === '');
 console.log('⇒ ' + OUT + '：' + picked.length + ' 行（视图 ' + ONLY + ' ‖ 全表 ' + recs.length + ' 行 ‖ 段快照剔除 ' + nSeg + '）');
 console.log('  版本按容器：2.0=' + t20.length + ' ‖ 1.8=' + (picked.length - t20.length) +
   ' ‖ D4a ⇒ ' + ((byId.get('D4a') || {}).ver || '?') + ' ‖ V7C-s13 ⇒ ' + ((byId.get('V7C-s13') || {}).ver || '?') + '（v7 面臂不再被 sidecar 拉进 2.0）');

@@ -50,12 +50,12 @@ console.log('718 枚 → 唯一权重 ' + G.size + ' 副 ⇒ ' + dup.length + ' 
 /* 名次污染：按**线上口径现算的名次**看前 30 名里有几枚是副本。
  * ⚠ 不许读 `coords.tsv` 的 `rank` 列 —— 那一列是 §E314 换尺前算的（§E319：现役旧名次 15 / 新尺 106，差 7 倍）。 */
 const rk = (function () {
-  const Fv = (r) => (+r[CH.Hp]) / 100 + 0.10 * (+r[CH.S]);
+  const Fv = (r) => (+r[CH.Hp5]) / 100 + 0.10 * (+r[CH.S]);
   const o = CR.slice().sort((a, b) => Fv(b) - Fv(a));
   const m = {}; o.forEach((r, i) => { m[r[CH.id]] = i + 1; });
   return (id) => (m[id] || 9e9);
 })();
-const Hb = (id) => (CO_BY_ID[id] ? +CO_BY_ID[id][CH.H] : NaN);
+const Hb = (id) => (CO_BY_ID[id] ? +CO_BY_ID[id][CH.H5] : NaN);
 const top = [];
 for (const [w, v] of G) { const s = v.slice().sort((a, b) => rk(a[LH.id]) - rk(b[LH.id])); top.push([w, s[0], v.length]); }
 top.sort((a, b) => rk(a[1][LH.id]) - rk(b[1][LH.id]));
