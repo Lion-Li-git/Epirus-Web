@@ -9,7 +9,7 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP } from './pg-lib.mjs';
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode', 'teacher'], 'supfit-full');
+rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode', 'teacher', 'balance', 'collect'], 'supfit-full');
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
 const UP = arg('up', 'scratch/arms/KD-V7.bak');
 const OUT = arg('out', 'scratch/arms/KDFULL.bak');
@@ -17,6 +17,14 @@ const OUT = arg('out', 'scratch/arms/KDFULL.bak');
  *   缺省 = 现役（原行为逐字不变）。桌面参照 refParams（createArena2 的关档席）**保持现役不动**——
  *   换的是"谁给标签"，不是"在什么环境里采"；两件事混着改，克隆读数就没法归因。 */
 const TEACHER = arg('teacher', 'js/bundled-champion-3p.js');
+/* （11-08 晨补）--balance=0 = 按教师自然分布采样（缺省 1 = 键级均衡）。KD-Q 实测：均衡采样把 guard 类
+ *   过度放大成 57% 守癖畸变（教师 28.6%）⇒ 教师本身多样时（8 键类）自然分布更保真；均衡档留着复现旧口径。 */
+const BALANCE = String(arg('balance', '1')) !== '0';
+/* （11-08 晨补）--collect=teacher = **教师开车**采状态（seat0 用教师自己的生产口径 chooser），学生离线学
+ *   教师分布上的标签。缺省 'student'（学生自访 + 教师给键）——KD-Q/KD-U 实测自访档会守癖螺旋
+ *   （学生 27% 防御的状态里教师 value 选 guard ⇒ 学生更守 ⇒ 状态更守 ⇒ 57~65% guard 畸变）。
+ *   整策略转移要的是教师分布上的行为克隆，不是自访分布上的 value 蒸馏；自访档留给 chain 那类"要执行"的用例。 */
+const COLLECT = arg('collect', 'student');
 const STEPS = Math.max(50, Number(arg('steps', 2000)) || 2000);
 const NGRP = Math.max(200, Number(arg('groups', 1200)) || 1200);
 const LR = Number(arg('lr', 3e-4)) || 3e-4;
@@ -58,6 +66,7 @@ const teacherIdx = (state, pid, cs) => {
 const chooser = (p, temp) => T.policyChooserN(p, temp, 0, 1, 'soft');
 /* 采集：学生自访（seat0 用当前权重），教师给标签 */
 const groups = [];
+const tchChooser = T.policyChooserN(tchParams, 0.15);   /* 教师的生产口径（--collect=teacher 时开车用） */
 for (let g = 0; g < GAMES && groups.length < NGRP; g++) {
   const sh = shapes[g % shapes.length];
   const ch = chooser(pv, TEMP);
@@ -71,7 +80,7 @@ for (let g = 0; g < GAMES && groups.length < NGRP; g++) {
         if (fr && fr.tape && fr.tape.keys && fr.tape.keys[wi]) groups.push({ tape: fr.tape, keys: fr.tape.keys, wantKey: fr.tape.keys[wi] });
       }
     }
-    return ch(state, pid, legal);
+    return (COLLECT === 'teacher') ? tchChooser(state, pid, legal) : ch(state, pid, legal);
   };
   const subs = [seat0];
   for (let pid = 1; pid < sh.n; pid++) { const ri = (90000 * 7 + pid * 11 + g * 17 + 101) % A.roster.length; let e = A.roster[ri]; if (e.kind === 'random') e = A.roster[(ri + 1) % A.roster.length]; subs.push(e.sel); }
@@ -80,7 +89,8 @@ for (let g = 0; g < GAMES && groups.length < NGRP; g++) {
 console.log('采集 ' + groups.length + ' 组 ‖ 键类 ' + new Set(groups.map((x) => x.wantKey)).size);
 const cut = Math.floor(groups.length * 0.75);
 const train = groups.slice(0, cut), hold = groups.slice(cut);
-/* 类平衡采样：键级目标在 ji 占多数时会塌成"永远 ji"（2000 步实测 41.7% = ji 频率）⇒ 每批按键均匀抽。 */
+/* 类平衡采样：键级目标在 ji 占多数时会塌成"永远 ji"（2000 步实测 41.7% = ji 频率）⇒ 每批按键均匀抽。
+ *   --balance=0 = 按教师自然分布抽（教师多样时不塌，且不放大稀有键 ⇒ 保真优先，见 KD-Q 57% 守癖教训）。 */
 const byKey = new Map();
 for (const g of train) { if (!byKey.has(g.wantKey)) byKey.set(g.wantKey, []); byKey.get(g.wantKey).push(g); }
 const keyList = Array.from(byKey.keys());
@@ -96,8 +106,9 @@ function step() {
   grad.fill(0);
   let used = 0;
   for (let b = 0; b < BATCH; b++) {
-    const g = byKey.get(keyList[Math.floor(rnd() * keyList.length)])[0] || train[0];
-    const poolK = byKey.get(g.wantKey); const g2 = poolK[Math.floor(rnd() * poolK.length)];
+    const g2 = BALANCE
+      ? (() => { const k = keyList[Math.floor(rnd() * keyList.length)]; const poolK = byKey.get(k); return poolK[Math.floor(rnd() * poolK.length)] || train[0]; })()
+      : train[Math.floor(rnd() * train.length)];
     const { a, t } = acc(g2, pv);
     if (t.kProb[g2.wantKey] == null) continue;
     const u = dLogKeyP(g2.wantKey, a.logits, g2.keys, TEMP, t);
@@ -146,7 +157,7 @@ try { hf = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { hf = ''; }
 if (!hf) console.log('⚠ 起点 wid 算不出（外壳不认/文件读不到）⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
 const meta = { ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
   up: UP, hotstartFrom: hf || UP, seed: SEED, steps: STEPS, groups: NGRP, lr: LR, batch: BATCH, temp: TEMP, games: GAMES, n: N, mode: MODE,
-  teacher: TEACHER };   /* METHODOLOGY 145：克隆的"知识来自谁"必须入档（保真闸要拿它对师徒三件套） */
+  teacher: TEACHER, balance: BALANCE ? 'key' : 'natural', collect: COLLECT };   /* METHODOLOGY 145：克隆的"知识来自谁 + 怎么采"必须入档（保真闸要拿它对师徒三件套） */
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 console.log('产物 → ' + OUT + ' ‖ meta.hotstartFrom=' + (hf ? hf + '（wid）' : UP + '（路径，wid 算不出）'));
