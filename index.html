@@ -155,30 +155,30 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mw4flbkj"></script>
-<script src="js/core/state.js?v=mw4flbkj"></script>
-<script src="js/core/resolve.js?v=mw4flbkj"></script>
-<script src="js/core/play.js?v=mw4flbkj"></script>
-<script src="js/train/bots.js?v=mw4flbkj"></script>
-<script src="js/train/policy.js?v=mw4flbkj"></script>
-<script src="js/train/policy2.js?v=mw4flbkj"></script>
-<script src="js/train/evo.js?v=mw4flbkj"></script>
-<script src="js/train/trainer.js?v=mw4flbkj"></script>
+<script src="js/core/rules.js?v=k7q2rm9d"></script>
+<script src="js/core/state.js?v=k7q2rm9d"></script>
+<script src="js/core/resolve.js?v=k7q2rm9d"></script>
+<script src="js/core/play.js?v=k7q2rm9d"></script>
+<script src="js/train/bots.js?v=k7q2rm9d"></script>
+<script src="js/train/policy.js?v=k7q2rm9d"></script>
+<script src="js/train/policy2.js?v=k7q2rm9d"></script>
+<script src="js/train/evo.js?v=k7q2rm9d"></script>
+<script src="js/train/trainer.js?v=k7q2rm9d"></script>
 <script src="js/bundled-champion.js?v=mw4xkkmf"></script>
     <script src="js/bundled-champion-3p.js?v=mw4xlg7j"></script>
-<script src="js/champion-pack.js?v=mw4flbkj"></script>
-<script src="js/pool-draw.js?v=mw4flbkj"></script>
-<script src="js/ui/skill-tip.js?v=mw4flbkj"></script>
-<script src="js/ui/bead-choice.js?v=mw4flbkj"></script>
-<script src="js/ui/rules-panel.js?v=mw4flbkj"></script>
+<script src="js/champion-pack.js?v=k7q2rm9d"></script>
+<script src="js/pool-draw.js?v=k7q2rm9d"></script>
+<script src="js/ui/skill-tip.js?v=k7q2rm9d"></script>
+<script src="js/ui/bead-choice.js?v=k7q2rm9d"></script>
+<script src="js/ui/rules-panel.js?v=k7q2rm9d"></script>
 <!-- 冠军池：成员权重表，defer（不挡首屏；第一次 AI 决策前必然已执行）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
-<script defer src="js/bundled-champion-pool.js?v=mw4flbkj"></script>
+<script defer src="js/bundled-champion-pool.js?v=k7q2rm9d"></script>
 <!-- 2P 池：2P 原生包。真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P --srcKey=EPIRUS_CHAMPION_3P --out=js/bundled-champion-pool-2p.js -->
-<script defer src="js/bundled-champion-pool-2p.js?v=mw4flbkj"></script>
+<script defer src="js/bundled-champion-pool-2p.js?v=k7q2rm9d"></script>
 <!-- v1.8.45（11-06 晨，用户报"刚进入时 3P 未加载静默回退"）：ui.js 也改 defer，且**排在两份池 bundle 之后** ——
      defer 脚本按文档序执行、全部先于 DOMContentLoaded ⇒ 事件绑定发生时池必然已就位，
      "首屏点击赶在 3MB 池 bundle 解析完之前"的竞态窗口从结构上关死（旧窗口内开局 = 池静默回退成单包）。
      降级提示（万一还有别的路能碰上）在 newGame 的开局日志里响亮记一笔，契约 §4。 -->
-<script defer src="js/ui/ui.js?v=mw4flbkj"></script>
+<script defer src="js/ui/ui.js?v=k7q2rm9d"></script>
 </body>
 </html>

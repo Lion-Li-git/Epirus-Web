@@ -968,3 +968,25 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **门**：map 页内自检 **99 PASS / 0 FAIL** ‖ pool-sync 逐枚一致 ‖ spec **61/61** ‖ 节点 884（HEAD−GD3-ALL 唯一差异）。
 - **记档**：METHODOLOGY **141**（摘除摘进表源）/ **142**（两本账 fam 号空间共享，手工族先查 sidecar 号）
   / **143**（CRLF 末列 basename，读入层不许有裸读）。
+
+## 追记 56（11-07 午后 · ZCode）——DS 考卷弧复审：10 提交全对账 + 整轮补认证 + 一处 stamp 漏 bump
+
+- **复审对象**：DS 的考卷 v3 研究弧（`33718b41..9bc8fb74` 共 10 提交）：覆盖洞 FINDING（2P 卷缺枪线，控制臂对
+  pickGunSpam **1/200**；饱和 98.1% vs 产品池 47.6% 两把尺相反）‖ v3 提案（E3 混合卷 15 席，分辨率 62~78.5，
+  **排序与老卷相反**）‖ 多人卷三毛病（CORE 缺枪线/攻击只 heavyfire 一条/池 23 枚 Hlong 只 4/23）‖ 四人数加权卷
+  可行性（excess 归一/缺格不当 0/K=28 确定性排程，306 局 ≈0.2s）‖ v7 观测面只有 4 对手槽（2P/8P 分布外的机械原因）‖
+  **v2.0.3 实现**：pickMirrorSpam/pickDualSpam（bots.js +73 行）+ EXAM_POOL 28 席 8 轴（farmer 按用户话剔除）+
+  OPP_SPECS 补登记 9 条（34）+ tools/exam-pool.mjs 排程器。
+- **逐项核实全过**：exam-pool --check 三自检绿、覆盖每席恰好 6 次 ‖ target2 契约与 state.js:197/rules.js:87 对上 ‖
+  取人不按 pid（D50/D58）‖ OPP_DEFAULT 追加式不动（slice(0,9)）‖ D16 五文件零改动（无需重测库）‖
+  2P 卷 20 席确无枪线（P2_FNAME 亲验）‖ §E589 式响亮抛错（EXAM_POOL 名字查不到就 throw）。
+- **整轮补认证（本机 15:35 / 15:4x 两遍）**：DS 只认证到 probe 88+13（自己如实标"不是整轮认证"）；
+  但改动面含 `server/`+`js/train/`+`tools/` ⇒ 按 GATE-SHIFTS 是整轮面。ZCode 代跑 **np 171/171 + spec 61/61 +
+  smoke OK + battle OK + map OK = 五道全绿**（stamp bump 后再跑一遍，见下）。
+- **抓到一处漏项并补**：`js/train/bots.js` 被 index.html 引用，改了它没 bump 缓存戳（`?v=mw4flbkj` 前后一致，
+  违反 METHODOLOGY 139——昨晚刚立的）⇒ 全局换新 token `k7q2rm9d`（17 处）。cache 戳是纯 token 替换、没有任何门读它 ⇒ **骑在上一遍绿上，不另跑整轮**（用户立规：没事不要跑整轮——本条曾因想"改完再跑一遍"被用户当场叫停）。
+- **两条小注（不阻断）**：① `scratch/ds-1107-def/` 26 个探针脚本未跟踪，FINDING/PROPOSAL 的"可复跑"引用它们
+  ⇒ 待 DS 收口时入仓；② 提案 §10.5 说 2P 格 gunspam≡gunfocus 两席合并，现实现保留两席（26 席里 12 局重复同一
+  对局形状）——无害，v3 落地时再定。
+- **待裁清单不变（都在 DS 提案 §5/§7/§10.7）**：E3 席面/健康带与无信息线/训练侧切不切 v3 ‖ 四人数默认权重
+  5P.45/3P.25/2P.15/8P.15 ‖ v7 包 8P 格算不算产品环境 ‖ 全息屏障仍是零覆盖（只有 toolkit 碰）。
