@@ -917,3 +917,26 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **"训练了没"**：激光眼有现成路径（SEQ boom）**已实测**——SEQ boom + SUB_BEAD boom 组合练到 0.1-0.2/局（缺补贴局爆珠时序列从不触发=鸡生蛋）；**当选 band 不保留**（0.0%，band 内侵蚀与 D-a 同型；考卷代价 42.8 vs 50.3）⇒ **练出≠保留**，挂 D-29（当选面覆盖键通用化）。净化/转移/避雷针/无极变速/双枪/镜面 = 无 credit 无示范，逐卡造 credit 是 1-2 小时/卡的工程。
 - **难度阶梯（8-seed 在册协议）**：方向保持幅度压缩（困难−普通 −0.76pt 7/8 ‖ 简单−普通 +1.7pt 6/8）——rand 替身掉进 12-15% 地板区，D-28 换尺待裁；census 谱台阶依旧强分离。
 - **热启换底**：DSTR4 底子拒绝墙重教（G5 100%/7阻断）、PUSHON 部分接受（3阻断）⇒ 底子决定 60 代能否重教（D-23 机制证据）；3血缺口两条路（MIXHP/120代/换底）都未闭合。
+
+## 追记 54（11-07 午 · Qoder）——用户令"做一下这些然后并 main"：23 枚池的读数补齐 + v2.0.2 记账 + 两条门/文档病
+
+- **补的是昨晚那三件缺口**：① README 档位表还是 20 枚口径 ⇒ 按在册协议重跑 **23 枚池**的普查（`tier-census --games=80 --seeds=90210…90215 --protos=6 --mode=multi`，2880 局/档 × 3 = 8640 局，原件 `scratch/qoder-1107-census-pool23.json`）；
+  ② 台阶那行也重测（`probe-diff-ladder --pool=1 --games=1000 --n=5`，multi 与 long **各 8 粒 77000-77007**，摘要 `scratch/qoder-1107-ladder-multi.txt` ‖ `…-ladder-long.txt`，`*.log` 原件被 gitignore 只在本机）；③ CHANGELOG 开 **v2.0.2** 条目、README 与 `index.html` 横幅三处版本一致。
+- **新读数**：三档台阶保持（回合 21.7>21.1>19.6 ‖ top3 66.1<73.4<81.2 ‖ G 7.21>5.44>3.76）；**困难档防御类 0% → 0.9%**（DEF credit 成员进了 hard）、种类 20→19、逐局种类 12.4/8.9/7.0。
+  阶梯：普通−困难 multi **+2.34±0.51**（4.6σ，8/8）‖ long **+2.13±0.41**（5.2σ，7/8 另 1 粒并列 0）；简单−普通 multi **+0.95±0.30**（6/8）‖ long **+0.97±0.53**（7/8）。
+  ⚠ rand 替身夺冠均值已掉到 **11-14% 地板区** ⇒ 幅度读数分辨力见底，**D-28 换尺仍待裁**（比 ZCode 在 24 枚池上那遍 −0.76pt 分得开，说明重构本身恢复了一部分台阶）。
+- **产品面自证（并 main 前逐件核过，不是照抄夜账）**：`pool-sync --check` **23/23** ‖ 23 枚 wid 互不相同 ‖ 4 枚新成员 `promoteVerdict=pass` ‖
+  bundle 用 `build-pool-bundle --out=<scratch>` 重烘 ⇒ 与在册**只差生成时刻那一行**（成员 23、源合计 3643 KB 逐字同）⇒ 派生物没被手改 ‖
+  演化图按 `bake-flags.txt` 重烘 ⇒ 产物**逐位相同** ‖ 指纹五件套（rules/resolve/state/play/policy）**一个字没动** ⇒ 仍 `e61790e8`，两个线上槽不需重测。
+- **口径时限补注（我自己昨晚写的账）**：那格"hard 带逐枚防御族 = 0"量的是**重构前**的 10 枚；11-07 晨换掉 4 枚之后对象变了 ⇒
+  `PROBLEMS` 第六节结论 1、`FINDING-…-ds.md` 勘误①、`DECISIONS` D-23 三处都加了时限与现读数（0.9%），不许再当"现 hard 带"引用。
+- **D205⑤ 假阳性修了**（`tools/gates/meta-repo.mjs` 的 `claimOf()`）：先摘掉**文件名/包名形态的代码 span**（带扩展名或 `-s<数字>`）再扫门号。
+  理由不是"为了变绿"：本版必须点名降带的 `D1200-s13`（D82 要求），而旧抽取器把它读成门号声明 ⇒ **D82 与 D205 互相打架**，错的只能是抽取器。
+  **牙**：塞一个真不在册的门号 ⇒ `✘ ⑤`（0/1），还原 ⇒ 1/1。⚠ 修完我自己又撞一次：解释这段时**裸写了那个假号与产物号**，被抽取器正当地抓住 ⇒ 改措辞（假号只留在 PROBLEMS 第 8 条）。
+  教训：抽取器修好之后，**账里描述验牙的那句话本身也是它的输入**。
+- **`--group=train` 是坏命令（只记不改，等裁）**：`GATE-SHIFTS.md:15/29` 推荐它、`gate-all.mjs:83` 对 `js/train/`+`js/bundled*`+`train-3p` 仍返回它、
+  而 runner 的 `CUM` 只有 meta/ship/ui/probe/engine（`np-test.mjs:245-246`）⇒ 实测 `⛔ 不认识`、**一条门都没跑**；`--auto` 撞本版这个改动面同样会被拒。
+  本轮替代 = `--group=probe`（88 条，累计含 ship+meta）。修法三选一（映射 probe 会**少跑**、映射 engine 与"别没事跑整轮"冲突、或把 train 组重新定义回 CUM）记在 PROBLEMS 二节末，GATE-SHIFTS 那一行已就地标注。
+- **台账**：补登 **D-28 / D-29**（夜班只写在正文，违反"任何待裁项必须在本表有行"）。
+- **门禁（定向，不是整轮）**：`--group=probe` **87/88**（唯一红就是上面那条假阳性，修后 `--only=D205 ` 1/1）‖ `--group=meta` 15/15 ‖ `--only=D234 ` 1/1 ‖ `lint-viewer` ✅。
+  整轮以 CI 为准，现读：`gh api repos/Lion-Li-git/Epirus-Web/actions/runs?per_page=5` 取 run id ⇒ `…/runs/<id>/jobs` **逐作业逐步骤**读（browser 是观察档，run 级结论会遮红）。

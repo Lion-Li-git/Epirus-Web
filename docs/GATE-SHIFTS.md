@@ -26,7 +26,7 @@
 | 只动 `champion-map/`、`docs/` 里不被门读的那些、`results/` | `node tools/gate-all.mjs --np --group=meta` | **~36 秒** |
 | 动了 `CHANGELOG.md` / `README.md` / `.gitignore` / 任何 `.bak` 落盘 | 同上（`meta` 就是为这个存在的：D8 / D82 / D205 / D194 都在里面） | ~36 秒 |
 | 动了 `docs/METHODOLOGY.md` / `docs/RULES-2P.md` / `docs/RULES-NP.md` / `docs/artifacts/e129-out/matrix.json` | `--np --group=ship` | ~2 分钟 |
-| 动了 `js/train/`、`tools/train-3p.mjs`、`tools/eval-5p.mjs`、`tools/style-exam.mjs`、env 旋钮 | `--np --group=train` | ~10 分钟 |
+| 动了 `js/train/`、`tools/train-3p.mjs`、`tools/eval-5p.mjs`、`tools/style-exam.mjs`、env 旋钮 | ⚠ **`--group=train` 已不存在**（11-07 实测 `⛔ 不认识`，runner 的 CUM 只有 meta/ship/ui/probe/engine）⇒ 暂用 `--np --group=probe`（88 条，累计含 ship+meta）；`gate-all.mjs:83` 仍返回 train ⇒ **`--auto` 撞这个改动面会被拒**，修法待裁（PROBLEMS 二节末追加条） | ~10 分钟 |
 | 动了 `js/ui/`、页面契约、`tools/smoke.mjs` / `battle-test.mjs` | `--np --group=ui` | ~11 分钟 |
 | 动了**量具本身**（`tools/probe-*`、`analyze-*`、`pool-frontier-lib`、被门当输入的 `docs/artifacts/e16*-*.mjs`） | `--np --group=probe` | ~10 分钟 |
 | 动了 `js/core/`、`server/`、`tests/`、根 `index.html`、`tools/np-test.mjs` 自己 | **整轮**：`node tools/gate-all.mjs --np`（不带 `--group`） | **见本节末真源表**（本机并行 ≈5.5 分钟 ‖ 串行 ≈16 分钟） |
