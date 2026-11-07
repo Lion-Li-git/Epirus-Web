@@ -4119,7 +4119,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     _nsShip.length <= 4,
     '历代上槽 ' + P.filter(function (d) { return d.lin === '历代上槽'; }).length + ' 枚里无上线时刻 ' + _nsShip.length + ' 枚'
       + (_nsShip.length ? '：' + _nsShip.map(function (d) { return d.id; }).slice(0, 8).join(',') : '')
-      + ' ‖ 代3臂产物（本就没上过槽）' + P.filter(function (d) { return d.lin === '代3臂产物'; }).length + ' 枚'
+      + ' ‖ 代3臂产物（本就没上过槽）' + P.filter(function (d) { return d.kin === '代3臂产物'; }).length + ' 枚'
       + ' ‖ 旧槽位冠军（时刻来自槽位时间轴，另一条腿逐枚核）' + P.filter(function (d) { return d.lin === '旧槽位冠军'; }).length + ' 枚');
   /* §E375 旧槽位冠军的上线时刻必须来自**槽位时间轴**（ship-times.tsv 按面板上的名字反查，天生覆盖不到它们）。
    *   牙口验过：把 slot-timeline.tsv 临时挪走 ⇒ 这一条红在"16 枚里有时刻的 0"。
