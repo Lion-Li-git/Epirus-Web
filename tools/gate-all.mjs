@@ -58,8 +58,9 @@ let GRPA = GRPA0;
  *   ① **保守**：认不出来的路径一律算 engine（= 整轮）⇒ 它只会多跑，不会少跑；
  *   ② 推断出来的是**分组** ⇒ 总结论照样标"不是整轮认证"，`--auto` 不能拿来冒充认证；
  *   ③ 打印每张票的来路（哪个文件被判成哪一组），不然"为什么只跑 15 道"会变成下一次考古。 */
+let EXTRA_FUZZ = false;   // 训练面 ⇒ 额外跑 --part=engine-fuzz（见下面的赋值处）
 if (process.argv.includes('--auto')) {
-  const RANK = { meta: 1, ship: 2, train: 3, ui: 4, probe: 4, engine: 5 };
+  const RANK = { meta: 1, ship: 2, ui: 4, probe: 4, engine: 5 };   // 'train' 已于 v2.0.2 退役（见下面分类器那段）
   /* v1.7.8：278 条门从 `tools/np-test.mjs` 拆进 `tools/gates/**` 的 16 个部分文件 ⇒ 分类表跟着动三处：
    *   ① **部分文件按前缀映射到它所属的组**（`engine-*`→engine ‖ `train-*`→train ‖ `ship-*`→ship ‖
    *      `probe-*`→probe ‖ `meta-*`→meta ‖ `ui-*`→ui）。这是**本仓最重要的一次止血**：
@@ -71,7 +72,7 @@ if (process.argv.includes('--auto')) {
    *   ③ 末行的兜底从 `meta` 改成**量具面 → probe**：拆前 `tools/usage-probe.mjs`、`tools/behavior-profile.mjs`、
    *      `champion-map/*.mjs` 这些**被 probe 组读的量具**全落进 `meta`，改了它们只跑 16 条纪律门（**少跑 262 条**），
    *      与本节 ①「保守：只会多跑，不会少跑」自相矛盾。现在量具面显式进 probe（累计 probe = 196 条）。 */
-  const PART2GRP = { engine: 'engine', train: 'train', ship: 'ship', probe: 'probe', meta: 'meta', ui: 'ui' };
+  const PART2GRP = { engine: 'engine', ship: 'ship', probe: 'probe', meta: 'meta', ui: 'ui' };   // 没有 train-* 部分文件了
   const cls = (p) => {
     /* 未跟踪的**新目录**：git 只给 `?? tools/gates/`（不给里面的文件名）⇒ 认不出里面是什么，
      *   保守方向必须整轮。拆前这里会掉进末行的 `meta`（少跑 262 条），与本节 ① 自相矛盾。 */
@@ -80,7 +81,14 @@ if (process.argv.includes('--auto')) {
     const pm = /^tools\/gates\/([a-z]+)-[^/]*\.mjs$/.exec(p);
     if (pm) return PART2GRP[pm[1]] || 'engine';       // 认不出的部分 ⇒ 保守：整轮（宁可多跑）
     if (/^(js\/ui\/|tools\/(smoke|battle-test)\.mjs$)/.test(p)) return 'ui';
-    if (/^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'train';
+    /* v2.0.2（11-07）：**训练面不再有 `train` 组** —— 训练那 8 个部分文件 10-27/10-31 已按用户裁定整组删除，
+     * runner 的 CUM 只剩 meta/ship/ui/probe/engine。这里原来仍返回 'train' ⇒ `--auto` 发出 `--group=train` ⇒
+     * runner 直接 `⛔ 不认识`（exit 2，**一条门都没跑**）。Qoder 在 v2.0.2 撞上并按「坏命令」记档、用 probe 绕过。
+     * 现在：训练面 → **probe**（累计 probe+ship+meta = 90 条，覆盖量具/池/出厂/纪律），
+     * 并且**另起一条 `--part=engine-fuzz`**（13 条）—— 因为 engine-fuzz 的夹具直接 `import` 训练侧
+     * （`Bots.pickAggro` / `Play.autoGameN`，D54 就是拿它做的对称性烟测）⇒ 只跑 probe 会漏掉那条耦合。
+     * 判据仍是「只会多跑，不会少跑」：90 + 13 = 103 条，仍远小于整轮 171。 */
+    if (/^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'probe';
     if (/^docs\/(METHODOLOGY|RULES-2P|RULES-NP)\.md$|^docs\/artifacts\/(e129-out\/matrix\.json|train-3p-out\.js|e161-ply\.mjs|e168-style-human\.mjs|e169-beadprice\.mjs|\.training-live\.sha1)$/.test(p)) return 'ship';
     /* 池装配契约的输入面（`D234` 那族读它们）⇒ ship，别让它们掉进 meta */
     if (/^champion-map\/(pool-[^/]*|pack-[^/]*|seat-rule|slot-identity)/.test(p)) return 'ship';
@@ -89,15 +97,20 @@ if (process.argv.includes('--auto')) {
     return 'meta';   // docs/ 其余、champion-map/ 的表与页面、results/ 等：门的读取面上没有 ⇒ 只跑仓库纪律那一组
   };
   const changed = new Set();
-  for (const a of ['status --porcelain', 'diff --name-only HEAD']) {
+  /* v2.0.2：`git status --porcelain` 的行有 3 字符状态前缀（` M ` / `?? ` / `R  旧 -> 新`），而
+   * `git diff --name-only` **没有**。旧实现把两支喂进同一个 `slice(3)` ⇒ diff 那支每条路径都被砍掉前 3 个字符
+   * （实测 `tools/gate-all.mjs` 变成 `ls/gate-all.mjs` ⇒ 分类表里多一条假的 meta 条目）。
+   * 之前没炸是因为 status 那支同时给了正确路径、并集里正确的那份赢 —— 但 `changed` 计数与判据打印一直是脏的。
+   * 现在按支分别取偏移。 */
+  for (const a of [{ cmd: 'status --porcelain', off: 3 }, { cmd: 'diff --name-only HEAD', off: 0 }]) {
     let o = '';
     try {
       const { execSync } = await import('node:child_process');
-      o = execSync('git ' + a, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 << 20 });
-    } catch (e) { console.error('⛔ --auto 认不出改动面（git ' + a + ' 跑不动：' + e.message.split('\n')[0] + '）⇒ 不猜，请手给 --group= 或整轮'); process.exit(2); }
+      o = execSync('git ' + a.cmd, { cwd: ROOT, encoding: 'utf8', maxBuffer: 32 << 20 });
+    } catch (e) { console.error('⛔ --auto 认不出改动面（git ' + a.cmd + ' 跑不动：' + e.message.split('\n')[0] + '）⇒ 不猜，请手给 --group= 或整轮'); process.exit(2); }
     for (const line of o.split('\n')) {
       if (!line.trim()) continue;
-      let p = line.length > 3 ? line.slice(3) : line;
+      let p = line.length > a.off ? line.slice(a.off) : line;
       const ar = p.indexOf(' -> '); if (ar >= 0) p = p.slice(ar + 4);          // R  旧 -> 新
       p = p.trim().replace(/^"|"$/g, '');
       if (p) changed.add(rel(p));
@@ -112,6 +125,9 @@ if (process.argv.includes('--auto')) {
     console.log('--auto 判据（改动 ' + changed.size + ' 个路径）：');
     for (const g of Object.keys(by).sort((x, y) => RANK[y] - RANK[x]))
       console.log('  ' + g.padEnd(7) + by[g].length + ' 个 ‖ ' + by[g].slice(0, 4).join(' ') + (by[g].length > 4 ? ' …' : ''));
+    /* 训练面还牵动 engine-fuzz（D54 的夹具直接 import Bots）⇒ 除 probe 外另跑那 13 条。 */
+    const TRAIN_SURFACE = /^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib)/;
+    EXTRA_FUZZ = Array.from(changed).some(function (p) { return TRAIN_SURFACE.test(p); });
     GRPA = top === 'engine' ? '' : top;
     console.log('--auto ⇒ np 跑 ' + (GRPA ? '--group=' + GRPA : '**整轮**（engine 面 ⇒ 不分组）') +
       '；⚠ 分组那一遍**不是认证**');
@@ -121,6 +137,11 @@ if (process.argv.includes('--np') || process.argv.includes('--auto')) {
   /* ⚑ 总结行要把 np 自己印的**跳过数**接住（§E576）：此前这里的 `want` 只抓两个数字
    *   ⇒ 「· 跳过 N（不算通过也不算失败）」那半段被整段丢掉，274/275 与"275 条全跑过"在总结论里长得一模一样。
    *   CI 的绿看不出少跑了什么，就是这一行造成的。正则**可选**：没有跳过段时照样匹配（旧格式不能变红）。 */
+  /* 训练面：先排 engine-fuzz，再排组 —— 两条并发起跑，结论行各自报数（少跑就是少跑，不合并成一句）。 */
+  if (EXTRA_FUZZ && GRPA) {
+    jobs.unshift({ name: 'np/engine-fuzz', argv: ['node', 'tools/np-test.mjs', '--part=engine-fuzz'],
+      want: /通过 (\d+) \/ (\d+)(?: · 跳过 (\d+))?/ });
+  }
   jobs.unshift({ name: GRPA ? 'np/' + GRPA : 'np', argv: ['node', 'tools/np-test.mjs'].concat(GRPA ? ['--group=' + GRPA] : []),
     want: /通过 (\d+) \/ (\d+)(?: · 跳过 (\d+))?/ });
 }
