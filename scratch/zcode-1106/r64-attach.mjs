@@ -22,8 +22,8 @@ for (let r = 1; r < co.length; r++) {
   if (!id || !(id in MP)) continue;
   if (co[r][h.ver] !== '2.0') { missing.push(id + '(ver=' + co[r][h.ver] + ')'); continue; }
   const oldHp = co[r][h.Hp5], oldHpl = co[r][h.Hplong5];
-  co[r][h.Hp] = MP[id];
-  co[r][h.De] = MD[id];
+  co[r][h.Hp5] = MP[id];   // 11-07 改名补漏（这行夜里跑的时候表头还是旧名）
+  co[r][h.De5] = MD[id];
   co[r][h.Hlong5] = LE[id] !== undefined ? LE[id] : '-';
   co[r][h.Hplong5] = LP[id] !== undefined ? LP[id] : '-';
   const S = parseFloat(co[r][h.S]);

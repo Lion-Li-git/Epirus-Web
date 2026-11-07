@@ -38,6 +38,7 @@
   - **修 `--auto` 在训练面必炸**（`b35ea251`）：分类器仍返回已退役的 `train` 组（runner 的 `CUM` 里没有 ⇒ `--group=train` exit 2、一条门都没跑，v2.0.2 自己就撞上了）
     ⇒ 训练面改判 **probe（88 条）+ 另跑 `--part=engine-fuzz`（13 条；D54 的夹具直接 `import` `Bots`）**；顺带修 `diff` 那支被误切 3 字符的潜伏 bug（`tools/gate-all.mjs` → `ls/gate-all.mjs`）。
     实测：`np/probe 88/88 ‖ np/engine-fuzz 13/13 ‖ spec 61/61`（不是整轮认证）。
+  - **四格考卷执行器 + 全图首跑（11-07 午后 · ZCode · 用户令"并发开跑全图的新考卷"）**：新工具 `tools/exam-4n.mjs`（单包仪器：EXAM_POOL 28 席 × planN 确定性排程，N=2/3/5/8，夺1率 rankOf 同口径，excess 归一）+ `tools/exam-4n-full.mjs`（批量编排，跑完按 id 规范化）。验证批 2.0 池 23 枚三跑逐位一致；全图 884 枚 R=100 jobs=10 **11.9 分钟零失败**（h2/h3/h5/h8 + x2..x8 + n2..n8）。读数挂进两张 coords 表为大写 **X2/X3/X5/X8**（§10.6，避开既有几何列 x2/y2/x3/y3/z3；首版撞名+表头漏名两病当场修）+ n 格局数。全图读数：X2 幅 widest（−0.72..0.73）分辨力最强，X8 最窄（8P 混战天花板）；新 h5 与旧 H5 参照全库秩相关 0.68（14→859 可比枚）。页面暂不展示 X 列（§10.6 的权重滑杆视图待裁）。
   - **champion-map 整理 + H 系列改名 H5 参照系（11-07 午后 · ZCode · 用户令）**：① 文件 229→~100 项——已并入联合表的历史批次（e608~e825 对）、一次性探针、退役分页图归档至 `champion-map/archive/`（103 份，README 有"信息现居地"对照），1105 联合表的建造源归拢至 `build-1105/`（9 份，join 路径同步）；活件逐一核过引用（ship 门读的 `pool-seat-ml2-*`、promscan 读的 `holo.tsv` 等留下）。② 旧 5P 单卷读数整族改参照名 `H5/Hp5/De5/Hlong5/Hplong5/Flong5`（五张 coords 表 + viewer + attach/switch-gear/fold/dups/rebuild + night6-join/r64-attach 全链；eps-full 仪器 `page/d` schema 不变）——为四格新卷（X2/X3/X5/X8）腾出命名空间，新卷上线后 H5 参照列整列退出图。页面重烘，页检 99/0 ‖ pool-sync 23/23 ‖ spec 61/61 ‖ meta 门 15/15（非整轮认证）。
   - **新发现（记档，未改任何判据）**：考卷的**覆盖洞**——它不是「全是进攻型对手」（20 基准里 6 防守族 / 4 半防），
     而是「难的一半全在进攻族 + 缺纯线性进攻族（`pickGunSpam`）+ 防守族基准自己很弱」。控制臂对纯枪压制 **1/200**，

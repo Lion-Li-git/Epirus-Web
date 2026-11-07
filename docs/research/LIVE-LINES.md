@@ -998,3 +998,12 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **搬迁 82 份**：`archive/`（103 份含 README 的"信息现居地"对照表）+ `build-1105/`（1105 联合表 9 份建造源，`night6-join`/`r64-attach` 路径同步）。全库断引扫描抓到 3 处真断引当场修：**`pool-seat-ml2-*` 是 ship 门（`tools/gates/ship-pool.mjs`）读的**（第一版分类器没扫 tools/gates，差点搬走）、`holo.tsv`（promscan 读）恢复顶层、`epsread` 的 AGG 路径改指 archive。
 - **H 系列改名**：`H/Hp/De/Hlong/Hplong/Flong → H5/Hp5/De5/Hlong5/Hplong5/Flong5`（旧 5P 单卷=参照系，新四格卷 X2/X3/X5/X8 上线后整列退出）。五张 coords 表表头 + viewer 全链（字段构建/头号尺守卫/长程映射/图例/tooltip/页内公式串）+ attach-hp（挂列名与幂等检测）/attach-hlong/attach-sc + switch-gear/fold-coords/dups/rebuild/repair + night6-join/r64-attach。仪器 `eps-full` 的 `page/d` schema **不动**（历史考卷表可比性）。
 - **门**：lint-viewer ✅ ‖ 重烘 884 枚（页字段 H5/Hp5/De5，旧 `"Hp":` 零残留）‖ 页检 **99/0** ‖ pool-sync 23/23 ‖ spec 61/61 ‖ meta 门 15/15 + 四道（如实标注：**非整轮认证**；改动面 = champion-map + docs，按 GATE-SHIFTS 就是 meta 组，没跑整轮）。
+
+## 追记 58（11-07 午后 · ZCode）——四格考卷执行器落地 + 全图 884 枚首跑
+
+- **用户澄清**：全图读数指的是**新考卷**（旧仪器全量批停掉；"摘铁索没影响，这堆点不用铁索连环"）。DS 只落了池+排程器，runner 缺位 ⇒ 本班补上。
+- **新工具**：`tools/exam-4n.mjs`（单包：planN 排程 × N=2/3/5/8，冠军席=局序%N、对手槽相对座位旋转（eval-5p 656 行教训），`oneGameN`+`rankOf` 与旧卷同源，考卷臂 ε=0）‖ `tools/exam-4n-full.mjs`（批量：worker/增量表/防混批/路径链同 eps-full；跑完按 id 排序规范化——首跑两遍"有差"实为 worker 完成序，12 列读数逐位同）。
+- **验证批（2.0 池 23 枚 R=30）**：三跑逐位一致 ‖ 新 h5 vs 旧 H5 参照 Spearman **0.724** ‖ hard 四枚占 2P 位次 1/2/5/6 ‖ D1200/LE-s13 垫底（与降级记录同向）。
+- **全图首跑**：884 枚 R=100 jobs=10 **11.9 分钟零失败**（8P 格 n=400，SE≈2.2pt）。挂列两病当场修：① 小写 x2/x3 与既有几何列撞名 ⇒ 照提案 §10.6 改大写 **X2/X3/X5/X8**；② attach 脚本漏推表头列名（数据 60 格表头 52 格）+ 大写查小写批表全空 ⇒ 恢复 .bak 重挂。终态：两张 coords 表 + projcols 表头/数据 64/64 对齐，X2 非空 884/884。
+- **全图首读**：X2 幅 widest（−0.72..0.73，2P 分辨力最强）‖ X8 最窄（−0.13..0.28，混战天花板）‖ 新 h5 vs 旧 H5 全库 Spearman **0.68**（859 可比枚）‖ 2P 全图前五 = v7role1w-93/v7seat24b-92/v7aim2-82/v7aim1-82/Lctl（**v7 决斗时代臂霸 2P 榜**——旧 5P 卷结构性看不见的维度）‖ 池 hard 四枚 2P 全图位次 154/219/394/457（池内排序 ≠ 全图 2P 排序，四格卷第一次给出这层读数）。
+- **门**：页检 99/0 ‖ pool-sync 23/23 ‖ spec 61/61 ‖ meta 15/15（非整轮认证）‖ 页面暂不展示 X 列（§10.6 权重滑杆视图待裁）。
