@@ -4647,13 +4647,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     ② 只有部分行有档（半挂）⇒ 没档那些行的读数没法跨文档比，却照样被画进同一张排序里
    *     ③ 一张表里出现**两个不同的档** ⇒ 那才叫"混档画在一张图上"，正是 §E566/§E562 那次误判的形状 */
   var gHas = 0, gVals = {}, gKeys;
-  for (var gi = 0; gi < DATA.length; gi++) { var gd = DATA[gi];
-    if (gd.examG !== null && gd.examG !== undefined && isFinite(gd.examG) && gd.examG >= 1) { gHas++; gVals[gd.examG] = (gVals[gd.examG] || 0) + 1; } }
-  gKeys = Object.keys(gVals);
-  T('§E569 每一行都必须带考卷档 examG，且全图只能有一个档（档写在数据里，不靠文案和记性）',
-    DATA.length > 0 && gHas === DATA.length && gKeys.length === 1,
-    '带档 ' + gHas + '/' + DATA.length + ' ‖ 出现过的档 = ' + (gKeys.join(',') || '（无）') +
-    ' ⇒ 漏档／半挂／混档都会让"离最强一批均值多远"这类读法失去意义');
+  /* §E569 撤（11-08）：examG = H5 时代仪器（eps-full 35 组合×120 局）的档签，H5 撤场时 DATA 里的 H5 字段一并
+   *   删除 ⇒ 页内**没有主语可判**。考卷档号卫生改由两处承担：① 表列 examG 留档（历史行 = 120；四格卷新行不填，
+   *   不拿旧档签冒领新仪器——METHODOLOGY 145 同族）；② 烘焙闸已强制 X2/X2L/P2/P2L 全量在册（同批同参才许烘）。
+   *   新收编行进图见 91c… 后续 intake 提交（3 枚 2.0 候补，读数与全表同批同参）。 */
+  st.hi = {};
   /* §E571 撤（11-07）：epsagg/Δε 子系统退场，两口径同档判据随之失去主语 */
   st.hi = {};
   /* ⑥ 冠军序列按上线时刻排，抽不到的**必须标出来**（不许拿训出时刻冒充上线时刻） */
