@@ -129,3 +129,13 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-07T16:11:27.807Z	612c5c6f6a3e6bb2	docs/artifacts/ADAPT-B4-s13-band2.bak	docs/artifacts/ADAPT-B8-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-07T16:11:27.826Z	2275b19ad23633b9	docs/artifacts/ADAPT-B4-s13-band3.bak	docs/artifacts/ADAPT-B8-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-07T16:11:27.830Z	612c5c6f6a3e6bb2	docs/artifacts/ADAPT-B4-s13-band2.bak	docs/artifacts/night-adapt/ADAPT-B8-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-07T16:27:44.569Z	18a449d116211c2d	docs/artifacts/e539-out/U-s205.js	docs/artifacts/ADAPT-B-s7-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-07T16:27:44.580Z	18a449d116211c2d	docs/artifacts/e539-out/U-s205.js	docs/artifacts/night-adapt/ADAPT-B-s7.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-07T16:33:18.141Z	18a449d116211c2d	docs/artifacts/ADAPT-B-s7-band3.bak	docs/artifacts/CTRL-B-s7-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-07T16:33:18.153Z	18a449d116211c2d	docs/artifacts/ADAPT-B-s7-band3.bak	docs/artifacts/CTRL-B-s7-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-07T16:33:18.167Z	18a449d116211c2d	docs/artifacts/ADAPT-B-s7-band3.bak	docs/artifacts/night-adapt/CTRL-B-s7.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-07T16:41:30.417Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	docs/artifacts/smoke-triplet-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-07T16:41:30.436Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	docs/artifacts/smoke-triplet-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-07T16:41:30.440Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	scratch/zcode-1106/smoke-triplet.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-07T16:43:14.167Z	24d8fa30bb0c3414	docs/artifacts/e528-out/T8-s114.js	docs/artifacts/smoke-triplet-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-07T16:44:54.654Z	6250ffa9a5655d69	docs/artifacts/smoke-triplet-band4.bak	scratch/zcode-1106/smoke-triplet.js	train-3p	未复制：同一粒权重已有真身

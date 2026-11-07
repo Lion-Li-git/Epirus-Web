@@ -3631,6 +3631,23 @@ if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT && process
 console.log((GUARD.wrote ? '\n\u5df2\u5199\u5165 ' : '\n✘ 没写文件（§E589 守卫）：' + GUARD.note + '\n  原本要写 ') + OUT_PATH + '  (coldStart=' + (!seedParams) + ', seed=' + __SEED + ')' +
   (PRODUCT_IS_SEED ? '  ⚠ 产物与起点逐位相同（本臂零改包）' : ''));
 
+/* =====（ZCode · 11-08 凌晨）三件套自动读数（PLAN-2026-11-07 A1 落地 · 默认关）=====
+ *   夜班实证：训练桌评估会骗人（塌方臂臂内 5P 终评 58.2%，考卷已塌到 0.201）⇒ 每臂收尾用**考卷**自报家门。
+ *   EPIRUS_TRIPLET=1 时 spawn tools/exam4-triplet.mjs（双剂量双桌 R=100 ≈70s），JSON 带前缀 [triplet] 打到 stdout，
+ *   并追加进 EPIRUS_TRIPLET_LOG（设了路径才写；批量调用方拼表用）。读数失败只响亮警告、不判臂死
+ *   （阈值闸等用户裁，见 PLAN-2026-11-07 A1）；默认关 ⇒ 历史臂逐字可复现。 */
+if (process.env.EPIRUS_TRIPLET === '1' && GUARD.wrote) {
+  const tr = spawnSync(process.execPath, ['tools/exam4-triplet.mjs', OUT_PATH, '100'], { cwd: process.cwd(), encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
+  const line = (tr.stdout || '').split(/\r?\n/).find(l => l.indexOf('{"pack"') === 0);
+  if (line) {
+    console.log('[triplet] ' + line);
+    const TL = String(process.env.EPIRUS_TRIPLET_LOG || '');
+    if (TL) { try { appendFileSync(TL, line + '\n', 'utf8'); } catch (e) { console.error('⛔ [triplet] 台账写不进去（' + TL + '）：' + (e && e.message ? e.message : e)); } }
+  } else {
+    console.error('⛔ [triplet] 三件套没读到结果（stderr 前 200 字）：' + String(tr.stderr || '').slice(0, 200));
+  }
+}
+
 /* v1.7.91 自证：落地广度这一项到底有没有付过钱。
  *   `max <= WIDTH_FLOOR(3)` ⇒ 这一项从来没付过钱 ⇒ "没效果"是恒零的必然，不是"奖励无效"。 */
 if (WIDTH_LAND_WANT > 0) {
