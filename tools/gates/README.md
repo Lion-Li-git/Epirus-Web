@@ -69,7 +69,7 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 | `js/core/**`、`tests/**`、`index.html`、`server/**`、`tools/np-test.mjs`、`tools/gate-all.mjs`、`tools/spec-run.mjs`、`tools/gates/_ctx.mjs`、未跟踪的**新目录** | engine | ⚠ **整轮**（保守方向：宁可多跑） |
 | `tools/gates/<前缀>-*.mjs` | 按前缀映射到 engine / ship / probe / meta / ui | 那一组 |
 | `js/ui/**`、`tools/smoke.mjs`、`tools/battle-test.mjs` | ui | `--group=ui`（61） |
-| `js/train/**`、`js/bundled*`、`tools/train-*`、`tools/eval-5p`、`tools/promote-champion*`、`tools/probe-*`、`tools/analyze-*` | ship | `--group=ship`（53） |
+| `js/train/**`、`js/bundled*`、`tools/train-*`、`tools/eval-5p`、`tools/promote-champion*`、`tools/probe-*`、`tools/analyze-*` | probe | `--group=probe`（88）+ **另跑 `--part=engine-fuzz`**（13，D54 夹具 import `Bots`） |
 | `docs/METHODOLOGY.md`、`docs/RULES-2P.md`、`docs/RULES-NP.md`、`champion-map/pool-*`、`champion-map/pack-*` | ship | 同上 |
 | `tools/*.mjs`、`champion-map/*.mjs`、`docs/debug/**` | probe | `--group=probe`（90） |
 | 其余（`docs/` 其它、`champion-map/` 的表与页面、`results/`） | meta | `--group=meta`（16） |

@@ -15,6 +15,14 @@
 - **记一条坏命令（不改，等裁）**：`docs/GATE-SHIFTS.md:29` 推荐的 `--group=train` 已不存在（runner 的 CUM 只有 meta/ship/ui/probe/engine），而 `tools/gate-all.mjs:83` 对 `js/train/`、`js/bundled*`、`train-3p` 仍返回 `train` ⇒ **`--auto` 撞本版这个改动面会被响亮拒绝**。本轮改用 `--group=probe` 覆盖；GATE-SHIFTS 那一行已就地标注，修法三选一见 PROBLEMS 二节末。
 - **门禁（本机定向，不是整轮认证）**：`--group=probe` **87/88**（唯一红 = 上面那条 D205⑤ 假阳性；修后 `--only=D205 ` 1/1 ‖ `--group=meta` 15/15，原件 `scratch/qoder-1107-gate-probe.txt` ‖ `…-gate-probe2.txt`）‖ `--only=D234 ` 1/1 ‖ `pool-sync --check` 23/23 ‖ `lint-viewer` ✅ ‖ 演化图重烘产物与在册逐位相同 ‖ bundle 与真源重烘只差生成时刻那一行。整轮以 CI 为准。
 - **未改**：规则与引擎一字未动（指纹五件套未触碰 ⇒ 仍 `e61790e8`，两个线上槽不需要重测）；2P 原生池 9 枚未动；`standard` 仍无 `suddenDeath` 字段（v2.0.1 记的那条待裁仍在）。
+- **11-07 午后追加（DS）**：
+  - **修 `--auto` 在训练面必炸**（`b35ea251`）：分类器仍返回已退役的 `train` 组（runner 的 `CUM` 里没有 ⇒ `--group=train` exit 2、一条门都没跑，v2.0.2 自己就撞上了）
+    ⇒ 训练面改判 **probe（88 条）+ 另跑 `--part=engine-fuzz`（13 条；D54 的夹具直接 `import` `Bots`）**；顺带修 `diff` 那支被误切 3 字符的潜伏 bug（`tools/gate-all.mjs` → `ls/gate-all.mjs`）。
+    实测：`np/probe 88/88 ‖ np/engine-fuzz 13/13 ‖ spec 61/61`（不是整轮认证）。
+  - **新发现（记档，未改任何判据）**：考卷的**覆盖洞**——它不是「全是进攻型对手」（20 基准里 6 防守族 / 4 半防），
+    而是「难的一半全在进攻族 + 缺纯线性进攻族（`pickGunSpam`）+ 防守族基准自己很弱」。控制臂对纯枪压制 **1/200**，
+    DEF credit 臂 25~63%，而考卷里没有这一族 ⇒ 「防御系在考卷上更差」有相当一部分是尺的问题。
+    读数、口径与三条建议见 [`docs/research/FINDING-2026-11-07-exam-coverage-ds.md`](docs/research/FINDING-2026-11-07-exam-coverage-ds.md)。
 
 ## v2.0.1 — 11-06（DS · 复核收口：页面口径归位 + 铁索 × 收缩修正 + 两处文档纠错）
 
