@@ -138,7 +138,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
   'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
@@ -164,6 +164,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
   'EPIRUS_MIX2_EVERY',   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌——同代混桌（DS 待办 2；默认 0=关）
   'EPIRUS_COURSE_EVERY',   //（ZCode · 11-06 夜）课程席：每第 K 代 fitness 局注一席脚本对手（D-08 机制解；默认 0=关）
+  'EPIRUS_MIXHP_EVERY',   //（ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌形（multi↔long；3血适应，默认 0=关）
   'EPIRUS_COURSE_BOT',     //（ZCode · 11-06 夜）课程席坐谁：Bots 导出的函数名（缺省 pickToolKit）
   'EPIRUS_HPSEED',   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
   'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
@@ -792,6 +793,7 @@ const DEPLOY_REC = {};
     ['EPIRUS_MIX8', 'setMix8Every', 'mix8Every'],   /*（ZCode · 11-02 深夜）训练形状档（非干预档）：每第 K 局 8 人桌，地雷的 8P 课；记录器自动落 requested/effective */
     ['EPIRUS_MIX2_EVERY', 'setMix2Every', 'mix2Every'],   /*（ZCode · 11-06 夜）同代混桌：每第 K 局 2 人桌（DS 待办 2）；记录器自动落 requested/effective */
     ['EPIRUS_COURSE_EVERY', 'setCourseEvery', 'courseEvery'],   /*（ZCode · 11-06 夜）课程席：每第 K 代注一席脚本对手（D-08 机制解） */
+    ['EPIRUS_MIXHP_EVERY', 'setMixHpEvery', 'mixHpEvery'],   /*（ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌（3血适应） */
     ['EPIRUS_HPSEED', 'setHpSeed', 'hpSeedOn']];   /*（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（p 比例局全席对称 HP=min(2,modeHp-1)，课程局照常进 fit） */
   const unset = [];
   for (const [envName, setter, getter] of KN) {
@@ -1679,7 +1681,7 @@ if (HUMAN_N > 0) {
  *   这里只负责"读不到就响亮失败"，不静默少放。记账写 **wid**（与 `hotstartFrom` 同一条纪律），不写路径。 */
 const POOL_OPP_N = Number(process.env.EPIRUS_POOL_OPPS || 0);
 const POOL_OPP_TIER = String(process.env.EPIRUS_POOL_OPPS_TIER || 'hard');
-const POOL_OPP_TABLE = 'champion-map/pool-members.tsv';
+const POOL_OPP_TABLE = String(process.env.EPIRUS_POOL_OPPS_TABLE || 'champion-map/pool-members.tsv');
 const POOL_OPPS = [];
 if (Number.isNaN(POOL_OPP_N) || POOL_OPP_N < 0 || POOL_OPP_N !== Math.floor(POOL_OPP_N)) {
   console.error('[pool-ops] ⛔ `EPIRUS_POOL_OPPS` 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_POOL_OPPS || '') + '）⇒ 拒绝把它当 0');
@@ -3281,6 +3283,19 @@ if (Number(process.env.EPIRUS_COURSE_EVERY || 0) > 0) {
     ' ‖ bot=' + (typeof T.courseBotName === 'function' ? (T.courseBotName() || 'pickToolKit') : '?') + '）');
   if (!(cs.fired > 0)) {
     console.error('[train-3p] ⛔ 下达了 EPIRUS_COURSE_EVERY=' + process.env.EPIRUS_COURSE_EVERY + ' 却**一局未注** ⇒ 本臂作废');
+    process.exit(8);
+  }
+}
+
+/* =====（ZCode · 11-06 深夜）桌形混合 收据：同 [course] 的形状 =====
+ * 一局未翻 ⇒ 判据没接上（k<2 被钳 / 表形不匹配）⇒ 本臂作废，不许静默空转。
+ * （池对手席走在册 EPIRUS_POOL_OPPS——它的收据在 [pool-ops] 那一支，不在这里重复。） */
+if (Number(process.env.EPIRUS_MIXHP_EVERY || 0) > 0) {
+  const flips = (typeof T.countMixHpFlips === 'function') ? T.countMixHpFlips() : -1;
+  console.log('[mixHp] 开火计数：换对偶桌 ' + flips + ' 局（mixHpEvery=' + process.env.EPIRUS_MIXHP_EVERY + ' ‖ 主桌=' +
+    (typeof T.trainMode === 'function' ? T.trainMode() : '?') + '）');
+  if (!(flips > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_MIXHP_EVERY=' + process.env.EPIRUS_MIXHP_EVERY + ' 却**一局未翻** ⇒ 本臂作废');
     process.exit(8);
   }
 }

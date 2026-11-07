@@ -71,3 +71,55 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-06T00:00:06.732Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	scratch/ga-arms/MUTFLAT-s16.js	train-3p	本臂零改包：产物 = 起点那一粒
 2026-11-06T04:25:46.673Z	206a93fabfa23653	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band5.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（真身 = band1）；07:56 那批跑完没登记是 widIndex 每进程只扫一遍、收尾写盘时看不见本进程先落的 band（pack-guard.mjs:110 那段没补缓存的已知后果）⇒ 按规矩②补登记，文件一字未动
 2026-11-06T04:25:46.681Z	206a93fabfa23653	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band6.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（真身 = band1）；07:56 那批跑完没登记是 widIndex 每进程只扫一遍、收尾写盘时看不见本进程先落的 band（pack-guard.mjs:110 那段没补缓存的已知后果）⇒ 按规矩②补登记，文件一字未动
+2026-11-06T16:10:44.124Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/SMOKE-MIXHP2-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T16:10:44.129Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/SMOKE-MIXHP2-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T16:10:44.140Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	scratch/ga-arms/SMOKE-MIXHP2.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-06T16:18:32.611Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/POOLOPP-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T16:49:34.423Z		docs/artifacts/COMBO-s13-band3.bak	docs/artifacts/COMBO-s13-band4.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-07 凌晨 · wave1 产物）
+2026-11-06T16:49:34.423Z		docs/artifacts/DEF-s13-band1.bak	docs/artifacts/DEF-s13-band6.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-07 凌晨 · wave1 产物）
+2026-11-06T16:49:34.423Z		docs/artifacts/DEF-s13-band2.bak	docs/artifacts/DEF-s13-band4.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-07 凌晨 · wave1 产物）
+2026-11-06T16:49:34.423Z		docs/artifacts/DEF-s13-band3.bak	docs/artifacts/DEF-s13-band5.bak	band-save	同臂收敛双 band（D191④ 登记 · 11-07 凌晨 · wave1 产物）
+2026-11-06T17:01:40.000Z	98f8594160f0b734	docs/artifacts/COMBO-s13-band6.bak	docs/artifacts/COMBO-half-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T17:01:40.005Z	3536813048db9fe3	docs/artifacts/POOLOPP-s13-band4.bak	docs/artifacts/COMBO-half-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T17:01:40.009Z	3536813048db9fe3	docs/artifacts/POOLOPP-s13-band4.bak	scratch/ga-arms/COMBO-half-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T17:23:29.394Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/DEF-s15-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T17:23:29.404Z	d4a7cf2cb5519439	docs/artifacts/MIX8-s15-band5.bak	docs/artifacts/DEF-s15-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-06T17:23:29.411Z	797a3c24c8323003	docs/artifacts/COMBO-s15-band5.bak	docs/artifacts/DEF-s15-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T17:23:29.415Z	797a3c24c8323003	docs/artifacts/COMBO-s15-band5.bak	scratch/ga-arms/DEF-s15.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T17:32:46.322Z	4f53c20de51d378b	docs/artifacts/DEF-s16-band5.bak	docs/artifacts/COMBO-s16-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T17:32:46.333Z	4f53c20de51d378b	docs/artifacts/DEF-s16-band5.bak	docs/artifacts/COMBO-s16-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T17:32:46.344Z	4f53c20de51d378b	docs/artifacts/DEF-s16-band5.bak	scratch/ga-arms/COMBO-s16.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T18:03:01.809Z	71792109815704ee	docs/artifacts/COMBO-s16-band3.bak	docs/artifacts/COMBO-s16-band6.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:01.826Z	30648c5b359329fa	docs/artifacts/DEF-half-s13-band4.bak	docs/artifacts/DEF-half-s13-band5.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:01.832Z	3f565b84475df9bd	docs/artifacts/DEF-s15-band2.bak	docs/artifacts/DEF-s15-band3.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:01.839Z	589db61d9d98ff1c	docs/artifacts/DEF-s16-band1.bak	docs/artifacts/DEF-s16-band2.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:01.843Z	589db61d9d98ff1c	docs/artifacts/DEF-s16-band1.bak	docs/artifacts/DEF-s16-band4.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:01.857Z	4f53c20de51d378b	docs/artifacts/2p0-pool/COMBO-s16.bak	docs/artifacts/2p0-pool/DEF-s16.bak	train-3p:band	已登记的复制：同臂 band-save 收敛到同一粒权重（widIndex 每进程只扫一遍 ⇒ 收尾写盘看不见本进程先落的 band，pack-guard.mjs:110 已知后果）⇒ 按规矩②补登记 / 池入口复制（scratch 臂产物 → docs/artifacts/2p0-pool/ 池件）与其 band 孪生同权重 ⇒ 池表=身份真源，此份按规矩②登记
+2026-11-06T18:03:50.862Z	e3bab4929e8e56ce	docs/artifacts/2p0-pool/COMBO-s13.bak	docs/artifacts/COMBO-s13-band5.bak	train-3p:band	已登记的复制：band 孪生 ⇒ 池件为 canonical（11-07 凌晨 wave1-3 补账）
+2026-11-06T18:03:50.869Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	docs/artifacts/DEF-s13-band2.bak	train-3p:band	已登记的复制：band 孪生 ⇒ 池件为 canonical（11-07 凌晨 wave1-3 补账）
+2026-11-06T18:03:50.877Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	docs/artifacts/DEF-s13-band4.bak	train-3p:band	已登记的复制：band 孪生 ⇒ 池件为 canonical（11-07 凌晨 wave1-3 补账）
+2026-11-06T18:03:50.881Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	docs/artifacts/DEF-s15-band6.bak	train-3p:band	已登记的复制：band 孪生 ⇒ 池件为 canonical（11-07 凌晨 wave1-3 补账）
+2026-11-06T18:03:50.887Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	docs/artifacts/COMBO-s15-band5.bak	train-3p:band	已登记的复制：band 孪生 ⇒ 池件为 canonical（11-07 凌晨 wave1-3 补账）
+2026-11-06T18:44:25.278Z	d4a7cf2cb5519439	docs/artifacts/DEF-s15-band1.bak	scratch/band-1107/DEF-s15-R2-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T18:44:25.285Z	3f565b84475df9bd	docs/artifacts/DEF-s15-band2.bak	scratch/band-1107/DEF-s15-R2-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T18:44:25.291Z	3f565b84475df9bd	docs/artifacts/DEF-s15-band2.bak	scratch/band-1107/DEF-s15-R2-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T18:44:25.295Z	d4a7cf2cb5519439	docs/artifacts/DEF-s15-band1.bak	scratch/band-1107/DEF-s15-R2-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-06T18:44:25.301Z	5dd5f9991d224dda	docs/artifacts/DEF-s15-band5.bak	scratch/band-1107/DEF-s15-R2-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T18:44:25.306Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/band-1107/DEF-s15-R2-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T18:44:25.311Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/ga-arms/DEF-s15-R2.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T18:50:24.352Z	034d776757f1c2cd	docs/artifacts/MIXHP-s13-band1.bak	docs/artifacts/MIXHP-L120-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T18:59:36.566Z	944762aa3445c978	docs/artifacts/COMBO-s15-band1.bak	scratch/band-1107/COMBO-s15-R2-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T18:59:36.572Z	e6726f71fb51655f	docs/artifacts/COMBO-s15-band2.bak	scratch/band-1107/COMBO-s15-R2-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T18:59:36.579Z	7e930c3920aed71f	docs/artifacts/COMBO-s15-band3.bak	scratch/band-1107/COMBO-s15-R2-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T18:59:36.587Z	1a4e3f63526ed97e	docs/artifacts/COMBO-s15-band4.bak	scratch/band-1107/COMBO-s15-R2-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-06T18:59:36.593Z	797a3c24c8323003	docs/artifacts/2p0-pool/DEF-s15.bak	scratch/band-1107/COMBO-s15-R2-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T18:59:36.598Z	97b727575f8cec4a	docs/artifacts/COMBO-s15-band6.bak	scratch/band-1107/COMBO-s15-R2-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T18:59:36.602Z	97b727575f8cec4a	docs/artifacts/COMBO-s15-band6.bak	scratch/ga-arms/COMBO-s15-R2.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T23:17:36.240Z	879bc0744e307918	docs/artifacts/DEF-s13-band1.bak	scratch/band-1107/SEQBOOM-DEF-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-06T23:17:36.253Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	scratch/band-1107/SEQBOOM-DEF-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-06T23:17:36.256Z	d9d695f1afe6f000	docs/artifacts/DEF-s13-band3.bak	scratch/band-1107/SEQBOOM-DEF-s13-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-06T23:17:36.260Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	scratch/band-1107/SEQBOOM-DEF-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-06T23:17:36.264Z	d9d695f1afe6f000	docs/artifacts/DEF-s13-band3.bak	scratch/band-1107/SEQBOOM-DEF-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-06T23:17:36.268Z	879bc0744e307918	docs/artifacts/DEF-s13-band1.bak	scratch/band-1107/SEQBOOM-DEF-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-06T23:17:36.271Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	scratch/ga-arms/SEQBOOM-DEF-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-06T23:23:41.078Z	d9d695f1afe6f000	docs/artifacts/DEF-s13-band3.bak	scratch/band-1107/SEQBOOM2-DEF-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）

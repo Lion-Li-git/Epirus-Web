@@ -27,7 +27,7 @@
   `localStorage['epirus.champion3p']`，取不到再回退内嵌全局 `window.EPIRUS_CHAMPION_3P`（由 `index.html:149` 的 script 标签带来）。
 
 ⇒ **契约决定**：池 = 一个 committed 的 `<script>` 文件 `js/bundled-champion-pool.js`，把成员包**内嵌**进去。
-体积账（11-06 实测）：多人池 20 枚 = **3.1 MB**（`js/bundled-champion-pool.js` 3,234,914 字节 ‖ 一枚 ≈160 KB，2.0 代 3 的 7993 参数比 v7 的 5689 大一档）‖ 2P 原生池 9 枚 = **960 KB**。缓解：
+体积账（11-07 实测）：多人池 23 枚 = **3.5 MB**（`js/bundled-champion-pool.js` 3,709,627 字节 ‖ 一枚 ≈160 KB，2.0 代 3 的 7993 参数比 v7 的 5689 大一档）‖ 2P 原生池 9 枚 = **960 KB**（982,647 字节）。缓解：
 ① 独立 `<script defer>`，不阻塞首屏；② `?v=` 缓存戳由 `bumpChampionVersion()`（`server/train-server.mjs:110-121`）
 统一刷新（它把 index.html 里**所有**脚本引用的 `?v=` 换成同一个构建标记 ⇒ 新标签自动被覆盖，不必另写机制）；
 ③ 池成员少而精：多人两带各 10 枚（`hard` 10 ‖ `soft` 10）‖ 2P 侧 `hard` 5 ‖ `soft` 4，低档主要靠脚本与低 Hp 包，不必全量入池。

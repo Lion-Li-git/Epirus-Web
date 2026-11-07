@@ -1,0 +1,6 @@
+id	exam	page	d	hp_old	sec	examG	pageDose	mode
+DEF-s13	48.20	47.40	0.80	0.00	26.7	120	tier:lv:regular	multi(默认)
+DEF-s15	51.30	50.20	1.10	0.00	29.4	120	tier:lv:regular	multi(默认)
+DEF-s16	50.00	48.00	2.00	0.00	28.7	120	tier:lv:regular	multi(默认)
+COMBO-s13	50.00	47.60	2.40	0.00	26.3	120	tier:lv:regular	multi(默认)
+COMBO-s16	50.00	48.00	2.00	0.00	31.5	120	tier:lv:regular	multi(默认)

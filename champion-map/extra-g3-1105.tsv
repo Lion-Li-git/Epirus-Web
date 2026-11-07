@@ -22,7 +22,6 @@ GD3-RATION	scratch/arms/GD3-RATION.bak
 L5-D4a-s13	scratch/ga-arms/L5-D4a-s13.js
 GD3ALL-PLAIN-s13	scratch/night3/GD3ALL-PLAIN-s13.js
 GD3ALL-PUSHON-s41	scratch/night3/GD3ALL-PUSHON-s41.js
-GD3-ALL	scratch/arms/GD3-ALL.bak
 G5DEF-s41	scratch/night5/G5DEF-s41.js
 D-a底座	scratch/night4/D-a-s41-base.bak
 D-a-s13	scratch/night4/D-a-s13.js
@@ -44,3 +43,9 @@ GA-ration-s41	scratch/ga-arms/GA-ration-s41.js
 WIDEFIX-s7	scratch/ga-arms/WIDEFIX-s7.js
 KDFULL2	scratch/arms/KDFULL2.bak
 KD-V7	scratch/arms/KD-V7.bak
+arm	productRel
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak
+COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak

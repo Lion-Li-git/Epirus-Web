@@ -1,0 +1,1 @@
+⛔ `--group=train` 不认识（可选：meta/ship/ui/probe/engine）。含糊拼写不许当"没写"。

@@ -449,7 +449,16 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
    * ⚠ 仍保留了它要防的那件事：任何一行只要**没写删**、又提到一个不在册的 D 号 ⇒ 照样红。 */
   const claimOf = function (text) {
     const out = new Set();
-    for (const line of String(text).split(/\r?\n/)) {
+    /* v2.0.2（11-07）：**产物名里的 D 数不是门号**。
+     * 病（同族第二次实测）：CHANGELOG 点名降带的包 `D1200-s13`，下面那条 \bD([0-9]+) 把它读成
+     *   "声称门 D1200 在册" ⇒ 假红；而"为了变绿不在账里点名产物"又正好违反 D82（24h 内落盘的 .bak 必须被点名）
+     *   ⇒ 两条规矩互相打架，错的只能是抽取器。判据改成：先摘掉**看起来是文件名/包名**的代码 span 再扫门号 ——
+     *   ① 带扩展名（.bak/.js/.tsv/.mjs/.json/.txt/.html）② 带本仓包名的种子后缀（-s<数字>）。
+     * 门号自己的写法（`D234` ‖ `D205⑤` ‖ `--only=D234 `）两样都不带 ⇒ 覆盖面不减。 */
+    const stripped = String(text)
+      .replace(/`[^`]*\.(bak|js|tsv|mjs|json|txt|html)`/g, ' ')
+      .replace(/`[^`]*-s[0-9]+[^`]*`/g, ' ');
+    for (const line of stripped.split(/\r?\n/)) {
       if (/删|移除/.test(line)) continue;
       const mappedSrc = new Set([...line.matchAll(/\bD([0-9]+)\s*→/g)].map(m => 'D' + m[1]));
       for (const m of line.matchAll(/\bD([0-9]+)(?![0-9])/g)) { const id = 'D' + m[1]; if (!mappedSrc.has(id)) out.add(id); }
