@@ -17,6 +17,9 @@
   `slot-timeline.tsv` 的 `v7new5_005-31` 那条 release 记录也写着「同时记 v7new6（CLEAR_W=0.05 · seed 94-99：**0/6 过门**，只是 v7new6-94 场B 0.28 差 0.02、v7new6-96 行为门全过）」
   ⇒ 两枚**从未上线**，`lineage=历代上槽` 是从批次候选那里抄错的。已在 `coords.tsv` 与 `coords-gen3-1105.tsv` 两处降成空（`relabel-lineage --check` 现在「已一致」，历代上槽 19→**17**）。
 
+- **收尾补账（11-07 深夜 · ZCode）**：`coords.tsv`（1.8 面板表）补挂 P/m 双桌 16 列（此前"有 X 没 P"半截宽表）；
+  §E375 覆盖行主语随 kin 迁移补课（91c6b0f6）；双剂量口径与 2.0 池画像进 `docs/research/RESULTS-2026-11-07-night-zcode.md` §四十
+  ‖ `docs/METHODOLOGY.md` 144（宽表结构动作要过全部现役宽表清单）‖ 今晚计划 `PLAN-2026-11-07-NIGHT-zcode.md`。
 ## v2.0.3 — 11-07（多人对手池：补两张多人专用卡 + 四人数考卷池与均衡排程；规则与引擎一字未动）
 
 - **新对手脚本两条**（`js/train/bots.js`，用户 11-07 提案）：
