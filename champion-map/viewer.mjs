@@ -484,6 +484,14 @@ const DATA = rows.map(r => ({
   n3: (r.n3 === '' || r.n3 === undefined) ? null : +r.n3,
   n5: (r.n5 === '' || r.n5 === undefined) ? null : +r.n5,
   n8: (r.n8 === '' || r.n8 === undefined) ? null : +r.n8,
+  X2L: (r.X2L === '' || r.X2L === undefined) ? null : +r.X2L,
+  X3L: (r.X3L === '' || r.X3L === undefined) ? null : +r.X3L,
+  X5L: (r.X5L === '' || r.X5L === undefined) ? null : +r.X5L,
+  X8L: (r.X8L === '' || r.X8L === undefined) ? null : +r.X8L,
+  n2L: (r.n2L === '' || r.n2L === undefined) ? null : +r.n2L,
+  n3L: (r.n3L === '' || r.n3L === undefined) ? null : +r.n3L,
+  n5L: (r.n5L === '' || r.n5L === undefined) ? null : +r.n5L,
+  n8L: (r.n8L === '' || r.n8L === undefined) ? null : +r.n8L,
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
    *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
@@ -827,7 +835,7 @@ var NSEL = 0;
  *   不再读 'Scd'（那是"与某一枚参照包的配对差"，参照物已退场；三列 Scd/Scs/Sch 留表里当账）。 */
 (function () { for (var i = 0; i < N; i++) { var v = P[i].sc;
   if (v === null || v === undefined || !isFinite(v)) continue; NSEL++; } })();
-var st = { mode: 'map', T: 0.10, color: 'fam', size: 1, labels: 'champ', q: '', ftab: 'multi',
+var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ftab: 'multi',
   /* 11-07 新标尺（用户令"跑完就换过来"）：ruler='exam4' = 四格加权 excess（DS §10.6）；'ref' = 旧 H5 参照系。
    * 权重默认 5P .45 / 3P .25 / 2P .15 / 8P .15（§10.7 待裁项由滑杆接手），页脚/提示随动显示权重串。 */
   ruler: 'exam4', w2: 0.15, w3: 0.25, w5: 0.45, w8: 0.15,
@@ -951,6 +959,10 @@ var INC = (function () {
     X5: mean(function (d) { return d.X5; }), X8: mean(function (d) { return d.X8; }),
     n2: mean(function (d) { return d.n2; }), n3: mean(function (d) { return d.n3; }),
     n5: mean(function (d) { return d.n5; }), n8: mean(function (d) { return d.n8; }),
+    X2L: mean(function (d) { return d.X2L; }), X3L: mean(function (d) { return d.X3L; }),
+    X5L: mean(function (d) { return d.X5L; }), X8L: mean(function (d) { return d.X8L; }),
+    n2L: mean(function (d) { return d.n2L; }), n3L: mean(function (d) { return d.n3L; }),
+    n5L: mean(function (d) { return d.n5L; }), n8L: mean(function (d) { return d.n8L; }),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     hpl2: mean(function (d) { return d.hpl2; }),
     H: mean(function (d) { return d.H5; }), pt: ANCH_TIER, ts: '', lin: false };
@@ -1060,13 +1072,15 @@ function Fl(d) { return (d.hpl2 === null || d.hpl2 === undefined || !isFinite(d.
  *   ⚑ 这段注释里不许出现反引号：本文件的注释嵌在模板字符串里，一个反引号就把生成器打断（v1.8.27 第一次生成就挂在这也）。 */
 /* 四格加权 excess（§10.6）：缺格按**有格重归一**（缺格不许当 0），一格都没有 = 未测 */
 function X4(d) {
-  var sw = 0, acc = 0;
-  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d['X' + n];
-    if (x !== null && x !== undefined && isFinite(x) && d['n' + n]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
+  /* 11-07 长程批并入：四格卷也有桌形维（multi=3血短程 ‖ long=5血长程），列名带 L 后缀 ⇒ Fv 的桌形自由度回来了 */
+  var L = (st.ftab === 'long') ? 'L' : '', sw = 0, acc = 0;
+  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d['X' + n + L];
+    if (x !== null && x !== undefined && isFinite(x) && d['n' + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
-function X4miss(d) { var m = []; for (var i = 0; i < st.NS4.length; i++) { var x = d['X' + st.NS4[i]];
-  if (!(x !== null && x !== undefined && isFinite(x))) m.push(NS4[i]); } return m; }
+function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
+  for (var i = 0; i < st.NS4.length; i++) { var x = d['X' + st.NS4[i] + L];
+    if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }
 function WSTR() { return '2P:' + Math.round(st.w2 * 100) + ' 3P:' + Math.round(st.w3 * 100) + ' 5P:' + Math.round(st.w5 * 100) + ' 8P:' + Math.round(st.w8 * 100); }
 function FLBL() { return st.ruler === 'exam4' ? 'F = X̄₄ + T·S（X̄₄ = 四格加权 excess）' : 'F = Hp5/100 + T·S（H5 参照系）'; }
 function Fv(d) {
@@ -3083,17 +3097,18 @@ function isoEnsure() {
    *   原来只比 sig/thr/gn/field/bw ⇒ 换桌形时这五项全相等 ⇒ 直接回吐旧场，**底图一动不动**。
    *   用户 10-16 傍晚的现象就是这条："切换桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"。
    *   （与今早那三处缓存键同一族病：凡缓存"由 Fv 导出的量"，键要带上 Fv 的每一个自由度。） */
-  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab) return ISO;
+  /* 11-07：FKEY（尺/T/权重/桌形）也是场值的自由度——拖权重滑杆而底图纹丝不动就是这条键漏维（用户点名） */
+  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab && ISO.fk === FKEY()) return ISO;
   /* E423 DS：**指名道姓**记录这次为什么重建**（空闲时四个条件 sig/thr/gn/field 都该稳定）。
    *   §E608：带宽是**第五个**条件 —— 不进缓存键的话，滑块一动而壳纹丝不动（"改了没生效"那一族，
    *   与 §E464 那座只搭一半的桥同形：代码写了、路是空的，而页面自己看起来一切正常）。
    *   顺带把 SIGMS/BUILDMS 在该帧重建时才是当帧值；读数那边每帧清零，避免拿陈旧值判读。 */
   MISSWHY = ISO ? ((ISO.sig === sg ? '' : 'sig') + (ISO.thr === st.isoT ? '' : '|thr') +
     (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') +
-    (ISO.tab === st.ftab ? '' : '|tab') || 'all-equal?') : 'noISO';
+    (ISO.tab === st.ftab ? '' : '|tab') + (ISO.fk === FKEY() ? '' : '|fk') || 'all-equal?') : 'noISO';
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
-  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.ms = performance.now() - t0;
+  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.fk = FKEY(); ISO.ms = performance.now() - t0;
   BUILDMS = ISO.ms;   /* E422：真重建花了多少 */
   return ISO;
 }
@@ -4220,12 +4235,17 @@ Tt.addEventListener('input', function () { st.T = +Tt.value; document.getElement
     var el = document.getElementById('w' + n);
     el.addEventListener('input', function () { st['w' + n] = +el.value;
       document.getElementById('w' + n + 'v').textContent = (+el.value).toFixed(2);
-      var ws = document.getElementById('wstr'); if (ws) ws.textContent = '（' + WSTR() + '）';
+      var ws = document.getElementById('wstr'); if (ws) ws.textContent = WSTR();
       recomputeVIS(); paintWin(); req(); });
   })(NS[i]);
   var rs = document.getElementById('ruler');
   if (rs) rs.addEventListener('change', function () { st.ruler = rs.value; recalcRank();
     recomputeVIS(); paintWin(); req(); });
+  var tt0 = document.getElementById('tunetoggle'), tb0 = document.getElementById('tunebox');
+  if (tt0 && tb0) tt0.addEventListener('click', function () {
+    var on = tb0.style.display === 'none'; tb0.style.display = on ? 'inline' : 'none';
+    tt0.innerHTML = '细调 <span id="wstr">' + WSTR() + '</span> ' + (on ? '▾' : '▸'); });
+  var ws0 = document.getElementById('wstr'); if (ws0) ws0.textContent = WSTR();
 })();
 document.getElementById('color').addEventListener('change', function () { st.color = this.value;
   /* 换分组口径 ⇒ 高亮键的**含义**变了（家族号 vs seed），留着会把两回事混成一次高亮 ⇒ 必须清 */
@@ -5437,9 +5457,9 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
        * ⚑ 但**必须**把 st.mode 钉在 'map' 上（照 §E306 那条壳判据的同款做法：直接改 st.mode + recomputeVIS + draw）：
        *   前面那条判据为了量壳，临时把视图改成了 3db 并在**更后面**才还原 ⇒ 本条第一版是在 3db 画面上量的，
        *   却写着"底图像素"（用户问的是地图）。尺子没对上用户抱怨的那个画面，读数再准也是废的。 */
-      var md0 = st.mode, iso0 = st.iso, rul0 = st.ruler;
-      /* 11-07：桌形只对参照尺生效（exam4 尺的 F 不随桌形）⇒ 本条断言的语义归属 = ref 尺，进尺先切 */
-      st.mode = 'map'; st.iso = 0; st.ruler = 'ref'; recalcRank(); recomputeVIS(); draw();
+      var md0 = st.mode, iso0 = st.iso;
+      /* 11-07 长程列并入后 exam4 的 F 又随桌形（X 列带 L 后缀）⇒ §E619 原语义恢复，不必切尺 */
+      st.mode = 'map'; st.iso = 0; recalcRank(); recomputeVIS(); draw();
       var fx = Math.round(cv.width * 0.42), fy = Math.round(cv.height * 0.46);
       function patch() { try { return String(g.getImageData(fx, fy, 9, 9).data.join(',')); } catch (e) { return 'ERR'; } }
       function band() { var b = colBand(); return b ? [b.lo, b.med, b.hi].join('/') : '—'; }
@@ -5498,7 +5518,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         ' ‖ FL.tab ' + (flOld ? flOld.tab : '—') + ' → ' + (flNew ? flNew.tab : '—') + '（应等于 ' + flFlip + '）' +
         ' ‖ 旧洞：判定只有 key/tv/bgc/col/vis 五项');
       st.ftab = back; ISO = null; recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
-      st.ruler = rul0; recalcRank(); recomputeVIS(); draw();
+      recomputeVIS(); draw();
     } catch (E) {
       T('桌形开关：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
     }
@@ -6810,11 +6830,16 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="reset">复位视图</button>' +
 '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
   /* 11-07 新标尺行：四格权重滑杆（exam4 尺）+ 标尺切换。权重串随动显示（§10.6：引用必须带权重串）。 */
-  '<label id="rulerrow" title="标尺：四格卷 = EXAM_POOL 28 席 × N=2/3/5/8 的加权 excess（seed=77000 · R=100 · 2026-11-07 全图批）；H5 参照 = 旧 5P 单卷读数（桌形开关只对它生效）">标尺 <select id="ruler"><option value="exam4">四格卷（新）</option><option value="ref">H5 参照（旧5P）</option></select></label>' +
-  '<label id="weightrow">权重 2P <input type="range" id="w2" min="0" max="0.6" step="0.01" value="0.15"><span id="w2v">0.15</span> 3P <input type="range" id="w3" min="0" max="0.6" step="0.01" value="0.25"><span id="w3v">0.25</span> 5P <input type="range" id="w5" min="0" max="0.6" step="0.01" value="0.45"><span id="w5v">0.45</span> 8P <input type="range" id="w8" min="0" max="0.6" step="0.01" value="0.15"><span id="w8v">0.15</span> <span id="wstr" style="opacity:.65"></span></label>' +
+  '<label id="rulerrow" title="标尺：四格卷 = EXAM_POOL 28 席 × N=2/3/5/8 的加权 excess（seed=77000 · R=100 · 2026-11-07 全图批，短程+长程两桌）；H5 参照 = 旧 5P 单卷读数">标尺 <select id="ruler"><option value="exam4">四格卷（新）</option><option value="ref">H5 参照（旧5P）</option></select></label>' +
+  /* 11-07 滑杆收拢（用户："滑杆太多了"）：T 广度 + 四格权重收进"细调"折叠行；chip 上的权重串常显（§10.6） */
+  '<label id="tunetoggle" style="cursor:pointer">细调 <span id="wstr">2P:15 3P:25 5P:45 8P:15</span> ▸</label>' +
+  '<span id="tunebox" style="display:none">' +
+  '<label>T <input type="range" id="T" min="0" max="0.3" step="0.01" value="0.10"><span id="Tv">0.10</span></label>' +
+  '<label id="weightrow">权重 2P <input type="range" id="w2" min="0" max="0.6" step="0.01" value="0.15"><span id="w2v">0.15</span> 3P <input type="range" id="w3" min="0" max="0.6" step="0.01" value="0.25"><span id="w3v">0.25</span> 5P <input type="range" id="w5" min="0" max="0.6" step="0.01" value="0.45"><span id="w5v">0.45</span> 8P <input type="range" id="w8" min="0" max="0.6" step="0.01" value="0.15"><span id="w8v">0.15</span></label>' +
+  '</span>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
 '<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;默认（3血短程）= 在册那把 Hp5(参照·旧5P卷)/F，历史引用都指着它；新四格卷(X2/X3/X5/X8)上线后旧 H5 系列整列退出。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong5 = Hplong5/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（线上口径势 = Hp+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（标尺势 · 随权重滑杆动 · 四格卷=X̄₄+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
 '<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
