@@ -2243,7 +2243,7 @@ function drawMap(fr) {
   pr.sort(function (p, q) { return q.dep - p.dep; });
   scr = new Array(N);
   for (i = 0; i < pr.length; i++) {
-    var d = P[pr[i].i], isC = !!d.lin, al = alphaOf(d);
+    var d = P[pr[i].i], isC = isShipped(d), al = alphaOf(d);
     var foot = ptw(d.x2, d.y2, 0);
     if (st.elev > 0.02 && (isC || st.hi[gk(d)])) {
       g.globalAlpha = al * 0.6 * st.elev;
