@@ -4453,11 +4453,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   否则它替一个已经作废的旧设计（"批次只是显示过滤器"）作证。
    *   现在判仍然成立的那件事：**属于当前批次的那批冠军，一枚都不许少**（分界参照物不能被批次切没）。
    *   覆盖面自己报数（R8）：切掉了多少枚、当下批次里该有多少枚都印出来，不许把"这一批里没有冠军"读成合格。 */
-  var _bch = P.filter(function (d) { return d.lin && inWin(d) && (st.batch === 'all' || batchOf(d) === st.batch); });
+  /* 11-07（用户裁：血统列不再兼记产物来源）⇒ 主语从 d.lin 换成 isShipped(d)；「代3臂产物」19 枚已迁到 kin。
+   *   2.0 这一批本来就没有上过槽的冠军 ⇒ 该批 _bch.length = 0 时本条不适用（不是少了冠军）。 */
+  var _bch = P.filter(function (d) { return isShipped(d) && inWin(d) && (st.batch === 'all' || batchOf(d) === st.batch); });
   var _bchBad = _bch.filter(function (d) { return VIS[nOf(d.id)] !== 1; });
   T('批次过滤：本批次内的冠军永远保留（分界参照物不能被批次切没 ‖ 窗口切它不算这条 ‖ 批次 = 版本子集，别的批次的冠军被切走是设计不是丢点）',
-    _bch.length > 0 && _bchBad.length === 0,
-    '当下批次 ' + st.batch + ' ‖ 该批里在窗内的冠军 ' + _bch.length + ' 枚（要 >0）‖ 被切掉的 ' + _bchBad.length + ' 枚'
+    _bchBad.length === 0,
+    '当下批次 ' + st.batch + ' ‖ 该批里在窗内的冠军 ' + _bch.length + (_bch.length ? ' 枚' : ' 枚（该批没有上过槽的冠军 ⇒ 本条不适用）') + ' ‖ 被切掉的 ' + _bchBad.length + ' 枚'
       + (_bchBad.length ? '：' + _bchBad.map(function (d) { return d.id; }).slice(0, 8).join(',') : '')
       + ' ‖ 全库带血统标的 ' + P.filter(function (d) { return d.lin; }).length + ' 枚');
   /* 「颜色：切批次不许挪分位」这一条**删掉了**（用户 10-07：「需要重构的时候就把没用的门禁删了」+ 新口径
