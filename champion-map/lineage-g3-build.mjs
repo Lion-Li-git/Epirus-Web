@@ -26,7 +26,7 @@ const g3 = tsv('champion-map/g3-lineage.tsv');                 // 237 行：id/p
 const coords = tsv('champion-map/coords-gen3-1105.tsv');       // 864 行（图上画的东西）
 const ruler = tsv('scratch/night6/ruler-g3.tsv');              // 21 枚精选：带 path
 const extra = existsSync(join(ROOT, 'champion-map/extra-g3-1105.tsv'))
-  ? readFileSync(join(ROOT, 'champion-map/extra-g3-1105.tsv'), 'utf8').trim().split('\n').slice(1)
+  ? readFileSync(join(ROOT, 'champion-map/extra-g3-1105.tsv'), 'utf8').replace(/\r\n/g, '\n').trim().split('\n').slice(1)   /* 11-07 晨：本表是 CRLF 且 path 在末列 ⇒ \r 跟进路径，撞车改名的 alt 剥不掉扩展名（sidecar id 全变 *.js/*.bak 的病根）；tsv() 那一路早归一了，就这里漏 */
     .map(l => { const c = l.split('\t'); return { id: c[0], path: c[1] }; }) : [];
 
 const byId = {}; for (const r of g3) byId[r.id] = r;
@@ -36,6 +36,7 @@ const PANEL = {}; for (const r of coords) if (r.path) PANEL[norm(r.id)] = r.path
 const RENAME = {};   // 同 id 撞两个产物 ⇒ 谱系里那一枚改用文件名（面板里的原枚不动）
 function putPath(id, p) {
   if (!p) return;
+  p = String(p).trim();                                        /* CRLF 表末列的 \r 不许跟进 basename（兜底，读入层已各自归一） */
   id = norm(id);
   if (!PATHOF[id]) { PATHOF[id] = p; return; }
   if (PATHOF[id] === p) return;
@@ -81,7 +82,7 @@ const WIDIDX = {}; let widBuilt = false;
 function buildWidIndex() {
   if (widBuilt) return;
   widBuilt = true;
-  const dirs = ['scratch/arms', 'scratch/ga-arms', 'docs/artifacts/e234-out', 'docs/artifacts/e100-out', 'docs/artifacts/e287-out'];
+  const dirs = ['scratch/arms', 'scratch/ga-arms', 'docs/artifacts/e234-out', 'docs/artifacts/e100-out', 'docs/artifacts/e287-out', 'docs/artifacts/e528-out'];   /* e528：T8-s114（活槽现主）——11-07 晨补：V7M/V7L 面臂的 hotstartFrom=24d8fa30 指它，不索引会回解成 wid: 假名父边 */
   for (const d of dirs) { let fs2; try { fs2 = readdirSync(join(ROOT, d)); } catch (e) { continue; }
     for (const f of fs2) { if (!/\.(bak|js)$/.test(f)) continue; const rel = d + '/' + f; const w = widOf(rel); if (w) { const id = f.replace(/\.(bak|js)$/, ''); if (!WIDIDX[w.slice(0, 12)]) WIDIDX[w.slice(0, 12)] = id; } } }
 }

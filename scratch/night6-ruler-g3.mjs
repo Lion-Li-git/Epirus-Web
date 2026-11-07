@@ -26,7 +26,8 @@ const GAMES = 60;
 /* 22 枚精选 2.0 点（代表性精选：完全失败实验不进图——用户 11-05 令） */
 const PICKS = [
   /* OB3S-C2-s7 裁掉（11-05 凌晨）：v=91 代 2 产物，现尺 loud 闸拒绝装载 ⇒ 2.0 图从 gen-3 可测层起步 */
-  ['GD3-ALL', 'scratch/arms/GD3-ALL.bak', '根·蒸馏'],
+  /* GD3-ALL 裁掉（11-07 晨）：2.2%/0.5% 退化点拉垮色标，两本血统账无子节点引用（用户 11-06 夜令摘出图）。
+   *   首摘只清了输出表（0dbe01e1），漏了本表与 join 的进表源 ⇒ 深夜班重跑整合链时复活。本次三处一起摘。 */
   ['GD3-RATION', 'scratch/arms/GD3-RATION.bak', '根·蒸馏'],
   ['GD3-SWORD', 'scratch/arms/GD3-SWORD.bak', '根·蒸馏'],
   ['D4a', 'scratch/arms/CLONE-D4a.bak', '根·蒸馏'],

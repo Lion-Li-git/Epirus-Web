@@ -950,3 +950,21 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **main 上再认证一遍（合并后 `10d103d8`）**：gates run `42337348341` **逐作业全 success**（plan ‖ 11 个 part ‖ gates ‖ browser 第 4/5/6 步）；
   pages run `42337348348` 的 build/deploy 也 success ⇒ **线上已是 v2.0.2 / 23 枚池**。摘要 `scratch/qoder-1107-ci-main.txt`。
   ⚠ 自己踩的一笔记档：两遍 run 同时 queued 时我按 `gh run list` 的第一条去 watch，**watch 到的是 pages 不是 gates**（jobs 只有 build/deploy 才看出来）⇒ 摘要文件已改名 `…-ci-main-pages-watch.txt`。取 run 要按 `workflowName` 认，不要按列表顺序认。
+
+## 追记 55（11-07 午 · ZCode）——GD3-ALL 复活复盘：摘除没摘进表源 ‖ V7 面臂 fam 撞号改走 sidecar
+
+- **用户点名**："昨晚说摘了 GD3-ALL，结果图上还在。" 复盘坐实：`0dbe01e1` 只摘了四张输出表，没摘进表源
+  `scratch/night6/ruler-g3.tsv`（night6-join ③ 号源）和量具硬编码（`night6-ruler-g3.mjs` PICKS）⇒ 深夜班
+  重跑整合链时从源复活。本次三处一起摘 + 重烘，页 884 枚、自检 **99/0**、pool-sync 23/23。
+- **复盘带出两个潜伏病，一并修**：
+  1. **fam 撞号**：`0dbe01e1` 给 6 枚 V7 面臂在 lineage.tsv 补 fam=14，与 sidecar 四类发号空间（14..17）相撞
+     ⇒ 页上 fam14 混装 6 V7 + 19 蒸馏产线（famLabel 还写着"全 v7 面臂"）。§E466 只查行序不查同族性，99/0 抓不到。
+     修法 = 改走 sidecar 既有 G3 类（正则本就收 V7C/V7M/V7L）：g3-lineage 补 6 行根行 + builder 重跑，V7 归 fam15。
+  2. **深夜班净删了那 6 行 lineage.tsv**（`v7-lineage-fix.mjs` 是"先摘再补"两段式，中断不落盘）——反而成了
+     走 sidecar 路线的正确前提；同族台本已删（git 史留档）。
+- **顺手修好的第三件**：builder 的 `extra` 裸读没归一 CRLF，`\r` 进 basename ⇒ 改名产出带扩展名的 id、
+  ts/父验证大面积哑、家族编号被搅成 14=G3/15=ROOT。修后：改名清零、编号回 14=ROOT/15=G3/16=KD（与老账同序）、
+  **实线父边 7→32 条**（哈希=名字父）、哈希补边 6 条——V7M/V7L→T8-s114 实线、池 5 枚（DEF/COMBO）谱系首次入账。
+- **门**：map 页内自检 **99 PASS / 0 FAIL** ‖ pool-sync 逐枚一致 ‖ spec **61/61** ‖ 节点 884（HEAD−GD3-ALL 唯一差异）。
+- **记档**：METHODOLOGY **141**（摘除摘进表源）/ **142**（两本账 fam 号空间共享，手工族先查 sidecar 号）
+  / **143**（CRLF 末列 basename，读入层不许有裸读）。

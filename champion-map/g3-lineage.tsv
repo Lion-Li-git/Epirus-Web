@@ -235,3 +235,9 @@ V7L-s13__final	V7L-s13	段@150代	V7L-s13		150		scratch/ga-arms/V7L-s13.js			kin
 V7L-s41__final	V7L-s41	段@150代	V7L-s41		150		scratch/ga-arms/V7L-s41.js			kinds=3 defShare=3.9 fit=
 V7M-s13__final	V7M-s13	段@150代	V7M-s13		150		scratch/ga-arms/V7M-s13.js			kinds=6 defShare=42.4 fit=
 V7M-s41__final	V7M-s41	段@150代	V7M-s41		150		scratch/ga-arms/V7M-s41.js			kinds=2 defShare=0.0 fit=
+V7C-s13		面臂对照(无热启)	gen-3	13			scratch/ga-arms/V7C-s13.js			v7 换脸面臂对照（无热启）· 11-03 · 三桌形；11-07 晨补根行（此前只有段行，builder 收不进）
+V7M-s13	T8-s114	面臂热启(哈希)	gen-3	13			scratch/ga-arms/V7M-s13.js			hotstartFrom=24d8fa30bb0c3414（=T8-s114 活槽现主）· 11-03
+V7L-s13	T8-s114	面臂热启(哈希)	gen-3	13			scratch/ga-arms/V7L-s13.js			hotstartFrom=24d8fa30bb0c3414（=T8-s114）· 11-03
+V7C-s41		面臂对照(无热启)	gen-3	41			scratch/ga-arms/V7C-s41.js			v7 换脸面臂对照（无热启）· 11-03
+V7M-s41	T8-s114	面臂热启(哈希)	gen-3	41			scratch/ga-arms/V7M-s41.js			hotstartFrom=24d8fa30bb0c3414（=T8-s114）· 11-03
+V7L-s41	T8-s114	面臂热启(哈希)	gen-3	41			scratch/ga-arms/V7L-s41.js			hotstartFrom=24d8fa30bb0c3414（=T8-s114）· 11-03
