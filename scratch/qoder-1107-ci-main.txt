@@ -1,0 +1,24 @@
+# main 10d103d8（v2.0.2 合并后）两遍 CI，逐作业读
+## gates run 42337348341
+browser => success
+gates => success
+part engine-fuzz => success
+part engine-rules => success
+part meta-lint => success
+part meta-repo => success
+part probe-instruments => success
+part probe-libs => success
+part ship-artifact => success
+part ship-feas => success
+part ship-pool => success
+part ship-promote => success
+part ui-contract => success
+plan => success
+## browser 三步（观察档，不看 run 级结论）
+4 页面冒烟（CDP 真 Chrome） => success
+5 多人页面对战（CDP 真 Chrome） => success
+6 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"） => success
+## pages run 42337348348（发布）
+build => success
+deploy => success
+## ⚠ 归档提示：qoder-1107-ci-main-pages-watch.txt 是 pages 那遍的 watch 输出（我先看错了 run，已改名）

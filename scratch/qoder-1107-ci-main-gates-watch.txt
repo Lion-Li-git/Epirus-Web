@@ -1,0 +1,311 @@
+Refreshing run status every 20 seconds. Press Ctrl+C to quit.
+
+* main gates · 42337348341
+Triggered via push about 3 minutes ago
+
+JOBS
+✓ plan in 14s (ID 128297163205)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ 从 runner 现读部分清单（写死清单迟早在加第 17 个部分时漏掉，而漏掉的表现是"少跑却全绿"）
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ browser in 1m35s (ID 128297163447)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ 页面冒烟（CDP 真 Chrome）
+  ✓ 多人页面对战（CDP 真 Chrome）
+  ✓ 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part meta-repo in 24s (ID 128297226952)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=meta-repo
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part probe-instruments in 1m29s (ID 128297226963)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=probe-instruments
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part engine-rules in 15s (ID 128297226970)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=engine-rules
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part meta-lint in 19s (ID 128297226973)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=meta-lint
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-pool in 11s (ID 128297226974)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-pool
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ui-contract in 24s (ID 128297226990)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ui-contract
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-artifact in 9s (ID 128297226997)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-artifact
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part engine-fuzz in 9s (ID 128297226998)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=engine-fuzz
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part probe-libs in 36s (ID 128297226999)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=probe-libs
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+* part ship-promote (ID 128297227001)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  * np --part=ship-promote
+  * Post Run actions/setup-node@v5
+  * Post Run actions/checkout@v5
+✓ part ship-feas in 51s (ID 128297227005)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-feas
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+
+ANNOTATIONS
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+plan: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part meta-repo: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part probe-instruments: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part engine-rules: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part meta-lint: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-pool: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ui-contract: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-artifact: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part engine-fuzz: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part probe-libs: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-promote: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-feas: .github#1
+
+✓ main gates · 42337348341
+Triggered via push about 3 minutes ago
+
+JOBS
+✓ plan in 14s (ID 128297163205)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ 从 runner 现读部分清单（写死清单迟早在加第 17 个部分时漏掉，而漏掉的表现是"少跑却全绿"）
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ browser in 1m35s (ID 128297163447)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ 页面冒烟（CDP 真 Chrome）
+  ✓ 多人页面对战（CDP 真 Chrome）
+  ✓ 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part meta-repo in 24s (ID 128297226952)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=meta-repo
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part probe-instruments in 1m29s (ID 128297226963)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=probe-instruments
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part engine-rules in 15s (ID 128297226970)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=engine-rules
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part meta-lint in 19s (ID 128297226973)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=meta-lint
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-pool in 11s (ID 128297226974)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-pool
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ui-contract in 24s (ID 128297226990)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ui-contract
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-artifact in 9s (ID 128297226997)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-artifact
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part engine-fuzz in 9s (ID 128297226998)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=engine-fuzz
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part probe-libs in 36s (ID 128297226999)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=probe-libs
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-promote in 3m5s (ID 128297227001)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-promote
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ part ship-feas in 51s (ID 128297227005)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ np --part=ship-feas
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+✓ gates in 12s (ID 128297969264)
+  ✓ Set up job
+  ✓ Run actions/checkout@v5
+  ✓ Run actions/setup-node@v5
+  ✓ 各部分的判定（有红 ⇒ 这一档就红，并点名是哪一段）
+  ✓ 并集守卫（全部部分的并集必须 = 整轮；少跑一条就红。条数由脚本现读 ⇒ 这里不写死）
+  ✓ spec（2 人引擎 52 用例）
+  ✓ 门禁哨兵（规矩 1：只许测行为 · 只报告）
+  ✓ Post Run actions/setup-node@v5
+  ✓ Post Run actions/checkout@v5
+  ✓ Complete job
+
+ANNOTATIONS
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+plan: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part meta-repo: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part probe-instruments: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part engine-rules: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part meta-lint: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-pool: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ui-contract: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-artifact: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part engine-fuzz: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part probe-libs: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-promote: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+part ship-feas: .github#1
+
+- "The ubuntu-latest label will migrate to Ubuntu 26 beginning October 19, 2026. For more information, see https://github.com/actions/runner-images/issues/14748"
+gates: .github#1
+

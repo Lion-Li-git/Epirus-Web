@@ -947,3 +947,6 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   （`SMOKE OK` ‖ `BATTLE OK` 推进 12 回合 ‖ 四视图 `tree/1d/3db/map` 各 **99 PASS / 0 FAIL**）。进仓摘要 = `scratch/qoder-1107-ci-pr3-browser.txt` ‖ `…-ci-pr3-jobs.txt`（job log 原文只在本机）。
 - **并 main**：`9d030ecf`（`--no-ff`，按仓里"Merge 研究分支的 … into main"的惯例），研究分支 `research/pool-opp-2026-11-06` 的 7 笔全部进来；main 上的版本三处 = **v2.0.2**。
 - ⚠ 没打 tag、没建 Release（用户 11-06 说过 tag 倒没必要打；要发布再点名）。
+- **main 上再认证一遍（合并后 `10d103d8`）**：gates run `42337348341` **逐作业全 success**（plan ‖ 11 个 part ‖ gates ‖ browser 第 4/5/6 步）；
+  pages run `42337348348` 的 build/deploy 也 success ⇒ **线上已是 v2.0.2 / 23 枚池**。摘要 `scratch/qoder-1107-ci-main.txt`。
+  ⚠ 自己踩的一笔记档：两遍 run 同时 queued 时我按 `gh run list` 的第一条去 watch，**watch 到的是 pages 不是 gates**（jobs 只有 build/deploy 才看出来）⇒ 摘要文件已改名 `…-ci-main-pages-watch.txt`。取 run 要按 `workflowName` 认，不要按列表顺序认。
