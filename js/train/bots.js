@@ -997,6 +997,71 @@
     return { key: SK.JI, target: null };                     // 攒到能开枪
   }
 
+  /* ===== 多人专用对手：镜面反射 pickMirrorSpam（v2.0.3 · 2026-11-07 用户提案） =====
+   * 为什么补它：整池 45 个脚本里**只有** `pickToolKit` 会碰双枪/镜面/全息（`bots.js:345,362` 的 `TOOL_*` 两张表）
+   *   ⇒ 多人卷从来没测过这三张多人专用卡。这条补「镜面反射」，与 `pickDualSpam` 一起补齐「4 人+ 专用卡」那一族。
+   * 口径（用户 11-07 原话）：「镜面反射的输入对手挑刚蓄能过、其次 ep 最多的角色，指向血最多的角色」。
+   *   · **输入对手**（复制谁的技能）= 本回合 `lastSkill === 蓄能` 者优先，其次 ep 最多者（并列随机）；
+   *     为什么：蓄能 = 下一手大概率是大雷/过载炮/电磁炮，复制那一手才值钱；没人蓄能就退回 ep 最多者。
+   *   · **输出对象**（打谁）= 存活对手里**血量最高**者（并列随机），且不与输入对手同一人。
+   *   · 镜面需要两个不同对象 ⇒ 存活对手 < 2 时退回 ジ（2 人局本来就禁用这张卡，R62 会把 legal 里那一项拿掉）。
+   * ⚠ 取目标只用 `mpPickOne`（并列走本局 rng）/ 显式血量档，**不按 pid**（D50/D58 座位身份通道，本仓栽过多次）。 */
+  function pickMirrorSpam(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (!mpAff(bk, SK.MIRROR)) return { key: SK.JI, target: null };
+    const opps = mpOpps(state, pid);
+    if (opps.length < 2) return { key: SK.JI, target: null };
+    /* ① 输入对手：刚蓄能 → 其次 ep 最多 */
+    const charged = [];
+    let maxEp = -Infinity, mostEp = [];
+    for (const i of opps) {
+      const o = state.p[i];
+      if (o.lastSkill === SK.CHARGE) charged.push(i);
+      if (o.ep > maxEp + 1e-9) { maxEp = o.ep; mostEp = [i]; }
+      else if (Math.abs(o.ep - maxEp) < 1e-9) mostEp.push(i);
+    }
+    const src = mpPickOne(state, charged.length ? charged : mostEp);
+    if (src == null) return { key: SK.JI, target: null };
+    /* ② 输出对象：血量最高（并列随机），排除输入对手 */
+    let mx = -Infinity, cand = [];
+    for (const i of opps) {
+      if (i === src) continue;
+      const h = state.p[i].hp;
+      if (h > mx + 1e-9) { mx = h; cand = [i]; } else if (Math.abs(h - mx) < 1e-9) cand.push(i);
+    }
+    const outT = mpPickOne(state, cand);
+    if (outT == null) return { key: SK.JI, target: null };
+    return { key: SK.MIRROR, target: src, target2: outT };
+  }
+
+  /* ===== 多人专用对手：双枪射手 pickDualSpam（v2.0.3 · 2026-11-07 用户提案） =====
+   * 口径：两支枪打**血量最高的两个**（各自档内并列随机）——「压制领先者」这条线只有在 ≥3 人局才存在；
+   *   剩 1 个对手时退回普通枪（双枪在 2 人局本来就被 R62 禁用），连枪都买不起才 ジ。
+   * ⚠ 同样不按 pid 取人：`mpPickOne` 只在本局 rng 下随机。 */
+  function pickDualSpam(state, pid, legal) {
+    const bk = mpBk(legal);
+    const opps = mpOpps(state, pid);
+    const topOf = function (list) {
+      if (!list.length) return null;
+      let mx = -Infinity, cand = [];
+      for (const i of list) {
+        const h = state.p[i].hp;
+        if (h > mx + 1e-9) { mx = h; cand = [i]; } else if (Math.abs(h - mx) < 1e-9) cand.push(i);
+      }
+      return mpPickOne(state, cand);
+    };
+    if (mpAff(bk, SK.DUAL_GUN) && opps.length >= 2) {
+      const t1 = topOf(opps);
+      const t2 = topOf(opps.filter(function (i) { return i !== t1; }));
+      if (t1 != null && t2 != null) return { key: SK.DUAL_GUN, target: t1, target2: t2 };
+    }
+    if (mpAff(bk, SK.GUN) && opps.length) {
+      const t = topOf(opps);
+      if (t != null) return { key: SK.GUN, target: t };
+    }
+    return { key: SK.JI, target: null };
+  }
+
   /* ===== 收割型对手 pickKillSecure（v1.5.156 · DS 09-22）=====
    * 为什么写它：跨 N 的臂 7′（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §11）两场都拿得出手，
    * 唯一缺口是「**把击杀收干净**」（场B 清场 0.10 < 0.3/局 ＋ G4[long]「珠爆发」63% ✗）。
@@ -1546,6 +1611,7 @@
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
     pickMineSpam, pickCurseStorm, pickRingSpam, pickTargeter, pickSnipeSpam, pickGunSpam, pickBeadBurst, pickLaserBead, pickLaserBank,
     pickGunFocus, pickAimDefender, pickBigTFocus, pickBigTRandom, pickBigTChain, bigtHubTarget, pickKillSecure,
+    pickMirrorSpam, pickDualSpam,   // v2.0.3（11-07）：多人专用卡的两条对手线（镜面 / 双枪）
     pickDeadlineBurst, pickEarlyPressure, getEconB, setEconB, setBreakFirst: function (on) { PLAN_BREAK_FIRST = !!on; return PLAN_BREAK_FIRST; }, setBreakBank: function (n) { const v = Number(n); PLAN_BREAK_BANK = isFinite(v) && v >= 0 ? v : 5; return PLAN_BREAK_BANK; },
     BOT_RANDOM: 'random', BOT_AGGRO: 'aggro', BOT_DEFEND: 'defend', BOT_BALANCED: 'balanced',
     BOT_ANTIDEF: 'antidef', BOT_BREAKDEF: 'breakdef', BOT_ADAPTIVE: 'adaptive', BOT_WALL: 'wall',

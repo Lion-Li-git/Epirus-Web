@@ -73,11 +73,73 @@ export const OPP_SPECS = [
    * ⚠️ **默认池不含它们**（`OPP_DEFAULT = OPP_SPECS.slice(0, 9)` ⇒ 追加在尾部不改任何既有协议），
    *   也只是**考场/评估**用的原型；要不要进进化池要等 §3 主判据结果再单独裁。 */
   { name: 'deadlineburst', fn: 'pickDeadlineBurst' },
-  { name: 'earlypressure', fn: 'pickEarlyPressure' }
+  { name: 'earlypressure', fn: 'pickEarlyPressure' },
+  /* v2.0.3（11-07 · DS）：补齐「`bots.js` 里有实现、OPP_SPECS 没登记」的几条 ——
+   * 登记表缺一条，`--pool=all` 就少一个对手，而没人会发现（这正是 v1.3.59 / v1.4.8 / v1.4.14 那三次事故的形状）。 */
+  { name: 'combocounter', fn: 'pickComboCounter' },
+  { name: 'reflectmix', fn: 'pickReflectMix' },
+  { name: 'reflecttank', fn: 'pickReflectTank' },
+  { name: 'guardgun', fn: 'pickGuardGun' },
+  { name: 'bigtfocus', fn: 'pickBigTFocus' },
+  { name: 'killsecure', fn: 'pickKillSecure' },
+  /* v2.0.3（11-07 · 用户提案）：**多人专用卡**的两条对手线。整池此前只有 `pickToolKit` 会碰
+   * 双枪/镜面/全息 ⇒ 「4 人+ 专用卡」在考卷上零覆盖。这两条补镜面与双枪（全息仍只有 toolkit 会碰）。 */
+  { name: 'mirrorspam', fn: 'pickMirrorSpam' },
+  { name: 'dualspam', fn: 'pickDualSpam' },
+  /* v2.0.3（11-07）：珠爆发线（2P 考卷第 20 席的同一条线），多人池此前未登记。 */
+  { name: 'beadburst', fn: 'pickBeadBurst' }
 ];
 
 /* 训练池的默认集合（名字数组）。默认**不含**四个 specialist —— 它们只在显式实验里按需加入
  * （`?opps=` / `EPIRUS_OPP_N`），这样默认基线不会被悄然改变。 */
+
+
+/* ===== 四人数考卷池 EXAM_POOL（v2.0.3 · 2026-11-07 · 用户提案）=====
+ * 为什么单独一张表：考试要的是「每根能力轴都有牙」，训练池要的是「覆盖得广」—— 两者会各自演化
+ *   （`farmer` 已按用户 11-07 的话从本表剔除：纯攒不打对任何有攻击能力的包都≈100% 胜率 ⇒ 无信息席）。
+ * 为什么 28 席：排程要对 4 种人数都「一整轮恰好每对手一次」⇒ K 必须能被 N−1 整除，
+ *   N−1 = 1 / 2 / 4 / 7 ⇒ K 是 28 的倍数。28 是能同时覆盖 8 轴又满足整除的最小值。
+ * 轴：压制(pressure) ‖ 墙(wall) ‖ 反弹/反制(reflect) ‖ 经济(econ) ‖ 爆发(burst) ‖ 混合(mix) ‖ 瞄准/地板(aim) ‖ 多人专用(multi)。
+ * ⚠ 本表只放**名字**：函数名仍以 OPP_SPECS 为单一来源（`EXAM_FN` 从那里查，查不到当场抛错）。
+ * `minN` = 该对手在几人局才有意义（镜面/双枪要 ≥3 人；其余 2 人局也合法，只是行为退化）。 */
+export const EXAM_POOL = [
+  { name: 'gunspam', axis: 'pressure', minN: 2 },
+  { name: 'gunfocus', axis: 'pressure', minN: 2 },
+  { name: 'aggro', axis: 'pressure', minN: 2 },
+  { name: 'earlypressure', axis: 'pressure', minN: 2 },
+  { name: 'guardspam', axis: 'wall', minN: 2 },
+  { name: 'wall', axis: 'wall', minN: 2 },
+  { name: 'protowall', axis: 'wall', minN: 2 },
+  { name: 'baguaspam', axis: 'wall', minN: 2 },
+  { name: 'reflectspam', axis: 'reflect', minN: 2 },
+  { name: 'reflecttank', axis: 'reflect', minN: 2 },
+  { name: 'antidef', axis: 'reflect', minN: 2 },
+  { name: 'combocounter', axis: 'reflect', minN: 2 },
+  { name: 'deepsaver', axis: 'econ', minN: 2 },
+  { name: 'ringspam', axis: 'econ', minN: 2 },
+  { name: 'beadburst', axis: 'econ', minN: 2 },
+  { name: 'heavyfire', axis: 'burst', minN: 2 },
+  { name: 'bigtfocus', axis: 'burst', minN: 2 },
+  { name: 'deadlineburst', axis: 'burst', minN: 2 },
+  { name: 'killsecure', axis: 'burst', minN: 2 },
+  { name: 'mix', axis: 'mix', minN: 2 },
+  { name: 'reflectmix', axis: 'mix', minN: 2 },
+  { name: 'guardgun', axis: 'mix', minN: 2 },
+  { name: 'balanced', axis: 'mix', minN: 2 },
+  { name: 'targeter', axis: 'aim', minN: 2 },
+  { name: 'snipespam', axis: 'aim', minN: 2 },
+  { name: 'random', axis: 'aim', minN: 2 },
+  { name: 'mirrorspam', axis: 'multi', minN: 3 },
+  { name: 'dualspam', axis: 'multi', minN: 3 }
+];
+/* 名字 → 函数名 的查表（单一来源 OPP_SPECS；查不到 ⇒ 抛错，不静默跳过）。 */
+export const EXAM_FN = (function () {
+  const byName = {};
+  for (const o of OPP_SPECS) byName[o.name] = o.fn;
+  for (const e of EXAM_POOL) if (!byName[e.name]) throw new Error('EXAM_POOL 里的 ' + e.name + ' 没有在 OPP_SPECS 登记（加名字漏一处是本仓的老事故）');
+  return byName;
+})();
+
 export const OPP_DEFAULT = OPP_SPECS.slice(0, 9).map(function (o) { return o.name; });
 
 /* 名字 → 函数名（server 用） */
