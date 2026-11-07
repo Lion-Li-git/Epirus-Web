@@ -1088,6 +1088,16 @@ function X4T(d, L) {
   return sw > 0 ? acc / sw : null;
 }
 function X4(d) { return X4T(d, (st.ftab === 'long') ? 'L' : ''); }
+/* Δε（11-07 用户令「小标签里 Δε 没上，现在有结果了也可以加上」）：同一条形上 **页面剂量 − 考卷口径**。
+ *   单位与 X̄₄ 一致（excess）；正 = 开探索反而更高，负 = 开探索掉分（旧 Hp−H 的同族读法）。 */
+function X4P(d, L, pref) {
+  var sw = 0, acc = 0;
+  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[pref + n + L];
+    if (x !== null && x !== undefined && isFinite(x) && d[(pref === 'P' ? 'm' : 'n') + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
+  return sw > 0 ? acc / sw : null;
+}
+function DE4(d, L) { var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
+  return (p === null || x === null) ? '未测' : ((p - x >= 0 ? '+' : '') + (p - x).toFixed(3)); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
   for (var i = 0; i < st.NS4.length; i++) { var x = d[st.XP + st.NS4[i] + L];
     if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }
@@ -1477,6 +1487,7 @@ function tip(d) {
         : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
           : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
     '\\n短程四格 ' + H4STR(d, '') + ' ‖ 长程四格 ' + H4STR(d, 'L') + ' ‖ 加权差(长−短) ' + X4D(d) +
+    '\\nΔε(短) ' + DE4(d, '') + ' ‖ Δε(长) ' + DE4(d, 'L') + '（页面剂量 − 考卷口径）' +
     '\\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')
@@ -2158,7 +2169,10 @@ function draw1(fr) {
     /* ⚠ 一维这条带**故意不跟"半径 = 名次"**（与地图/谱系/三维不同）：这里横轴已经是名次本身，
      *   901 枚挤在 1500px（间距 1.7px）⇒ 再按名次放大到 5.6px 会把整条带糊成一块，
      *   而"名次"这件事在这张图上已经由横轴表达了，重复编码只会损失可读性。*/
-    var rr1 = (d.lin ? 5 : 2.6) * st.size;
+    /* 11-07 修：原来这里按 d.lin（**任何**血统标签）定大小 ⇒ 2.0 的「代3臂产物」13 枚、1.8 的「旧槽位冠军」16 枚
+     *   全被画成大号点，看起来像「历代上槽」；而地图/谱系/三维三处用的是 d.sh（真进过活槽），页内自检也只量那三处。
+     *   现在 1D 跟它们同一条判据（E349 的两档规则：上过线一档 / 没上过线一档）。 */
+    var rr1 = (d.sh ? 5.8 : 2.6) * st.size;
     g.beginPath(); g.arc(x, y, rr1, 0, 6.284); g.fillStyle = colOf(d, fr); g.fill();
     if (d.lin && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     /* §E590 池层环（与 drawTree/drawMap 同一件事）：**这一条是补的 bug** —— 10-12 把页内自检搬到 mode=1d 上跑，
