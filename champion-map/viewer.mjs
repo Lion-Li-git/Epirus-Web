@@ -97,6 +97,10 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
+/* 四格卷读哪一族列（11-07 用户令：页面标尺改回 Hp 侧 ⇒ 默认读 P 族 = 页面剂量）。
+ *   P = DIFF_TIERS lv:regular 剂量下的 excess ‖ X = ε=0 考卷口径（历史对照，仍挂在表里）。
+ *   ⚑ 必须在这里定义：生成侧的空洞守卫（比 `var st` 更早执行）要读它。 */
+const XCOL = 'P';
 /* §G3：三张预置图的初始版本模式。
  *   ⚠ 11-05 傍晚的实测事故（本班自己造的）：按文件名习惯传了 `--preset=20`，而合法取值是 `all/1.8/2.0`
  *     ⇒ 原来这一行**静默回落成 'all'** ⇒ 子集页丢掉 SUBSETP 判据域，页内自检从 `74/3/22 SKIP` 变成
@@ -211,12 +215,13 @@ if (PROJTSNE) {
  *   「Hp 线上口径夺1率 = 0.0%（图上的尺就是它）」；补测之后是 51.8 / 52.8 / 53.0（现役 47.3）⇒ 完全反过来。
  *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
  *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
- { const noX = rows.filter(r => String(r.X2 === undefined ? '' : r.X2).trim() === '');
-   const noXL = rows.filter(r => String(r.X2L === undefined ? '' : r.X2L).trim() === '');
-   if (noX.length || noXL.length) { console.error('⛔ 四格卷读数有空洞：X2 空 ' + noX.length + ' 枚 ‖ X2L 空 ' + noXL.length +
+ { const XPF = XCOL;   /* 跟着 XP 走：P = 页面剂量族，X = ε=0 族 */
+   const noX = rows.filter(r => String(r[XPF + '2'] === undefined ? '' : r[XPF + '2']).trim() === '');
+   const noXL = rows.filter(r => String(r[XPF + '2L'] === undefined ? '' : r[XPF + '2L']).trim() === '');
+   if (noX.length || noXL.length) { console.error('⛔ 四格卷读数有空洞：' + XPF + '2 空 ' + noX.length + ' 枚 ‖ ' + XPF + '2L 空 ' + noXL.length +
      '\n       前 8 枚：' + noX.concat(noXL).slice(0, 8).map(r => r.id).join(' ') +
      '\n       ⇒ F = X̄₄ + T·S 是图上**所有**排序的底，空格会被当“未测”灰掉 ⇒ 先补测再烘。'); process.exit(2); }
-   console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 X2/X2L 全部在册（短程+长程双桌，R=100 · seed=77000 · 2026-11-07 批）'); }
+   console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 ' + XPF + '2/' + XPF + '2L 全部在册（' + (XPF === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') + ' ‖ 短程+长程双桌，R=100 · seed=77000 · 2026-11-07 批）'); }
 const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
@@ -470,6 +475,24 @@ const DATA = rows.map(r => ({
   n3L: (r.n3L === '' || r.n3L === undefined) ? null : +r.n3L,
   n5L: (r.n5L === '' || r.n5L === undefined) ? null : +r.n5L,
   n8L: (r.n8L === '' || r.n8L === undefined) ? null : +r.n8L,
+  /* 页面剂量族（11-07 · P/m + L 后缀）：与 X 族**同一套形状**，页面默认读它（XCOL='P'）。
+   *   ⚠ 必须在这里显式映射：DATA 是白名单，表里有列不等于 d 上有字段（漏映射 = 全页 F=NaN ⇒ 0 个点）。 */
+  P2: (r.P2 === '' || r.P2 === undefined) ? null : +r.P2,
+  P3: (r.P3 === '' || r.P3 === undefined) ? null : +r.P3,
+  P5: (r.P5 === '' || r.P5 === undefined) ? null : +r.P5,
+  P8: (r.P8 === '' || r.P8 === undefined) ? null : +r.P8,
+  m2: (r.m2 === '' || r.m2 === undefined) ? null : +r.m2,
+  m3: (r.m3 === '' || r.m3 === undefined) ? null : +r.m3,
+  m5: (r.m5 === '' || r.m5 === undefined) ? null : +r.m5,
+  m8: (r.m8 === '' || r.m8 === undefined) ? null : +r.m8,
+  P2L: (r.P2L === '' || r.P2L === undefined) ? null : +r.P2L,
+  P3L: (r.P3L === '' || r.P3L === undefined) ? null : +r.P3L,
+  P5L: (r.P5L === '' || r.P5L === undefined) ? null : +r.P5L,
+  P8L: (r.P8L === '' || r.P8L === undefined) ? null : +r.P8L,
+  m2L: (r.m2L === '' || r.m2L === undefined) ? null : +r.m2L,
+  m3L: (r.m3L === '' || r.m3L === undefined) ? null : +r.m3L,
+  m5L: (r.m5L === '' || r.m5L === undefined) ? null : +r.m5L,
+  m8L: (r.m8L === '' || r.m8L === undefined) ? null : +r.m8L,
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
    *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
@@ -811,7 +834,7 @@ var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ft
   wTilt: 0.5,   /* 统一权重参数（用户令）：0 = 最倾向 2P/3P ‖ 0.5 = 现状（15/25/45/15）‖ 1 = 最倾向 5P/8P；w2..w8 由 deriveW 派生 */
   w2: 0.15, w3: 0.25, w5: 0.45, w8: 0.15,
   /* 四格名单提前到 st 处声明：INC 锚构建（先于 X4 定义行）就会走 Fv→X4，var 赋值晚于调用 = 初始化序 bug（11-07 实测抓回） */
-  NS4: [2, 3, 5, 8],
+  NS4: [2, 3, 5, 8], XP: 'P',   /* 四格卷读哪一族列：P = 页面剂量（DIFF_TIERS lv:regular，玩家默认拿到的数）‖ X = ε=0 考卷口径（历史对照） */
   elaw: 'log',        /* §E673 谱系图线条叠加的法律：'log' = 每条线静态 alpha + 像素累加之后过对数表（**默认，用户 10-20 下午点名换的**）
                          ‖ 'attr' = 旧的"密度压进每条线的属性"，仍可达（#elaw=attr），页内那两条 §E467/§E469 判据各自钉的是它 */
   lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
@@ -934,6 +957,15 @@ var INC = (function () {
     X5L: mean(function (d) { return d.X5L; }), X8L: mean(function (d) { return d.X8L; }),
     n2L: mean(function (d) { return d.n2L; }), n3L: mean(function (d) { return d.n3L; }),
     n5L: mean(function (d) { return d.n5L; }), n8L: mean(function (d) { return d.n8L; }),
+    /* 伪行也要带 P 族（Fv(INC) 在页面剂量尺下读的是 P 列；漏了 = 锚点变 NaN） */
+    P2: mean(function (d) { return d.P2; }), P3: mean(function (d) { return d.P3; }),
+    P5: mean(function (d) { return d.P5; }), P8: mean(function (d) { return d.P8; }),
+    m2: mean(function (d) { return d.m2; }), m3: mean(function (d) { return d.m3; }),
+    m5: mean(function (d) { return d.m5; }), m8: mean(function (d) { return d.m8; }),
+    P2L: mean(function (d) { return d.P2L; }), P3L: mean(function (d) { return d.P3L; }),
+    P5L: mean(function (d) { return d.P5L; }), P8L: mean(function (d) { return d.P8L; }),
+    m2L: mean(function (d) { return d.m2L; }), m3L: mean(function (d) { return d.m3L; }),
+    m5L: mean(function (d) { return d.m5L; }), m8L: mean(function (d) { return d.m8L; }),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     pt: ANCH_TIER, ts: '', lin: false };
 })();
@@ -1051,23 +1083,23 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
 function X4T(d, L) {
   /* 11-07 长程批并入：四格卷也有桌形维（multi=3血短程 ‖ long=5血长程），列名带 L 后缀 ⇒ Fv 的桌形自由度回来了 */
   var sw = 0, acc = 0;
-  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d['X' + n + L];
+  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[st.XP + n + L];
     if (x !== null && x !== undefined && isFinite(x) && d['n' + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
 function X4(d) { return X4T(d, (st.ftab === 'long') ? 'L' : ''); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
-  for (var i = 0; i < st.NS4.length; i++) { var x = d['X' + st.NS4[i] + L];
+  for (var i = 0; i < st.NS4.length; i++) { var x = d[st.XP + st.NS4[i] + L];
     if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }
 function WSTR() { return '2P:' + Math.round(st.w2 * 100) + ' 3P:' + Math.round(st.w3 * 100) + ' 5P:' + Math.round(st.w5 * 100) + ' 8P:' + Math.round(st.w8 * 100); }
 /* 当前桌的四格夺1率串（由 excess 反解 p = X·(1−1/N)+1/N）；缺格 = – */
 function H4STR(d, L) { L = (L === undefined) ? ((st.ftab === 'long') ? 'L' : '') : L;
-  return st.NS4.map(function (n) { var x = d['X' + n + L];
+  return st.NS4.map(function (n) { var x = d[st.XP + n + L];
     return (x === null || x === undefined || !isFinite(x)) ? '–' : ((x * (1 - 1 / n) + 1 / n) * 100).toFixed(1); }).join('/'); }
 function X4F(d, L) { var x = X4T(d, L); return (x === null || !isFinite(x)) ? '未测' : x.toFixed(3); }
 function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
-function FLBL() { return 'F = X̄₄ + T·S（X̄₄ = 四格加权 excess' + (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
+function FLBL() { return 'F = X̄₄ + T·S（X̄₄ = 四格加权 excess' + (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '，页面剂量）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
   var x = X4(d);
@@ -1451,7 +1483,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000（2026-11-07 全图批）' +
+    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000（2026-11-07 全图批）· 页面剂量 lv:regular' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +

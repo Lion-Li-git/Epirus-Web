@@ -13,7 +13,10 @@
  *   · 冠军座位 = 局序号 % N（轮转），对手槽位相对座位再旋转（eval-5p 656 行的"座位率 × 脚本强度"解耦教训）。
  * 桌形 = 引擎默认 multi（3 血短程）；四格卷考的是**人数轴**，桌形固定才可跨包比较。
  *
- * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8]
+ * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular]
+ * --dose=exam（缺省）：主体席 ε=0 贪心 —— 与旧卷的 exam 臂、与 `exam4-all-*.tsv` 那两批同口径（H 侧）。
+ * --dose=page：主体席按**页面剂量**出手（`DIFF_TIERS` 那档的 ε/epsK/epsMode + 回合斜坡，默认 `lv:regular`）
+ *   —— 这才是「玩家默认拿到的那个数」（Hp 侧）。斜坡形状走 `Bots.tierEps`，**不在这里再写一遍**（D153 只许一份）。
  * 输出: [冠军4N] h2=..% h3=..% h5=..% h8=..% x2=... x3=... x5=... x8=... n2=.. n3=.. n5=.. n8=.. sec=..
  *   （h 缺格子不会出现：planN 对每个 N 都有局；--onlyN 只用于调试，正式读数四格必须齐）
  */
@@ -30,7 +33,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -39,6 +42,9 @@ if (!FILE) { console.error('用法: node tools/exam-4n.mjs [rounds=6] [seed=7700
 const NS = (FLAG.onlyn ? String(FLAG.onlyn).split(',').map(Number) : [2, 3, 5, 8]);
 for (const n of NS) if (![2, 3, 5, 8].includes(n)) { console.error('⛔ --onlyN 只认 2/3/5/8，收到 ' + n); process.exit(2); }
 const MODE = FLAG.mode || '';   // 缺省 = 引擎默认桌 multi；传了就透传（两批不许混：mode 写进输出行）
+const DOSE = FLAG.dose || 'exam';
+if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
 /* ===== 沙箱与引擎（与 eval-5p 同一份装载清单） ===== */
@@ -63,8 +69,18 @@ if (!mm) { console.error('未找到 EPIRUS_CHAMPION_3P: ' + FILE); process.exit(
 const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack(JSON.parse(mm[1])))); process.exit(1); }
 
+/* ===== 主体席 chooser：考卷臂（ε=0）或页面剂量（DIFF_TIERS 那一档 + 回合斜坡） ===== */
+function subjectSel() {
+  if (DOSE === 'exam') return T.policyChooserN(params, 0.15);
+  const tier = (Bots.DIFF_TIERS || []).find(function (x) { return x.id === EPS_TIER_ID; });
+  if (!tier) { console.error('⛔ --eps-tier=' + EPS_TIER_ID + ' 不在 DIFF_TIERS（在册：' + (Bots.DIFF_TIERS || []).map(function (x) { return x.id; }).join(' ‖ ') + '）'); process.exit(2); }
+  const mk = function (e) { return e > 0 ? T.policyChooserN(params, 0.15, e, tier.epsK, tier.epsMode) : T.policyChooserN(params, 0.15); };
+  const byRound = { 1: mk(Bots.tierEps(tier, 1)), 2: mk(Bots.tierEps(tier, 2)), 3: mk(Bots.tierEps(tier, 3)) };
+  return function (state, id, legal) { return byRound[Math.min(3, state.round)](state, id, legal); };
+}
 /* ===== 四格对局 ===== */
 const out = {};
+const SUBJ = subjectSel();
 for (const n of NS) {
   const plan = planN(n, R, SEED);
   let first = 0;
@@ -75,7 +91,7 @@ for (const n of NS) {
     const field = plan[j].seats.slice(rot).concat(plan[j].seats.slice(0, rot));   // 对手槽相对座位旋转（解耦座位率×脚本强度）
     const choosers = [];
     let oi = 0;
-    const sel = T.policyChooserN(params, 0.15);                                   // 考卷臂：ε=0（贪心），与旧卷 exam 臂同口径
+    const sel = SUBJ;                                                            // 考卷臂(ε=0) 或 页面剂量；见 subjectSel()
     for (let pid = 0; pid < n; pid++) {
       if (pid === seat) choosers.push(sel);
       else choosers.push(asChooser(FN[field[oi++]]));
@@ -93,7 +109,7 @@ for (const n of NS) {
 }
 const fmt = (k) => NS.map((n) => k + n + '=' + out[n][k === 'h' ? 'h' : 'x']).join(' ');
 const fmtN = () => NS.map((n) => 'n' + n + '=' + out[n].G).join(' ');
-console.log('[冠军4N] ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : ''));
+console.log('[冠军4N] ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : ''));
 for (const n of NS) {
   const o = out[n];
   console.error('  N=' + n + ': ' + o.first + '/' + o.G + ' 夺1 ‖ 各座 ' + o.seatFirst.map((f, i) => f + '/' + o.seatGames[i]).join(' ') + '');

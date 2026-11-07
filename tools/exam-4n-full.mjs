@@ -5,7 +5,8 @@
  * 每枚派一个 `tools/exam-4n.mjs` 子进程，解析 `[冠军4N]` 行，增量写 `--out=` 表。
  *
  * 用法: node tools/exam-4n-full.mjs --out=exam4-all-1107.tsv [--extra=extra-all-1107.tsv]
- *       [--only=<清单>] [--jobs=8] [--rounds=12] [--seed=77000] [--mode=multi]
+ *       [--only=<清单>] [--jobs=8] [--rounds=12] [--seed=77000] [--mode=multi] [--dose=exam|page]
+ *       `--dose=page` 透传给子进程（页面剂量，DIFF_TIERS 的 lv:regular）；dose 进表头 ⇒ 两批不可能混成一张表。
  * 产物: id / h2 / h3 / h5 / h8 / x2 / x3 / x5 / x8 / n2 / n3 / n5 / n8 / seed / rounds / mode / sec
  */
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'node:fs';
@@ -17,7 +18,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode'], 'exam-4n-full');
+rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier'], 'exam-4n-full');
 
 const OUT = join(ROOT, 'champion-map', arg('out', ''));
 if (!arg('out', '')) { console.error('⛔ 必须 --out=<表>（四格卷读数落盘处）'); process.exit(2); }
@@ -26,6 +27,9 @@ if (!(Number.isInteger(ROUNDS) && ROUNDS >= 1)) { console.error('⛔ --rounds �
 const SEED = Number(arg('seed', 77000));
 const JOBS = Math.max(1, Number(arg('jobs', 8)));
 const MODE = arg('mode', '');
+const DOSE = arg('dose', 'exam');
+if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+const EPS_TIER = arg('eps-tier', '');
 const ONLY_FILE = arg('only', '');
 const EXTRA = arg('extra', '');
 
@@ -54,7 +58,7 @@ if (ONLY_FILE) {
 }
 if (existsSync(OUT)) { console.error('⛔ ' + OUT + ' 已存在 ⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
 
-const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'sec'];
+const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'sec'];
 writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
 
 function one(id) {
@@ -63,6 +67,8 @@ function one(id) {
   for (const c of cand) { if (existsSync(join(ROOT, c))) { rel = c; break; } }
   const a = ['tools/exam-4n.mjs', String(ROUNDS), String(SEED), rel];
   if (MODE) a.push('--mode=' + MODE);
+  if (DOSE !== 'exam') a.push('--dose=' + DOSE);
+  if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER);
   return new Promise((res) => {
     const t0 = Date.now();
     execFile(process.execPath, a, { cwd: ROOT, maxBuffer: 1 << 26, timeout: 600000 },
@@ -84,7 +90,7 @@ async function worker() {
     done++;
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
-      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', r.sec];
+      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.sec];
     appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 25 === 0) console.error('  … ' + done + '/' + ids.length + '（失败 ' + fail + '）');
   }
