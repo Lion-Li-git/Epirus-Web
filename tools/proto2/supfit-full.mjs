@@ -9,10 +9,14 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP } from './pg-lib.mjs';
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode'], 'supfit-full');
+rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode', 'teacher'], 'supfit-full');
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
 const UP = arg('up', 'scratch/arms/KD-V7.bak');
 const OUT = arg('out', 'scratch/arms/KDFULL.bak');
+/* （ZCode · 11-08 晨 · METHODOLOGY 145）标签教师可指：任意 v7 包（EpirusPolicy.value 的 argmax 当标签源）。
+ *   缺省 = 现役（原行为逐字不变）。桌面参照 refParams（createArena2 的关档席）**保持现役不动**——
+ *   换的是"谁给标签"，不是"在什么环境里采"；两件事混着改，克隆读数就没法归因。 */
+const TEACHER = arg('teacher', 'js/bundled-champion-3p.js');
 const STEPS = Math.max(50, Number(arg('steps', 2000)) || 2000);
 const NGRP = Math.max(200, Number(arg('groups', 1200)) || 1200);
 const LR = Number(arg('lr', 3e-4)) || 3e-4;
@@ -27,6 +31,8 @@ const rnd = () => { s0 = (s0 + 0x6D2B79F5) >>> 0; let t = s0; t = Math.imul(t ^ 
 /* 先读 v7 参照（createArena2 的硬条款：必须在 installArch2 之前） */
 const Wv = sandbox();
 const refParams = Float64Array.from(loadChamp(Wv, 'js/bundled-champion-3p.js', ''));
+const tchParams = Float64Array.from(loadChamp(Wv, TEACHER, ''));   /* 标签教师（可与参照不同包） */
+console.log('[supfit-full] 教师 = ' + TEACHER + (TEACHER === 'js/bundled-champion-3p.js' ? '（=现役，历史行为）' : '（参数化教师）'));
 const W = sandbox();
 const raw = readPack2(UP);
 if (!raw) { console.error('⛔ 读不出上游 ' + UP); process.exit(5); }
@@ -44,7 +50,7 @@ const teacherIdx = (state, pid, cs) => {
   let best = -1e9, bi = 0;
   for (let i = 0; i < cs.length; i++) {
     let v = 0;
-    try { v = Wv.EpirusPolicy.value(state, pid, cs[i].key, refParams, null, cs[i]); } catch (e) { v = 0; }
+    try { v = Wv.EpirusPolicy.value(state, pid, cs[i].key, tchParams, null, cs[i]); } catch (e) { v = 0; }
     if (v > best) { best = v; bi = i; }
   }
   return bi;
@@ -139,7 +145,8 @@ let hf = '';
 try { hf = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { hf = ''; }
 if (!hf) console.log('⚠ 起点 wid 算不出（外壳不认/文件读不到）⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
 const meta = { ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
-  up: UP, hotstartFrom: hf || UP, seed: SEED, steps: STEPS, groups: NGRP, lr: LR, batch: BATCH, temp: TEMP, games: GAMES, n: N, mode: MODE };
+  up: UP, hotstartFrom: hf || UP, seed: SEED, steps: STEPS, groups: NGRP, lr: LR, batch: BATCH, temp: TEMP, games: GAMES, n: N, mode: MODE,
+  teacher: TEACHER };   /* METHODOLOGY 145：克隆的"知识来自谁"必须入档（保真闸要拿它对师徒三件套） */
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 console.log('产物 → ' + OUT + ' ‖ meta.hotstartFrom=' + (hf ? hf + '（wid）' : UP + '（路径，wid 算不出）'));
