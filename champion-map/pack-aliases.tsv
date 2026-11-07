@@ -123,3 +123,9 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-06T23:17:36.268Z	879bc0744e307918	docs/artifacts/DEF-s13-band1.bak	scratch/band-1107/SEQBOOM-DEF-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-06T23:17:36.271Z	e7ce9136170a98cb	docs/artifacts/2p0-pool/DEF-s13.bak	scratch/ga-arms/SEQBOOM-DEF-s13.js	train-3p	未复制：同一粒权重已有真身
 2026-11-06T23:23:41.078Z	d9d695f1afe6f000	docs/artifacts/DEF-s13-band3.bak	scratch/band-1107/SEQBOOM2-DEF-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-07T15:58:53.885Z	a4cd940f8e462687	docs/artifacts/ADAPT-B-s41-band5.bak	docs/artifacts/CTRL-B-s41-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-07T15:58:53.899Z	a4cd940f8e462687	docs/artifacts/ADAPT-B-s41-band5.bak	docs/artifacts/CTRL-B-s41-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-07T16:11:27.802Z	dd582389eff99ce0	docs/artifacts/ADAPT-B4-s13-band1.bak	docs/artifacts/ADAPT-B8-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-07T16:11:27.807Z	612c5c6f6a3e6bb2	docs/artifacts/ADAPT-B4-s13-band2.bak	docs/artifacts/ADAPT-B8-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-07T16:11:27.826Z	2275b19ad23633b9	docs/artifacts/ADAPT-B4-s13-band3.bak	docs/artifacts/ADAPT-B8-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-07T16:11:27.830Z	612c5c6f6a3e6bb2	docs/artifacts/ADAPT-B4-s13-band2.bak	docs/artifacts/night-adapt/ADAPT-B8-s13.js	train-3p	未复制：同一粒权重已有真身
