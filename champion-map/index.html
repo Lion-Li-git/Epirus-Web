@@ -519,21 +519,25 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *   ⚠ 只改长程档；默认档（Hp）仍由 §E491 那道生成侧守卫保证全在册，走不到非有限这一支。
  *   ⚑ 这段注释里不许出现反引号：本文件的注释嵌在模板字符串里，一个反引号就把生成器打断（v1.8.27 第一次生成就挂在这也）。 */
 /* 四格加权 excess（§10.6）：缺格按**有格重归一**（缺格不许当 0），一格都没有 = 未测 */
-function X4(d) {
+function X4T(d, L) {
   /* 11-07 长程批并入：四格卷也有桌形维（multi=3血短程 ‖ long=5血长程），列名带 L 后缀 ⇒ Fv 的桌形自由度回来了 */
-  var L = (st.ftab === 'long') ? 'L' : '', sw = 0, acc = 0;
+  var sw = 0, acc = 0;
   for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d['X' + n + L];
     if (x !== null && x !== undefined && isFinite(x) && d['n' + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
+function X4(d) { return X4T(d, (st.ftab === 'long') ? 'L' : ''); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
   for (var i = 0; i < st.NS4.length; i++) { var x = d['X' + st.NS4[i] + L];
     if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }
 function WSTR() { return '2P:' + Math.round(st.w2 * 100) + ' 3P:' + Math.round(st.w3 * 100) + ' 5P:' + Math.round(st.w5 * 100) + ' 8P:' + Math.round(st.w8 * 100); }
 /* 当前桌的四格夺1率串（由 excess 反解 p = X·(1−1/N)+1/N）；缺格 = – */
-function H4STR(d) { var L = (st.ftab === 'long') ? 'L' : '';
+function H4STR(d, L) { L = (L === undefined) ? ((st.ftab === 'long') ? 'L' : '') : L;
   return st.NS4.map(function (n) { var x = d['X' + n + L];
     return (x === null || x === undefined || !isFinite(x)) ? '–' : ((x * (1 - 1 / n) + 1 / n) * 100).toFixed(1); }).join('/'); }
+function X4F(d, L) { var x = X4T(d, L); return (x === null || !isFinite(x)) ? '未测' : x.toFixed(3); }
+function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
+  return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
 function FLBL() { return 'F = X̄₄ + T·S（X̄₄ = 四格加权 excess' + (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
@@ -911,7 +915,7 @@ function tip(d) {
       : (d.psrc === 'cold' ? '：冷启动（无父边，不是漏记）'
         : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
           : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
-    '\n长程四格 h2/h3/h5/h8 ' + (function () { var o = []; for (var i = 0; i < 4; i++) { var n = [2, 3, 5, 8][i], x = d['X' + n + 'L']; o.push((x === null || x === undefined || !isFinite(x)) ? '–' : ((x * (1 - 1 / n) + 1 / n) * 100).toFixed(1)); } return o.join('/'); })() +
+    '\n短程四格 ' + H4STR(d, '') + ' ‖ 长程四格 ' + H4STR(d, 'L') + ' ‖ 加权差(长−短) ' + X4D(d) +
     '\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')
@@ -1283,7 +1287,7 @@ function buildBitmap(key, visSigNow) {
   cg.putImageData(img, 0, 0);
   __covAcc.nPainted = nPainted;
   if (typeof window !== 'undefined') (window.__covdbg = window.__covdbg || []).push(__covAcc);
-  FL = { c: c, px: dta, img: img, cg: cg, cix: CIX9, alp: ALP9, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED,
+  FL = { c: c, px: dta, img: img, cg: cg, cix: CIX9, alp: ALP9, key: key, tv: st.T, bgc: st.bg, col: st.color, tab: st.ftab, cov: COV_MED, fk: FKEY(),
     vis: NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3),
     /* §E381 自检要读的两个数：地板被涂了几格 ‖ 有几格的场值跑到"可见点的 F 区间"之外（应当恒为 0）。
      *   带外 = 0 这一条同时排掉两种病：钳位（一大片纯色）与淡出（黑洞）—— 因为加权平均不可能跑到被平均的那些点之外。*/
@@ -1319,7 +1323,9 @@ function ensureField(key, bx, byy) {
    *   ⚠ 下拉框处理程序里那串"清键"（_FR.k='' 那些）是另一条自救路，它掩盖这个洞：判据必须**绕开清键**去量（见 §E623 那条）。 */
   var visSig = NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
   if (FL && FL.key === k2 && FL.tv === st.T && FL.col === st.color && FL.tab === st.ftab && FL.cov === COV_MED && FL.vis === visSig && FL.bgc !== st.bg) rebgField();
-  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COV_MED || FL.vis !== visSig) buildBitmap(k2, visSig);
+  /* 11-07 晚：fk（尺/T/权重/桌形）是第九项 —— 用户实测"底图颜色跟随并没有成功"：ISO 场层修了，
+   *   位图层（这一层）的判定漏了权重维 ⇒ 拖倾向滑杆底图纹丝不动。Fv 的每个自由度都必须在键里（§E617 总规矩）。 */
+  if (!FL || FL.key !== k2 || FL.tv !== st.T || FL.bgc !== st.bg || FL.col !== st.color || FL.tab !== st.ftab || FL.cov !== COV_MED || FL.vis !== visSig || FL.fk !== FKEY()) buildBitmap(k2, visSig);
 }
 /* ---- 通用：标签贪心避让（撞了就不画，冠军宁可错开一行） ---- */
 var boxes = [];
@@ -3090,8 +3096,10 @@ function paintSide() {
       ' ‖ ' + (labOf(d) === d.sv ? d.id : (d.sv || (d.sh ? '' : '未上槽'))) + ' ‖ ' + (d.sh ? d.sh.slice(5, 10) : (d.ts || '').slice(5, 10)) +
       ' ‖ F ' + Ftxt(d) + ' ‖ 四格 h2/h3/h5/h8 ' + H4STR(d);
     b.title = ('id ' + d.id + (d.wid ? ' ‖ 权重 ' + d.wid : '') + '\n' + (d.sh ? '上线 ' + d.sh : 'git 里没找到上槽提交 ⇒ 按训出时刻 ' + (d.ts || '—') + ' 排（这枚从没真进过槽）')) +
-      '\n名次 第 ' + d.rk + ' ‖ X̄₄(新标尺) ' + (X4(d) === null ? '未测' : X4(d).toFixed(3)) + (X4miss(d).length ? '（缺N:' + X4miss(d).join(',') + '）' : '') + ' ‖ 权重 ' + WSTR() +
-      '\nS ' + d.S.toFixed(2) + ' ‖ ' + H4STR(d);
+      '\n名次 第 ' + d.rk + ' ‖ 权重 ' + WSTR() +
+      '\n短程四格 h2/h3/h5/h8 ' + H4STR(d, '') + ' ‖ X̄₄短 ' + X4F(d, '') +
+      '\n长程四格 h2/h3/h5/h8 ' + H4STR(d, 'L') + ' ‖ X̄₄长 ' + X4F(d, 'L') + ' ‖ 加权差(长−短) ' + X4D(d) +
+      '\nS ' + d.S.toFixed(2);
     b.onclick = function () { var k = st.cmp.indexOf(d.id);
       if (k >= 0) st.cmp.splice(k, 1); else { if (st.cmp.length >= 7) { st.cmp.shift(); } st.cmp.push(d.id); }
       st.sel = d.id; recomputeVIS(); paintCard(); paintSide(); buildFamBar(); req(); };
