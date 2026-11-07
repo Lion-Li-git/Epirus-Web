@@ -940,3 +940,10 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **台账**：补登 **D-28 / D-29**（夜班只写在正文，违反"任何待裁项必须在本表有行"）。
 - **门禁（定向，不是整轮）**：`--group=probe` **87/88**（唯一红就是上面那条假阳性，修后 `--only=D205 ` 1/1）‖ `--group=meta` 15/15 ‖ `--only=D234 ` 1/1 ‖ `lint-viewer` ✅。
   整轮以 CI 为准，现读：`gh api repos/Lion-Li-git/Epirus-Web/actions/runs?per_page=5` 取 run id ⇒ `…/runs/<id>/jobs` **逐作业逐步骤**读（browser 是观察档，run 级结论会遮红）。
+
+### 追记 54 补段（并 main 之后）
+
+- **CI 先认证再并**：PR **#3** / run `42336887147`（head `6cb04da6`）**逐作业逐步骤全绿** —— `plan` ‖ 11 个 part ‖ `gates` ‖ `browser` 第 4/5/6 步
+  （`SMOKE OK` ‖ `BATTLE OK` 推进 12 回合 ‖ 四视图 `tree/1d/3db/map` 各 **99 PASS / 0 FAIL**）。进仓摘要 = `scratch/qoder-1107-ci-pr3-browser.txt` ‖ `…-ci-pr3-jobs.txt`（job log 原文只在本机）。
+- **并 main**：`9d030ecf`（`--no-ff`，按仓里"Merge 研究分支的 … into main"的惯例），研究分支 `research/pool-opp-2026-11-06` 的 7 笔全部进来；main 上的版本三处 = **v2.0.2**。
+- ⚠ 没打 tag、没建 Release（用户 11-06 说过 tag 倒没必要打；要发布再点名）。
