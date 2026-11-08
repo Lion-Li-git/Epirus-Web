@@ -321,3 +321,21 @@ v7 冠军的包内 META：`gens=400 · games=8 · pop=8`，起点 `docs/artifact
 2. **但同一个 GA 会收走别的**：广度 9→5 张、场A 26%→11.7%、X̄₄ 0.118；反向（Q-s47 起点）则保场B 0.45 + 10 张卡，但强度 0.349→0.203。
 3. 用**逐字相同的指令**复跑也保不住分数 ⇒ **今天的 fitness 与 v7 时代不是同一个 landscape**（引擎数月改动所致）
    ⇒ 「场B / 广度 / 场A / 强度」在今天的面上是**互相拉扯的四个角**，单包四样全中在本配方族里没有解。
+
+### 10. 代表性点进图 + 池覆盖（11-08 夜 · 用户令）
+
+**进图**（METHODOLOGY 146 三步）：`FOCUS-Q-s13` / `CLEAR-Q-s13` / `WIDE-Q-s13` 三枚全列进图（84 列 + lineage-g3 fam16，父边按 wid：
+FOCUS/CLEAR→KD-G2、WIDE→KD-Qg），全表重投影 **N=899**、attach-projcols、重烘（index.html 1505 KB）、页检 **98/0**。
+（`KD-G2` 早上已由图管同事补进，未重复。）
+
+**池**：本轮**没有**把三枚新包放进池 —— 实测加进去会把 `D234 ⑥b` 的公平份额锚打红：
+夹具 `docs/artifacts/2p0-pool/D1200-s13.bak` **早已被踢出池**（16:35 降带/踢出那批），它的主体席夺 1 率现在只有 10%（公平份额 20%），
+池里再掺三枚更强的新包后它更低（STR-B 作参照也只有 7.5%、KDG-B 20%）⇒ 这是**夹具过期**，不是新包的错；
+修法应是先把 D234 的夹具换成一枚当前池成员（并重定阈），这属于独立的池版本动作，留待裁。
+
+**进图后整池技能覆盖（17 枚）**：
+
+- 覆盖 **12/30 张卡 = 40%**；用卡数 min 3 / 中位 **6** / max 7；
+- 逐卡（枚数/17）：ji 17、sword 15、gun 14、charge 11、bigT 11、railgun 10、guard 7、ring 5、snipe 2、reflect 2、proto 1、drain 1；
+- **一块都没人用**的 18 张：tank / bagua / shift / jinshield / armor / holo / miniT / rod / laserEye / transfer / curse / firestorm / mine / taunt / cannon / purify / dualGun / mirror；
+- 与 v7 三枚并集（11 张）相比：池多覆盖 snipe/proto/drain，**少 bagua/holo**（防御多样性缺口）。

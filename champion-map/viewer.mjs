@@ -6455,15 +6455,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   if (st.isoField !== wifBk) c2Bad.push('场没还原（' + st.isoField + ' ≠ ' + wifBk + '）');
   /* §E608 带宽滑轨的**接线**判据（前面那几条判的是场本身，判不到这根滑杆）。
    *   三条各卡一种"写了但没生效"：st 没改（监听没挂）‖ isoEnsure 还返同一个缓存（bw 没进缓存键）‖
-   *   重建了但读数一模一样（bw 没传进 isoBuild）。这一族就是 §E464 那座只搭一半的桥的形状。*/
+   *   重建了但读数一模一样（bw 没传进 isoBuild）。这一族就是 §E464 那座只搭一半的桥的形状。
+   *   ⚠ 11-08 夜：探针值从 0.2 改成 0.05 —— 899 枚这版数据上 bw=0.2 的壳内枚数与 bw=1 恰好相同（实测 285/285），
+   *     而 0.05 能分开；接线本身没坏（缓存键与重建计数都已判过），是样本碰撞不是死线。留此一行免得以后被当成改门放水。*/
   var wbw = document.getElementById('isobw'), wbwBk = wbw.value, bv = document.getElementById('isobwv');
   var nB0 = ISOBUILDS, iso0 = isoEnsure();
-  wbw.value = '0.2'; fireEv(wbw, 'change');
-  if (Math.abs(st.isoBW - 0.2) > 1e-9) c2Bad.push('带宽滑到 0.2 而 st.isoBW = ' + st.isoBW + ' ⇒ 监听没挂上');
+  wbw.value = '0.05'; fireEv(wbw, 'change');
+  if (Math.abs(st.isoBW - 0.05) > 1e-9) c2Bad.push('带宽滑到 0.05 而 st.isoBW = ' + st.isoBW + ' ⇒ 监听没挂上');
   /* §E677（用户裁「奇怪的钉措辞的门删掉」）：原来这句判的是"标签里不许还有『今天』两个字"——
    *   它想证的事是真的（标签必须跟着生效值走），但它钉的是**散文**，于是给"今天的壳"那次改名埋了个雷。
    *   换成钉标签开头的**生效值**：改名、改文案都不红，而标签冻在旧值上照样红。 */
-  if (bv && String(bv.textContent).slice(0, 4) !== '0.20') c2Bad.push('带宽滑到 0.2 而标签开头的生效值不是 0.20（印的是「' + bv.textContent + '」）');
+  if (bv && String(bv.textContent).slice(0, 4) !== '0.05') c2Bad.push('带宽滑到 0.05 而标签开头的生效值不是 0.05（印的是「' + bv.textContent + '」）');
   var iso2 = isoEnsure();
   if (iso2 === iso0) c2Bad.push('带宽改了而 isoEnsure 返同一个缓存对象 ⇒ bw 没进缓存键（滑块一动壳不动）');
   else if (iso2.ins === iso0.ins) c2Bad.push('重建了但壳内枚数与 c=1 一模一样（' + iso0.ins + '）⇒ bw 没传进 isoBuild');

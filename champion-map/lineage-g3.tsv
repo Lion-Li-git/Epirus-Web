@@ -79,3 +79,6 @@ STR-B-Q-s41	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T08:01:18.508Z		s4
 KDG-B-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:14:56.193Z		s13	KD-G2	KD-G2	KD-G2	29dc059ae61dcf1f	seedpack-wid	product
 KD-Qg-l	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:12:26.319Z		s13	KD-V7	KD-V7	KD-V7	472e50814709da66	seedpack-wid	product
 KD-G2	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:09:21.325Z		s41	KD-Qg-l	KD-Qg-l	KD-Qg-l	8d5dcee382388482	seedpack-wid	product
+FOCUS-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T12:41:04.185Z			KD-G2	KD-G2	KD-G2	46ca109c8ed7e41e	seedpack-wid	
+CLEAR-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T12:17:04.254Z			KD-G2	KD-G2	KD-G2	d5e326e38202644e	seedpack-wid	
+WIDE-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T11:48:09.657Z			KD-Qg	KD-Qg	KD-Qg	4b55611e3c5513e3	seedpack-wid	
