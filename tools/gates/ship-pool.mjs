@@ -121,16 +121,16 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
    *   它被 61 处属性级断言钉着，换它 = 另一件事）。
    *   11-06 晨：原候选 L5-1200-s13 实测主体席只有 10%，随机席 20%，锚会因夹具过弱而假红；
    *   D1200-s13 同条件实测 27.5% vs 12.5%，故统一用它。 */
-  const POOL_FIXTURE = 'docs/artifacts/2p0-pool/D1200-s13.bak';
+  const POOL_FIXTURE = 'docs/artifacts/night-adapt/KDG-B-Q-s13.js';
   const prPair = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE, '--ref=' + POOL_FIXTURE,
-    '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
+    '--batches=6', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 300000 });
   eq(prPair.status, 0, '⑥b 主体席尺（同枚两臂）必须跑成（实测 exit=' + prPair.status + ' ‖ ' + String(prPair.stderr || '').slice(-240) + '）');
   ok(/自证①（同枚两臂 ⇒ 差恰好 0）：\d+ 批全过/.test(String(prPair.stdout || '')),
     '⑥b 必须印出"同枚两臂配对差恰好 0"那条自证 ⇒ 没印 = 自证根本没跑却报绿（这台尺的配对性没人验过）');
   ok(/配对差 \+0\.00pt/.test(String(prPair.stdout || '')),
     '⑥b 同枚两臂的配对差均值必须是 +0.00pt ⇒ 不是 +0.00 就说明两臂没共用盐/阵容，那"配对"是假的');
   const prRand = spawnSync(process.execPath, [PB, '--subject=rand', '--ref=' + POOL_FIXTURE,
-    '--batches=2', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 180000 });
+    '--batches=6', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 300000 });
   eq(prRand.status, 0, '⑥b 主体席尺（`rand` 公平份额锚）必须跑成（实测 exit=' + prRand.status + '）');
   ok(/自证②（公平份额锚）：随机席 [\d.]+% < 参照 [\d.]+%/.test(String(prRand.stdout || '')),
     '⑥b 必须印出"随机席低于参照" ⇒ 锚接反（或主体席没真换成 rand）= 这台尺的绝对刻度不可信');
