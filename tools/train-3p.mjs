@@ -138,6 +138,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_PASSIVE_OPPS',   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
@@ -1586,6 +1587,33 @@ if (TOOLKIT_N > 0) {
   console.log('[toolkit-ops] 杂货铺（`st:toolkit` 的 `pickToolKit`，含计划层 P0~P7）已进训练桌 ' + TOOLKIT_N + ' 份' +
     ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（桌内份额 ' + (100 * TOOLKIT_N / OPPS.length).toFixed(1) + '%）' +
     '（判据：产物的**攒-花链**那一族，见日志 §E676 预注册）');
+
+}
+
+/* ===== `EPIRUS_PASSIVE_OPPS=<k>`（DS · 11-08 晚 · 用户「2.0 包要全方位优于 v7 包」）=====
+ * 病（实测）：场B（对 4 个只攒钱席的**清场数**）在 2.0 线上恒 0.00 —— 考卷池 28 个脚本全会打人，
+ *   fitness 里没有一张「被动桌」⇒ 打死一个不构成威胁的对手从来不换分（KILL_FIELD 的 killSecure 是**会打人**的，
+ *   COURSE_BOT=pickFarmer 每代只注 1 席且杀它不加分）。v7 强包（Q-s47 场B 2.91）不是被奖励出来的，是老 fitness 的攻防形状带出来的。
+ * 纪律与 EPIRUS_RING_OPPS / ECON_OPPS / TOOLKIT_OPPS 逐字同形：
+ *   默认 0 ⇒ OPPS 一字不变（历史臂仍可逐位复现）；k 不是非负整数 ⇒ exit 4；
+ *   Bots.pickFarmer 不是函数 ⇒ exit 4（少一个就是一根空枪）；开了必印「OPPS 从 N 变 M」与桌内份额。
+ * ⚠ 与 EPIRUS_CLEAR_W 配合使用才有意义：CLEAR_W 单独开（§N8 的 xn10b）会把最高分让给纯ジ龟包，
+ *   环境（被动桌）+ 奖励（清场）同时到位才可能让「清场」有价格（与 KILL_FIELD 那条的推理同构）。 */
+const PASSIVE_N = Number(process.env.EPIRUS_PASSIVE_OPPS || 0);
+if (!Number.isInteger(PASSIVE_N) || PASSIVE_N < 0) {
+  console.error('[train-3p] ⛔ EPIRUS_PASSIVE_OPPS 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_PASSIVE_OPPS || '') + '）⇒ 拒绝把它当 0');
+  process.exit(4);
+}
+if (PASSIVE_N > 0) {
+  if (typeof Bots.pickFarmer !== 'function') {
+    console.error('[train-3p] ⛔ EPIRUS_PASSIVE_OPPS 要的对手在 EpirusBots 里不存在：passive:farmer ⇒ 拒绝静默少放对手');
+    process.exit(4);
+  }
+  const baseP = OPPS.length;
+  for (let i = 0; i < PASSIVE_N; i++) OPPS.push({ name: 'passive:farmer' + (PASSIVE_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickFarmer });
+  console.log('[passive-ops] 只攒钱席（pickFarmer）已进训练桌 ' + PASSIVE_N + ' 份 ⇒ OPPS 从 ' + baseP + ' 个变 ' + OPPS.length +
+    ' 个（桌内份额 ' + (100 * PASSIVE_N / OPPS.length).toFixed(1) + '%）（判据：产物的场B 清场数 / 对农民桌胜率）');
+
 }
 
 /* ===== v1.6.60（用户 10-10 提的方向，10-11 落成接线）：把**人类形状替身**放上训练桌 =====
