@@ -153,3 +153,5 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-08T08:13:24.627Z	da58e843d231f0eb	docs/artifacts/STR-B-Q-s13-band3.bak	docs/artifacts/STR-B3-Q-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
 2026-11-08T08:13:24.630Z	7550ad0e543130c4	docs/artifacts/STR-B-Q-s13-band4.bak	docs/artifacts/STR-B3-Q-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-08T08:13:24.635Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/night-adapt/STR-B3-Q-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-08T09:14:52.436Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/STR-C-Q-s7-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-08T09:14:52.440Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/night-adapt/STR-C-Q-s7.js	train-3p	本臂零改包：产物 = 起点那一粒
