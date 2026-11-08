@@ -19,9 +19,11 @@ for (const l of LOG_LINES) {
   const [, id, tag, x2, x3, x5, x8, n2, n3, n5, n8] = m;
   const fam = tag[0] === 'X' ? 'X' : 'P', suf = tag[1] === 'L' ? 'L' : '';
   R[id] = R[id] || {};
-  for (const [i, n] of [[2, '2'], [3, '3'], [5, '5'], [8, '8']]) {
-    R[id][fam + n + suf] = [x2, x3, x5, x8][i];
-    R[id]['n' + n + (tag[1] === 'L' ? 'L' : '')] = [n2, n3, n5, n8][i];
+  /* ⚠ 11-08 修：原写法把 **N 本身**当下标（[2,3,5,8] ⇒ 取第 2/3/5/8 个元素）⇒ P2 写的是 x5、P3 写的 x8、P5/P8 空。
+   *   下标与 N 必须分开：idx 0..3 ↔ N 2/3/5/8。 */
+  for (const [idx, n] of [[0, '2'], [1, '3'], [2, '5'], [3, '8']]) {
+    R[id][fam + n + suf] = [x2, x3, x5, x8][idx];
+    R[id]['n' + n + (tag[1] === 'L' ? 'L' : '')] = [n2, n3, n5, n8][idx];
   }
 }
 /* ruler（S/Geff/行为列） */
