@@ -1,0 +1,3 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+STR-A-Q-s13	0	1	G 2.30 < 3（短程有效技能数只有 2.30，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕	2.3		6.95	0.381	4	ok	12.1	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+STR-B-Q-s13	1	0		3.32		19.5	0.304	4	ok	9.4	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
