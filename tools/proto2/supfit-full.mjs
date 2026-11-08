@@ -9,7 +9,7 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP } from './pg-lib.mjs';
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode', 'teacher', 'balance', 'collect'], 'supfit-full');
+rejectUnknownFlags(argv, ['up', 'out', 'steps', 'groups', 'lr', 'batch', 'seed', 'temp', 'games', 'n', 'mode', 'teacher', 'balance', 'collect', 'wKey'], 'supfit-full');
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
 const UP = arg('up', 'scratch/arms/KD-V7.bak');
 const OUT = arg('out', 'scratch/arms/KDFULL.bak');
@@ -25,6 +25,16 @@ const BALANCE = String(arg('balance', '1')) !== '0';
  *   （学生 27% 防御的状态里教师 value 选 guard ⇒ 学生更守 ⇒ 状态更守 ⇒ 57~65% guard 畸变）。
  *   整策略转移要的是教师分布上的行为克隆，不是自访分布上的 value 蒸馏；自访档留给 chain 那类"要执行"的用例。 */
 const COLLECT = arg('collect', 'student');
+/* （ZCode · 11-08 晚）--wKey=<键>:<权重>（可重复）= **键过采样**：采集自然分布里稀缺但战斗关键的键
+ *   （KD 谱系实测 gun 同键保真 ~15% ⇒ 农民盲/场B 缺失顺着克隆链传给每一代）按权重放大它在训练抽样里
+ *   的被抽概率（自然计数 × 权重）。只改"抽谁"，不改"抽到之后怎么学"（梯度式/lr/步数全不动）⇒ 归因单变量。
+ *   只在 --balance=0（自然分布档）生效；均衡档本就按键均匀，过采样无意义（给了就打警告）。 */
+const WKEY = new Map();
+for (const a of argv.filter((x) => x.indexOf('--wKey=') === 0)) {
+  const m2 = a.slice(7).match(/^(\S+):([\d.]+)$/);
+  if (!m2) { console.error('⛔ --wKey 格式 = <键>:<权重>（如 --wKey=gun:5），收到 ' + a); process.exit(2); }
+  WKEY.set(m2[1], Number(m2[2]));
+}
 const STEPS = Math.max(50, Number(arg('steps', 2000)) || 2000);
 const NGRP = Math.max(200, Number(arg('groups', 1200)) || 1200);
 const LR = Number(arg('lr', 3e-4)) || 3e-4;
@@ -94,6 +104,26 @@ const train = groups.slice(0, cut), hold = groups.slice(cut);
 const byKey = new Map();
 for (const g of train) { if (!byKey.has(g.wantKey)) byKey.set(g.wantKey, []); byKey.get(g.wantKey).push(g); }
 const keyList = Array.from(byKey.keys());
+/* 键过采样的加权抽样表（自然计数 × wKey 权重；不给 wKey 时保持 train 均匀这条历史路径逐字节不动） */
+let wSample = null;
+if (WKEY.size && !BALANCE) {
+  const cnt = new Map();
+  for (const g of train) cnt.set(g.wantKey, (cnt.get(g.wantKey) || 0) + 1);
+  const cum = []; let tot = 0;
+  for (const [k, c] of cnt) { tot += c * (WKEY.get(k) || 1); cum.push([tot, k]); }
+  wSample = { cum, tot };
+  console.log('[supfit-full] 键过采样（balance=natural）：' + [...WKEY].map(([k, w]) => k + '×' + w + '（train ' + (cnt.get(k) || 0) + '/' + train.length + ' 组，占 ' + (100 * (cnt.get(k) || 0) / Math.max(1, train.length)).toFixed(1) + '%）').join(' ‖ '));
+} else if (WKEY.size && BALANCE) {
+  console.log('[supfit-full] ⚠ --wKey 在 --balance=1（键均衡）档不生效：均衡档每键已等概率。要过采样请配 --balance=0');
+}
+function pickTrain() {
+  if (!wSample) return train[Math.floor(rnd() * train.length)];
+  const r = rnd() * wSample.tot;
+  let k = wSample.cum[wSample.cum.length - 1][1];
+  for (const [c, kk] of wSample.cum) { if (r <= c) { k = kk; break; } }
+  const poolK = byKey.get(k);
+  return poolK && poolK.length ? poolK[Math.floor(rnd() * poolK.length)] : train[0];
+}
 const dim = pv.length;
 const adam = { m: new Float64Array(dim), v: new Float64Array(dim), t: 0 };
 const grad = new Float64Array(dim);
@@ -108,7 +138,7 @@ function step() {
   for (let b = 0; b < BATCH; b++) {
     const g2 = BALANCE
       ? (() => { const k = keyList[Math.floor(rnd() * keyList.length)]; const poolK = byKey.get(k); return poolK[Math.floor(rnd() * poolK.length)] || train[0]; })()
-      : train[Math.floor(rnd() * train.length)];
+      : pickTrain();
     const { a, t } = acc(g2, pv);
     if (t.kProb[g2.wantKey] == null) continue;
     const u = dLogKeyP(g2.wantKey, a.logits, g2.keys, TEMP, t);
@@ -157,7 +187,8 @@ try { hf = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { hf = ''; }
 if (!hf) console.log('⚠ 起点 wid 算不出（外壳不认/文件读不到）⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
 const meta = { ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
   up: UP, hotstartFrom: hf || UP, seed: SEED, steps: STEPS, groups: NGRP, lr: LR, batch: BATCH, temp: TEMP, games: GAMES, n: N, mode: MODE,
-  teacher: TEACHER, balance: BALANCE ? 'key' : 'natural', collect: COLLECT };   /* METHODOLOGY 145：克隆的"知识来自谁 + 怎么采"必须入档（保真闸要拿它对师徒三件套） */
+  teacher: TEACHER, balance: BALANCE ? 'key' : 'natural', collect: COLLECT,   /* METHODOLOGY 145：克隆的"知识来自谁 + 怎么采"必须入档（保真闸要拿它对师徒三件套） */
+  wkey: WKEY.size ? Object.fromEntries(WKEY) : undefined };   /* 键过采样剂量入档（11-08 晚；无旗标时不写此键 ⇒ 历史 meta 逐字不变） */
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
   'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 console.log('产物 → ' + OUT + ' ‖ meta.hotstartFrom=' + (hf ? hf + '（wid）' : UP + '（路径，wid 算不出）'));

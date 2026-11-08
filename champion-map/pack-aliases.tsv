@@ -148,3 +148,8 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-08T00:37:24.683Z	ecd6085a7f1780ec	docs/artifacts/CLOS2-Q-s13-band5.bak	docs/artifacts/PASS2-Q-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-08T00:37:24.686Z	c031e4ded3d304dc	docs/artifacts/CLOS2-Q-s13-band6.bak	docs/artifacts/PASS2-Q-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-08T00:37:24.690Z	a81a543e1b671e49	docs/artifacts/CLOS2-Q-s13-band1.bak	docs/artifacts/night-adapt/PASS2-Q-s13.js	train-3p	未复制：同一粒权重已有真身
+2026-11-08T08:13:24.614Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/STR-B3-Q-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-08T08:13:24.619Z	29474671aca2ece8	docs/artifacts/STR-B-Q-s13-band2.bak	docs/artifacts/STR-B3-Q-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-08T08:13:24.627Z	da58e843d231f0eb	docs/artifacts/STR-B-Q-s13-band3.bak	docs/artifacts/STR-B3-Q-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-08T08:13:24.630Z	7550ad0e543130c4	docs/artifacts/STR-B-Q-s13-band4.bak	docs/artifacts/STR-B3-Q-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-08T08:13:24.635Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/night-adapt/STR-B3-Q-s13.js	train-3p	未复制：同一粒权重已有真身

@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+CLOS2-Q-s13	0	1	G 2.69 < 3（短程有效技能数只有 2.69，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕	2.69		20.75	0.402	4	ok	8.2	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
