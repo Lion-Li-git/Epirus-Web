@@ -248,6 +248,39 @@
     eq(st.p[0].hp + st.p[1].hp + st.p[2].hp, 6, '总扣血 = 1(枪) + 2(雷波)，一点都不能多');
   });
 
+  t('N20①a 雷主被踩雷那一下打死 ⇒ 雷照炸（用户裁定 2026-11-08 = v2.0.6；实机 27回合局 r17 实报）', function () {
+    /* 旧实现：引爆统一在全部伤害之后（N20 延后引爆），雷主已死 ⇒ `hp > 0` 守卫把 pending
+     *   **静默丢弃**。文义：触发条件只有"非狙击枪攻击**且伤害落到他身上**"；"存活"限定的是
+     *   被波及那一侧。复现：scratch/mine-bug/（hp=1 + armed + 一发枪 ⇒ 旧实现无 mine 事件、枪手满血）。 */
+    const st = game(); setEp(st, 5, 0);
+    st.p[1].hp = 1;
+    st.p[1].mineArmed = true; st.p[1].mineTurns = 3; st.p[1].mineRound = st.round;
+    play(st, SK.GUN, SK.JI);
+    eq(st.p[1].hp, 0, '雷主死于枪（伤害落身 = 触发条件成立）');
+    eq(st.p[0].hp, 2, '雷主死了雷照炸：枪手挨 1 火焰（旧实现这里是 3 = 雷被静默丢）');
+    ok(!st.p[1].mineArmed, '触发即失效');
+    ok(st.events.some(e => e.type === 'mine'), '必须有 mine 事件（不许静默丢）');
+  });
+
+  t('N20②a 被雷波**炸死**的雷主同样链爆（同一裁定，间接触发侧对称修）', function () {
+    /* 旧实现：间接触发收集处的 `hp > 0` 让连环雷在第二跳哑火。修后：P2 被 P1 的雷波打穿，
+     *   P2 的雷照样走 indirect 波。 */
+    const st = S.createState('multi', noJudge(), 3);
+    for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+    st.events = []; X.startTurn(st);
+    st.p[1].mineArmed = true; st.p[1].mineTurns = 3; st.p[1].mineRound = st.round;
+    st.p[2].mineArmed = true; st.p[2].mineTurns = 3; st.p[2].mineRound = st.round;
+    st.p[2].hp = 1;                    /* P2 会被 P1 的雷波打穿 ⇒ 旧实现他的雷就此哑火 */
+    S.attemptAction(st, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[2].hp, 0, 'P2 被 P1 的雷波打死');
+    eq(st.p[0].hp, 1, 'P0 挨两波：P1 的雷 + P2 的链爆雷（旧实现 hp=2）');
+    eq(st.p[1].hp, 1, 'P1 = 枪 1 + P2 链爆雷 1（P1 自己的雷不波及自己）');
+    eq(st.events.filter(e => e.type === 'mine').length, 2, 'direct + indirect 两笔引爆都要有事件');
+  });
+
   t('R58×N23 被激光眼作废的藤甲**不许挂上火弱**（用户裁定 2026-10-16；两个座序都要判）', function () {
     /* 病：火弱是藤甲在**生产侧**写下的（`resolve.js:1129`），而作废可能落在它之后（激光眼与藤甲同层、
      *   按 `turnOrder` 轮换）⇒ 只判 `a.voided` 不够。修法：贴之前快照 + `setVoid` 回滚。

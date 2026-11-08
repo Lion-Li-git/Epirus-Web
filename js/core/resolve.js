@@ -456,7 +456,12 @@
     for (let i = 0; i < N; i++) {
       if (!state.p[i]._minePending) continue;
       state.p[i]._minePending = false;
-      if (state.p[i].hp > 0 && state.p[i].mineArmed) direct.push(i);
+      /* v2.0.6（**用户裁定 2026-11-08**）：雷主死亡不丢雷。N20① 文义的触发条件只有
+       *   "非狙击枪攻击**且伤害落到他身上**"，从来没有"雷主存活"这一条；"存活"限定的是
+       *   被波及的那一侧（"全场其他存活角色各受 1"）。旧实现在这里私加 `hp > 0`，
+       *   踩雷那一下恰好打死雷主时整颗雷**静默作废**（实机 11-08 对局实报：results/2.0
+       *   的 27回合局 r17：埋雷同回合被枪×2 打死，雷没响）。 */
+      if (state.p[i].mineArmed) direct.push(i);
     }
     if (!direct.length) return;
     const indirect = [];
@@ -468,7 +473,9 @@
         if (i === v || state.p[i].hp <= 0) continue;
         const struck = mineHit(state, i, v, transferable);
         const s = struck == null ? i : struck;           // 转走了 ⇒ 判定对象是真正吃到这跳的人
-        if (state.p[s].hp > 0 && state.p[s].mineArmed && direct.indexOf(s) < 0 && indirect.indexOf(s) < 0)
+        /* v2.0.6（同一裁定）：被雷波**炸死**的雷主同样链爆 —— N20② 间接触发的文义里也没有存活条件，
+         *   旧实现的 `hp > 0` 让"连环雷"在第二跳就哑火。 */
+        if (state.p[s].mineArmed && direct.indexOf(s) < 0 && indirect.indexOf(s) < 0)
           indirect.push(s);
       }
     }
