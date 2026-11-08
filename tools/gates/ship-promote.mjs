@@ -657,7 +657,11 @@ t('D155 设防持续性栏必须**只记录不阻断**，且配对表的解析�
     + '⇒ 打印住在 `defense-axis.mjs:39`，不在 promote 源码里（原来那条钉的是 promote 的注释）');
   const strip = x => String(x || '').split(/\r?\n/).filter(l => l.indexOf('设防持续性栏') < 0).join('\n');
   eq(strip(on.stdout + on.stderr), strip(off.stdout + off.stderr), '去掉这一行后两次的全部输出（含 stderr 里的阻断结论）必须逐字相同');
-  ok((on.stdout + on.stderr).indexOf('G 有效技能数') >= 0 || on.status === 0, '顺带确认这次 dry-run 真走到了门结论（阻断文案在 stderr，别只拼 stdout）');
+  /* v2.0.6（2026-11-08）：样本串原来钉 `'G 有效技能数'`（多模式广度阻断的无后缀写法）——
+   *   实测带模式后缀的阻断文案是 `'G(long) 有效技能数 2.16 < 3'`（夹具 cbs1s2-band2 在地雷规则修后
+   *   广度读数从过线滑到 2.16，dry-run 从"无阻断 exit 0"翻成"带阻断 exit 6"）⇒ 无后缀样本串匹配不上，
+   *   门红在措辞而不是语义。改成正则同时收 `G 有效技能数` / `G(multi) 有效技能数` / `G(long) 有效技能数`。 */
+  ok(/G(\((multi|long|standard)\))? 有效技能数/.test(on.stdout + on.stderr) || on.status === 0, '顺带确认这次 dry-run 真走到了门结论（阻断文案在 stderr，别只拼 stdout）');
 });
 
 
