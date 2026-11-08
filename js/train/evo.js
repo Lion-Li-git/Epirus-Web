@@ -2338,7 +2338,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0, defAdaptHits = 0, drainHeals = 0, defHands = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0, defAdaptHits = 0, drainHeals = 0, defHands = 0, focusHits = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
     let voidWins = 0, voidIdeal = 0;
@@ -2357,7 +2357,7 @@ let WALL_GAMES = 3;
      *   **这一族里只要有一个 W 非零，就把 8 个计数全部算出来** ⇒ 被下达的那根能看到剂量，
      *   没被下达的兄弟也能当**对照组**读；全 0 时没有任何杠杆需要否证 ⇒ 直接不算、逐位不变、零成本。
      * 收益项（`pressBonus` 等，:1553~:1582）**仍各自按自己的 W 门控** ⇒ `fit` 一字不变。 */
-    const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || BEAD_BOOM_W > 0 || TGT_W > 0 || CLEAR_W > 0 ||
+    const DOSE_ON = PRESS_W > 0 || PIERCE_W > 0 || BEAD_W > 0 || BEAD_BOOM_W > 0 || TGT_W > 0 || CLEAR_W > 0 || FOCUS_W > 0 ||
       BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || WALL_BREAK_W > 0 || REFLECT_W > 0 || GUARD_HIT_W > 0 || BEAD_WASTE_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
       /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
        * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
@@ -2596,6 +2596,11 @@ let WALL_GAMES = 3;
        * （实测：`DIV_W=0.3` + 真示范那批 6 个里 4 个场B 清场 = 0.00，在位包 0.63）。
        * 封顶 /1，与 `tgtBonus` 同尺度（标度按 v1.5.79 的教训取"0 次得 0、1 次吃满"）。 */
       const clearBonus = CLEAR_W * Math.min(1, clears / 1);
+      /* DS · 11-08 夜：**集火**（连续命中同一个目标）—— 场B 清场的真缺口。
+       * 依据（RESULTS §十三.7 实测量）：2.0 对 4 农民伤害 10.65/局 > v7 6.00，却清场 0.00；
+       * 集火率 28% vs v7 49% ⇒ 伤害摊在四个人身上、没人被打死。封顶 /2（两次同目标即吃满，
+       * 标度按 v1.5.79 的「0 次得 0」）。默认 FOCUS_W=0 ⇒ gFit 逐字不变。 */
+      const focusBonus = FOCUS_W * Math.min(1, focusHits / 2);
       /* v1.5.121（E4）：**挡下一次伤害** —— 与"清场"互补的那把尺子（清场 = 打死人；这个是扛住）。
        * 封顶 /1（**量出来的标度**：线上包自对局实测每席每局只有 **0.10** 次挡下、最大 0.40 ⇒
        * 用 /2 会几乎恒为 0、奖励退化成常数微扰；改用 v1.5.79 那条"0 次得 0、1 次即吃满"的规矩）。 */
@@ -2643,7 +2648,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus + defAdaptBonus + drainHealBonus - defIdlePenalty - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + focusBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus + defAdaptBonus + drainHealBonus - defIdlePenalty - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2690,6 +2695,8 @@ let WALL_GAMES = 3;
         if (DOSE_ON) { const vsc = voidScan(r.state.events, seat); voidWins += vsc.wins; voidIdeal += vsc.ideal; }
         /* v1.5.103（v1.5.100 §20）：**清场**（收缩开始前把对手打死）—— 与门禁 `场B 清场` 同口径。 */
         if (DOSE_ON) clears += countClears(r.state.events, seat);
+        /* DS · 11-08 夜：集火计数（与 clearBonus 同族，计数不设门槛、付钱才按 FOCUS_W 门控）。 */
+        if (DOSE_ON) focusHits += countFocusHits(r.state.events, seat);
         /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
          * 论点：防御族**费用 0 ep** ⇒ 与"ep 深度"不同，它不需要多回合计划 ⇒
          * 是"shaping 只在 0.0X 尺度、买不动多回合计划"这条限制**唯一**还可能绕过的方向。 */
@@ -3700,6 +3707,9 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
    *    不归因就等于奖励"别人把场子清了"（在 5 席同策略自对局里那是白送分）。 */
   let CLEAR_W = 0;
   function setClearReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) CLEAR_W = v; return CLEAR_W; }
+/* DS · 11-08 夜：集火奖励（默认关；与 CLEAR_W 同形，>0 才付钱）。 */
+let FOCUS_W = 0;
+function setFocusReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) FOCUS_W = v; return FOCUS_W; }
   function clearReward() { return { w: CLEAR_W }; }
   /* ===== v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**计数奖励（默认关；实验臂用 `EPIRUS_BLOCK_W` 打开）
    * 事件口径（只认"真的挡掉/弹走"，**不认摆架势**）：
@@ -3824,6 +3834,17 @@ function countVariety(events, seat) {
     }
     return n;
   }
+  /* DS · 11-08 夜：**集火** = 连续两次伤害命中同一个目标（只看受评席自己的伤害事件）。 */
+  function countFocusHits(events, seat) {
+    let prev = null, n = 0;
+    for (const e of (events || [])) {
+      if (e.type !== 'damage' || e.source !== seat || e.to == null) continue;
+      if (e.to === prev) n++;
+      prev = e.to;
+    }
+    return n;
+  }
+  function focusReward() { return { w: FOCUS_W, stat: { games: 0, max: 0, paid: 0 } }; }
   function threatKeyList() { return pierceKeyList().concat([R.SK.RING]); }
   function targetReward() { return { w: TGT_W, threatKeys: threatKeyList() }; }
   function countThreatHits(events, seat) {
@@ -4194,6 +4215,7 @@ function countVariety(events, seat) {
     /* v1.8.29：失效成功定价（计数是纯函数 ⇒ 门可以直接喂事件序列断言，不必跑一整局）。 */
     setVoidReward, setVoidIdealReward, voidReward, countVoidWins, countVoidIdeal, voidScan,
     setClearReward, clearReward, countClears,
+    setFocusReward, focusReward, countFocusHits,
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）

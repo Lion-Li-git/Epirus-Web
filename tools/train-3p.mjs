@@ -138,7 +138,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_PASSIVE_OPPS',   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_PASSIVE_OPPS', 'EPIRUS_FOCUS_W',   // DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
@@ -1338,6 +1338,22 @@ if (CLEAR_W_CLI > 0) {
     process.exit(5);
   }
   console.log('[clear] train-3p 主线程生效值 CLEAR_W=' + gotClear);
+}
+
+
+/* ===== DS · 11-08 夜：`EPIRUS_FOCUS_W=<w>`（集火奖励）=====
+ * 病（RESULTS §十三.7 实测量）：2.0 对 4 农民伤害 10.65/局（比 v7 的 6.00 还高），却**清场 0.00**（v7 2.91）；
+ *   集火率 28% vs v7 49% ⇒ 伤害摊在 4 个人身上、没人被打死。清场奖励（CLEAR_W）0.3 与 1.0 两档已证伪
+ *   （1.0 直接把包练成 70% 防御的龟壳、X̄₄ 转负）⇒ 换一根对症的杠杆：**连续命中同一目标**才付钱。
+ * 纪律与 `EPIRUS_CLEAR_W` 逐字同形：默认 0 ⇒ `gFit` 逐字不变；>0 必须回读生效值，否则 exit 5（拒绝静默空转）。 */
+const FOCUS_W_CLI = Number(process.env.EPIRUS_FOCUS_W || 0);
+if (FOCUS_W_CLI > 0) {
+  const gotFocus = T.setFocusReward ? T.setFocusReward(FOCUS_W_CLI) : 0;
+  if (!(Number(gotFocus) > 0)) {
+    console.error('⛔ EPIRUS_FOCUS_W=' + FOCUS_W_CLI + ' 未能生效（setFocusReward 返回 ' + gotFocus + '）—— 拒绝静默空转');
+    process.exit(5);
+  }
+  console.log('[focus] train-3p 主线程生效值 FOCUS_W=' + gotFocus);
 }
 
 const OPPS = [
