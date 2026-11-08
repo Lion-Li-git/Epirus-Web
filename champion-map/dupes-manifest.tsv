@@ -198,6 +198,9 @@ fbc3926b144ee593	move	docs/artifacts/kept/e124-out__blk0t00-s71.bak	docs/artifac
 206a93fabfa23653	canonical	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:04.419Z	0	disk	
 206a93fabfa23653	move	docs/artifacts/MUTFLAT-s15-band5.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:07.042Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MUTFLAT-s15-band5.bak
 206a93fabfa23653	move	docs/artifacts/MUTFLAT-s15-band6.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:07.045Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MUTFLAT-s15-band6.bak
+8d5dcee382388482	canonical	docs/artifacts/night-adapt/KD-G2.bak	docs/artifacts/night-adapt/KD-G2.bak	2026-11-08T09:09:21.325Z	0	git	
+8d5dcee382388482	move	docs/artifacts/SMOKE-passive-band1.bak	docs/artifacts/night-adapt/KD-G2.bak	2026-11-08T12:14:06.733Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-passive-band1.bak
+8d5dcee382388482	move	docs/artifacts/SMOKE-passive-band2.bak	docs/artifacts/night-adapt/KD-G2.bak	2026-11-08T12:14:10.454Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-passive-band2.bak
 e500051a05802cb8	canonical	docs/artifacts/night-adapt/PASS2-Q-s13.js	docs/artifacts/night-adapt/PASS2-Q-s13.js	2026-11-08T00:44:35.803Z	27	git	
 e500051a05802cb8	move	docs/artifacts/PASS2-Q-s13-band5.bak	docs/artifacts/night-adapt/PASS2-Q-s13.js	2026-11-08T00:44:35.797Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/PASS2-Q-s13-band5.bak
 2bdd3e4c97585604	canonical	docs/artifacts/STR-A-Q-s13-band2.bak	docs/artifacts/STR-A-Q-s13-band2.bak	2026-11-08T07:33:42.421Z	0	disk	
@@ -216,12 +219,22 @@ de85af8599a8b789	move	docs/artifacts/P2A-s41-band5.bak	docs/artifacts/P2A-s41-ba
 d2046df0147eb4a9	canonical	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-03T12:57:11.823Z	0	disk	
 d2046df0147eb4a9	move	docs/artifacts/SMOKE-CR-band3.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-05T16:30:50.155Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-CR-band3.bak
 d2046df0147eb4a9	move	docs/artifacts/SMOKE-CR-band4.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-05T16:30:50.160Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-CR-band4.bak
+fd129add8d33b68c	canonical	docs/artifacts/SMOKE-MX-band3.bak	docs/artifacts/SMOKE-MX-band3.bak	2026-11-05T16:32:17.794Z	0	disk	
+fd129add8d33b68c	move	docs/artifacts/SMOKE-passive-band3.bak	docs/artifacts/SMOKE-MX-band3.bak	2026-11-08T12:14:10.459Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-passive-band3.bak
+d046294836c01098	canonical	docs/artifacts/SMOKE-MX-band4.bak	docs/artifacts/SMOKE-MX-band4.bak	2026-11-05T16:32:17.799Z	0	disk	
+d046294836c01098	move	docs/artifacts/SMOKE-passive-band4.bak	docs/artifacts/SMOKE-MX-band4.bak	2026-11-08T12:14:10.465Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-passive-band4.bak
 66bc2f92eb807f51	canonical	docs/artifacts/SMOKE-NORM-s13-band2.bak	docs/artifacts/SMOKE-NORM-s13-band2.bak	2026-11-02T14:09:38.298Z	0	disk	
 66bc2f92eb807f51	move	docs/artifacts/SMOKE-NORM-s13-band3.bak	docs/artifacts/SMOKE-NORM-s13-band2.bak	2026-11-02T14:09:38.303Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-NORM-s13-band3.bak
 66bc2f92eb807f51	move	docs/artifacts/SMOKE-SW2-band1.bak	docs/artifacts/SMOKE-NORM-s13-band2.bak	2026-11-03T12:57:09.202Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-SW2-band1.bak
+900cb457bd922ba8	canonical	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/SMOKE2-band1.bak	2026-11-08T12:15:04.607Z	0	disk	
+900cb457bd922ba8	move	docs/artifacts/SMOKE3-band1.bak	docs/artifacts/SMOKE2-band1.bak	2026-11-08T12:16:35.810Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE3-band1.bak
+f8c6b067f2bf2773	canonical	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/SMOKE2-band2.bak	2026-11-08T12:15:08.423Z	0	disk	
+f8c6b067f2bf2773	move	docs/artifacts/SMOKE3-band2.bak	docs/artifacts/SMOKE2-band2.bak	2026-11-08T12:16:39.459Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE3-band2.bak
 29474671aca2ece8	canonical	docs/artifacts/STR-B-Q-s13-band2.bak	docs/artifacts/STR-B-Q-s13-band2.bak	2026-11-08T07:44:12.265Z	0	disk	
 29474671aca2ece8	move	docs/artifacts/STR-B3-Q-s13-band2.bak	docs/artifacts/STR-B-Q-s13-band2.bak	2026-11-08T08:13:24.617Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-B3-Q-s13-band2.bak
 da58e843d231f0eb	canonical	docs/artifacts/STR-B-Q-s13-band3.bak	docs/artifacts/STR-B-Q-s13-band3.bak	2026-11-08T07:44:12.269Z	0	disk	
 da58e843d231f0eb	move	docs/artifacts/STR-B3-Q-s13-band4.bak	docs/artifacts/STR-B-Q-s13-band3.bak	2026-11-08T08:13:24.625Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-B3-Q-s13-band4.bak
 7550ad0e543130c4	canonical	docs/artifacts/STR-B-Q-s13-band4.bak	docs/artifacts/STR-B-Q-s13-band4.bak	2026-11-08T07:44:12.275Z	0	disk	
 7550ad0e543130c4	move	docs/artifacts/STR-B3-Q-s13-band5.bak	docs/artifacts/STR-B-Q-s13-band4.bak	2026-11-08T08:13:24.628Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-B3-Q-s13-band5.bak
+93e9b15fbeac6809	canonical	docs/artifacts/WIDE-Q-s13-band4.bak	docs/artifacts/WIDE-Q-s13-band4.bak	2026-11-08T11:48:09.642Z	0	disk	
+93e9b15fbeac6809	move	docs/artifacts/WIDE-Q-s13-band5.bak	docs/artifacts/WIDE-Q-s13-band4.bak	2026-11-08T11:48:09.646Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WIDE-Q-s13-band5.bak
