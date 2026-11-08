@@ -1,5 +1,12 @@
 # 交接（2026-11-08 晚 ZCode → 下一班）
 
+> **深夜补记（六臂全落地后）**：详见 RESULTS §十二。要点：① **KDG-B-Q-s13 已进图+进池硬带**
+> （X̄₄ 0.364/0.399 池内新高、农民 100%、缺 1 型门=场B——池 17 硬 10）；② KDG-B-Q-s41（0.464/0.505 但缺 2 门）
+> 是"场A 修复臂"候选种子：**SEL_COUNTER 单开、不加 COUNTER_OPPS**（教训 3：两者同开会把农民练丢）；③ 场B=种子性状，
+> 想让 KDG 线收场要么换种子要么换蒸馏教师（方向②的场B 键过采样实验待做：`--wKey` 已支持任意键）；
+> ④ ruler-measure 对**图外包**要用 `--set=champ --extra=<表> --ids=<id> --out=<新文件>`（9 秒/枚），
+> 别用裸 `--extra`（默认 --set=all 会重测全库几小时）。
+
 ## 一、在飞（你接手时大概率已落地）
 **4 条 150 代臂**（11-08 晚 ~发射，n3 g24 pop8，全部 `EPIRUS_TRIPLET=1`，台账追加 `scratch/night-adapt2/triplet-ledger.tsv`，产物 `docs/artifacts/night-adapt/`）：
 
