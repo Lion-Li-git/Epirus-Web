@@ -136,7 +136,7 @@ todo.forEach((e, i) => {
   }
   rec.tag = FEAS_N.tag;   /* §E492 出错行也要带 tag（否则"没判定"会被读成"这一批的样本量不明"）*/
   rec.legsMode = ALL_LONG ? 'all-long(G主判/座位/场A/场B 都换 long)'
-    : ALL_MULTI ? 'all-multi(反弹墙/密度/蓄能/场A剂量 都换 multi ‖ G2 与 G 同桌不判第二遍)'
+    : ALL_MULTI ? 'all-multi(反弹墙/密度/蓄能/场A/场B 都换 multi ‖ G2 与 G 同桌不判第二遍)'
     : 'as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)';
   appendFileSync(OUTP, COLS.map(c => rec[c] === undefined ? '' : rec[c]).join('\t') + '\n');
   if (i % 25 === 0 || i === todo.length - 1) {
