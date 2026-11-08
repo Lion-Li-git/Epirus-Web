@@ -1,0 +1,322 @@
+{
+ "perPack": {
+  "DEF-s13": {
+   "acts": 50,
+   "byCard": {
+    "ji": 37,
+    "sword": 5,
+    "railgun": 3,
+    "charge": 2,
+    "bigT": 2,
+    "gun": 1
+   },
+   "def": 0,
+   "bai": 0,
+   "eff": 0,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 4,
+   "onUser": 4
+  },
+  "KD-G2": {
+   "acts": 39,
+   "byCard": {
+    "ji": 12,
+    "gun": 6,
+    "bagua": 8,
+    "guard": 9,
+    "reflect": 2,
+    "sword": 1,
+    "snipe": 1
+   },
+   "def": 19,
+   "bai": 18,
+   "eff": 1,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 2,
+   "onUser": 1
+  },
+  "STR-B-Q-s13": {
+   "acts": 66,
+   "byCard": {
+    "ji": 42,
+    "snipe": 6,
+    "gun": 14,
+    "sword": 1,
+    "drain": 1,
+    "charge": 1,
+    "bigT": 1
+   },
+   "def": 0,
+   "bai": 0,
+   "eff": 0,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 4,
+   "onUser": 3
+  },
+  "FOCUS-Q-s13": {
+   "acts": 112,
+   "byCard": {
+    "ji": 46,
+    "gun": 13,
+    "bagua": 7,
+    "reflect": 12,
+    "guard": 17,
+    "sword": 12,
+    "charge": 3,
+    "bigT": 1,
+    "holo": 1
+   },
+   "def": 37,
+   "bai": 34,
+   "eff": 3,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 4,
+   "onUser": 5
+  },
+  "PASS2-Q-s13": {
+   "acts": 97,
+   "byCard": {
+    "ji": 47,
+    "gun": 25,
+    "guard": 16,
+    "sword": 5,
+    "snipe": 4
+   },
+   "def": 16,
+   "bai": 12,
+   "eff": 4,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 5,
+   "onUser": 9
+  },
+  "KDG-B-Q-s13": {
+   "acts": 107,
+   "byCard": {
+    "ji": 43,
+    "gun": 9,
+    "reflect": 19,
+    "guard": 21,
+    "sword": 14,
+    "holo": 1
+   },
+   "def": 41,
+   "bai": 38,
+   "eff": 3,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 4,
+   "onUser": 3
+  },
+  "CLEAR-Q-s13": {
+   "acts": 106,
+   "byCard": {
+    "ji": 41,
+    "guard": 26,
+    "gun": 21,
+    "reflect": 10,
+    "snipe": 1,
+    "sword": 5,
+    "charge": 1,
+    "bigT": 1
+   },
+   "def": 36,
+   "bai": 33,
+   "eff": 3,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 5,
+   "onUser": 3
+  },
+  "ADAPT2-Q-s7": {
+   "acts": 77,
+   "byCard": {
+    "ji": 26,
+    "guard": 12,
+    "gun": 7,
+    "reflect": 23,
+    "snipe": 1,
+    "sword": 6,
+    "charge": 1,
+    "holo": 1
+   },
+   "def": 36,
+   "bai": 30,
+   "eff": 6,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 3,
+   "onUser": 4
+  },
+  "EFFG-s41": {
+   "acts": 24,
+   "byCard": {
+    "ji": 15,
+    "sword": 1,
+    "ring": 4,
+    "railgun": 1,
+    "charge": 2,
+    "bigT": 1
+   },
+   "def": 0,
+   "bai": 0,
+   "eff": 0,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 2
+  },
+  "COMBO-s13": {
+   "acts": 59,
+   "byCard": {
+    "ji": 40,
+    "gun": 3,
+    "sword": 10,
+    "holo": 3,
+    "ring": 1,
+    "charge": 2
+   },
+   "def": 3,
+   "bai": 3,
+   "eff": 0,
+   "pen": 0,
+   "dmgTaken": 0,
+   "deaths": 0,
+   "games": 2,
+   "onUser": 5
+  }
+ },
+ "user": {
+  "acts": 110,
+  "byCard": {
+   "ji": 47,
+   "ring": 33,
+   "railgun": 8,
+   "mine": 7,
+   "drain": 9,
+   "proto": 3,
+   "charge": 1,
+   "bigT": 1,
+   "gun": 1
+  },
+  "def": 0,
+  "bai": 0,
+  "eff": 0,
+  "pen": 0,
+  "dmgTaken": 0
+ },
+ "games": [
+  {
+   "file": "epirus-battle-23回合 (4).txt",
+   "winner": "玩家5 获胜",
+   "rounds": 23,
+   "coverage": [
+    "ji",
+    "gun",
+    "guard",
+    "bagua",
+    "snipe",
+    "reflect",
+    "ring",
+    "sword",
+    "railgun",
+    "mine",
+    "drain"
+   ]
+  },
+  {
+   "file": "epirus-battle-27回合 (5).txt",
+   "winner": "玩家2 获胜",
+   "rounds": 27,
+   "coverage": [
+    "ji",
+    "gun",
+    "guard",
+    "reflect",
+    "ring",
+    "charge",
+    "snipe",
+    "bagua",
+    "bigT",
+    "sword",
+    "mine",
+    "railgun",
+    "drain"
+   ]
+  },
+  {
+   "file": "epirus-battle-30回合 (1).txt",
+   "winner": "玩家6 获胜",
+   "rounds": 30,
+   "coverage": [
+    "ji",
+    "guard",
+    "gun",
+    "reflect",
+    "ring",
+    "snipe",
+    "holo",
+    "bagua",
+    "mine",
+    "railgun",
+    "sword",
+    "drain",
+    "charge",
+    "bigT"
+   ]
+  },
+  {
+   "file": "epirus-battle-32回合.txt",
+   "winner": "玩家4 获胜",
+   "rounds": 32,
+   "coverage": [
+    "ji",
+    "gun",
+    "guard",
+    "reflect",
+    "bagua",
+    "ring",
+    "sword",
+    "railgun",
+    "drain",
+    "mine",
+    "holo",
+    "charge",
+    "snipe",
+    "bigT"
+   ]
+  },
+  {
+   "file": "epirus-battle-34回合 (2).txt",
+   "winner": "你赢了",
+   "rounds": 34,
+   "coverage": [
+    "ji",
+    "guard",
+    "gun",
+    "sword",
+    "ring",
+    "reflect",
+    "railgun",
+    "charge",
+    "holo",
+    "snipe",
+    "bigT",
+    "drain",
+    "proto"
+   ]
+  }
+ ]
+}
