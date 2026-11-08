@@ -67,7 +67,7 @@ wid:0db60b97fc25	14	2.0 蒸馏根与 L5/CB/D 产线
 wid:3489c16057e7	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:7e5247918994	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:0290df82ac5e	14	2.0 蒸馏根与 L5/CB/D 产线									
-KD-Qg	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:20:00.000Z		s13				fa28800eae6a3d7c		product
+KD-Qg	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:20:00.000Z		s13	KD-Qg-l	KD-Qg-l	KD-Qg-l	fa28800eae6a3d7c	seedpack-wid	product
 CTRL2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:02.829Z		s7	KD-Qg	KD-Qg	KD-Qg	5a1d3ce77b2fd2c3	seedpack-wid	product
 CTRL2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:25:35.822Z		s13	KD-Qg	KD-Qg	KD-Qg	9b0cc330a1598a2a	seedpack-wid	product
 ADAPT2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:53.171Z		s7	KD-Qg	KD-Qg	KD-Qg	6c84d61da4bd9a17	seedpack-wid	product
@@ -77,3 +77,5 @@ PASS2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T00:44:35.803Z		s1
 STR-B-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T07:44:12.287Z		s13	PASS2-Q-s13	PASS2-Q-s13	PASS2-Q-s13	64e0e62c5056f1f0	seedpack-wid	product
 STR-B-Q-s41	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T08:01:18.508Z		s41	PASS2-Q-s13	PASS2-Q-s13	PASS2-Q-s13	b8e43dcc73db7bf8	seedpack-wid	product
 KDG-B-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:14:56.193Z		s13	KD-G2	KD-G2	KD-G2	29dc059ae61dcf1f	seedpack-wid	product
+KD-Qg-l	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:12:26.319Z		s13	KD-V7	KD-V7	KD-V7	472e50814709da66	seedpack-wid	product
+KD-G2	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:09:21.325Z		s41	KD-Qg-l	KD-Qg-l	KD-Qg-l	8d5dcee382388482	seedpack-wid	product

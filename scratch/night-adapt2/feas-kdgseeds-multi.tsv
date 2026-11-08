@@ -1,0 +1,3 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+KD-Qg-l	0	1	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	6.5		10.5	0.201	0	ok	12.2	0			0	n=20/aggr100/seat100	all-multi(反弹墙/密度/蓄能/场A/场B 都换 multi ‖ G2 与 G 同桌不判第二遍)
+KD-G2	0	1	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	4.99		10.9	0.258	0	ok	6.7	0			0	n=20/aggr100/seat100	all-multi(反弹墙/密度/蓄能/场A/场B 都换 multi ‖ G2 与 G 同桌不判第二遍)
