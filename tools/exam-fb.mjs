@@ -10,7 +10,7 @@
  * 判据与门**同源**：直接调 audit-lib 的 aggressionProfile（feasibilityOf 的场A/场B 就是它的输出），
  *   不再另写一份"怎么数清场"。规矩：两处各写一遍 = 训出和量出来不是一套规则（本仓栽过六次）。
  *
- * 用法：node tools/exam-fb.mjs --packs=a.js,b.bak [--games=100] [--out=x.tsv]
+ * 用法：node tools/exam-fb.mjs --packs=a.js,b.bak [--games=100] [--mode=multi|long] [--out=x.tsv]
  *   （--games 缺省 100 = 门那一档的样本量；别拿 20 局的数当结论，G/清场在小样本下系统性偏低）
  * 退出码：0 = 跑完 ‖ 2 = 读不出包/参数
  */
@@ -21,6 +21,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k +
 const PACKS = String(arg('packs', '')).split(',').map(s => s.trim()).filter(Boolean);
 const GAMES = Number(arg('games', 100));
 const OUT = arg('out', '');
+const MODE = arg('mode', 'multi');   /* 与门同口径：场A/场B 在哪张桌上量 */
 if (!PACKS.length) { console.error('用法：node tools/exam-fb.mjs --packs=a.js,b.bak [--games=100] [--out=x.tsv]'); process.exit(2); }
 
 const W = sandbox();
@@ -28,7 +29,7 @@ const rows = [];
 for (const f of PACKS) {
   const params = loadChamp(W, f);
   if (!params) { console.error('⛔ 读不出包：' + f); process.exit(2); }
-  const r = aggressionProfile(W, params, GAMES);
+  const r = aggressionProfile(W, params, GAMES, { mode: MODE });
   const id = f.replace(/^.*\//, '').replace(/\.(bak|js)$/, '');
   rows.push({ id, path: f, fieldA: r.fieldA ? r.fieldA.atk : null, fieldB: r.fieldB ? r.fieldB.clearedPerGame : null,
     dealt: r.fieldA ? r.fieldA.dealtPerGame : null, winB: r.fieldB ? r.fieldB.winRate : null });
