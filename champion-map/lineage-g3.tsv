@@ -67,3 +67,7 @@ wid:0db60b97fc25	14	2.0 蒸馏根与 L5/CB/D 产线
 wid:3489c16057e7	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:7e5247918994	14	2.0 蒸馏根与 L5/CB/D 产线									
 wid:0290df82ac5e	14	2.0 蒸馏根与 L5/CB/D 产线									
+KD-Qg	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:20:00.000Z		s13	Q-s47	Q-s47	Q-s47	fa28800eae6a3d7c	teacher	product
+CTRL2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:02.829Z		s7	KD-Qg	KD-Qg	KD-Qg	5a1d3ce77b2fd2c3	seedpack-wid	product
+CTRL2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:25:35.822Z		s13	KD-Qg	KD-Qg	KD-Qg	9b0cc330a1598a2a	seedpack-wid	product
+ADAPT2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:53.171Z		s7	KD-Qg	KD-Qg	KD-Qg	6c84d61da4bd9a17	seedpack-wid	product
