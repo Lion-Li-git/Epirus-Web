@@ -1,0 +1,4 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+Q-s47	1	0		6.93		4	0.348	2.91	ok	14.1	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+U-s205	0	1	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	5.3		19	0.295	0	ok	17.2	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)
+T8-s114	1	0		5.83		5.6	0.394	3.84	ok	8.6	0			0	n=20/aggr100/seat100	all-long(G主判/座位/场A/场B 都换 long)

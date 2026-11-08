@@ -1,0 +1,20 @@
+
+import { readFileSync } from 'node:fs';
+const s = readFileSync('champion-map/index.html', 'utf8');
+const i = s.indexOf('var DATA = ');
+const j = s.indexOf('; var OKSRCJ', i);
+const DATA = JSON.parse(s.slice(i + 'var DATA = '.length, j));
+console.log('rows', DATA.length);
+const sh = DATA.filter(d => d.sh);
+console.log('带 sh（大号点/上过线）: ' + sh.length);
+const byVer = {};
+for (const d of sh) byVer[d.ver || '?'] = (byVer[d.ver || '?'] || 0) + 1;
+console.log('按 ver：', JSON.stringify(byVer));
+const linOn = DATA.filter(d => d.lin === '历代上槽');
+console.log('lin=历代上槽: ' + linOn.length + '  其中 2.0: ' + linOn.filter(d => d.ver === '2.0').length);
+const pt = DATA.filter(d => d.pt);
+console.log('pt（池成员）: ' + pt.length);
+console.log('\n带 sh 且不在池里的（前 15）：');
+for (const d of sh.filter(x => !x.pt).slice(0, 15)) console.log('  ' + String(d.id).padEnd(26) + ' ver=' + (d.ver || '?') + '  lin=' + (d.lin || '') + '  sh=' + d.sh + '  pt=' + (d.pt || ''));
+console.log('\nlin=历代上槽 且 ver=2.0（前 15）：');
+for (const d of linOn.filter(x => x.ver === '2.0').slice(0, 15)) console.log('  ' + String(d.id).padEnd(26) + ' pt=' + (d.pt || '-') + ' sh=' + (d.sh || '-'));
