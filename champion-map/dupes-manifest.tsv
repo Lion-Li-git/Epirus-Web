@@ -66,6 +66,8 @@ f0483830ce2aec6f	move	docs/artifacts/CB3-s13-seg3.bak	docs/artifacts/CB3-s13-ban
 3152f877e95f50d4	move	docs/artifacts/CB3-s7-band3.bak	docs/artifacts/CB3-s7-band1.bak	2026-11-03T18:51:38.485Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/CB3-s7-band3.bak
 7a80fc2da9f5d067	canonical	docs/artifacts/CB3L-1200-band6.bak	docs/artifacts/CB3L-1200-band6.bak	2026-11-03T20:56:41.066Z	0	disk	
 7a80fc2da9f5d067	move	docs/artifacts/CB3L-1200-seg14.bak	docs/artifacts/CB3L-1200-band6.bak	-	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/CB3L-1200-seg14.bak
+d5e326e38202644e	canonical	docs/artifacts/night-adapt/CLEAR-Q-s13.js	docs/artifacts/night-adapt/CLEAR-Q-s13.js	2026-11-08T12:17:04.254Z	0	git	
+d5e326e38202644e	move	docs/artifacts/CLEAR-Q-s13-band3.bak	docs/artifacts/night-adapt/CLEAR-Q-s13.js	2026-11-08T12:17:04.236Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/CLEAR-Q-s13-band3.bak
 a81a543e1b671e49	canonical	docs/artifacts/CLOS2-Q-s13-band1.bak	docs/artifacts/CLOS2-Q-s13-band1.bak	2026-11-08T00:29:35.775Z	0	disk	
 a81a543e1b671e49	move	docs/artifacts/night-adapt/CLOS2-Q-s13.js	docs/artifacts/CLOS2-Q-s13-band1.bak	2026-11-08T00:29:38.780Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/CLOS2-Q-s13.js
 98f8594160f0b734	canonical	docs/artifacts/COMBO-s13-band6.bak	docs/artifacts/COMBO-s13-band6.bak	2026-11-06T16:30:29.900Z	0	disk	
@@ -161,6 +163,8 @@ cb8df9309acbbb0e	move	docs/artifacts/night-adapt/DEFW-A4-s13.js	docs/artifacts/D
 d490dc136293cfc4	canonical	docs/artifacts/eval-out/win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	73	git	
 d490dc136293cfc4	move	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/eval-out__win-Ldemo.bak
 d490dc136293cfc4	move	docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak
+46ca109c8ed7e41e	canonical	docs/artifacts/night-adapt/FOCUS-Q-s13.js	docs/artifacts/night-adapt/FOCUS-Q-s13.js	2026-11-08T12:41:04.185Z	0	git	
+46ca109c8ed7e41e	move	docs/artifacts/FOCUS-Q-s13-band5.bak	docs/artifacts/night-adapt/FOCUS-Q-s13.js	2026-11-08T12:41:04.175Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/FOCUS-Q-s13-band5.bak
 f04474821b5f6c4a	canonical	docs/artifacts/GATE2-Q-s13-band3.bak	docs/artifacts/GATE2-Q-s13-band3.bak	2026-11-08T00:10:10.368Z	0	disk	
 f04474821b5f6c4a	move	docs/artifacts/night-adapt/GATE2-Q-s13.js	docs/artifacts/GATE2-Q-s13-band3.bak	2026-11-08T00:10:10.381Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/GATE2-Q-s13.js
 38742ad2016f2c39	canonical	docs/artifacts/HPG-s41-band1.bak	docs/artifacts/HPG-s41-band1.bak	2026-11-03T18:32:07.132Z	0	disk	
@@ -214,6 +218,8 @@ b8e43dcc73db7bf8	canonical	docs/artifacts/night-adapt/STR-B-Q-s41.js	docs/artifa
 b8e43dcc73db7bf8	move	docs/artifacts/STR-B-Q-s41-band3.bak	docs/artifacts/night-adapt/STR-B-Q-s41.js	2026-11-08T08:01:18.491Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-B-Q-s41-band3.bak
 6e043a5eaef3ed6a	canonical	docs/artifacts/STR-C-Q-s41-band6.bak	docs/artifacts/STR-C-Q-s41-band6.bak	2026-11-08T09:14:26.836Z	0	disk	
 6e043a5eaef3ed6a	move	docs/artifacts/night-adapt/STR-C-Q-s41.js	docs/artifacts/STR-C-Q-s41-band6.bak	2026-11-08T09:14:26.840Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/STR-C-Q-s41.js
+4b55611e3c5513e3	canonical	docs/artifacts/night-adapt/WIDE-Q-s13.js	docs/artifacts/night-adapt/WIDE-Q-s13.js	2026-11-08T11:48:09.657Z	0	git	
+4b55611e3c5513e3	move	docs/artifacts/WIDE-Q-s13-band2.bak	docs/artifacts/night-adapt/WIDE-Q-s13.js	2026-11-08T11:48:09.633Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WIDE-Q-s13-band2.bak
 de85af8599a8b789	canonical	docs/artifacts/P2A-s41-band4.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.898Z	0	disk	
 de85af8599a8b789	move	docs/artifacts/P2A-s41-band5.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.902Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/P2A-s41-band5.bak
 d2046df0147eb4a9	canonical	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-03T12:57:11.823Z	0	disk	

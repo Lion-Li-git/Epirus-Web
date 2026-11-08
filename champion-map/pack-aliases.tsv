@@ -155,3 +155,11 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-08T08:13:24.635Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/night-adapt/STR-B3-Q-s13.js	train-3p	未复制：同一粒权重已有真身
 2026-11-08T09:14:52.436Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/STR-C-Q-s7-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-08T09:14:52.440Z	64e0e62c5056f1f0	docs/artifacts/night-adapt/STR-B-Q-s13.js	docs/artifacts/night-adapt/STR-C-Q-s7.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-08T12:14:10.452Z	8d5dcee382388482	docs/artifacts/night-adapt/KD-G2.bak	docs/artifacts/SMOKE-passive-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-08T12:14:10.457Z	8d5dcee382388482	docs/artifacts/night-adapt/KD-G2.bak	docs/artifacts/SMOKE-passive-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-08T12:14:10.462Z	fd129add8d33b68c	docs/artifacts/SMOKE-MX-band3.bak	docs/artifacts/SMOKE-passive-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-08T12:14:10.468Z	d046294836c01098	docs/artifacts/SMOKE-MX-band4.bak	docs/artifacts/SMOKE-passive-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-08T12:14:10.473Z	8d5dcee382388482	docs/artifacts/night-adapt/KD-G2.bak	scratch/ds-1108/SMOKE-passive.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-08T12:16:39.456Z	900cb457bd922ba8	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/SMOKE3-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-08T12:16:39.462Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/SMOKE3-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-08T12:16:39.468Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	scratch/ds-1108/SMOKE3.js	train-3p	未复制：同一粒权重已有真身
