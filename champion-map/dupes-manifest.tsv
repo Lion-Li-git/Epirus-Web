@@ -173,7 +173,7 @@ f04474821b5f6c4a	move	docs/artifacts/night-adapt/GATE2-Q-s13.js	docs/artifacts/G
 434a2a1ad8d7e150	move	docs/artifacts/HPG-s7-seg6.bak	docs/artifacts/HPG-s7-band1.bak	-	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/HPG-s7-seg6.bak
 f466f1048995b584	canonical	docs/artifacts/HPG-s7-band2.bak	docs/artifacts/HPG-s7-band2.bak	2026-11-03T19:05:23.680Z	0	disk	
 f466f1048995b584	move	docs/artifacts/HPG-s7-seg2.bak	docs/artifacts/HPG-s7-band2.bak	-	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/HPG-s7-seg2.bak
-29dc059ae61dcf1f	canonical	docs/artifacts/night-adapt/KDG-B-Q-s13.js	docs/artifacts/night-adapt/KDG-B-Q-s13.js	2026-11-08T09:14:56.193Z	7	git	
+29dc059ae61dcf1f	canonical	docs/artifacts/night-adapt/KDG-B-Q-s13.js	docs/artifacts/night-adapt/KDG-B-Q-s13.js	2026-11-08T09:14:56.193Z	8	git	
 29dc059ae61dcf1f	move	docs/artifacts/KDG-B-Q-s13-band2.bak	docs/artifacts/night-adapt/KDG-B-Q-s13.js	2026-11-08T09:14:56.176Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/KDG-B-Q-s13-band2.bak
 a36c5616ce4f470d	canonical	docs/artifacts/KDG-B-Q-s41-band6.bak	docs/artifacts/KDG-B-Q-s41-band6.bak	2026-11-08T09:15:30.785Z	0	disk	
 a36c5616ce4f470d	move	docs/artifacts/night-adapt/KDG-B-Q-s41.js	docs/artifacts/KDG-B-Q-s41-band6.bak	2026-11-08T09:15:30.788Z	7	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/KDG-B-Q-s41.js
@@ -220,6 +220,8 @@ b8e43dcc73db7bf8	move	docs/artifacts/STR-B-Q-s41-band3.bak	docs/artifacts/night-
 6e043a5eaef3ed6a	move	docs/artifacts/night-adapt/STR-C-Q-s41.js	docs/artifacts/STR-C-Q-s41-band6.bak	2026-11-08T09:14:26.840Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/STR-C-Q-s41.js
 4b55611e3c5513e3	canonical	docs/artifacts/night-adapt/WIDE-Q-s13.js	docs/artifacts/night-adapt/WIDE-Q-s13.js	2026-11-08T11:48:09.657Z	0	git	
 4b55611e3c5513e3	move	docs/artifacts/WIDE-Q-s13-band2.bak	docs/artifacts/night-adapt/WIDE-Q-s13.js	2026-11-08T11:48:09.633Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WIDE-Q-s13-band2.bak
+7e1d5cd3e7f5d1c6	canonical	docs/artifacts/night-adapt/WIDE2-200.js	docs/artifacts/night-adapt/WIDE2-200.js	2026-11-09T04:35:58.981Z	0	git	
+7e1d5cd3e7f5d1c6	move	docs/artifacts/WIDE2-200-band6.bak	docs/artifacts/night-adapt/WIDE2-200.js	2026-11-09T04:35:58.973Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WIDE2-200-band6.bak
 de85af8599a8b789	canonical	docs/artifacts/P2A-s41-band4.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.898Z	0	disk	
 de85af8599a8b789	move	docs/artifacts/P2A-s41-band5.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.902Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/P2A-s41-band5.bak
 d2046df0147eb4a9	canonical	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-03T12:57:11.823Z	0	disk	
