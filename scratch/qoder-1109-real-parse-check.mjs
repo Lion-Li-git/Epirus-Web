@@ -1,4 +1,7 @@
-/* 复核 scratch/real-games/analyze.mjs 的事件解析：原脚本 l.trim() 之后行首仍带 "- "，
+/* ⚑ 历史件（11-09 上午第一次交叉核）：本文件的 DEF_KEYS 是手抄名单（含 holo/armor、漏 shift/proto），
+ * 与官方 selfGuard 不同 ⇒ 它报 188 手，而**权威读数是 analyze.mjs 改成从 R.byKey 现取之后的 182 手**。
+ * 留着是为了记住"两份独立实现一致 ≠ 口径对"这一步；要复算现口径请跑 scratch/real-games/analyze.mjs。
+ * 复核 scratch/real-games/analyze.mjs 的事件解析：原脚本 l.trim() 之后行首仍带 "- "，
  * 而六条事件正则都写成 /^💥/ 等 ⇒ dmg/reflect/blocked/death/mineArm/void 全部恒不匹配。
  * 本脚本只做一件事：把 "- " 剥掉再跑同一套判据，报"哪些读数会翻"。不改原脚本。 */
 import { readFileSync, readdirSync } from 'node:fs';

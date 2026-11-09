@@ -13,7 +13,12 @@ const CN2KEY = {
   '净化': 'purify', '镜面': 'mirror', '符咒': 'curse', '缩地': 'shift', '梦魇': 'nightmare', '微型电磁炮': 'miniT',
   '大雷': 'bigT', ' rod': 'rod',
 };
-const DEF_KEYS = new Set(['guard', 'reflect', 'bagua', 'jinshield', 'armor', 'holo']);
+/* 防御手键集**不在这儿硬编码**：走官方 selfGuard 同一判据（cat===DEFENSE && target==='self'，
+ * 见 tools/probe-wasted-play.mjs:57 与 tools/defense-quality.mjs）。11-09 实测差别：官方含 shift/proto、
+ * 不含 holo（target=other）与 armor（target=enemy）⇒ 手抄名单会把 holo 算成白防、把 proto 漏掉。 */
+import { sandbox, ROOT } from '../../tools/audit-lib.mjs';
+const RULES = sandbox(ROOT).EpirusRules;
+const DEF_KEYS = new Set(Object.keys(RULES.byKey).filter(k => RULES.byKey[k].cat === RULES.CAT.DEFENSE && RULES.byKey[k].target === 'self'));
 const ATK_HINT = /→玩家\d+/;   // 带指向的动作（攻击或 holo 护人）
 
 const files = readdirSync('results/2.0').filter(f => f.endsWith('.txt')).sort();

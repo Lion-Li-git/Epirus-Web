@@ -75,11 +75,11 @@
     "bigT": 1,
     "holo": 1
    },
-   "def": 37,
-   "bai": 33,
+   "def": 36,
+   "bai": 32,
    "eff": 3,
    "pen": 1,
-   "defAfterHit": 5,
+   "defAfterHit": 4,
    "dmgTaken": 16,
    "deaths": 1,
    "games": 4,
@@ -114,8 +114,8 @@
     "sword": 14,
     "holo": 1
    },
-   "def": 41,
-   "bai": 38,
+   "def": 40,
+   "bai": 37,
    "eff": 2,
    "pen": 1,
    "defAfterHit": 2,
@@ -158,10 +158,10 @@
     "charge": 1,
     "holo": 1
    },
-   "def": 36,
+   "def": 35,
    "bai": 29,
    "eff": 4,
-   "pen": 3,
+   "pen": 2,
    "defAfterHit": 2,
    "dmgTaken": 17,
    "deaths": 3,
@@ -197,8 +197,8 @@
     "ring": 1,
     "charge": 2
    },
-   "def": 3,
-   "bai": 3,
+   "def": 0,
+   "bai": 0,
    "eff": 0,
    "pen": 0,
    "defAfterHit": 0,
@@ -221,11 +221,12 @@
    "bigT": 1,
    "gun": 1
   },
-  "def": 0,
-  "bai": 0,
+  "def": 3,
+  "bai": 3,
   "eff": 0,
   "pen": 0,
-  "dmgTaken": 32
+  "dmgTaken": 32,
+  "defAfterHit": 1
  },
  "games": [
   {
