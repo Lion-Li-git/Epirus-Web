@@ -18,9 +18,11 @@ const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + 
 const TABLE = arg('table', '');
 if (!TABLE) { console.error('⛔ 必须 --table=<四格批表>'); process.exit(2); }
 const SUF = arg('suffix', '');
-if (SUF !== '' && SUF !== 'L') { console.error('⛔ --suffix 只认 空 或 L'); process.exit(2); }
+if (SUF !== '' && SUF !== 'L' && !/^[A-Z]{1,2}$/.test(SUF)) { console.error('⛔ --suffix 只认 空 / L / B / BL（大写字母 ≤2 个）'); process.exit(2); }
 const IN = arg('in', 'champion-map/coords-gen3-1105.tsv');
 const ALLOW_MISSING = process.argv.includes('--allow-missing');
+/* 11-10：后缀放宽带进 B 轴（冠军桌）族——'B'（multi）/ 'BL'（long），列 = P<n>B/P<n>BL。
+ *   A 轴的 P/P-L 列族是全图 v2 读数，B 轴**必须分族**（同名列会让"这一格是哪把尺"不可查，§E597 教训）。 */
 
 const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map((l) => l.split('\t'));
 const bt = rd(TABLE), bh = Object.fromEntries(bt[0].map((x, i) => [x, i]));
