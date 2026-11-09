@@ -33,7 +33,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -49,7 +49,9 @@ if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/
  *   缺省空 ⇒ 与 v1 逐位相同（历史读数可复现）。N=2 时隔局换冠军（否则就变成纯 1v1）。 */
 const CHAMP_IDS = String(FLAG.champ || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const CHAMP_N = Math.max(0, Number(FLAG.champn || 1) | 0);   // 每局冠军席数（≤N−1；缺省 1）
-const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
+/* B/both 轴没显式给 --champ 时用**在册 2.0 夹具**（用户 11-09：v7 跨人数泛用性差 ⇒ 冠军席必须用 2.0 强包）。 */
+if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.push('KDG-B-Q-s13', 'FOCUS-Q-s13');
+const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
@@ -98,10 +100,13 @@ function subjectSel() {
   const byRound = { 1: mk(Bots.tierEps(tier, 1)), 2: mk(Bots.tierEps(tier, 2)), 3: mk(Bots.tierEps(tier, 3)) };
   return function (state, id, legal) { return byRound[Math.min(3, state.round)](state, id, legal); };
 }
-/* ===== 四格对局 ===== */
-if (CHAMP_CHOOSERS.length) console.error('[exam-v2] 冠军席 = ' + CHAMP_IDS.join(',') + '（每局第一个对手席；N=2 隔局）⇒ 本读数与 v1 不同源，必须标注');
-const out = {};
+/* ===== 四格对局：按「轴」跑 ===== 
+ *   A 轴 = 脚本桌（champN=0，与 v1 逐位相同）‖ B 轴 = 冠军桌（champN=N−1，对手席全换冠军）。
+ *   --exam=A|B|both；both 先跑 A 再跑 B，[冠军4N] 仍是 A（旧解析器不受影响），B 用 [冠军4N-B]，组合分用 [冠军4N-v2]。 */
+if (CHAMP_CHOOSERS.length) console.error('[exam-v2] 冠军席 = ' + CHAMP_IDS.join(','));
 const SUBJ = subjectSel();
+function evalAxis(champN) {
+const out = {};
 for (const n of NS) {
   const plan = planN(n, R, SEED);
   let first = 0;
@@ -116,7 +121,7 @@ for (const n of NS) {
     for (let pid = 0; pid < n; pid++) {
       if (pid === seat) { choosers.push(sel); continue; }
       /* exam-v2：第一个对手席是冠军（自适应）；其余是脚本。N=2 时隔局换冠军。 */
-      const champSlot = CHAMP_CHOOSERS.length > 0 && oi < Math.min(CHAMP_N, n - 1) && (n > 2 || (j % 2 === 0));
+      const champSlot = CHAMP_CHOOSERS.length > 0 && oi < Math.min(champN, n - 1);
       choosers.push(champSlot ? CHAMP_CHOOSERS[(j + oi) % CHAMP_CHOOSERS.length] : asChooser(FN[field[oi]]));
       oi++;
     }
@@ -131,10 +136,22 @@ for (const n of NS) {
   const x = (first / G - 1 / n) / (1 - 1 / n);
   out[n] = { h: h.toFixed(2), x: x.toFixed(4), G, first, seatFirst, seatGames };
 }
-const fmt = (k) => NS.map((n) => k + n + '=' + out[n][k === 'h' ? 'h' : 'x']).join(' ');
-const fmtN = () => NS.map((n) => 'n' + n + '=' + out[n].G).join(' ');
-console.log('[冠军4N] ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : ''));
-for (const n of NS) {
-  const o = out[n];
-  console.error('  N=' + n + ': ' + o.first + '/' + o.G + ' 夺1 ‖ 各座 ' + o.seatFirst.map((f, i) => f + '/' + o.seatGames[i]).join(' ') + '');
+return out;
+}
+const AXIS = String(FLAG.exam || 'A').toUpperCase();
+if (AXIS !== 'A' && AXIS !== 'B' && AXIS !== 'BOTH') { console.error('⛔ --exam 只认 A/B/both，收到 ' + FLAG.exam); process.exit(2); }
+if ((AXIS === 'B' || AXIS === 'BOTH') && !CHAMP_CHOOSERS.length) { console.error('⛔ --exam=' + AXIS + ' 需要 --champ=<ids>'); process.exit(2); }
+function emit(prefix, o) {
+  const fmt = (k) => NS.map((n) => k + n + '=' + o[n][k === 'h' ? 'h' : 'x']).join(' ');
+  const fmtN = () => NS.map((n) => 'n' + n + '=' + o[n].G).join(' ');
+  console.log(prefix + ' ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : ''));
+  for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
+}
+if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));
+else if (AXIS === 'B') emit('[冠军4N-B]', evalAxis(Number.MAX_SAFE_INTEGER));
+else {
+  const a = evalAxis(0), b = evalAxis(Number.MAX_SAFE_INTEGER);
+  emit('[冠军4N]', a); emit('[冠军4N-B]', b);
+  const mix = {}; for (const n of NS) mix[n] = { h: ((+a[n].h + +b[n].h) / 2).toFixed(2), x: ((+a[n].x + +b[n].x) / 2).toFixed(4), G: a[n].G };
+  emit('[冠军4N-v2]', mix);
 }
