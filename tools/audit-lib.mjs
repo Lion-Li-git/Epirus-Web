@@ -850,6 +850,40 @@ export function chargeProfile(W, params, mode, GAMES) {
   };
 }
 
+/* 用卡谱（11-09 抽成单一来源）。病是当天撞出来的：`SEL_CARDS` 想复用 `behavior-profile.fieldProfile` 数卡，
+ *   结果 KD-G2 在镜像口径下读 **8 张**、`tools/card-usage.mjs` 在册读 **9 张** —— 差的正是压在阈值上的
+ *   `bigT 0.51%`。两把尺不是"差一点"，是**同一判据有两个不可比的分母**（种子序列与 slotSalt 都不同）
+ *   ⇒ 地板不能建在两把尺上，所以把 card-usage 的循环原样搬进来，CLI 与训练侧共用这一份。
+ * 口径（与 `tools/card-usage.mjs` 逐字相同，不是"等价重写"）：5 席全是同一枚包（镜像自对局）· ε=0 · temp 0.15 ·
+ *   `mode` 默认 multi · 每局 rng = `mulberry32(seedBase + g)`、**不设 slotSalt**（原实现就没有）·
+ *   只数 `type==='action' && outcome==='ok'` 的出手 · **用卡数 = 份额 ≥ shareMin 的卡数，含 ジ**
+ *   ⚠ 与 `SEL_GRID` 的"种数"差一张 ジ，引用时必须点名以哪把为准。 */
+export function cardUsageProfile(W, params, opts) {
+  const o = opts || {};
+  const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
+  const GAMES = o.games == null ? 60 : Number(o.games);
+  const MODE = o.mode || 'multi';
+  const SEED0 = o.seedBase == null ? 70000 : Number(o.seedBase);
+  const MIN = o.shareMin == null ? 0.005 : Number(o.shareMin);
+  const CAT = function (k) { const d = R.byKey[k]; return d ? (d.cat || '') : ''; };
+  const ch = T.policyChooserN(params, 0.15, 0);
+  const cnt = {}; let acts = 0;
+  for (let g = 0; g < GAMES; g++) {
+    const st = S.createState(MODE, { next: T.mulberry32(SEED0 + g) }, 5);
+    Play.autoGameN(st, [0, 1, 2, 3, 4].map(function () { return ch; }));
+    for (const e of st.events) {
+      if (e.type !== 'action' || e.outcome !== 'ok' || !e.key || e.pid == null) continue;
+      cnt[e.key] = (cnt[e.key] || 0) + 1; acts++;
+    }
+  }
+  const pct = {}; for (const k of Object.keys(cnt)) pct[k] = cnt[k] / (acts || 1) * 100;
+  const keys = Object.keys(pct).filter(function (k) { return pct[k] >= MIN * 100; }).sort(function (a, b) { return pct[b] - pct[a]; });
+  const defShare = keys.filter(function (k) { return CAT(k) === 'defense'; }).reduce(function (s, k) { return s + pct[k]; }, 0);
+  const borderline = Object.keys(pct).filter(function (k) { return pct[k] >= MIN * 100 - 0.15 && pct[k] <= MIN * 100 + 0.15; });
+  return { acts: acts, cnt: cnt, pct: pct, keys: keys, distinct: keys.length, defShare: defShare, games: GAMES, mode: MODE,
+    seedBase: SEED0, shareMin: MIN, borderline: borderline };
+}
+
 /* 侵略性双场探针（v1.5.62，用户裁定：**F 改用场 A**）。
  * 旧 F（fieldRate）的考核依据有两处结构问题（代码证据见 CHANGELOG v1.5.61）：
  *   ① "活跃场"里只有 1 席脚本进攻者，其余 4 席是**冠军自己的副本** ⇒ 量到的是自对局均衡；

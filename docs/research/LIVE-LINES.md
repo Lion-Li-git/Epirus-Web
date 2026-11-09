@@ -1074,3 +1074,11 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **未跟踪件分诊（只报不删）**：98 件 = 备份 7 / 读数表 35 / 空表 2 / 取证快照 18 / 权重产物 10 / 探针脚本 18 / JSONL 台账 1 / 其他 4。**按全路径核，0 件被在册 md 引用**（4 件只是 basename 同名，属 ruler.tsv/coverage.mjs 这类通用名假命中）⇒ 没有"不收编就断证据链"的件；两张 `usage-pool-1108*.tsv` 是只有表头的空表。清单 `scratch/qoder-1109-untracked-inventory.txt`（尺自身纠过两次：JSONL 被误判空表、basename 命中被当成真引用）。
 - **门禁（定向，不是整轮）**：`node tools/gate-all.mjs --np --group=ship` ⇒ 工具原话「np/ship **51/51**（148.3s）· spec **63/63** · smoke OK · battle OK · map OK ⇒ **5 道全绿**；但 np 只跑了 `--group=ship` 那一组 ⇒ 这一遍不许当认证引用」。回执 `scratch/qoder-1109-gate-ship.txt`。结构尺：FINDING 11 标题 / POOL-CONTRACT 13 标题，`check.cjs --file` 两份都 GUARD OK。
 - **自我纠错记一笔**：分诊脚本第一版把 `triplet-ledger.tsv`（JSONL，1 条真读数）判成"空表"，第二版又把 basename 命中一律标"被引用"⇒ 两次都是**先跑一遍看输出才抓住**，不是读代码看出来的。报"空/没引用"之前先验尺，这条与"整列 0 先验钩子"同形。
+
+## 追记 66（11-09 午 · Qoder · 分支 qoder-1109-realplay-fix）——P1/P2 落地（默认全关）+ 拦到"两把尺做一个地板"
+
+- **用户三条裁定**（都进 `DECISIONS.md`）：D-30 SEL_DEFQ 形状 = **容差带内排序键**（不是硬地板）+ **n≥30 才算数** ‖ D-31 SEL_CARDS **只筛新候选、不回筛现役池** ‖ D-32 用卡数**不许有两把尺**。第三条之前是先同口径重量（D-30 的③）：`scratch/qoder-1109-defq-caliber.mjs` 用页面 8 席装配量出分母够的 6 枚 = 65.9~85.1%、排序两 seed 一致但相邻差 2–4pt ⇒ 硬地板必然落在噪声里或全否。
+- **代码面**：`tools/defense-quality.mjs` 新导出 `measureDefenseQuality`（攒钱者装配 + 官方切窗 + placebo 倍差，**判据仍是原来那一份**）‖ `tools/audit-lib.mjs` 新导出 `cardUsageProfile`（把 `tools/card-usage.mjs` 的循环搬进 lib）‖ `tools/train-3p.mjs` 两个旋钮 `EPIRUS_SEL_DEFQ*` / `EPIRUS_SEL_CARDS*`，默认 0 ⇒ 整段不跑、`meta.recipe` 留 null ‖ 都加进同代接线条件（不接线 exit 7）。
+- **落地前拦到的真问题**：训练侧原计划复用 `fieldProfile` 数卡 ⇒ 同一枚 KD-G2 读出 **8 张** vs card-usage 在册 **9 张**，差在压线的 `bigT 0.51%`。抽成单一来源后三条验证全过：重构前后 CLI 产物**逐字节相同**、训练侧=CLI、白防率与在产探针逐位相同（`scratch/qoder-1109-knob-caliber.txt`）。顺带量到 **5 枚里 4 枚有压线卡** ⇒ 张数是噪声统计，这条现在由代码自己印出来。
+- **自检与牙**：`SEL_DEFQ_MINHANDS<10` / `_GAMES<10` / `SEL_CARDS>30`（恒假）/ `SEL_CARDS_GAMES<10` 四条响亮 `exit 2`，前两条已实测触发；`analyze.mjs` 那条"整批 0 事件就拒"的验牙本轮**自己坏过一次**（副本目录深度不对 ⇒ 变异体崩在 `ERR_MODULE_NOT_FOUND` 而不是被自检拒绝，看着像"无牙"），修 harness 后重验 exit 2 且点名。
+- **没做的事**：没开任何臂（等点名）、没动池成员、没动默认值、没并 main。

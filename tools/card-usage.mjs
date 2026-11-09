@@ -15,7 +15,7 @@
  * 退出码：0 = 跑完 ‖ 2 = 读不出包/参数不齐
  */
 import { writeFileSync } from 'node:fs';
-import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
+import { sandbox, loadChamp, rejectUnknownFlags, cardUsageProfile } from './audit-lib.mjs';
 
 rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'mode', 'out', 'eps'], 'card-usage');
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -26,26 +26,18 @@ const OUT = arg('out', '');
 if (!PACKS.length) { console.error('用法：node tools/card-usage.mjs --packs=a.js,b.bak [--games=60] [--mode=multi|long] [--out=x.tsv]'); process.exit(2); }
 
 const W = sandbox();
-const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
-const CAT = (k) => { const d = R.byKey[k]; return d ? (d.cat || '') : ''; };
+/* 引擎句柄与"打一局→数逐卡"都在 `audit-lib.cardUsageProfile` 里（11-09 抽出，训练侧 SEL_CARDS 共用同一把尺）
+ * ⇒ 本文件只负责选包、打印、落表，不再自带第二份计数算术。 */
 const rows = [];
 for (const f of PACKS) {
   const params = loadChamp(W, f);
   if (!params) { console.error('⛔ 读不出包：' + f); process.exit(2); }
-  const ch = T.policyChooserN(params, 0.15, 0);
-  const cnt = {}; let acts = 0;
-  for (let g = 0; g < GAMES; g++) {
-    const st = S.createState(MODE, { next: T.mulberry32(70000 + g) }, 5);
-    Play.autoGameN(st, [0,1,2,3,4].map(() => ch));
-    for (const e of st.events) {
-      if (e.type !== 'action' || e.outcome !== 'ok' || !e.key || e.pid == null) continue;
-      cnt[e.key] = (cnt[e.key] || 0) + 1; acts++;
-    }
-  }
+  /* 11-09：对局循环搬进 `audit-lib.cardUsageProfile` ⇒ 这把 CLI 与训练侧的 `EPIRUS_SEL_CARDS` 用的是**同一把尺**
+   * （同种子序列、同不设 slotSalt、同阈值）。原来在这儿自己写一遍的后果是：同一枚包在两处读出 8 张 / 9 张，
+   * 差的正是压在 ≥0.5% 线上的 `bigT 0.51%` ⇒ 地板不能建在两个分母上。 */
+  const u = cardUsageProfile(W, params, { games: GAMES, mode: MODE });
+  const acts = u.acts, pct = u.pct, keys = u.keys, defShare = u.defShare;
   const id = f.replace(/^.*\//, '').replace(/\.(bak|js)$/, '');
-  const pct = {}; for (const k of Object.keys(cnt)) pct[k] = cnt[k] / (acts || 1) * 100;
-  const keys = Object.keys(pct).filter(k => pct[k] >= 0.5).sort((a, b) => pct[b] - pct[a]);
-  const defShare = keys.filter(k => CAT(k) === 'defense').reduce((s, k) => s + pct[k], 0);
   rows.push({ id, path: f, acts, keys, pct, defShare, distinct: keys.length });
   console.log(id.padEnd(14) + ' 出手 ' + String(acts).padStart(6) + ' 用卡 ' + String(keys.length).padStart(2) + ' 防御占比 ' + defShare.toFixed(0) + '%  ' + keys.slice(0, 8).map(k => k + ' ' + pct[k].toFixed(0) + '%').join(' '));
 }

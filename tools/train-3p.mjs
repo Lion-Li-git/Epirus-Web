@@ -9,7 +9,7 @@ import { P2_FNAME } from './p2-baselines.mjs';   // 2P 考卷基准的单一来�
 import { loadPool, makeMimic } from './human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
-import { densityProfile, aggressionProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）‖ §E787 清场地板用同一个 `aggressionProfile`（官方 场A/场B 口径，与门禁 `fieldB.clearedPerGame` 同源 ⇒ 不加新尺）
+import { densityProfile, aggressionProfile, cardUsageProfile } from './audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）‖ §E787 清场地板用同一个 `aggressionProfile`（官方 场A/场B 口径，与门禁 `fieldB.clearedPerGame` 同源 ⇒ 不加新尺）   // 11-09 P2：`cardUsageProfile` = `tools/card-usage.mjs` 的那把尺搬进 lib ⇒ 地板与 POOL-CONTRACT v2.1 的基准同一个种子序列
 import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from '../server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from '../server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
@@ -19,6 +19,7 @@ import { HOLO_GIFT_MAX, landShareOf } from './audit-lib.mjs';   // v1.5.168：�
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
 import { fieldProfile, WIN } from './behavior-profile.mjs';   // §E787：`WIN` = 那个模块已经装载好的引擎沙箱 ⇒ 清场地板直接复用，不再 sandbox() 第二次
+import { measureDefenseQuality } from './defense-quality.mjs';   // 11-09 P1：当选面白防率的**装配与切窗**与在产探针同源（三档算术本来就是这一份）
 /* v1.5.194（qoder 0924 夜）：击杀奖励规则的**单一来源**实现（与 `probe-kill-reward.mjs` 共用同一份 ⇒
  * 不会出现"训出来的冠军和量出来的冠军不是一套规则"）*/
 import { patchResolve as krPatchResolve, patchPlay as krPatchPlay, makeKR as krMakeKR } from './kill-reward-lib.mjs';
@@ -147,6 +148,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_DEF', 'EPIRUS_SEL_DEF_MIN', 'EPIRUS_SEL_DEF_GAMES', 'EPIRUS_SEL_DEF_MODE',   // 11-02 千问 §A（PREREG-2026-11-02-SEL-DEF）：当选面**防御下限**排序键（默认 0=关 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
+  'EPIRUS_SEL_DEFQ', 'EPIRUS_SEL_DEFQ_MINHANDS', 'EPIRUS_SEL_DEFQ_GAMES', 'EPIRUS_SEL_DEFQ_MODE', 'EPIRUS_SEL_DEFQ_EPS',   // 11-09 P1（用户三条裁定：容差带内**排序键**不是硬地板 ‖ 防御手 n≥30 才算数、不够按"没量到"跳过 ‖ 只筛新候选不动现役池）：带内把**白防率低**的挤上当选席，默认 0=关 ⇒ 当选者逐字不变
+  'EPIRUS_SEL_CARDS', 'EPIRUS_SEL_CARDS_GAMES',   // 11-09 P2（用户裁定：只筛新候选、不回筛现役池）：当选面**用卡数地板 veto**，度量复用 fieldProfile 的逐卡计数（份额 ≥0.5%，与 tools/card-usage.mjs 同定义），默认 0=关
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_OPP_SWEEP',       // DS 11-03：对手池每代轮齐（旧公式每代只覆盖 11 位；默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
@@ -469,6 +472,56 @@ if (SEL_DEF > 0 && SEL_DEF_GAMES < 10) {
   console.error('[train-3p] ⛔ EPIRUS_SEL_DEF_GAMES=' + SEL_DEF_GAMES + ' 太短（<10 局 ⇒ 防御是"整局才几次"的事件，量不稳）');
   process.exit(2);
 }
+/* ===== 11-09 P1/P2（用户 11-09 上午裁定）：当选面**白防率排序键**与**用卡数地板** =====
+ * 两条都默认 0=关 ⇒ 整段一行都不跑，`meta.recipe` 里留 null，与历史臂逐字相同（在册纪律）。
+ * **P1 为什么是排序键而不是地板**（同口径实测 `scratch/qoder-1109-defq-caliber.mjs`，页面装配 60 局×2 seed）：
+ *   分母够的 6 枚白防率 = PASS2 65.9% < CLEAR 76.8% < FOCUS 80.2% < KD-G2 82.8% < ADAPT2 85.0% ≈ KDG-B 85.1%，
+ *   排序两 seed 完全一致但相邻只差 2–4pt，而 CLEAR(74.9/78.6) 与 FOCUS(79.3/81.0) **正好跨着 80%**
+ *   ⇒ 任何硬地板要么落在噪声里、要么像原计划的 ≤60% 那样把 28/29 粒全否。带内排序没有悬崖。
+ * **P1 的 n≥30 门为什么必须有**：同一批里 STR-B 两 seed 只有 2/3 手防御却读出 50%/66.7% ⇒
+ *   没有手数门时它会以"全池防得最准"的身份通过任何筛选；DEF-s13（18/15 手）两 seed 差 8.9pt。
+ *   ⇒ 手数不够按 `defense-quality` 的"没量到"处理：**既不判过也不判不过**，也不许被读成"测过且无效"。
+ * **P2 用哪把尺**：`fieldProfile(params, 0, 'soft', N, seed, 'self', 'multi')` = 5 席同包镜像 · ε=0 · multi，
+ *   与 `tools/card-usage.mjs`（POOL-CONTRACT v2.1 判据的出处）同一装配同一阈值（份额 ≥0.5%，**含 ジ**）
+ *   ⇒ 地板 9 就是契约里那句"用卡 ≥9"。⚠ 与 `SEL_GRID` 的"种数"**差一张 ジ**（那边排除 ジ），两条别混着引用。 */
+const SEL_DEFQ = Number(process.env.EPIRUS_SEL_DEFQ || 0);
+const SEL_DEFQ_MINHANDS = Number(process.env.EPIRUS_SEL_DEFQ_MINHANDS || 30);
+const SEL_DEFQ_GAMES = Number(process.env.EPIRUS_SEL_DEFQ_GAMES || 40);
+const SEL_DEFQ_MODE = String(process.env.EPIRUS_SEL_DEFQ_MODE || 'multi');
+const SEL_DEFQ_EPS = Number(process.env.EPIRUS_SEL_DEFQ_EPS || 0.1);
+let SEL_DEFQ_LOG = null;
+const SEL_CARDS = Number(process.env.EPIRUS_SEL_CARDS || 0);
+const SEL_CARDS_GAMES = Number(process.env.EPIRUS_SEL_CARDS_GAMES || 60);   // 默认对齐 card-usage 的 60 局 ⇒ 地板值与 POOL-CONTRACT v2.1 的基准同一次测量口径
+let SEL_CARDS_LOG = null;
+if (!(SEL_DEFQ >= 0) || !isFinite(SEL_DEFQ)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_DEFQ 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_DEFQ));
+  process.exit(2);
+}
+if (SEL_DEFQ > 0 && !(SEL_DEFQ_MINHANDS >= 10)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_DEFQ_MINHANDS=' + SEL_DEFQ_MINHANDS + ' ⇒ 防御是"整局才几次"的事件，' +
+    '11-09 实测 2–3 手就能读出 50% 白防（全池最好看的数）⇒ 手数门低于 10 等于把噪声接进当选决策，拒跑');
+  process.exit(2);
+}
+if (SEL_DEFQ > 0 && SEL_DEFQ_GAMES < 10) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_DEFQ_GAMES=' + SEL_DEFQ_GAMES + ' 太短（<10 局 ⇒ 凑不满手数门，白防率不可比）');
+  process.exit(2);
+}
+if (SEL_DEFQ > 0 && typeof measureDefenseQuality !== 'function') {
+  console.error('[train-3p] ⛔ SEL_DEFQ 开着但量具 `measureDefenseQuality` 没接进来 ⇒ 拒绝静默空转');
+  process.exit(7);
+}
+if (!(SEL_CARDS >= 0) || !isFinite(SEL_CARDS)) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_CARDS 必须是 ≥0 的数（0=关，单位=用卡张数）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_CARDS));
+  process.exit(2);
+}
+if (SEL_CARDS > 30) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_CARDS=' + SEL_CARDS + ' 高于全卡种上限 30 ⇒ 这是**恒假判据**（名人堂会整批被否），拒跑');
+  process.exit(2);
+}
+if (SEL_CARDS > 0 && SEL_CARDS_GAMES < 10) {
+  console.error('[train-3p] ⛔ EPIRUS_SEL_CARDS_GAMES=' + SEL_CARDS_GAMES + ' 太短（<10 局 ⇒ 逐卡份额不稳，地板会随抽样翻）');
+  process.exit(2);
+}
 const SEL_BIGT_KEYS = String(process.env.EPIRUS_SEL_BIGT_KEYS || 'bigT,drain').split(',')
   .map(function (s) { return s.trim(); }).filter(Boolean);
 const SEL_BIGT_GAMES = Number(process.env.EPIRUS_SEL_BIGT_GAMES || 60);
@@ -752,7 +805,7 @@ if (process.env.EPIRUS_ARCH2) {
    *   而 `WIN` 是 `behavior-profile.mjs` 自己 `sandbox()` 出的**第二个引擎沙箱**，此前从没被 arch2 覆盖 ⇒
    *   在 2.0 臂里它拿 **v7 前向读代 3 权重**（`evo.js:21` 的 `LEGACY` 认形状那条老路）， ⇒ 排序键会拿"另一个世界的读数"换人，**且不崩不报错**。
    *   修法只在 2.0 分支里做（v7 路径、promote、门禁一个字节不动），装完立刻用 `verifyArch2Wired` 自证真被调用（"横幅证明变量、证明不了效果"是本页在册教训）。 */
-  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0 || SEL_GRID > 0) {
+  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0 || SEL_GRID > 0 || SEL_DEFQ > 0 || SEL_CARDS > 0) {
     let AW = null, wiredMsg = '';
     try {
       AW = installArch2(WIN, cfg);
@@ -770,7 +823,8 @@ if (process.env.EPIRUS_ARCH2) {
     console.log('[train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=' + AW.L.input +
       ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ ' + wiredMsg +
       ' ⇒ `fieldProfile/aggressionProfile` 的当选面读数与产物同代（用到它的旗标：' +
-      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF, 'SEL_GRID=' + SEL_GRID].join(' ') + '）');
+      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF, 'SEL_GRID=' + SEL_GRID,
+        'SEL_DEFQ=' + SEL_DEFQ, 'SEL_CARDS=' + SEL_CARDS].join(' ') + '）');
   }
 }
 
@@ -2967,6 +3021,64 @@ for (const h of hall) {
       sel.clean = kept.map(function (k) { return k.e; }); sel.best = best;
     }
   }
+  /* ===== 11-09 P2：用卡数地板（当选 veto）—— 位置在清场地板**之后**、兑现广度**之前** =====
+   * 三条纪律照 `SEL_CLEAR`：① **空转要响亮**（一格没咬到 ⇒ 明说"这根等于没开"）；② 逐粒读数 + 改没改判 + 胜负分差；
+   * ③ 生效值与账写进 `meta.recipe.selCards`（关档 ⇒ null，一行都不跑，与历史臂逐字相同）。
+   * 主语 = **只筛新候选**：这根住在当选面，不回筛现役池（用户 11-09 裁）。 */
+  if (SEL_CARDS > 0 && sel.clean && sel.clean.length) {
+    const cacheK = new Map();
+    const cardsOf = function (p) {
+      let v = cacheK.get(p);
+      if (!v) {
+        /* 单一来源 = `audit-lib.cardUsageProfile`（`tools/card-usage.mjs` 的循环搬进 lib）⇒ 与 POOL-CONTRACT v2.1 的
+         * 基准**同一个种子序列**。11-09 实测：原来想复用 `fieldProfile` 的逐表数卡，同一枚 KD-G2 读出 8 张而
+         * card-usage 在册 9 张，差的就是压在 ≥0.5% 线上的 `bigT 0.51%` ⇒ 两把尺做不了一个地板。 */
+        const u = cardUsageProfile(WIN, p, { games: SEL_CARDS_GAMES, mode: 'multi' });
+        v = { n: u.distinct, keys: u.keys, acts: u.acts, borderline: u.borderline };
+        cacheK.set(p, v);
+      }
+      return v;
+    };
+    const kept = [], dropped = [];
+    for (const e of sel.clean) (cardsOf(e.ref.params).n >= SEL_CARDS ? kept : dropped).push({ e: e, c: cardsOf(e.ref.params) });
+    console.log('[用卡地板] 口径 = `audit-lib.cardUsageProfile`（镜像 5 席 · ε=0 · temp 0.15 · multi · ' + SEL_CARDS_GAMES +
+      ' 局 · 种子 70000+g · 份额 ≥0.5% **含 ジ**）＝ 与 `tools/card-usage.mjs` **同一把尺** ⇒ 线值可直接对 POOL-CONTRACT v2.1' +
+      '｜ 线 ≥' + SEL_CARDS + ' 张 ‖ 候选 ' + sel.clean.length + ' 粒逐粒：' +
+      sel.clean.map(function (e) { return cardsOf(e.ref.params).n + '张' + (e === sel.best ? '(当选)' : ''); }).join(' '));
+    /* 压线卡自报：11-09 实测 KD-G2 的第 9 张是 `bigT 0.51%`，正好贴在阈值上 ⇒ 张数会随抽样翻。
+     * 这根地板咬在压线卡上时**不许**当稳定判据引用：要稳就抬 EPIRUS_SEL_CARDS_GAMES，或把线挪开那一张。 */
+    const bl = [];
+    for (const kk of kept.concat(dropped)) { const c = cardsOf(kk.e.ref.params); if (c.borderline.length) bl.push(c.borderline.join(',')); }
+    if (bl.length) {
+      console.log('[用卡地板] ⚠ 有 ' + bl.length + ' 粒的张数由**压在 0.5% 线上的卡**决定（' + bl.join(' ‖ ') +
+        '）⇒ 这一维落在噪声边缘，改判与否可能只取决于那张卡');
+    }
+    SEL_CARDS_LOG = { line: SEL_CARDS, games: SEL_CARDS_GAMES, cal: 'cardUsageProfile(mirror5,eps=0,multi,share>=0.5%,incl-ji)＝card-usage 同尺',
+      of: sel.clean.length, dropped: dropped.length,
+      readings: sel.clean.map(function (e) { return { score: Number(e.score.toFixed(4)), cards: cardsOf(e.ref.params).n, incumbent: e === sel.best }; }),
+      allRejected: false, bitNothing: false, changedWinner: false };
+    if (!kept.length) {
+      SEL_CARDS_LOG.allRejected = true;
+      console.error('[用卡地板] ⛔ 名人堂**全部**低于线 ' + SEL_CARDS + ' 张 ⇒ 产物照写并标 selCardsAllDropped；' +
+        '这按预注册是"这一支里没有宽粒"，**不是**"地板没用" ⇒ 别拿这粒去换包，回去看起点/谱系');
+    } else {
+      if (!dropped.length) {
+        SEL_CARDS_LOG.bitNothing = true;
+        console.log('[用卡地板] ⚠ 线 ' + SEL_CARDS + ' **一格都没咬到**（' + kept.length + '/' + kept.length +
+          ' 粒本来就达标）⇒ 这根在本臂等于没开，不许读成"筛过了"（要它咬东西就把线抬到读数之上）');
+      }
+      let best = kept[0].e;
+      for (const k of kept) if (k.e.score > best.score) best = k.e;
+      SEL_CARDS_LOG.changedWinner = best !== sel.best;
+      const cb = cardsOf(best.ref.params);
+      console.log('[用卡地板] 剔 ' + dropped.length + '/' + sel.clean.length + ' 粒（被剔张数：' +
+        dropped.map(function (d) { return d.c.n; }).join('/') + '）' +
+        (SEL_CARDS_LOG.changedWinner ? ' ⇒ **改判**：换成 ' + cb.n + ' 张（' + cb.keys.join(' ') + '）的粒，胜负分差 ' +
+          ((best.score - sel.best.score) * 100).toFixed(1) + 'pt（veto 换人本来就是拿胜负分换能力）'
+          : ' ⇒ 未改判（原当选者本来就达标，' + cb.n + ' 张）'));
+      sel.clean = kept.map(function (k) { return k.e; }); sel.best = best;
+    }
+  }
   /* v1.5.167（§N24）：兑现广度参与当选（默认关）。量具 = `mirrorHealth.effSkillsLand`（同一套熵，把"出手次数"换成"落地次数"）；
    * 必须打印「换没换人」(`tieBrokenBy`)——排序键不咬就等于没接线（§N12 的教训：判作用点，不判有没有配置）。 */
   if (SEL_LAND > 0 && sel.clean && sel.clean.length) {
@@ -3160,6 +3272,74 @@ if (WIDE_FINAL) {
     }
     if (dp.best && dp.best.__defShare > 15) {
       console.log('[防御选人] ⚠ 当选者防御占出手 ' + dp.best.__defShare.toFixed(1) + '%（>15% 就靠近 `GATE2-s13` 那片凑数区 20~22% ⇒ A-2 白防率判生死）');
+    }
+  }
+  /* ===== 11-09 P1（用户裁「容差带内排序键 + n≥30 才算数 + 只筛新候选」）：当选面**白防率**排序键 =====
+   * 与 `SEL_DEF` 的刻意分工：那根问"防得够不够多"（下限，越多越好），这根问"防得对不对时机"（白防率低者优）。
+   *   在册证据：把占比推上去只会放大白防（11-09 实机：实验室 24% → 实机 49%，同时白防率 89%）。
+   * 位置在 `SEL_DEF` **之后**、`SEL_GRID` **之前** ⇒ `SEL_GRID` 仍保有它在册的"最后发言权"。
+   * 读数走 `measureDefenseQuality`（攒钱者装配，与 promote 那条防御质量栏同一把尺；11-09 交叉核 874/82/19/773 逐位相同）。
+   *   ⚠ 装配是 4 席同包 ⇒ 决策相关 ⇒ 本读数只配**相对排序**，不配当绝对合格线（绝对口径另量：
+   *   `scratch/qoder-1109-defq-caliber.mjs` 用页面 8 席装配，分母够的 6 枚 = 65.9%~85.1%，与这把转移差约 3pt）。
+   * 手数门：`def < SEL_DEFQ_MINHANDS` ⇒ 喂哨兵值，**不参与竞争**（不判过也不判不过）；全体都不够 ⇒
+   *   明说"这根零作用（selDefqNoSample）"，不许读成"测过且无效"。带仍按**全体闸后候选**的最高重验分算，
+   *   不是按"有读数的那几粒"算 ⇒ 否则容差带会随样本可得性伸缩（同 §E679 那类主语漂移）。 */
+  if (SEL_DEFQ > 0 && sel.best) {
+    const NOSENTRY = -1e9;
+    const defqOf = function (e) {
+      if (e.__defq === undefined) {
+        const m = measureDefenseQuality(WIN, e.ref.params, { games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS });
+        if (m.err) { console.error('[白防选人] ⛔ 量具读不出：' + m.err + ' ⇒ 拒跑（不许静默当成"没防过"或"防得准"）'); process.exit(7); }
+        e.__defq = m;
+        e.__defqBy = '白防 ' + (m.measurable ? m.whitePct.toFixed(1) + '%' : '没量到(n=' + m.n + '<' + m.minHands + '手)') +
+          ' ‖ 防御 ' + m.def + ' 手 · 质量 ' + (isFinite(m.q) ? (100 * m.q).toFixed(1) + '%' : '—') +
+          ' ‖ placebo 倍差 ' + (isFinite(m.placeboRatio) ? m.placeboRatio.toFixed(2) + '×' : '—');
+      }
+      return e.__defq;
+    };
+    const keyOf = function (e) { const m = defqOf(e); return m.measurable ? -m.whitePct : NOSENTRY; };
+    defqOf(sel.best);   /* 照 SEL_BIGT/SEL_DEF 的在册坑：best 不一定在带内 ⇒ 先单独量一遍，否则下面读 `.__defqBy` 会崩在选完人之后 */
+    const gpool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
+    const gated = gpool.filter(function (e) { return e.gateOk !== false; });   /* 硬门槛不过的**不许**被这根键换上来（§E168/§N24 的教训） */
+    const usable = gated.filter(function (e) { return defqOf(e).measurable; });
+    SEL_DEFQ_LOG = { tol: SEL_DEFQ, games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS,
+      of: gpool.length, gatedOut: gpool.length - gated.length, measurable: usable.length, skipped: gated.length - usable.length,
+      readings: gated.map(function (e) { const m = defqOf(e);
+        return { score: Number(e.score.toFixed(4)), def: m.def, white: isFinite(m.whitePct) ? Number(m.whitePct.toFixed(1)) : null,
+          measurable: m.measurable, placebo: isFinite(m.placeboRatio) ? Number(m.placeboRatio.toFixed(3)) : null, incumbent: e === sel.best }; }),
+      band: 0, pickedWhite: null, changedWinner: false, noSample: usable.length === 0, tieBrokenBy: 'none' };
+    if (!usable.length) {
+      console.log('[白防选人] tol=' + SEL_DEFQ + 'pt · 手数门 ≥' + SEL_DEFQ_MINHANDS + ' ‖ 闸后 ' + gated.length + ' 粒逐粒：' +
+        gated.map(function (e) { return defqOf(e).__defqBy; }).join(' ‖ ') +
+        '\n[白防选人] ⇒ **全部没量到防御手 ⇒ 不改判（selDefqNoSample）**：这根在本臂零作用，**不算**"测过且无效"');
+    } else {
+      /* 排序键算术仍交给纯函数 `bandPickByUsage`（门 D221 能喂合成表直接钉它）。它取"用量最大"，
+       * 而这里"白防率低者优" ⇒ 喂**负值**；没量到的喂哨兵 ⇒ 永不竞争，但仍在带里（带不因可得性缩）。 */
+      const bp = bandPickByUsage(gated, SEL_DEFQ, keyOf, null);
+      const ladder = bp.band.map(function (e) { return defqOf(e).__defqBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
+      SEL_DEFQ_LOG.band = bp.band.length;
+      SEL_DEFQ_LOG.tieBrokenBy = bp.tieBrokenBy;
+      SEL_DEFQ_LOG.pickedWhite = bp.best ? Number(defqOf(bp.best).whitePct.toFixed(1)) : null;
+      if (bp.best && bp.best !== sel.best && bp.tieBrokenBy === 'usage') {
+        SEL_DEFQ_LOG.changedWinner = true;
+        console.log('[白防选人] 带内 ' + bp.band.length + '/' + gated.length + ' 粒（闸外剔 ' + SEL_DEFQ_LOG.gatedOut +
+          ' 粒 · 手数不够不参与竞争 ' + SEL_DEFQ_LOG.skipped + ' 粒）白防梯：' + ladder +
+          '\n[白防选人] **改判（排序键换人）**：' + defqOf(sel.best).__defqBy + ' → ' + defqOf(bp.best).__defqBy +
+          '（拿 ' + ((sel.best.score - bp.best.score) * 100).toFixed(1) + 'pt 胜负分换更低的白防率）');
+        sel.best = bp.best;
+      } else {
+        /* 归因要说全（照 `兑现广度` 那条在册教训）：不改判有两种完全不同的原因——键真的没咬到，
+         * 或者原当选者压根不在这根键看的带里（前面的 veto 把它挤出去了）。后者不许读成"键没起作用"。 */
+        const inBand = bp.band.indexOf(sel.best) >= 0;
+        console.log('[白防选人] 带内白防梯：' + ladder + ' ⇒ **未改判**（' +
+          (!inBand ? '⚠ 原当选者**不在带内**（被前面的 veto 挤出去）⇒ 这根键无从比较，不许读成"键没作用"'
+            : (bp.best === sel.best ? '带内白防最低的就是原当选者' : '带内可比的读数没低过原当选者')) + '）');
+      }
+      const pm = bp.best ? defqOf(bp.best).placeboRatio : NaN;
+      if (isFinite(pm) && pm > 0.85) {
+        console.log('[白防选人] ⚠ 当选者 placebo 倍差 ' + pm.toFixed(2) + '×（≈1 ⇒ "白防高"主要是因为**这张桌没人互相打**，' +
+          '不许读成"时机差"；这条基线率是在册纪律，见 probe-wasted-play 的同名行）');
+      }
     }
   }
   /* ===== T1（11-03 用户裁"先试这两个低成本的" · 默认 0 ⇒ 这一段一行都不跑）：当选面**按族别签名分格、取最稀格** =====
@@ -3562,6 +3742,11 @@ const meta = {
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
     selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
     selClear: SEL_CLEAR, selClearGames: (SEL_CLEAR > 0 ? SEL_CLEAR_GAMES : null),   // §E787：下达值 + 测量长度（关档 ⇒ 只留 0，读数与历史臂逐字相同）
+    /* 11-09 P1/P2（用户裁的形状：白防率**排序键**+ 手数门 / 用卡地板**只筛新候选**）。
+     * 关档 ⇒ 两条 `null`，整段一行都不跑；开着就把「逐粒读数 / 改没改判 / placebo 倍差 / 几粒没量到」全记进产物，
+     * 因为"这根有没有作用"只能从落盘的账里核，不能从我嘴上说。 */
+    selDefq: SEL_DEFQ_LOG,
+    selCards: SEL_CARDS_LOG,
     /* v1.5.326 §E249：这根排序键**有没有真的换人**必须写在产物里（`{changedWinner, zeroDose, usage…}`）。
      * 关档 ⇒ `null`（一行都不跑，与历史臂逐字相同）。`zeroDose:true` 那一臂**不许**被读成"测过且无效"。 */
     selBigT: SEL_BIGT_LOG,
