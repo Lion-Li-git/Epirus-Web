@@ -50,7 +50,10 @@ if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/
 const CHAMP_IDS = String(FLAG.champ || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const CHAMP_N = Math.max(0, Number(FLAG.champn || 1) | 0);   // 每局冠军席数（≤N−1；缺省 1）
 /* B/both 轴没显式给 --champ 时用**在册 2.0 夹具**（用户 11-09：v7 跨人数泛用性差 ⇒ 冠军席必须用 2.0 强包）。 */
-if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.push('KDG-B-Q-s13', 'FOCUS-Q-s13');
+if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.push('KDG-B-Q-s13', 'FOCUS-Q-s13', 'Q-s47');
+/* 11-09 用户裁（方案 1，混合夹具）：B 轴 = **2.0 主力两枚 + 1 枚反墙锚**。
+ *   为什么必须留 Q-s47：实测 2.0 池里没有任何包压得住反射墙（G5C 在 2.0 冠军桌上 2P 0.935 / 3P 0.502），
+ *   只有 v7 的 Q-s47 能把 G5C 压到 3P 17%。⇒ Q-s47 是**临时锚**，等 2.0 造出反墙强包就替换（在册理由见 RESULTS §十三.18）。 */
 const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
