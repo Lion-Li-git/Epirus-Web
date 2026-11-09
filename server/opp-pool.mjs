@@ -15,6 +15,9 @@
 export const OPP_SPECS = [
   { name: 'random', fn: 'pickRandom' },
   { name: 'balanced', fn: 'pickBalanced' },
+  /* 11-09（用户：考卷枪席太多、穿透太少，反弹被喂肥）⇒ 新增两个穿透型人格 */
+  { name: 'swordspam', fn: 'pickSwordSpam' },
+  { name: 'piercemix', fn: 'pickPierceMix' },
   { name: 'aggro', fn: 'pickAggro' },
   { name: 'defend', fn: 'pickDefend' },
   { name: 'wall', fn: 'pickWall' },
@@ -105,7 +108,7 @@ export const OPP_SPECS = [
 export const EXAM_POOL = [
   { name: 'gunspam', axis: 'pressure', minN: 2 },
   { name: 'gunfocus', axis: 'pressure', minN: 2 },
-  { name: 'aggro', axis: 'pressure', minN: 2 },
+  { name: 'swordspam', axis: 'pressure', minN: 2 },   /* 11-09 换下 aggro（49% 枪、与 gunspam 同型） */
   { name: 'earlypressure', axis: 'pressure', minN: 2 },
   { name: 'guardspam', axis: 'wall', minN: 2 },
   { name: 'wall', axis: 'wall', minN: 2 },
@@ -125,7 +128,7 @@ export const EXAM_POOL = [
   { name: 'mix', axis: 'mix', minN: 2 },
   { name: 'reflectmix', axis: 'mix', minN: 2 },
   { name: 'guardgun', axis: 'mix', minN: 2 },
-  { name: 'balanced', axis: 'mix', minN: 2 },
+  { name: 'piercemix', axis: 'pressure', minN: 2 },   /* 11-09 换下 balanced（49% 枪、无第二轴） */
   { name: 'targeter', axis: 'aim', minN: 2 },
   { name: 'snipespam', axis: 'aim', minN: 2 },
   { name: 'random', axis: 'aim', minN: 2 },

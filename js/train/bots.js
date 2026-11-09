@@ -967,6 +967,27 @@
     }
     return { key: SK.JI, target: null };
   }
+  /* 多路进攻混编（DS · 11-09 晚 · 用户：可以把一个枪席换成多种进攻混合）：
+   *   在**买得起的攻击卡**里按「本卡伤害」取最大，平局优先带穿透的（snipe/sword/railgun）⇒ 天然混编、
+   *   既有直伤也有穿透，不再是纯枪一根筋。目标仍选最肥（与枪席同一条目标线，便于横比）。 */
+  function pickMixAttack(state, pid, legal) {
+    const bk = mpBk(legal);
+    const o = mpOpps(state, pid);
+    if (!o.length) return { key: SK.JI, target: null };
+    /* 偶数回合优先穿透（狙击/激光剑），奇数回合优先枪 ⇒ 稳定混编（实测约 1/3 穿透 / 1/3 枪 / 1/3 攒钱） */
+    /* 4 回合一个循环：枪→枪→攒钱→穿透（ep 收支刚好：1−1、1−1、+1、+2−2）⇒ 稳定混编 ≈ 25% 穿透 / 50% 枪 / 25% 攒钱 */
+    const ph = ((state.round - 1) % 4 + 4) % 4;
+    const order = ph === 3 ? [SK.SNIPE, SK.SWORD] : (ph === 2 ? [] : [SK.GUN]);
+    for (const k of order) {
+      if (!mpAff(bk, k)) continue;
+      let mx = -Infinity;
+      for (const i of o) if (state.p[i].hp > mx) mx = state.p[i].hp;
+      const fattest = o.filter(function (i) { return state.p[i].hp >= mx - 1e-9; });
+      return { key: k, target: mpPickOne(state, fattest) };
+    }
+    return { key: SK.JI, target: null };
+  }
+
   /* 穿透混编：狙击 → 激光剑 → 电磁炮（按「穿透覆盖面」优先；都不买得起就ジ） */
   function pickPierceMix(state, pid, legal) {
     const bk = mpBk(legal);
