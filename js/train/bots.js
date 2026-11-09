@@ -950,6 +950,38 @@
    * 口径与其他 `*spam` 一致：只做一件事（付得起枪就开枪）。
    * ⚠️ 目标选择：**只在血量最高的那一档里随机取一个**（`mpPickOne`），**不能**按 pid 取最肥 ——
    *    那会重新引入"座位身份通道"（D50/D58 家族，本仓库栽过多次）。 */
+  /* ===== 穿透型人格（DS · 11-09 晚 · 用户：考卷里枪席太多、穿透太少，反弹被喂肥）=====
+   * 为什么加：EXAM_POOL 28 席实测 **11 席是枪（均 17.9% 出招）**、只有 **4 席带穿透（均 5.0%）**，
+   *   而 guardspam/wall/baguaspam/reflectspam 四席 100% 防御 ⇒ 反射墙在当前考卷里几乎无人能罚。
+   * 写法照 pickGunSpam：买得起就出、否则ジ；目标选**最肥**（与枪同一条目标线，便于横比）。 */
+  function pickSwordSpam(state, pid, legal) {
+    const bk = mpBk(legal);
+    if (mpAff(bk, SK.SWORD)) {
+      const o = mpOpps(state, pid);
+      if (o.length) {
+        let mx = -Infinity;
+        for (const i of o) if (state.p[i].hp > mx) mx = state.p[i].hp;
+        const fattest = o.filter(function (i) { return state.p[i].hp >= mx - 1e-9; });
+        return { key: SK.SWORD, target: mpPickOne(state, fattest) };
+      }
+    }
+    return { key: SK.JI, target: null };
+  }
+  /* 穿透混编：狙击 → 激光剑 → 电磁炮（按「穿透覆盖面」优先；都不买得起就ジ） */
+  function pickPierceMix(state, pid, legal) {
+    const bk = mpBk(legal);
+    const o = mpOpps(state, pid);
+    const order = [SK.SNIPE, SK.SWORD, SK.RAILGUN];
+    for (const k of order) {
+      if (!mpAff(bk, k) || !o.length) continue;
+      let mx = -Infinity;
+      for (const i of o) if (state.p[i].hp > mx) mx = state.p[i].hp;
+      const fattest = o.filter(function (i) { return state.p[i].hp >= mx - 1e-9; });
+      return { key: k, target: mpPickOne(state, fattest) };
+    }
+    return { key: SK.JI, target: null };
+  }
+
   function pickGunSpam(state, pid, legal) {
     const bk = mpBk(legal);
     if (mpAff(bk, SK.GUN)) {
@@ -1612,7 +1644,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, pickSwordSpam, pickPierceMix, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
     snapshotBotMem, restoreBotMem,
     setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
