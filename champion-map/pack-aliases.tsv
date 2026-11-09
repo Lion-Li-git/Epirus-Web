@@ -170,3 +170,5 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-09T05:24:31.693Z	1c5ae5d209697878	docs/artifacts/WSEL9-200-band5.bak	docs/artifacts/WSEL10-200-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-09T05:24:31.697Z	79b420e13288e1cf	docs/artifacts/WSEL9-200-band6.bak	docs/artifacts/WSEL10-200-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-09T05:24:31.700Z	330226d3e823d715	docs/artifacts/night-adapt/WSEL9-200.js	scratch/ds-1109/WSEL10-200.js	train-3p	未复制：同一粒权重已有真身
+2026-11-09T10:41:22.723Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-09T10:41:22.731Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
