@@ -139,7 +139,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_PASSIVE_OPPS', 'EPIRUS_FOCUS_W',   // DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_PASSIVE_OPPS', 'EPIRUS_AGGRO_OPPS', 'EPIRUS_FOCUS_W',   // DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外）
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
@@ -1686,7 +1686,26 @@ if (PASSIVE_N > 0) {
   for (let i = 0; i < PASSIVE_N; i++) OPPS.push({ name: 'passive:farmer' + (PASSIVE_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickFarmer });
   console.log('[passive-ops] 只攒钱席（pickFarmer）已进训练桌 ' + PASSIVE_N + ' 份 ⇒ OPPS 从 ' + baseP + ' 个变 ' + OPPS.length +
     ' 个（桌内份额 ' + (100 * PASSIVE_N / OPPS.length).toFixed(1) + '%）（判据：产物的场B 清场数 / 对农民桌胜率）');
+}
 
+/* ===== `EPIRUS_AGGRO_OPPS=<k>`（DS · 11-09 晚）：把 **pickAggro** 追加进训练桌 ===== */
+/* 动机（RESULTS §十三.15 的反面）：只喂防御席能把 G5 从 40% 压到 2%，但包会变成「不还手的墙」（场A 14.4%）；
+ *   而换进攻课程补场A 又把 G5 打回 100%。⇒ 需要**两种对手同时在桌上**：防御课程保 G5、进攻席逼还手。
+ * 纪律与 PASSIVE_OPPS/TOOLKIT_OPPS 逐字同形：默认 0 ⇒ OPPS 一字不变；非负整数；函数缺失 exit 4；开了印份额。 */
+const AGGRO_N = Number(process.env.EPIRUS_AGGRO_OPPS || 0);
+if (!Number.isInteger(AGGRO_N) || AGGRO_N < 0) {
+  console.error('[train-3p] ⛔ EPIRUS_AGGRO_OPPS 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_AGGRO_OPPS || '') + '）⇒ 拒绝把它当 0');
+  process.exit(4);
+}
+if (AGGRO_N > 0) {
+  if (typeof Bots.pickAggro !== 'function') {
+    console.error('[train-3p] ⛔ EPIRUS_AGGRO_OPPS 要的对手在 EpirusBots 里不存在：pickAggro ⇒ 拒绝静默少放对手');
+    process.exit(4);
+  }
+  const baseA = OPPS.length;
+  for (let i = 0; i < AGGRO_N; i++) OPPS.push({ name: 'aggro:pickAggro' + (AGGRO_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickAggro });
+  console.log('[aggro-ops] 进攻席（pickAggro）已进训练桌 ' + AGGRO_N + ' 份 ⇒ OPPS 从 ' + baseA + ' 个变 ' + OPPS.length +
+    ' 个（桌内份额 ' + (100 * AGGRO_N / OPPS.length).toFixed(1) + '%）（判据：场A 还手率与 G5 破防两条同时看）');
 }
 
 /* ===== v1.6.60（用户 10-10 提的方向，10-11 落成接线）：把**人类形状替身**放上训练桌 =====
