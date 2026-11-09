@@ -104,6 +104,33 @@ ctx 层槽位权重按位置分家——跨人数泛用差（用户点名"和当
   特征增补（jinshield/armor 位）待 D 判定后定。
 - 运行成本：臂耗时 4005s vs OBS4-C 1940s——注意力前向 ~2×（每决策 K² 点积 + PMA；K≤8 便宜但 GA 局数多）。
 
+## 七、预算判定与教师换血（11-10 凌晨）
+
+**OBS5-D 续训（600 代）判定：预算不敏感。**
+- s41：X̄₄ −0.1439/−0.1639（对 Q 的 −0.1437/−0.1496：短程持平、长程回退 −0.014）。
+- s13：**逐位复现了 OBS5-Q-s13 的同一粒权重**（GA 收敛回同一吸引子，§E589 去重守卫拦下、exit 9）。
+- ⇒ 加代无用，瓶颈不在预算。
+
+**尺子校准（把问题重新定框）**：triplet 台账全表——好包 KDG-C 0.529 / CTRL2 0.443 / ADAPT2 0.403，
+OBS 族停在 −0.15~−0.19 ⇒ **缺口 ~0.5**。同配方族里 obs3b 面能爬到 0.4-0.5，新面爬不动。
+⇒ 瓶颈假设从「特征不够」改判为「**种子质量 / GA-注意力面的优化**」：
+KDO5 种子只带 gun/ji（sword 0%），GA 要从零自学 sword；而 obs3b 族的种子（KDG 线）sword 67-71%。
+
+**教师换血实验（OBS5-E，在飞）**：
+- supfit-full 补 2.0 教师支持（装教师自己的面 + 标签走 forwardCands argmax + 开车走 chooseCandidates）。
+  第一版教训：只装面不动 value() ⇒ v7 的 value 对 2.0 参数当场抛、catch 吞 0 ⇒ 教师退化成
+  "永远选第一枚候选"的 ji 单键 spam（实测留出 100% ji）。
+- 教师 = **KDG-C-Q-s41（triplet 0.529，全表最强）**；wKey gun:2 sword:2；600 步留出 29%
+  （ji 28%/sword 57%/snipe 100%/bigT 100%——7 键多样，比 bundled 教师的 gun/ji 双键种子丰富得多；
+  1200 步过冲回退 ⇒ 600 步定档）。
+- OBS5-E-s13/s41（400 代，KDO5C 种子）在飞。判定：E 明显优于 Q ⇒ 种子质量是主瓶颈，蒸馏→GA 的
+  链条值得加码（更强教师、更多步、逐键课程）；E ≈ Q ⇒ obs5 的 GA 优化本身是墙，转
+  attention-lite/蒸馏为主的训练法研究。
+
+**顺手抓出的潜伏 bug（本节实验踩出，已修）**：obs3.mjs manifest 的 obs4/obs5 分支早退漏 `_MAN = m`
+⇒ 同进程先 obs3b 后 obs5 时缓存命中返回陈旧 415（obs4 原始实现就在的洞；单面冒烟/selftest 不触发，
+双面工具全中）。修复后双面流程 unpack/checkPack 全过、smoke5/selftest3 复绿。
+
 ## 五′、已知边界（下一班接手点）
 - obs4 的 obs3.mjs `scene4` 双胞胎已加（scene/seatVec4/manifest），但 browser-parity 的显式腿没跑（policy2 单实现两处调用，结构性同源；要钉死再加一条 parity 用例）
 - guard 蒸馏保真 0% 的机理未查（候选侧 guard 的 te 特征无"对手在防御"信号——本来就该由计数维补，等臂训完看 GA 是否自学）
