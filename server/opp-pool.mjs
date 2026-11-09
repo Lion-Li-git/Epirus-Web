@@ -15,9 +15,6 @@
 export const OPP_SPECS = [
   { name: 'random', fn: 'pickRandom' },
   { name: 'balanced', fn: 'pickBalanced' },
-  /* 11-09（用户：考卷枪席太多、穿透太少，反弹被喂肥）⇒ 新增两个穿透型人格 */
-  { name: 'swordspam', fn: 'pickSwordSpam' },
-  { name: 'piercemix', fn: 'pickPierceMix' },
   { name: 'aggro', fn: 'pickAggro' },
   { name: 'defend', fn: 'pickDefend' },
   { name: 'wall', fn: 'pickWall' },
@@ -90,7 +87,12 @@ export const OPP_SPECS = [
   { name: 'mirrorspam', fn: 'pickMirrorSpam' },
   { name: 'dualspam', fn: 'pickDualSpam' },
   /* v2.0.3（11-07）：珠爆发线（2P 考卷第 20 席的同一条线），多人池此前未登记。 */
-  { name: 'beadburst', fn: 'pickBeadBurst' }
+  { name: 'beadburst', fn: 'pickBeadBurst' },
+  /* 11-09（用户：考卷枪席太多、穿透太少，反弹被喂肥）⇒ 两个穿透型人格。**追加在尾部**
+   *  （§三处注释同一条协议：OPP_DEFAULT 取前 9 ⇒ 11-09 曾插在 index 2/3 把默认基线改了而门没红——
+   *    已由名字集断言修好，见 tools/gates/ship-promote.mjs）。 */
+  { name: 'swordspam', fn: 'pickSwordSpam' },
+  { name: 'piercemix', fn: 'pickPierceMix' }
 ];
 
 /* 训练池的默认集合（名字数组）。默认**不含**四个 specialist —— 它们只在显式实验里按需加入

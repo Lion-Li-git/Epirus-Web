@@ -2,6 +2,7 @@
 {"file":"tools/gates/meta-repo.mjs","part":"meta-repo","group":"meta","ranges":[[661,704],[863,883],[917,1002],[2253,2288],[2416,2432],[5078,5110],[9554,9573],[9613,9679],[11116,11215]],"gates":[661,863,917,944,971,2253,2416,5078,9554,9613,11116,11158],"patched":[11121]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
+import { EXAM_POOL, EXAM_POOL_V1 } from '../../server/opp-pool.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -30,7 +31,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [661, 863, 917, 944, 971, 2253, 2416, 5078, 9554, 9613, 11116, 11158];
+export const ords = [36, 94, 115, 142, 169, 201, 237, 254, 262, 337, 357, 430, 495];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）', function () {
@@ -251,6 +252,14 @@ t('D8 版本号三方一致（CHANGELOG 最新条目 = README = index.html）', 
   eq(ix[1], newest, 'index.html 版本号必须等于 CHANGELOG 最新条目');
 });
 
+t('D235 考卷池锚（11-10 · 千问覆盖缺口）：EXAM_POOL/V1 的序列哈希必须等于在册锚 —— 静默换尺从此必红', function () {
+  /* 469dfdb1 换席没有旗标没有戳，900+ 枚历史读数被换尺而无人知晓（千问 11-09 查出：tools/gates/ 里
+   *   考卷仪器零覆盖）。锚值 = sha1(席(name:axis:minN) 序列)[:8]，与 exam-4n 输出行的 pool= 戳同源；
+   *   v2#fbf59889 = 现行卷（11-09 换席后）‖ v1#27901ec8 = 换席前冻结化石（--expool=v1 可复算）。 */
+  const stamp = (P) => createHash('sha1').update(P.map((e) => e.name + ':' + e.axis + ':' + e.minN).join(',')).digest('hex').slice(0, 8);
+  eq(stamp(EXAM_POOL), 'fbf59889', '现行考卷池（v2）序列哈希必须等于在册锚（动了 EXAM_POOL ⇒ 全图 907 枚读数作废，先版本化再动）');
+  eq(stamp(EXAM_POOL_V1), '27901ec8', 'v1 冻结化石序列哈希必须等于在册锚（--expool=v1 的可复算保证）');
+});
 t('D82 记账纪律：24 小时内落盘的 .bak 必须在 CHANGELOG 里被点名（第九轮复核 §7-5）', function () {
   /* 复核抓到：整晚 20 个产物零记录（其中一个座位极差 99pt）—— "产物=证据，没记账的产物等于没有结论"。
    * 这条门只看**最近 24 小时**（不去追溯历史堆积，那是另一件清理工作）；它的作用是：

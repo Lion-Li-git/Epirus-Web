@@ -8,6 +8,7 @@ import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 import { P2_FNAME, P2_NAMES } from '../p2-baselines.mjs';
 /* v1.8.11（D107 换行为腿）：G4 装配的单一来源，门自己真跑它（与 `probe-instruments.mjs` 里 D178 的接法同一先例）。 */
 import { duelAssembly } from '../v2v4-lib.mjs';
+import { OPP_DEFAULT } from '../../server/opp-pool.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -38,7 +39,7 @@ const {
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。
  * 10-23 夜班：删掉 D219（整门，冠军经济行为 ⇒ 归入池侧）⇒ 首位的 `1184` 同批移除，数量与 t() 调用数对齐。 */
-export const ords = [2750, 2964, 4363, 4572, 4929, 4980, 5426, 6024, 6109, 7661, 7787, 8006, 8078, 8108, 8292, 8312, 8682, 8810, 9574, 11362];
+export const ords = [60, 86, 123, 167, 264, 342, 380, 447, 504, 523, 625, 677, 723, 771, 795, 818, 844, 933, 1012, 1051];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 /* §删（10-23 夜班 · 用户 10-22/23 裁定「冠军有什么表现该在入池时判；上线后的门只测引擎是否正常工作」）：
@@ -311,7 +312,14 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
     '打最肥必须在最高血那一档里**随机**取（按 pid 取 = 座位身份通道，D50/D58 家族）');
   ok(readFileSync('server/opp-pool.mjs', 'utf8').indexOf("name: 'gunspam'") >= 0, 'gunspam 必须在对手注册表里');
   const T2 = readFileSync('server/opp-pool.mjs', 'utf8');
-  ok(/OPP_DEFAULT = OPP_SPECS\.slice\(0, 9\)/.test(T2), '默认池仍取前 9 个 ⇒ 新增 specialist 不进默认基线');
+  /* v2.0.6（11-10 · ZCode）：文本钉被 469dfdb1 静默打穿（specialist 插在 OPP_SPECS index 2/3、字符串没变、
+   *   门一路绿而它要防的事恰好发生）。改成**名字集断言**（行为式）：默认 9 席必须逐字等于冻结名单 ——
+   *   swordspam/piercemix 这类后加 specialist 只许追加尾部。 */
+  const OPD = OPP_DEFAULT;
+  const OPD_FROZEN = ['random','balanced','aggro','defend','wall','antidef','breakdef','mix','farmer'];
+  eq(OPD.length, 9, '默认对手池必须恰 9 席（实测 ' + OPD.length + '）');
+  ok(OPD.length === OPD_FROZEN.length && OPD_FROZEN.every((n, idx) => OPD[idx] === n),
+    '默认对手池必须逐字等于冻结名单（实测 ' + OPD.join(',') + '）⇒ 新增 specialist 只许追加尾部，不许挤进默认基线');
   /* ⚑ 10-22（DS，⑤ 分诊）：上面全是源码 pin；补一条**行为腿**——直接调 `AUDIT.feasibilityOf`，
    *   证明「第 6 道在 `DENSITY_BLOCK=false` 时只进 notes、永不进 fails」，且坏密度也照样进 notes。
    *   牙：把 `DENSITY_BLOCK` 翻成 true（或把 dens 判据塞进 fails）⇒ 第一条红。 */
