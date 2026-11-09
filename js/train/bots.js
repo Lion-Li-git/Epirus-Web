@@ -988,6 +988,22 @@
     return { key: SK.JI, target: null };
   }
 
+  /* 穿透集火（DS · 11-09 晚 · 用户：先写 1 个「穿透 + 集火」脚本补进池）：
+   *   目标固定为**血量最低者**（击杀优先，与 pickGunFocus 同一条目标线），出手只用穿透卡（狙击 → 激光剑），
+   *   买不起就攒钱（不退回枪）⇒ 对 100% 防御的墙与「靠反弹吃枪」的形状都是直的威胁。 */
+  function pickPierceFocus(state, pid, legal) {
+    const bk = mpBk(legal);
+    const o = mpOpps(state, pid);
+    if (!o.length) return { key: SK.JI, target: null };
+    let mn = Infinity;
+    for (const i of o) if (state.p[i].hp < mn) mn = state.p[i].hp;
+    const weakest = o.filter(function (i) { return state.p[i].hp <= mn + 1e-9; });
+    for (const k of [SK.SNIPE, SK.SWORD]) {
+      if (mpAff(bk, k)) return { key: k, target: mpPickOne(state, weakest) };
+    }
+    return { key: SK.JI, target: null };
+  }
+
   /* 穿透混编：狙击 → 激光剑 → 电磁炮（按「穿透覆盖面」优先；都不买得起就ジ） */
   function pickPierceMix(state, pid, legal) {
     const bk = mpBk(legal);
@@ -1665,7 +1681,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, pickSwordSpam, pickPierceMix, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, pickSwordSpam, pickPierceMix, pickPierceFocus, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
     snapshotBotMem, restoreBotMem,
     setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,
