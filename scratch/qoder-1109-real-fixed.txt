@@ -1,0 +1,26 @@
+事件解析自检：5 局共读到 269 条事件
+===== 每局 =====
+epirus-battle-23回合 (4).txt ‖ 胜者=玩家5 获胜 ‖ 23 回合 ‖ 全场卡覆盖 11 张: ji,gun,guard,bagua,snipe,reflect,ring,sword,railgun,mine,drain
+epirus-battle-27回合 (5).txt ‖ 胜者=玩家2 获胜 ‖ 27 回合 ‖ 全场卡覆盖 13 张: ji,gun,guard,reflect,ring,charge,snipe,bagua,bigT,sword,mine,railgun,drain
+epirus-battle-30回合 (1).txt ‖ 胜者=玩家6 获胜 ‖ 30 回合 ‖ 全场卡覆盖 14 张: ji,guard,gun,reflect,ring,snipe,holo,bagua,mine,railgun,sword,drain,charge,bigT
+epirus-battle-32回合.txt ‖ 胜者=玩家4 获胜 ‖ 32 回合 ‖ 全场卡覆盖 14 张: ji,gun,guard,reflect,bagua,ring,sword,railgun,drain,mine,holo,charge,snipe,bigT
+epirus-battle-34回合 (2).txt ‖ 胜者=你赢了 ‖ 34 回合 ‖ 全场卡覆盖 13 张: ji,guard,gun,sword,ring,reflect,railgun,charge,holo,snipe,bigT,drain,proto
+
+===== 按包聚合（跨局）=====
+包             局 出手 用卡 防御手  白防   有效  穿透  被打后守  白防率  质量   死亡  承伤/局  卡谱(top)
+DEF-s13       4   50   6     0     0     0     0       0   —   —    4    5.00  ji 74% sword 10% railgun 6% charge 4% bigT 4% gun 2%
+KD-G2         2   39   7    19    17     1     1       1  89%  8%    2    5.00  ji 31% guard 23% bagua 21% gun 15% reflect 5% sword 3%
+STR-B-Q-s13   4   66   7     0     0     0     0       0   —   —    4    5.25  ji 64% gun 21% snipe 9% sword 2% drain 2% charge 2%
+FOCUS-Q-s13   4  112   9    36    32     3     1       4  89%  10%    1    4.00  ji 41% guard 15% gun 12% reflect 11% sword 11% bagua 6%
+PASS2-Q-s13   5   97   5    16    12     4     0       2  75%  25%    5    5.00  ji 48% gun 26% guard 16% sword 5% snipe 4%
+KDG-B-Q-s13   4  107   6    40    37     2     1       2  93%  6%    3    4.75  ji 40% guard 20% reflect 18% sword 13% gun 8% holo 1%
+CLEAR-Q-s13   5  106   8    36    33     2     1       1  92%  7%    5    5.00  ji 39% guard 25% gun 20% reflect 9% sword 5% snipe 1%
+ADAPT2-Q-s7   3   77   8    35    29     4     2       2  83%  14%    3    5.67  ji 34% reflect 30% guard 16% gun 9% sword 8% snipe 1%
+EFFG-s41      2   24   6     0     0     0     0       0   —   —    2    5.50  ji 63% ring 17% charge 8% sword 4% railgun 4% bigT 4%
+COMBO-s13     2   59   6     0     0     0     0       0   —   —    2    6.00  ji 68% sword 17% gun 5% holo 5% charge 3% ring 2%
+
+===== 你（玩家1）=====
+出手 110 ‖ 用卡 9 ‖ 防御手 3（白防 3 有效 0 穿透 0 ‖ 白防率 100% 质量 0%）
+你的卡谱: ji 47 ring 33 drain 9 railgun 8 mine 7 proto 3 charge 1 bigT 1 gun 1
+
+明细 → scratch/real-games/real-summary.json

@@ -1,0 +1,18 @@
+# 同口径白防率校准 ‖ 档=lv:hard（困难 · 冠军）剂量现读 eps=0.1 k=5 mode=soft ramp=true
+# 桌=long · 8 席（1 席人类形状替身 makeMimic + 7 席池抽）· 60 局 · seed=77001
+# 池真源=D:\code\Epirus-Web\champion-map\pool-members.tsv ‖ 该档 roster 8 枚（DEF-s13,PASS2-Q-s13,STR-B-Q-s13,ADAPT2-Q-s7,KDG-B-Q-s13,KD-G2,FOCUS-Q-s13,CLEAR-Q-s13）‖ bandW=null
+# 判据=defense-quality.mjs 单一来源 ‖ 防御键集现读 R.byKey（cat=DEFENSE ∧ target=self）= guard,reflect,bagua,shift,jinshield,proto
+
+包              局  出手  防御手  白防  有效  穿透  被打后守  白防率  质量  承伤/局
+ADAPT2-Q-s7      54  1448    533   454    57    22      30   85.2%  12.8%    4.52
+KD-G2            55  1265    495   415    55    25      51   83.8%  13.6%    4.93
+FOCUS-Q-s13      57  1290    336   272    50    14      37   81.0%  17.0%    5.14
+CLEAR-Q-s13      48  1022    283   212    62     9      23   74.9%  23.5%    4.92
+KDG-B-Q-s13      53  1236    283   240    35     8      24   84.8%  13.8%    4.77
+PASS2-Q-s13      51   904     81    51    30     0      19   63.0%  37.0%    5.00
+DEF-s13          54   987     15    12     3     0       3   80.0%  20.0%    5.04
+STR-B-Q-s13      48   895      3     2     0     1       0   66.7%  16.7%    4.90
+
+# 白防率分布（只数有防御手的 8 枚；零防手 0 枚**不进分布**，不许按 0 或 100 处理）：min=63.0% p25=74.9% 中位=81.0% p75=84.8% max=85.2%
+# 合计 2029 手防御 ‖ 事件 21507 条 ‖ 实际生效剂量均值 ε=0.0930（9047 次决策；斜坡有没有落地看这一行）
+# 写 D:\code\Epirus-Web\scratch\qoder-1109-defq-hard-long-s77001.tsv

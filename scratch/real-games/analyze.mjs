@@ -13,13 +13,19 @@ const CN2KEY = {
   '净化': 'purify', '镜面': 'mirror', '符咒': 'curse', '缩地': 'shift', '梦魇': 'nightmare', '微型电磁炮': 'miniT',
   '大雷': 'bigT', ' rod': 'rod',
 };
-const DEF_KEYS = new Set(['guard', 'reflect', 'bagua', 'jinshield', 'armor', 'holo']);
+/* 防御手键集**不在这儿硬编码**：走官方 selfGuard 同一判据（cat===DEFENSE && target==='self'，
+ * 见 tools/probe-wasted-play.mjs:57 与 tools/defense-quality.mjs）。11-09 实测差别：官方含 shift/proto、
+ * 不含 holo（target=other）与 armor（target=enemy）⇒ 手抄名单会把 holo 算成白防、把 proto 漏掉。 */
+import { sandbox, ROOT } from '../../tools/audit-lib.mjs';
+const RULES = sandbox(ROOT).EpirusRules;
+const DEF_KEYS = new Set(Object.keys(RULES.byKey).filter(k => RULES.byKey[k].cat === RULES.CAT.DEFENSE && RULES.byKey[k].target === 'self'));
 const ATK_HINT = /→玩家\d+/;   // 带指向的动作（攻击或 holo 护人）
 
 const files = readdirSync('results/2.0').filter(f => f.endsWith('.txt')).sort();
 const perPack = {};   // pack → 聚合
 const perGame = [];
 let userAgg = { acts: 0, byCard: {}, def: 0, bai: 0, eff: 0, pen: 0 };
+let evTotal = 0;   // 自检：整批 0 事件 = 正则没接上，不许把"被穿透 0/被打后守 0%"当事实报出去
 
 for (const f of files) {
   const txt = readFileSync('results/2.0/' + f, 'utf8').replace(/\r/g, '');
@@ -44,7 +50,7 @@ for (const f of files) {
     }
     const evs = [];
     for (const l of body.split('\n')) {
-      const s = l.trim();
+      const s = l.trim().replace(/^-\s*/, '');   // 原始行是「   - 💥 …」：trim 吃不掉列表前缀，不剥则下面六条事件正则恒不匹配
       let m;
       if ((m = s.match(/^💥 玩家(\d+) 受 (\d+) 点伤害（(.+?)）/))) evs.push({ t: 'dmg', to: +m[1], amt: +m[2], reason: m[3] });
       else if ((m = s.match(/^↩ 玩家(\d+) 的攻击被 玩家(\d+) 的【(.+?)】弹回/))) evs.push({ t: 'reflect', atk: +m[1], by: +m[2], via: m[3] });
@@ -53,6 +59,7 @@ for (const f of files) {
       else if ((m = s.match(/^💣 玩家(\d+) 埋下地雷/))) evs.push({ t: 'mineArm', pid: +m[1] });
       else if ((m = s.match(/^🚫 玩家(\d+) 的技能被无效化/))) evs.push({ t: 'void', pid: +m[1] });
     }
+    evTotal += evs.length;
     G.rows.push({ rnd, acts, evs });
   }
 
@@ -74,7 +81,7 @@ for (const f of files) {
       S.acts++;
       S.byCard[a.key] = (S.byCard[a.key] || 0) + 1;
       const isUser = pid === 1;
-      const AGG = isUser ? userAgg : (perPack[seats[pid]] = perPack[seats[pid]] || { acts: 0, byCard: {}, def: 0, bai: 0, eff: 0, pen: 0, dmgTaken: 0, deaths: 0, games: 0 });
+      const AGG = isUser ? userAgg : (perPack[seats[pid]] = perPack[seats[pid]] || { acts: 0, byCard: {}, def: 0, bai: 0, eff: 0, pen: 0, defAfterHit: 0, dmgTaken: 0, deaths: 0, games: 0 });
       if (isUser) AGG.acts++; else { AGG.acts++; if (S.acts === 1) AGG.games++; }
       AGG.acts = AGG.acts; // (占位：下面统一累加)
       AGG.byCard[a.key] = (AGG.byCard[a.key] || 0) + 1;
@@ -104,18 +111,24 @@ for (const f of files) {
 }
 
 /* ===== 输出 ===== */
+if (!evTotal) {
+  console.error('⛔ 事件解析恒不匹配：' + files.length + ' 局里一条伤害/挡下/弹回/死亡事件都没读到 ⇒ 被穿透、被打后守、承伤、死亡会整列为 0。' +
+    '那是正则没接上，不是事实（11-09 实测：行首列表前缀 "- " 没剥就会这样）。先核原始行格式再报数。');
+  process.exit(2);
+}
+console.log('事件解析自检：' + files.length + ' 局共读到 ' + evTotal + ' 条事件');
 console.log('===== 每局 =====');
 for (const G of perGame) {
   console.log(G.file + ' ‖ 胜者=' + G.winner + ' ‖ ' + G.rounds + ' 回合 ‖ 全场卡覆盖 ' + G.coverage.size + ' 张: ' + [...G.coverage].join(','));
 }
 console.log('\n===== 按包聚合（跨局）=====');
-console.log('包'.padEnd(14) + '局 出手 用卡 防御手  白防   有效  穿透  白防率  质量   死亡  承伤/局  卡谱(top)');
+console.log('包'.padEnd(14) + '局 出手 用卡 防御手  白防   有效  穿透  被打后守  白防率  质量   死亡  承伤/局  卡谱(top)');
 for (const [pk, S] of Object.entries(perPack).sort((a, b) => b.def - a.def)) {
   const cards = Object.keys(S.byCard).length;
   const q = S.def ? (S.eff + 0.5 * S.pen) / S.def : NaN;
   const baiR = S.def ? S.bai / S.def : NaN;
   const top = Object.entries(S.byCard).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => k + ' ' + Math.round(100 * v / S.acts) + '%').join(' ');
-  console.log(pk.padEnd(14) + String(S.games) + '  ' + String(S.acts).padStart(3) + '  ' + String(cards).padStart(2) + '  ' + String(S.def).padStart(4) + '  ' + String(S.bai).padStart(4) + '  ' + String(S.eff).padStart(4) + '  ' + String(S.pen).padStart(4) + '  ' + (isFinite(baiR) ? (100 * baiR).toFixed(0) + '%' : ' —') + '  ' + (isFinite(q) ? (100 * q).toFixed(0) + '%' : ' —') + '  ' + String(S.deaths || 0).padStart(3) + '  ' + (S.dmgTaken / Math.max(1, S.acts)).toFixed(2).padStart(6) + '  ' + top);
+  console.log(pk.padEnd(14) + String(S.games) + '  ' + String(S.acts).padStart(3) + '  ' + String(cards).padStart(2) + '  ' + String(S.def).padStart(4) + '  ' + String(S.bai).padStart(4) + '  ' + String(S.eff).padStart(4) + '  ' + String(S.pen).padStart(4) + '  ' + String(S.defAfterHit || 0).padStart(6) + '  ' + (isFinite(baiR) ? (100 * baiR).toFixed(0) + '%' : ' —') + '  ' + (isFinite(q) ? (100 * q).toFixed(0) + '%' : ' —') + '  ' + String(S.deaths || 0).padStart(3) + '  ' + (S.dmgTaken / Math.max(1, S.games)).toFixed(2).padStart(6) + '  ' + top);
 }
 console.log('\n===== 你（玩家1）=====');
 const u = userAgg;
