@@ -3310,13 +3310,13 @@ if (WIDE_FINAL) {
       band: 0, pickedWhite: null, changedWinner: false, noSample: usable.length === 0, tieBrokenBy: 'none' };
     if (!usable.length) {
       console.log('[白防选人] tol=' + SEL_DEFQ + 'pt · 手数门 ≥' + SEL_DEFQ_MINHANDS + ' ‖ 闸后 ' + gated.length + ' 粒逐粒：' +
-        gated.map(function (e) { return defqOf(e).__defqBy; }).join(' ‖ ') +
+        gated.map(function (e) { defqOf(e); return e.__defqBy; }).join(' ‖ ') +
         '\n[白防选人] ⇒ **全部没量到防御手 ⇒ 不改判（selDefqNoSample）**：这根在本臂零作用，**不算**"测过且无效"');
     } else {
       /* 排序键算术仍交给纯函数 `bandPickByUsage`（门 D221 能喂合成表直接钉它）。它取"用量最大"，
        * 而这里"白防率低者优" ⇒ 喂**负值**；没量到的喂哨兵 ⇒ 永不竞争，但仍在带里（带不因可得性缩）。 */
       const bp = bandPickByUsage(gated, SEL_DEFQ, keyOf, null);
-      const ladder = bp.band.map(function (e) { return defqOf(e).__defqBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
+      const ladder = bp.band.map(function (e) { defqOf(e); return e.__defqBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
       SEL_DEFQ_LOG.band = bp.band.length;
       SEL_DEFQ_LOG.tieBrokenBy = bp.tieBrokenBy;
       SEL_DEFQ_LOG.pickedWhite = bp.best ? Number(defqOf(bp.best).whitePct.toFixed(1)) : null;
@@ -3324,7 +3324,7 @@ if (WIDE_FINAL) {
         SEL_DEFQ_LOG.changedWinner = true;
         console.log('[白防选人] 带内 ' + bp.band.length + '/' + gated.length + ' 粒（闸外剔 ' + SEL_DEFQ_LOG.gatedOut +
           ' 粒 · 手数不够不参与竞争 ' + SEL_DEFQ_LOG.skipped + ' 粒）白防梯：' + ladder +
-          '\n[白防选人] **改判（排序键换人）**：' + defqOf(sel.best).__defqBy + ' → ' + defqOf(bp.best).__defqBy +
+          '\n[白防选人] **改判（排序键换人）**：' + sel.best.__defqBy + ' → ' + bp.best.__defqBy +
           '（拿 ' + ((sel.best.score - bp.best.score) * 100).toFixed(1) + 'pt 胜负分换更低的白防率）');
         sel.best = bp.best;
       } else {
