@@ -44,7 +44,7 @@ const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
 const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 78 + 1;   /* obs3b 序列 78 = 32 Q.seq + 30 Q.bag + 16 Q.out */
 const SEAT3C = 89 + 5 + 1;   /* obs3c：obs3b 81 + 风格摘要 11（3 聚合 + 8 防御有效位；DS · 11-02 晚） */
 const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
-const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c' || s === 'obs4';   /* obs4：槽位面（11-10 ZCode），与 obs3 族同构（actIn/dof/inter/seqBlocks） */   /* 2.0 观测面共用同一条结构路 */
+const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c' || s === 'obs4' || s === 'obs5';   /* obs5：注意力面（11-10 ZCode）——特征与 obs4 同一张 manifest，聚合段换 set-transformer */   /* obs4：槽位面（11-10 ZCode），与 obs3 族同构（actIn/dof/inter/seqBlocks） */   /* 2.0 观测面共用同一条结构路 */
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
 const INIT_SCALE = 0.25;
 /* ===== 结构代 `gen`（10-30 下午换代）=====
@@ -143,31 +143,32 @@ export function layout(opts) {
    *     旧写法"只在非零时写"是为了让代 2 容器逐位不变；现在代 2 没了，留着就等于"读回来的默认可能与写出去的不同"。 */
   const keySplit = (o.keySplit == null) ? 1 : (Number(o.keySplit) > 0 ? 1 : 0);
   if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺、代 2 请 checkout 删 qHead 前那一笔，不要在这里装半旧档');
-  const input = o.input === 'obs3' || o.input === 'obs3b' || o.input === 'obs3c' || o.input === 'obs4' ? o.input : 'v7';
-  const isO3 = input === 'obs3' || input === 'obs3b' || input === 'obs3c' || input === 'obs4';
+  const input = o.input === 'obs3' || o.input === 'obs3b' || o.input === 'obs3c' || o.input === 'obs4' || o.input === 'obs5' ? o.input : 'v7';
+  const isO3 = input === 'obs3' || input === 'obs3b' || input === 'obs3c' || input === 'obs4' || input === 'obs5';
   const skills = Math.max(1, Number(o.skills) || 27);
   const seatH = Math.max(1, Number(o.seatH) || 16);
   const actH = Math.max(1, Number(o.actH) || 8);
   const hid = Math.max(1, Number(o.hid) || 32);
   const hid2 = Math.max(1, Number(o.hid2) || 24);
     const is4 = input === 'obs4';   /* obs4：固定 8 槽 + 正交席位块 + 无池化（11-10 深夜 ZCode） */
-  const seatIn = is4 ? 35 : input === 'obs3' ? SEAT3 : input === 'obs3c' ? SEAT3C : input === 'obs3b' ? SEAT3B : SEAT_DIM;
+    const is5 = input === 'obs5';   /* obs5：注意力聚合（seatIn/selfDim 与 obs4 同族；seg 多 attn/pma 两段） */
+  const seatIn = (is4 || is5) ? 35 : input === 'obs3' ? SEAT3 : input === 'obs3c' ? SEAT3C : input === 'obs3b' ? SEAT3B : SEAT_DIM;
   const actIn = isO3 ? (CAND3_BASE + skills) : 22;
-    const selfDim = is4 ? 60 : input === 'obs3' ? SELF3_EXTRA : (input === 'obs3b' || input === 'obs3c') ? SELF3B_EXTRA : BASE + 3;   // obs4：G5+私有2+序列48+合计1+局面比较4   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计 ‖ obs3b：序列 168（+Q.id 120）
+    const selfDim = (is4 || is5) ? 60 : input === 'obs3' ? SELF3_EXTRA : (input === 'obs3b' || input === 'obs3c') ? SELF3B_EXTRA : BASE + 3;   // obs4：G5+私有2+序列48+合计1+局面比较4   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计 ‖ obs3b：序列 168（+Q.id 120）
   /* 池化段的拼接项：obs3 档是 **h_self ‖ mean(对手) ‖ max(对手)**（三块），v7 档是 mean ‖ max（两块，
    *   因为 base(63) 本来就把自己的资源/冷却/架势写全了，再拼一份 h_self 就是同一事实写两遍）。
    * ⚑ 两档都**不把你自己算进池化**——旧代码把 `sc.seats`（含 isSelf 那一席）一起平均，于是
    *   ① 与设计文档 L1.5 的 `mean_{i≠self}` 不符，② 与离线平面向量 `obs3.encode` 的 `pool.mean.*`（只算对手）
    *   不是同一个量 ⇒ 离线路尺（dimgate/fit2/rankfit）关于"哪一列值多少"的账，跟训练时真吃的那一列对不上。
    *   obs3 档的 xin 里原本没有任何"自己"的席位列（只有 g/priv/seq/sums），所以直接排除会把你弄丢 ⇒ 补 h_self。 */
-    const poolN = is4 ? 8 : isO3 ? 3 : 2;   /* obs4：8 槽位（无池化块） */
+    const poolN = is4 ? 8 : is5 ? 4 : isO3 ? 3 : 2;   /* obs4：8 槽位（无池化块） ‖ obs5：4 个 PMA seed（ctx 拼接块） */
   const ctxDim = selfDim + poolN * seatH;
   /* ⚠ 10-28 18:4x 自己抓到的布局 bug（字节对账逼出来的，不是看代码看出的）：
    *   原先写的是 `ctxDim + actH + seatH`，而真正喂进逐候选层的只有 **[hctx(hid) ‖ ae(actH) ‖ te(seatH)]**
    *   ⇒ 每单位多出 `selfDim + 2*seatH - hid` 列**恒零输入的死权重**（S1 默认档 = 66×24 ≈ 1584 个参数白占白算）。
    *   旧版每候选新建数组 ⇒ 尾部天然为 0，看不出来；改成复用缓冲后残留值让两次结果不一致，才把它照出来。
    *   ⇒ 宽度一律**由实际拼接项算**，并在 selftest 里加一条"尾列必须有牙"的构造对照（T8）。 */
-  const candIn = hid + actH + ((isO3 || is4) ? 2 * seatH : seatH);   // obs4：两目标槽同 obs3 族
+  const candIn = hid + actH + ((isO3 || is4) ? 2 * seatH : seatH);   // obs4/obs5：两目标槽同 obs3 族
   /* ===== 交互头（10-30 凌晨，ZCode；用户假说"层数不足"的可测形态）=====
    * `inter=K`：**rank-K 双线性通道**——logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。
    * 动因：`rank-inter` 在 v7 编码上读到"无一阶 state×action 奖品"（容量文档 §二），而"对第 k 威胁者"这类
@@ -199,6 +200,12 @@ const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
    * ⇒ 目标身份 = 那一席自己的隐向量 h_t1 ⊕ h_t2，不再抄目标标量。 */
   const seg = [
     { name: 'seatEnc', off: 0, len: seatH * seatIn + seatH },
+    /* obs5（11-10 ZCode）：attn = Wq|bq|Wk|bk|Wv|bv（各 H*H+H）；pma = Wq2|bq2|seeds(4*H）。注意这两个块的
+     *   内部序与偏移算术必须与 policy2.layoutOfPack / pg-lib.layoutOf 逐字同源，不一致由 parity 当场红。 */
+    ...(is5 ? [
+      { name: 'attn', off: 0, len: 3 * (seatH * seatH + seatH) },
+      { name: 'pma', off: 0, len: (seatH * seatH + seatH) + 4 * seatH },
+    ] : []),
     { name: 'actEnc', off: 0, len: actH * actIn + actH },
     { name: 'ctx', off: 0, len: hid * ctxDim + hid },
     { name: 'cand', off: 0, len: hid2 * candIn + hid2 },
@@ -217,7 +224,7 @@ const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
     poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, keyHeadOn, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid },
+    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid, attn: seatH, pma: seatH },
   };
 }
 
@@ -429,11 +436,12 @@ export function install(W, opts) {
   function forwardObs3(state, pid, cands, params, opts2) {
     CNT.forwards++; CNT.cands += cands.length;
     const sc = obs3Scene(W, state, pid, L.input);     /* ⚑ obs3b：面版本随布局走（席位 81/序列 168） */
-    const seatBias = L.seg[0].off + L.seatH * L.seatIn;
-    const actBias = L.seg[1].off + L.actH * L.actIn;
-    const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
-    const candBias = L.seg[3].off + L.hid2 * L.candIn;
-    const headOff = L.seg[4].off;
+    /* 11-10：bias/headOff 一律按段名（obs5 在 seatEnc 后插了 attn/pma，seg[1..4] 下标假设不成立；obs3 族名字=下标，逐位不变） */
+    const seatBias = segOff('seatEnc') + L.seatH * L.seatIn;
+    const actBias = segOff('actEnc') + L.actH * L.actIn;
+    const ctxBias = segOff('ctx') + L.hid * L.ctxDim;
+    const candBias = segOff('cand') + L.hid2 * L.candIn;
+    const headOff = segOff('policyHead');
     /* 权重起点每次决策取一次（不在逐候选循环里查段表） */
     const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
@@ -447,7 +455,10 @@ export function install(W, opts) {
      *   逐位对不上就红（selftest3 腿）。默认关 ⇒ 现有调用逐字不变。 */
     const TP = (opts2 && opts2.wantTape) ? { svs: [], afs: [], t1: [], t2: [], keys: [], xin: null } : null;
     const v4 = L.input === 'obs4';   /* obs4：槽位分支（无 mean/max、无 hSelf 单列——自己在槽里） */
+    const v5 = L.input === 'obs5';   /* obs5：注意力聚合（与 policy2.forwardCands 逐字同源，改一处必改三处） */
     for (const s of sc.seats) {
+      /* obs5：死亡席不进集合（不编码、不占 softmax、不进 tape）——淘汰信息由 sit 的淘汰数维承载 */
+      if (v5 && !(s.isSelf === 1 || s.public[14] === 1)) continue;
       let k = 0;
       const seatOff = s.isSelf ? isAblated('S.self') : isAblated('P.opp');
       for (let j = 0; j < PUBN; j++) svBuf[k++] = seatOff ? 0 : s.public[j];
@@ -461,13 +472,54 @@ export function install(W, opts) {
       /* ⚑ 代 2：**自己单列 h_self，池子只算对手**（与设计文档 L1.5 的 `mean/max_{i≠self}` 以及
        *   离线平面向量 `obs3.encode` 的 `pool.mean.*` 对齐）。旧版把 isSelf 那一席也平均进去 ⇒
        *   两把尺读的不是同一个量，而 obs3 档的 xin 里当时**没有**任何一列是"你自己"，去掉就把自己弄丢。 */
-      if (!v4 && s.isSelf) { hSelf = e; continue; }
-      if (!v4) {
+      if (!v4 && !v5 && s.isSelf) { hSelf = e; continue; }
+      if (!v4 && !v5) {
         poolN++;
         for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
       }
     }
-    if (!v4) { const kk = Math.max(1, poolN); for (let j = 0; j < L.seatH; j++) mean[j] /= kk; }
+    if (!v4 && !v5) { const kk = Math.max(1, poolN); for (let j = 0; j < L.seatH; j++) mean[j] /= kk; }
+
+    /* ---- obs5 注意力聚合（11-10 ZCode）——与 policy2.forwardCands / pg-lib tapeForward 逐字同源，改一处必改三处 ----
+     *   活席集合上的自注意力（QKV 线性投影 /√H 掩码 softmax，残差直连）→ PMA（4 seed 查询，keys/values
+     *   重读注意力后语境向量 ē）。置换不变与跨人数泛用由结构成立：softmax 作用在在场集合上，K 不进权重。 */
+    const pooled5 = new Float64Array(L.poolN * L.seatH);
+    if (v5) {
+      const H5 = L.seatH, SQ5 = Math.sqrt(H5);
+      const atS = L.seg.find((s) => s.name === 'attn'), pmS = L.seg.find((s) => s.name === 'pma');
+      const WQ = atS.off, BQ = WQ + H5 * H5;
+      const WKg = BQ + H5, BKg = WKg + H5 * H5;
+      const WVg = BKg + H5, BVg = WVg + H5 * H5;
+      const WQ2 = pmS.off, BQ2 = WQ2 + H5 * H5, SD0 = BQ2 + H5;
+      const lin5 = (src, wOff, bOff) => { const out = new Float64Array(H5); for (let j = 0; j < H5; j++) { let s5 = params[bOff + j]; const base = wOff + j * H5; for (let i = 0; i < H5; i++) s5 += params[base + i] * src[i]; out[j] = s5; } return out; };
+      const sm5 = (row) => { let m5 = -Infinity; for (let j = 0; j < row.length; j++) if (row[j] > m5) m5 = row[j]; let s5 = 0; const w = new Float64Array(row.length); for (let j = 0; j < row.length; j++) { w[j] = Math.exp(row[j] - m5); s5 += w[j]; } for (let j = 0; j < row.length; j++) w[j] /= s5; return w; };
+      const es5 = [];
+      for (const s of sc.seats) if (enc.has(s.id)) es5.push(enc.get(s.id));   // sc.seats = pid 序 ⇒ 求和序确定
+      const K5 = es5.length;
+      const qs5 = [], ks5 = [], vs5 = [];
+      for (let i = 0; i < K5; i++) { qs5.push(lin5(es5[i], WQ, BQ)); ks5.push(lin5(es5[i], WKg, BKg)); vs5.push(lin5(es5[i], WVg, BVg)); }
+      const ebs5 = [];
+      for (let i = 0; i < K5; i++) {
+        const row = new Float64Array(K5);
+        for (let j = 0; j < K5; j++) { let lg = 0; for (let t = 0; t < H5; t++) lg += qs5[i][t] * ks5[j][t]; row[j] = lg / SQ5; }
+        const w = sm5(row);
+        const eb = new Float64Array(H5);
+        for (let j = 0; j < K5; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H5; t++) eb[t] += wj * vs5[j][t]; }
+        for (let t = 0; t < H5; t++) eb[t] += es5[i][t];   // 残差：席位原始嵌入直通，信息全覆盖不过瓶颈
+        ebs5.push(eb);
+      }
+      const kbs5 = [], vbs5 = [];
+      for (let j = 0; j < K5; j++) { kbs5.push(lin5(ebs5[j], WKg, BKg)); vbs5.push(lin5(ebs5[j], WVg, BVg)); }
+      for (let d = 0; d < L.poolN; d++) {
+        const seed = new Float64Array(H5);
+        for (let t = 0; t < H5; t++) seed[t] = params[SD0 + d * H5 + t];
+        const q2d = lin5(seed, WQ2, BQ2);
+        const row = new Float64Array(K5);
+        for (let j = 0; j < K5; j++) { let lg = 0; for (let t = 0; t < H5; t++) lg += q2d[t] * kbs5[j][t]; row[j] = lg / SQ5; }
+        const w = sm5(row);
+        for (let j = 0; j < K5; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H5; t++) pooled5[d * H5 + t] += wj * vbs5[j][t]; }
+      }
+    }
 
     const xin = new Float64Array(L.ctxDim);
     let p = 0;
@@ -491,6 +543,10 @@ export function install(W, opts) {
       /* obs4：局面比较 4 维 + 8 个槽位嵌入（slot = pid 0..7；空槽/已淘汰 = 零向量）——没有 mean/max */
       for (let i = 0; i < (sc.sit || []).length; i++) xin[p++] = sc.sit[i];
       for (let s = 0; s < 8; s++) { const e = enc.has(s) ? enc.get(s) : BUF.zeroSeat; for (let j = 0; j < L.seatH; j++) xin[p++] = e[j]; }
+    } else if (v5) {
+      /* obs5：局面比较 4 维（直接可读）+ PMA 池 4×seatH（内容寻址，K 自由）——没有 mean/max、没有槽位身份 */
+      for (let i = 0; i < (sc.sit || []).length; i++) xin[p++] = sc.sit[i];
+      for (let i = 0; i < pooled5.length; i++) xin[p++] = pooled5[i];
     } else {
     for (let j = 0; j < L.seatH; j++) xin[p++] = isAblated('S.self') ? 0 : hSelf[j];
     for (let j = 0; j < L.seatH; j++) xin[p++] = ABL.pool ? 0 : mean[j];
@@ -676,7 +732,7 @@ export function install(W, opts) {
       for (let r = 0; r < D; r++) { if (r === c) continue; const f = A[r][c]; if (!f) continue; for (let k = c; k <= D; k++) A[r][k] -= f * A[c][k]; }
     }
     const out = Float64Array.from(params);
-    const headOff = L.seg[4].off;
+    const headOff = L.seg.find((sg) => sg.name === 'policyHead').off;   /* 11-10：按段名（obs5 插段后下标错位） */
     if (!STD) {
       for (let j = 0; j < L.hid2; j++) out[headOff + j] = A[j][D];
       out[headOff + L.hid2] = A[L.hid2][D];
@@ -778,12 +834,13 @@ export function install(W, opts) {
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
     const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, keyHead: L.keyHeadOn || 0, gen: L.gen, keySplit: L.keySplit };
-    if (L.input === 'obs4') d.dof = 292;   /* obs4：8×29 公开 + 60 自块（manifest 见 obs3.mjs dims('obs4')） */
+    if (L.input === 'obs4' || L.input === 'obs5') d.dof = 292;   /* obs4/obs5：同一张特征 manifest（8×29 公开 + 60 自块，见 obs3.mjs dims） */
     else if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);
     if (L.norm) d.norm = L.norm;     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/
     return d;
   }
   function pack(p) {
+    for (let i = 0; i < p.length; i++) if (!Number.isFinite(p[i])) throw new Error('pack: 参数 ' + i + ' 非有限（NaN/Inf）⇒ JSON.stringify 会静默写成 null、读回来变 0（11-10 种子包全零事故的根因），拒绝写盘');
     return { v: V_FOR_GEN[L.gen], arch: L.arch, dims: packDims(), a: Array.from(p), n: L.n,
       /* 参数块的**标注**：段表 + 每段"权重区/bias 区"的确切下标 ⇒ 任何下游（变异、冻结、蒸馏、审计）
         照这张表算，不必再各自复制一遍偏移算术（10-30 那条事故的根因就是"两处各写一遍下标"） */

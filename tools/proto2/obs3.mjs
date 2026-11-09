@@ -66,7 +66,9 @@ function manifest(R, ver) {
   const c = ver === 'obs3c';
   const m = [];
   const add = (name, block, note) => m.push({ i: m.length, name, block, note: note || '' });
-  if (ver === 'obs4') {
+  /* obs5（11-10 ZCode）：与 obs4 **共用同一张特征 manifest**（292 项逐项同账）——两面的差别只在网络聚合段
+   *  （obs4=8 槽位拼接 / obs5=attention+PMA），特征层完全同源 ⇒ 审计、dimgate、消融账全部照旧复用。 */
+  if (ver === 'obs4' || ver === 'obs5') {
     const S4 = ['hp','ep','ringStreak','cannonCount','rodGuard','mineTurns','baguaExtra','fireWeakNow','tauntActive','nightmare','vampire','infiniteEnergy','stickers','stickerMaxAge'];
     for (let s = 0; s < 8; s++) {
       S4.forEach((n) => add('slot' + s + '.' + n, 'S4.slot'));
@@ -157,7 +159,7 @@ export function seqLayout(R, ver) {
 /* ---- 席位向量（obs3=22 维 / obs3b=81 维；**公开可读**；mePid<0 ⇒ lastTgtMe 自然全 0）---- */
 const NMAX = 10;              /* 2.0 的目标上限（用户 2.0 目标里写死 2–10 人）⇒ 人数族一律 /10，值域 ⊆ [0,1] */
 function seatVec(p, mePid, modeHp, R, ver, recent) {
-  if (ver === 'obs4') {
+  if (ver === 'obs4' || ver === 'obs5') {   /* obs5：席位特征与 obs4 同一函数（聚合层才分家） */
     const N4 = 29;
     if (!(p.hp > 0)) return new Array(N4).fill(0);   // 已淘汰席位全零（alive 位 0）
     const st4 = (p.stickers || []);
@@ -256,8 +258,8 @@ const STYLE_NAMES = ['style.maxBag', 'style.atkFrac', 'style.defFrac',
 function recentAll(state, R, ids, mePid, K) {
   const ev = state.events || [];
   const need = new Map(); for (const id of ids) need.set(id, K);
-  const bag = new Map(), tgt = new Map(), age = new Map();
-  for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); }
+  const bag = new Map(), tgt = new Map(), age = new Map(), keysSeq = new Map();
+  for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); keysSeq.set(id, []); }   // keys：与 policy2.recentAll 同账（11-10 腿 E 抓出训练侧缺 keys/cnt ⇒ obs4 的 actsLast4/streakDef 训练时恒 0）
   for (let i = ev.length - 1; i >= 0; i--) {
     let left = 0; for (const id of ids) left += need.get(id) || 0;
     if (!left) break;
@@ -271,9 +273,10 @@ function recentAll(state, R, ids, mePid, K) {
     else if (e.target != null && e.target !== e.pid) tg[2] += w; /* 指向第三者 */
     need.set(e.pid, need.get(e.pid) - 1);
     age.set(e.pid, a + 1);
+    const ks = keysSeq.get(e.pid); ks.push(e.key); if (ks.length > K) ks.length = K;   // 反向扫描 ⇒ keys[0] = 最近一手
   }
   const out = new Map();
-  for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id) });
+  for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id), keys: keysSeq.get(id) || [], cnt: 4 - (need.get(id) || 0) });
   return out;
 }
 
@@ -359,7 +362,7 @@ export function scene(W, state, pid, ver) {
   const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
   const b = ver === 'obs3b' || ver === 'obs3c';
   /* ⚑ obs3b/obs3c：最近 K=4 回合的键/目标 bag——一次反扫共用给所有活席（含自己：自己的 bag 也是"我最近打谁"） */
-  const v4 = ver === 'obs4';   /* obs4：全席位进 recent（含已淘汰）；sit = 局面比较 4 维 */
+  const v4 = ver === 'obs4' || ver === 'obs5';   /* obs4/obs5：全席位进 recent（含已淘汰）；sit = 局面比较 4 维 */
   let sit = null;
   if (v4) { const al = alive.map((q) => q.hp); const lead = al.length ? Math.max.apply(null, al) : 0;
     sit = [(al.filter((h2) => h2 > me.hp).length + 1) / 8, Math.max(-1, Math.min(1, (me.hp - lead) / modeHp)),
@@ -381,7 +384,7 @@ export function scene(W, state, pid, ver) {
     seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R, ver, recentMap), rel, isSelf: q.id === pid ? 1 : 0, p: q });
   }
   const sums = [Math.min(sumSt, 12) / 12];
-  const seatN = ver === 'obs3c' ? SEAT_NC : (b ? SEAT_NB : ver === 'obs4' ? 29 : SEAT_N);
+  const seatN = ver === 'obs3c' ? SEAT_NC : (b ? SEAT_NB : (ver === 'obs4' || ver === 'obs5') ? 29 : SEAT_N);
   return { W, R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, sit, seq: selfSeq(state, pid, R, ver), SEAT_W: seatN + 6, seatN, ver };
 }
 /** 由 scene 派生一个候选的部件（目标走 h_t ⇒ 这里**不再**给目标标量，除非装配平面向量） */

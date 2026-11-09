@@ -134,19 +134,20 @@ function acc(g, p) {
 }
 function step() {
   grad.fill(0);
-  let used = 0;
+  let used = 0, skipped = 0;
   for (let b = 0; b < BATCH; b++) {
     const g2 = BALANCE
       ? (() => { const k = keyList[Math.floor(rnd() * keyList.length)]; const poolK = byKey.get(k); return poolK[Math.floor(rnd() * poolK.length)] || train[0]; })()
       : pickTrain();
     const { a, t } = acc(g2, pv);
-    if (t.kProb[g2.wantKey] == null) continue;
+    if (t.kProb[g2.wantKey] == null) { skipped++; continue;   /* 11-10：静默跳过必须留痕——全跳 = 训练空转（lr 都不敏感） */ }
     const u = dLogKeyP(g2.wantKey, a.logits, g2.keys, TEMP, t);
     for (let j = 0; j < u.length; j++) u[j] = -u[j];   /* 最小化 −log P ⇒ 传负导数（与 pg-train 的梯度约定对齐） */
     tapeBackward(g2.tape, pv, ly, a, u, grad);
     used++;
   }
-  if (!used) return;
+  if (!used) { if (!step.skips) step.skips = 0; step.skips += skipped; return; }
+  if (skipped > 0) console.log('  [skip] 本批 ' + skipped + '/' + BATCH + ' 组键不匹配（teacher 键不在学生候选键表）');
   adam.t++;
   for (let d = 0; d < dim; d++) {
     const gg = grad[d] / used;
