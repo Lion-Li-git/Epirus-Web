@@ -508,3 +508,38 @@ obs3b（`js/train/policy2.js`）是**全席位编码后池化**：每席 87 维 
 - **C. 给脚本池加「反墙」脚本**（集火最肥 / 专打不出手的人）：改动最小，但仍是静态脚本，治标。
 
 我的建议：**A + 版本化**（exam-v2），把 v1 留在图上作历史轴；同时把今天这批 G5 的读数标成「v1 高、h2h 低」的典型样本。
+
+### 18. 考卷 v2（冠军席）落地 + 池成分分析：11 枪席 vs 4 穿透席（11-09 晚）
+
+**A. exam-v2 已实现**（`tools/exam-4n.mjs` 新旗标，默认关 ⇒ v1 逐位不变）：
+- `--champ=Q-s47,T8-s114`：每局第一个对手席换成**冻结冠军包**（自适应）；`--champn=<k>` 指定每局冠军席数；N=2 隔局换。
+- 夹具在册：`docs/artifacts/e507-out/Q-s47.js`、`docs/artifacts/e528-out/T8-s114.js`（另可指 KDG-B/WSEL9）。
+
+**首测（page 剂量、100 局/格、seed 77000）**：
+| 包 | v1 X̄₄ | v2 champn=1 | v2 champn=2 |
+|---|---|---|---|
+| G5C-100（反射墙） | 0.535 | 0.326 | **0.227** |
+| G5F-100 | 0.352 | 0.270 | 0.216 |
+| WSEL9-200 | 0.325 | 0.156 | **0.097** |
+
+⇒ 冠军席确实把墙的分数压下来（G5C −0.31 / WSEL9 −0.23），但 **2P 那一格仍高**（G5C 0.61），
+因为 2P 时冠军隔局上、且墙在 1v1 里确实强 ⇒ 若要让 2P 也反映「打不打得过冠军」，应改成**每局都上冠军**（N=2）。
+
+**B. 池成分（我逐席跑了 8 局镜像，统计出招）**：
+
+| 轴 | 席数 | 代表 |
+|---|---|---|
+| 压制（枪为主） | 4 | gunspam 49% 枪 / gunfocus 50% / aggro 49% / earlypressure 49% |
+| 墙 | 4 | guardspam/wall/baguaspam 100% 防御 / protowall（proto） |
+| 反弹 | 4 | reflectspam 100% 防御 / reflecttank 66% / antidef **33% 穿透** / combocounter 34% 枪 |
+| 经济 | 3 | deepsaver 56% 防御 / ringspam / beadburst 17% 穿透 |
+| 爆发 | 3 | heavyfire / bigtfocus 17% 穿透 / deadlineburst 27% 枪 |
+| 混合 | 4 | mix / reflectmix 31% 枪+32% 防御 / guardgun 31% 枪+36% 防御 / balanced 49% 枪 |
+| 瞄准 | 3 | targeter 67% 防御 / snipespam **33% 穿透** / random 67% 防御 |
+| 多人 | 2 | mirrorspam / dualspam 49% 枪 |
+
+- **枪% ≥25 的席：11/28**（均 17.9%）；**穿透% ≥15 的只有 4/28**（antidef 33、snipespam 33、beadburst 17、bigtfocus 17，均 5.0%）；
+- **防御% ≥40 的 8/28**（guardspam/wall/baguaspam/reflectspam 100%、reflecttank 66、deepsaver 56、targeter 67、random 67）。
+
+⇒ **用户直觉被证实**：池子里枪席是穿透席的 2.75 倍，反弹只被 4 席克制 ⇒ 反射墙天然农得动。
+exam-v2 的冠军席能部分纠正，但**池成分本身也该配平**（枪席砍到 6~7、穿透席加到 8 席），否则 v1 的任何读数都偏向反弹。

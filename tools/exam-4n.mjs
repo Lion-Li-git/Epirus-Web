@@ -33,7 +33,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -44,6 +44,12 @@ for (const n of NS) if (![2, 3, 5, 8].includes(n)) { console.error('⛔ --onlyN 
 const MODE = FLAG.mode || '';   // 缺省 = 引擎默认桌 multi；传了就透传（两批不许混：mode 写进输出行）
 const DOSE = FLAG.dose || 'exam';
 if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+/* 11-09 用户裁 A：**exam-v2 = 冠军席考卷**。`--champ=Q-s47,T8-s114` 把每局的第一个对手席换成
+ *   一枚**冻结的冠军包**（自适应、会集火会破防），其余仍是 EXAM_POOL 脚本 ⇒ 反射墙再也farm不到。
+ *   缺省空 ⇒ 与 v1 逐位相同（历史读数可复现）。N=2 时隔局换冠军（否则就变成纯 1v1）。 */
+const CHAMP_IDS = String(FLAG.champ || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+const CHAMP_N = Math.max(0, Number(FLAG.champn || 1) | 0);   // 每局冠军席数（≤N−1；缺省 1）
+const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
@@ -69,6 +75,20 @@ if (!mm) { console.error('未找到 EPIRUS_CHAMPION_3P: ' + FILE); process.exit(
 const params = P.unpack(JSON.parse(mm[1]), true);
 if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack(JSON.parse(mm[1])))); process.exit(1); }
 
+/* ===== exam-v2：冠军席（冻结夹具 · 用户 11-09 裁 A）=====
+ * 每局把**第一个对手席**换成 champion（自适应），其余仍是脚本 ⇒ 反射墙再也不能靠「脚本互相消耗」farm。
+ * N=2 时隔局换（否则 N=2 变成纯 1v1）；缺省 --champ 空 ⇒ 与 v1 逐位相同。 */
+const CHAMP_CHOOSERS = CHAMP_IDS.map(function (id) {
+  const p2 = CHAMP_PATHS[id];
+  if (!p2) { console.error('⛔ --champ 里有不认识的 id：' + id + '（在册：' + Object.keys(CHAMP_PATHS).join(',') + '）'); process.exit(2); }
+  const s2 = readFileSync(p2, 'utf8');
+  const m2 = s2.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
+  if (!m2) { console.error('⛔ 冠军席包读不出 EPIRUS_CHAMPION_3P：' + p2); process.exit(2); }
+  const par2 = P.unpack(JSON.parse(m2[1]), true);
+  if (!par2) { console.error('⛔ 冠军席包不兼容：' + p2 + ' ⇒ ' + JSON.stringify(P.checkPack(JSON.parse(m2[1])))); process.exit(2); }
+  return T.policyChooserN(par2, 0.15);
+});
+
 /* ===== 主体席 chooser：考卷臂（ε=0）或页面剂量（DIFF_TIERS 那一档 + 回合斜坡） ===== */
 function subjectSel() {
   if (DOSE === 'exam') return T.policyChooserN(params, 0.15);
@@ -79,6 +99,7 @@ function subjectSel() {
   return function (state, id, legal) { return byRound[Math.min(3, state.round)](state, id, legal); };
 }
 /* ===== 四格对局 ===== */
+if (CHAMP_CHOOSERS.length) console.error('[exam-v2] 冠军席 = ' + CHAMP_IDS.join(',') + '（每局第一个对手席；N=2 隔局）⇒ 本读数与 v1 不同源，必须标注');
 const out = {};
 const SUBJ = subjectSel();
 for (const n of NS) {
@@ -93,8 +114,11 @@ for (const n of NS) {
     let oi = 0;
     const sel = SUBJ;                                                            // 考卷臂(ε=0) 或 页面剂量；见 subjectSel()
     for (let pid = 0; pid < n; pid++) {
-      if (pid === seat) choosers.push(sel);
-      else choosers.push(asChooser(FN[field[oi++]]));
+      if (pid === seat) { choosers.push(sel); continue; }
+      /* exam-v2：第一个对手席是冠军（自适应）；其余是脚本。N=2 时隔局换冠军。 */
+      const champSlot = CHAMP_CHOOSERS.length > 0 && oi < Math.min(CHAMP_N, n - 1) && (n > 2 || (j % 2 === 0));
+      choosers.push(champSlot ? CHAMP_CHOOSERS[(j + oi) % CHAMP_CHOOSERS.length] : asChooser(FN[field[oi]]));
+      oi++;
     }
     const gseed = SEED + n * 1000003 + j * 977;
     const r = T.oneGameN(choosers, gseed, n, MODE ? { mode: MODE } : undefined);
