@@ -87,6 +87,10 @@ function manifest(R, ver) {
     for (let k = 0; k < 4; k++) ['landed','blocked','nullified','none'].forEach((n) => add('seq' + k + '.out.' + n, 'Q4.out'));
     add('sumStickers', 'S4.add');
     ['myRank','leaderGap','totalHpRatio','deadCount'].forEach((n) => add(n, 'S4.sit'));
+    /* ⚑ 11-10 修（教师换血实验踩出的潜伏 bug）：早退必须先落缓存——原实现只设 `_SK` 不设 `_MAN`，
+     *   同进程先构建过 obs3b（_MAN=415 数组）再调 obs5 ⇒ 缓存命中返回陈旧 415 ⇒ checkPack 假拒
+     *   （双面工具全中：supfit 教师=obs3b+学生=obs5、任何跨面 dimgate。单面冒烟/selftest 不触发。） */
+    _MAN = m;
     return m;   // 8×29 + (5+2+48+1+4) = 292
   }
 

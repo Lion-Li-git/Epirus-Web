@@ -1,0 +1,13 @@
+import { sandbox } from '../../tools/audit-lib.mjs';
+import { install as installArch2, readPack2 } from '../../tools/proto2/arch2.mjs';
+import { dims as obs3Dims } from '../../tools/proto2/obs3.mjs';
+const W = sandbox();
+installArch2(W, { input: 'obs5', gen: 3, keySplit: 1, skills: W.EpirusRules.skills.length, seatH: 24, actH: 24, hid: 32, hid2: 24, mutMode: 'seg' });
+const P = W.EpirusPolicy, R = W.EpirusRules;
+console.log('paramCount=' + P.paramCount());
+console.log('obs3Dims(obs5)=' + obs3Dims(R, 'obs5'));
+const raw = readPack2('scratch/obs4/KDO5-seed.bak');
+console.log('raw dims:', JSON.stringify(raw.dims), 'arch=' + raw.arch, 'v=' + raw.v, 'len=' + raw.a.length);
+const up = P.unpack(raw, true);
+console.log('unpack=' + (up ? up.length : 'null'));
+console.log('checkPack=', JSON.stringify(P.checkPack(raw)));

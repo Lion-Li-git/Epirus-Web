@@ -49,7 +49,18 @@ const rnd = () => { s0 = (s0 + 0x6D2B79F5) >>> 0; let t = s0; t = Math.imul(t ^ 
 /* 先读 v7 参照（createArena2 的硬条款：必须在 installArch2 之前） */
 const Wv = sandbox();
 const refParams = Float64Array.from(loadChamp(Wv, 'js/bundled-champion-3p.js', ''));
-const tchParams = Float64Array.from(loadChamp(Wv, TEACHER, ''));   /* 标签教师（可与参照不同包） */
+/* 教师 = 2.0 包时：先在 Wv 装**教师自己的面**再 unpack（11-10 ZCode）。v7 参照已取成参数快照，
+ *   后装的 arch2 不动它；v7 参照跑局时走 LEGACY 老路（§E821 修过的路由），两边互不踩。 */
+let tchParams = null;
+const tchRawSrc = readFileSync(TEACHER, 'utf8');
+const tchCfgMatch = tchRawSrc.match(/"dims":\{[^}]*"input":"(obs[345][a-z]?)"/);
+if (tchCfgMatch) {
+  const tchPack = JSON.parse(tchRawSrc.match(/EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/)[1]);
+  installArch2(Wv, { input: tchPack.dims.input, gen: tchPack.dims.gen, keySplit: tchPack.dims.keySplit, seatH: tchPack.dims.seatH, actH: tchPack.dims.actH, hid: tchPack.dims.hid, hid2: tchPack.dims.hid2, skills: tchPack.skills, mutMode: 'seg' });
+  console.log('[supfit-full] 教师 = 2.0 包（面=' + tchPack.dims.input + '）⇒ Wv 已装教师面');
+}
+const TCH20 = !!tchCfgMatch;   /* 教师 = 2.0 包 ⇒ 标签/开车走 forwardCands/chooseCandidates（v7 的 value() 对 2.0 参数当场抛） */
+tchParams = Float64Array.from(loadChamp(Wv, TEACHER, ''));   /* 标签教师（可与参照不同包/不同面） */
 console.log('[supfit-full] 教师 = ' + TEACHER + (TEACHER === 'js/bundled-champion-3p.js' ? '（=现役，历史行为）' : '（参数化教师）'));
 const W = sandbox();
 const raw = readPack2(UP);
@@ -65,6 +76,13 @@ pv.set(up0);
 const A = createArena2(W, { refParams, temp: 0.15, stratified: true, stratCap: 2, stratMix: 0.5 });
 const shapes = A.shapes.filter((s) => s.mode === MODE && (s.n === N || s.n === 3));
 const teacherIdx = (state, pid, cs) => {
+  if (TCH20) {
+    /* 2.0 教师：逐候选前向取 argmax（确定性；与它的 chooseCandidates 同一前向，只是不加温） */
+    const fr = Wv.EpirusPolicy.forwardCands(state, pid, cs, tchParams, { temp: 1 });
+    let bi = 0, bp = -1;
+    for (let i = 0; i < cs.length; i++) { const p2 = fr.probs[i]; if (p2 > bp) { bp = p2; bi = i; } }
+    return bi;
+  }
   let best = -1e9, bi = 0;
   for (let i = 0; i < cs.length; i++) {
     let v = 0;
@@ -76,7 +94,9 @@ const teacherIdx = (state, pid, cs) => {
 const chooser = (p, temp) => T.policyChooserN(p, temp, 0, 1, 'soft');
 /* 采集：学生自访（seat0 用当前权重），教师给标签 */
 const groups = [];
-const tchChooser = T.policyChooserN(tchParams, 0.15);   /* 教师的生产口径（--collect=teacher 时开车用） */
+const tchChooser = TCH20
+  ? ((state, pid, legal) => Wv.EpirusPolicy.chooseCandidates(state, pid, legal, tchParams, { temp: 0.15 }))   /* 2.0 教师：走自己的 chooseCandidates（temp=0.15 同生产档） */
+  : T.policyChooserN(tchParams, 0.15);   /* v7 教师：生产口径不变（--collect=teacher 时开车用） */
 for (let g = 0; g < GAMES && groups.length < NGRP; g++) {
   const sh = shapes[g % shapes.length];
   const ch = chooser(pv, TEMP);
