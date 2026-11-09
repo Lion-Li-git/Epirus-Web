@@ -339,3 +339,23 @@ FOCUS/CLEAR→KD-G2、WIDE→KD-Qg），全表重投影 **N=899**、attach-projc
 - 逐卡（枚数/17）：ji 17、sword 15、gun 14、charge 11、bigT 11、railgun 10、guard 7、ring 5、snipe 2、reflect 2、proto 1、drain 1；
 - **一块都没人用**的 18 张：tank / bagua / shift / jinshield / armor / holo / miniT / rod / laserEye / transfer / curse / firestorm / mine / taunt / cannon / purify / dualGun / mirror；
 - 与 v7 三枚并集（11 张）相比：池多覆盖 snipe/proto/drain，**少 bagua/holo**（防御多样性缺口）。
+
+### 11. 进图 WIDE2 + 两个新当选面旋钮的冒烟（11-09 午 · 复核千问 P1/P2）
+
+**WIDE2-Q-s13 进图**（METHODOLOGY 146 全列）：X̄₄ 0.282/0.300、场A 27.4%、场B 0.00、用卡 8（防御三件缺 reflect）、缺 1 门（场B）；
+父边 → KD-Qg（wid 43b8263321947245），全表重投影 **N=900**、四视图 98/0。
+
+**四臂机制冒烟（我重跑，千问那次在 11:24–11:26 被打断）**：
+
+| 臂 | exit | 见证 | 判读 |
+|---|---|---|---|
+| BASE | 0 | 无任何见证行 | ✅ 关档守住 |
+| CARDS9 | 0 | 剔 5/6 粒（5/4/5/5/5）⇒ 改判成 11 张粒，**胜负分差 −35.6pt** | ✅ 地板真咬；代价说明现役名人堂没有「宽且强」的粒 |
+| CARDS29 | 0 | 名人堂全部低于线 ⇒ `selCardsAllDropped` 响亮支路 | ✅ 全否分支正确 |
+| DEFQ-HOT（热启动 KD-G2 种群） | 0 | 白防 **92.0%** ‖ 防御 **212 手** ‖ 质量 7.3% ‖ placebo 0.09×（重验分 90.4·原当选）⇒ 未改判 | ✅ 量具在强包种群上可量（212 手 ≫ 30 门槛） |
+
+**修掉的 bug**（`e888d6e4`）：SEL_DEFQ 的白防梯标签一律 `undefined` —— 标签 `__defqBy` 记在候选对象 `e` 上，
+四处却读 `defqOf(e).__defqBy`（量具返回对象没有该字段）。改 `e.__defqBy` 后标签正常。
+
+**已知瑕疵（留给千问）**：当 `usable>0` 但**带内所有粒都没量到**时，仍打印「带内白防最低的就是原当选者」，
+措辞会让人误以为量过；应走「带内无可比样本」那条。
