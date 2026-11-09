@@ -21,9 +21,11 @@
 import { EXAM_POOL } from '../server/opp-pool.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
-/* 池里该人数可用的席（minN 过滤；2 人局拿掉镜面/双枪这类要 ≥3 人的线）。 */
-export function seatsFor(n) {
-  return EXAM_POOL.filter(function (e) { return e.minN <= n; }).map(function (e) { return e.name; });
+/* 池里该人数可用的席（minN 过滤；2 人局拿掉镜面/双枪这类要 ≥3 人的线）。
+ * `pool` 省略 = 现在的 EXAM_POOL（v2）⇒ 既有调用方（含 server/train-server）逐字不变；
+ * 传 `examPool('v1')` 就复算 11-09 换席前那张卷（考卷版本戳的理由见 opp-pool 那段注释）。 */
+export function seatsFor(n, pool) {
+  return (pool || EXAM_POOL).filter(function (e) { return e.minN <= n; }).map(function (e) { return e.name; });
 }
 
 export function mulberry32(a) {
@@ -38,11 +40,11 @@ function shuffled(arr, rnd) {
 }
 
 /* 一个 N 的排程：返回 G_N 局，每局 (N−1) 个**互不相同**的对手名。 */
-export function planN(n, rounds, seed) {
+export function planN(n, rounds, seed, pool) {
   if (!(Number.isInteger(n) && n >= 2 && n <= 8)) throw new Error('planN: n 必须是 2..8（收到 ' + n + '）');
   const R = Number(rounds);
   if (!(Number.isInteger(R) && R >= 1)) throw new Error('planN: rounds 必须是正整数（收到 ' + rounds + '）');
-  const seats = seatsFor(n);
+  const seats = seatsFor(n, pool);
   const per = n - 1;
   if (seats.length < per) throw new Error('planN: N=' + n + ' 需要 ' + per + ' 个不同对手，池里只有 ' + seats.length);
   const K = seats.length;

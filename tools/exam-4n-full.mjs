@@ -14,11 +14,12 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rejectUnknownFlags } from './audit-lib.mjs';
+import { EXAM_POOL_VERSIONS } from '../server/opp-pool.mjs';   // 考卷池版本名单的单一来源（不在这儿抄第二份）
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier'], 'exam-4n-full');
+rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier', 'exam', 'champ', 'champn', 'expool'], 'exam-4n-full');
 
 const OUT = join(ROOT, 'champion-map', arg('out', ''));
 if (!arg('out', '')) { console.error('⛔ 必须 --out=<表>（四格卷读数落盘处）'); process.exit(2); }
@@ -29,6 +30,10 @@ const JOBS = Math.max(1, Number(arg('jobs', 8)));
 const MODE = arg('mode', '');
 const DOSE = arg('dose', 'exam');
 if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+/* 考卷池版本（11-09 晚补）：默认 v2 ⇒ 既有批跑逐字不变；`v1` 复算 `469dfdb1` 换席前那张卷。
+ *   戳由子进程印在 `[冠军4N]` 行里，父进程原样记进表 ⇒ 两版的读数混不进同一张表。 */
+const EXPOOL = arg('expool', 'v2');
+if (EXAM_POOL_VERSIONS.indexOf(EXPOOL) < 0) { console.error('⛔ --expool 只认 ' + EXAM_POOL_VERSIONS.join('/') + '，收到 ' + EXPOOL); process.exit(2); }
 const EPS_TIER = arg('eps-tier', '');
 const ONLY_FILE = arg('only', '');
 const EXTRA = arg('extra', '');
@@ -58,7 +63,7 @@ if (ONLY_FILE) {
 }
 if (existsSync(OUT)) { console.error('⛔ ' + OUT + ' 已存在 ⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
 
-const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'sec'];
+const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'pool', 'sec'];
 writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
 
 function one(id) {
@@ -68,6 +73,14 @@ function one(id) {
   const a = ['tools/exam-4n.mjs', String(ROUNDS), String(SEED), rel];
   if (MODE) a.push('--mode=' + MODE);
   if (DOSE !== 'exam') a.push('--dose=' + DOSE);
+  if (EXPOOL !== 'v2') a.push('--expool=' + EXPOOL);
+/* 11-09：考卷 v2 两轴的透传（A=脚本桌 / B=冠军桌 / both）；不传 ⇒ v1 逐位不变 */
+const EXAM_AX = arg('exam', '');
+if (EXAM_AX) a.push('--exam=' + EXAM_AX);
+const CHAMP_L = arg('champ', '');
+if (CHAMP_L) a.push('--champ=' + CHAMP_L);
+const CHAMP_N_ARG = arg('champn', '');
+if (CHAMP_N_ARG) a.push('--champn=' + CHAMP_N_ARG);
   if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER);
   return new Promise((res) => {
     const t0 = Date.now();
@@ -90,7 +103,7 @@ async function worker() {
     done++;
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
-      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.sec];
+      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.kv.pool || '(没印戳)', r.sec];
     appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 25 === 0) console.error('  … ' + done + '/' + ids.length + '（失败 ' + fail + '）');
   }

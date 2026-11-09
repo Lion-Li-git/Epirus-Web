@@ -3,6 +3,11 @@
 > 用户 ⑥：「门禁重新规划一下」。§E335 已经把**所有门**分成六组并支持 `--group=`（条数与末号别在这里抄 ——
 > 机器版本是 `node tools/np-test.mjs --list-groups`），这份补的是**上面那一层**：
 > 拿到一次改动，怎么知道该跑哪一组。默认命令是 **`node tools/gate-all.mjs --auto`**（它读 `git status` 自己判）。
+> ⚠ **共享工作树上 `--auto` 会把别人未提交的改动一起算进分类**（它读 `git status` + `git diff HEAD`，不分班次）。
+>   11-09 晚实测：我改的是 `tools/exam-4n*.mjs`/`tools/exam-pool.mjs`/`server/opp-pool.mjs`（按本表该走 **probe** 那组），
+>   而 DS 同时在树上改了 `champion-map/viewer.mjs` ⇒ `--auto` 判成 engine 面 ⇒ **直接起整轮**（十几分钟，而且验的还是两班混合的面）。
+>   ⇒ 在这棵树上：知道自己改了哪些面就**手敲 `--np --group=<组>`**；`--auto` 留给树干净的时候。跑之前先
+>   `git status --porcelain | grep -v '^??'` 看一眼有没有别人的 M（有就不是"我这批"的判定）。
 > ⚠ 为什么不写进 `docs/METHODOLOGY.md`：那份文件**在门的读取面上**（D153 读它），往里加一段就得重跑一整轮
 > —— 为一张操作表付 20 分钟不划算。这里是操作性内容，不是方法学规矩。
 

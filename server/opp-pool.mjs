@@ -135,6 +135,25 @@ export const EXAM_POOL = [
   { name: 'mirrorspam', axis: 'multi', minN: 3 },
   { name: 'dualspam', axis: 'multi', minN: 3 }
 ];
+/* ===== 考卷池版本（11-09 晚补 · Qoder）=====
+ * 病：`469dfdb1` 把上面这份 28 席就地换名（aggro→swordspam、balanced→piercemix，且后者从 mix 轴挪进 pressure 轴），
+ *   而在册条款 `docs/POOL-CONTRACT.md §1` 明写「EXAM_POOL 一个不动（它现在是尺；动了 X̄₄ 跨批不可比）」，
+ *   exam 的输出里又没有池版本 ⇒ 从那之后的每一条 X̄₄ 与图上 900+ 枚历史读数**不是同一把尺**，收据上却看不出来。
+ * 这里不评判该不该换（用户 11-09 裁 A 授权改考卷），只补两件最低要求：**v1 可复算** ‖ **用的哪把可读出**。
+ *   v1 = 换席前那 28 席（其余 26 席与顺序逐字不动，两个替换点各自还原名字与轴）
+ *   v2 = 现在这份 = **默认** ⇒ 任何现有调用方（含 `server/train-server.mjs`）行为一字不变。 */
+const EXAM_V1_BACK = { swordspam: { name: 'aggro', axis: 'pressure' }, piercemix: { name: 'balanced', axis: 'mix' } };
+export const EXAM_POOL_V1 = EXAM_POOL.map(function (e) {
+  const b = EXAM_V1_BACK[e.name];
+  return b ? { name: b.name, axis: b.axis, minN: e.minN } : e;
+});
+export const EXAM_POOL_VERSIONS = ['v1', 'v2'];
+export function examPool(version) {
+  const v = (version == null || version === '') ? 'v2' : String(version);
+  if (v === 'v2') return EXAM_POOL;
+  if (v === 'v1') return EXAM_POOL_V1;
+  throw new Error('examPool: --expool 只认 ' + EXAM_POOL_VERSIONS.join('/') + '，收到 ' + JSON.stringify(version));
+}
 /* 名字 → 函数名 的查表（单一来源 OPP_SPECS；查不到 ⇒ 抛错，不静默跳过）。 */
 export const EXAM_FN = (function () {
   const byName = {};

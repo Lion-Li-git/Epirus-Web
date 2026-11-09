@@ -13,7 +13,10 @@
  *   · 冠军座位 = 局序号 % N（轮转），对手槽位相对座位再旋转（eval-5p 656 行的"座位率 × 脚本强度"解耦教训）。
  * 桌形 = 引擎默认 multi（3 血短程）；四格卷考的是**人数轴**，桌形固定才可跨包比较。
  *
- * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular]
+ * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2]
+ * --expool=v2（缺省）= 现在的 28 席；`v1` = 11-09 `469dfdb1` 换席前那张卷 ⇒ **历史 X̄₄ 可复算**。
+ *   为什么必须有：换席动的是默认表、没有旗标也没有戳，而 `POOL-CONTRACT §1` 明写"EXAM_POOL 一个不动"
+ *   ⇒ 那之后同一条命令算出来的 X̄₄ 与图上 900+ 枚历史读数不是同一把尺，收据上却一模一样。
  * --dose=exam（缺省）：主体席 ε=0 贪心 —— 与旧卷的 exam 臂、与 `exam4-all-*.tsv` 那两批同口径（H 侧）。
  * --dose=page：主体席按**页面剂量**出手（`DIFF_TIERS` 那档的 ε/epsK/epsMode + 回合斜坡，默认 `lv:regular`）
  *   —— 这才是「玩家默认拿到的那个数」（Hp 侧）。斜坡形状走 `Bots.tierEps`，**不在这里再写一遍**（D153 只许一份）。
@@ -22,7 +25,8 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { OPP_SPECS, EXAM_POOL } from '../server/opp-pool.mjs';
+import { OPP_SPECS, examPool } from '../server/opp-pool.mjs';
+import { createHash } from 'node:crypto';
 import { planN } from './exam-pool.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
@@ -33,7 +37,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -44,6 +48,14 @@ for (const n of NS) if (![2, 3, 5, 8].includes(n)) { console.error('⛔ --onlyN 
 const MODE = FLAG.mode || '';   // 缺省 = 引擎默认桌 multi；传了就透传（两批不许混：mode 写进输出行）
 const DOSE = FLAG.dose || 'exam';
 if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+/* 考卷池版本（11-09 晚补 · Qoder）：`469dfdb1` 把 28 席里两席就地换名 ⇒ 在册条款「EXAM_POOL 一个不动」被破，
+ *   而输出里没有池版本，此后任何 X̄₄ 与图上 900+ 枚历史读数不是同一把尺却看不出来。
+ *   默认 `v2`（= 现在的池 ⇒ 既有调用逐字不变）；`v1` 复算换席前那张卷。**两版不许混进一张表**：戳写进输出行。 */
+const POOL_VERSION = FLAG.expool || 'v2';
+let POOL;
+try { POOL = examPool(POOL_VERSION); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+const POOL_STAMP = POOL_VERSION + '#' + createHash('sha1')
+  .update(POOL.map(function (e) { return e.name + ':' + e.axis + ':' + e.minN; }).join(',')).digest('hex').slice(0, 8);
 /* 11-09 用户裁 A：**exam-v2 = 冠军席考卷**。`--champ=Q-s47,T8-s114` 把每局的第一个对手席换成
  *   一枚**冻结的冠军包**（自适应、会集火会破防），其余仍是 EXAM_POOL 脚本 ⇒ 反射墙再也farm不到。
  *   缺省空 ⇒ 与 v1 逐位相同（历史读数可复现）。N=2 时隔局换冠军（否则就变成纯 1v1）。 */
@@ -68,10 +80,10 @@ for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', '
 const W = sb.window, P = W.EpirusPolicy, S = W.EpirusState, R0 = W.EpirusRules, T = W.EpirusTrainer, Bots = W.EpirusBots;
 const asChooser = makeAsChooser({ T, R: R0 });
 
-/* 对手：EXAM_POOL 名字 → Bots 函数（EXAM_FN 已在 opp-pool 里做过"没登记就抛错"的守卫） */
+/* 对手：考卷池名字 → Bots 函数（EXAM_FN 已在 opp-pool 里做过"没登记就抛错"的守卫；v1 的两席同样在 OPP_SPECS 里） */
 const FN = {};
 for (const o of OPP_SPECS) FN[o.name] = Bots[o.fn];
-for (const e of EXAM_POOL) if (typeof FN[e.name] !== 'function') { console.error('⛔ EXAM_POOL 的 ' + e.name + ' 取不到函数'); process.exit(1); }
+for (const e of POOL) if (typeof FN[e.name] !== 'function') { console.error('⛔ 考卷池 ' + POOL_STAMP + ' 的 ' + e.name + ' 取不到函数'); process.exit(1); }
 
 /* ===== 冠军包（v7 / 2.0 两种容器都走 P.unpack —— 与 eval-5p 全库同一条装包路） ===== */
 const src = readFileSync(FILE, 'utf8');
@@ -111,7 +123,7 @@ const SUBJ = subjectSel();
 function evalAxis(champN) {
 const out = {};
 for (const n of NS) {
-  const plan = planN(n, R, SEED);
+  const plan = planN(n, R, SEED, POOL);
   let first = 0;
   const seatFirst = new Array(n).fill(0), seatGames = new Array(n).fill(0);
   for (let j = 0; j < plan.length; j++) {
@@ -147,7 +159,8 @@ if ((AXIS === 'B' || AXIS === 'BOTH') && !CHAMP_CHOOSERS.length) { console.error
 function emit(prefix, o) {
   const fmt = (k) => NS.map((n) => k + n + '=' + o[n][k === 'h' ? 'h' : 'x']).join(' ');
   const fmtN = () => NS.map((n) => 'n' + n + '=' + o[n].G).join(' ');
-  console.log(prefix + ' ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : ''));
+  console.log(prefix + ' ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : '') +
+    ' pool=' + POOL_STAMP + ' K=' + POOL.length);   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }
 if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));
