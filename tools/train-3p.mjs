@@ -148,7 +148,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_DEF', 'EPIRUS_SEL_DEF_MIN', 'EPIRUS_SEL_DEF_GAMES', 'EPIRUS_SEL_DEF_MODE',   // 11-02 千问 §A（PREREG-2026-11-02-SEL-DEF）：当选面**防御下限**排序键（默认 0=关 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
-  'EPIRUS_SEL_DEFQ', 'EPIRUS_SEL_DEFQ_MINHANDS', 'EPIRUS_SEL_DEFQ_GAMES', 'EPIRUS_SEL_DEFQ_MODE', 'EPIRUS_SEL_DEFQ_EPS',   // 11-09 P1（用户三条裁定：容差带内**排序键**不是硬地板 ‖ 防御手 n≥30 才算数、不够按"没量到"跳过 ‖ 只筛新候选不动现役池）：带内把**白防率低**的挤上当选席，默认 0=关 ⇒ 当选者逐字不变
+  'EPIRUS_SEL_DEFQ', 'EPIRUS_SEL_DEFQ_MINHANDS', 'EPIRUS_SEL_DEFQ_MINSHARE', 'EPIRUS_SEL_DEFQ_GAMES', 'EPIRUS_SEL_DEFQ_MODE', 'EPIRUS_SEL_DEFQ_EPS',   // 11-09 P1（用户三条裁定：容差带内**排序键**不是硬地板 ‖ 防御手 n≥30 才算数、不够按"没量到"跳过 ‖ 只筛新候选不动现役池）：带内把**白防率低**的挤上当选席，默认 0=关 ⇒ 当选者逐字不变
   'EPIRUS_SEL_CARDS', 'EPIRUS_SEL_CARDS_GAMES',   // 11-09 P2（用户裁定：只筛新候选、不回筛现役池）：当选面**用卡数地板 veto**，度量复用 fieldProfile 的逐卡计数（份额 ≥0.5%，与 tools/card-usage.mjs 同定义），默认 0=关
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_OPP_SWEEP',       // DS 11-03：对手池每代轮齐（旧公式每代只覆盖 11 位；默认关）
@@ -486,6 +486,9 @@ if (SEL_DEF > 0 && SEL_DEF_GAMES < 10) {
  *   ⇒ 地板 9 就是契约里那句"用卡 ≥9"。⚠ 与 `SEL_GRID` 的"种数"**差一张 ジ**（那边排除 ジ），两条别混着引用。 */
 const SEL_DEFQ = Number(process.env.EPIRUS_SEL_DEFQ || 0);
 const SEL_DEFQ_MINHANDS = Number(process.env.EPIRUS_SEL_DEFQ_MINHANDS || 30);
+/* 11-09 用户裁定：白防率是比值 ⇒ 必须配一个**防御占比地板**（默认 0=关，历史读数逐位不变）；
+ *   实测反例：只开 minHands=30 时，2.0pt 容差带会改判到「51 手 / 防御占比 1%」的包（白防 90.2% 但根本不防）。 */
+const SEL_DEFQ_MINSHARE = Number(process.env.EPIRUS_SEL_DEFQ_MINSHARE || 0);
 const SEL_DEFQ_GAMES = Number(process.env.EPIRUS_SEL_DEFQ_GAMES || 40);
 const SEL_DEFQ_MODE = String(process.env.EPIRUS_SEL_DEFQ_MODE || 'multi');
 const SEL_DEFQ_EPS = Number(process.env.EPIRUS_SEL_DEFQ_EPS || 0.1);
@@ -3288,10 +3291,10 @@ if (WIDE_FINAL) {
     const NOSENTRY = -1e9;
     const defqOf = function (e) {
       if (e.__defq === undefined) {
-        const m = measureDefenseQuality(WIN, e.ref.params, { games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS });
+        const m = measureDefenseQuality(WIN, e.ref.params, { games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS, minShare: SEL_DEFQ_MINSHARE });
         if (m.err) { console.error('[白防选人] ⛔ 量具读不出：' + m.err + ' ⇒ 拒跑（不许静默当成"没防过"或"防得准"）'); process.exit(7); }
         e.__defq = m;
-        e.__defqBy = '白防 ' + (m.measurable ? m.whitePct.toFixed(1) + '%' : '没量到(n=' + m.n + '<' + m.minHands + '手)') +
+        e.__defqBy = '白防 ' + (m.measurable ? m.whitePct.toFixed(1) + '%' : '没量到(n=' + m.n + '<' + m.minHands + '手' + (SEL_DEFQ_MINSHARE > 0 ? ' 或占比 ' + (100 * m.share).toFixed(1) + '%<' + (100 * SEL_DEFQ_MINSHARE).toFixed(0) + '%' : '') + ')') +
           ' ‖ 防御 ' + m.def + ' 手 · 质量 ' + (isFinite(m.q) ? (100 * m.q).toFixed(1) + '%' : '—') +
           ' ‖ placebo 倍差 ' + (isFinite(m.placeboRatio) ? m.placeboRatio.toFixed(2) + '×' : '—');
       }
@@ -3302,7 +3305,7 @@ if (WIDE_FINAL) {
     const gpool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
     const gated = gpool.filter(function (e) { return e.gateOk !== false; });   /* 硬门槛不过的**不许**被这根键换上来（§E168/§N24 的教训） */
     const usable = gated.filter(function (e) { return defqOf(e).measurable; });
-    SEL_DEFQ_LOG = { tol: SEL_DEFQ, games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS,
+    SEL_DEFQ_LOG = { tol: SEL_DEFQ, games: SEL_DEFQ_GAMES, mode: SEL_DEFQ_MODE, eps: SEL_DEFQ_EPS, minHands: SEL_DEFQ_MINHANDS, minShare: SEL_DEFQ_MINSHARE,
       of: gpool.length, gatedOut: gpool.length - gated.length, measurable: usable.length, skipped: gated.length - usable.length,
       readings: gated.map(function (e) { const m = defqOf(e);
         return { score: Number(e.score.toFixed(4)), def: m.def, white: isFinite(m.whitePct) ? Number(m.whitePct.toFixed(1)) : null,

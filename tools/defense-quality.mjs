@@ -85,6 +85,10 @@ export function measureDefenseQuality(W, params, opts) {
   const EK = o.epsk == null ? 5 : Number(o.epsk);
   const EM = o.epsmode || 'soft', TEMP = o.temp == null ? 0.15 : Number(o.temp), MODE = o.mode || 'multi';
   const MINH = o.minHands == null ? 30 : Number(o.minHands);
+  /* 11-09 用户裁定（「防御可以少一点，不一定非要 30%，防御太多了也不太行，不过 1% 确实太少了」）：
+   *   **量纲地板**。白防率是比值 ⇒ 防御手数越少、白防率越容易低，只定绝对手数（minHands=30）挡不住
+   *   「几乎不防御」的包（51 手 / 防御占比 1% 那种照样过线）。默认 0 ⇒ 与历史读数逐位不变。 */
+  const MINS = o.minShare == null ? 0 : Number(o.minShare);
   const isDef = function (k) { const d = R.byKey[k]; return !!(d && d.cat === R.CAT.DEFENSE && d.target === 'self'); };
   const isCardHit = function (e, pid) { return e.type === 'damage' && e.to === pid && e.source != null && e.source !== pid && !!R.byKey[e.via]; };
   const out = { games: G, acts: 0, def: 0, eff: 0, part: 0, idle: 0, afterHit: 0, events: 0, defRounds: 0, defHit: 0, otherRounds: 0, otherHit: 0 };
@@ -135,7 +139,9 @@ export function measureDefenseQuality(W, params, opts) {
   const oh = out.otherRounds ? out.otherHit / out.otherRounds : NaN;
   out.hitWhileDef = dh; out.hitWhenNotDef = oh;
   out.placeboRatio = (isFinite(dh) && isFinite(oh) && oh > 0) ? dh / oh : NaN;
-  out.measurable = q.n >= MINH;
+  out.share = out.acts ? out.def / out.acts : 0;   // 防御手 / 总出手（量纲地板的分子·分母）
+  out.minShare = MINS;
+  out.measurable = q.n >= MINH && out.share >= MINS;
   out.cal = '攒钱者（seat0 永远 ジ + 其余 ' + (N - 1) + ' 席被评包）· ' + MODE + ' · ε=' + EPS + '/' + EM + ' k=' + EK +
     ' · temp ' + TEMP + ' · ' + G + ' 局 · seed ' + SEED + ' · 最小手数门 ' + MINH;
   if (!out.events) out.err = '整批 0 事件 ⇒ 仪器没接上，不许当"防得准"读';
