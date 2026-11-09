@@ -14,8 +14,9 @@
    "bai": 0,
    "eff": 0,
    "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "defAfterHit": 0,
+   "dmgTaken": 20,
+   "deaths": 4,
    "games": 4,
    "onUser": 4
   },
@@ -31,11 +32,12 @@
     "snipe": 1
    },
    "def": 19,
-   "bai": 18,
+   "bai": 17,
    "eff": 1,
-   "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "pen": 1,
+   "defAfterHit": 1,
+   "dmgTaken": 10,
+   "deaths": 2,
    "games": 2,
    "onUser": 1
   },
@@ -54,8 +56,9 @@
    "bai": 0,
    "eff": 0,
    "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "defAfterHit": 0,
+   "dmgTaken": 21,
+   "deaths": 4,
    "games": 4,
    "onUser": 3
   },
@@ -73,11 +76,12 @@
     "holo": 1
    },
    "def": 37,
-   "bai": 34,
+   "bai": 33,
    "eff": 3,
-   "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "pen": 1,
+   "defAfterHit": 5,
+   "dmgTaken": 16,
+   "deaths": 1,
    "games": 4,
    "onUser": 5
   },
@@ -94,8 +98,9 @@
    "bai": 12,
    "eff": 4,
    "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "defAfterHit": 2,
+   "dmgTaken": 25,
+   "deaths": 5,
    "games": 5,
    "onUser": 9
   },
@@ -111,10 +116,11 @@
    },
    "def": 41,
    "bai": 38,
-   "eff": 3,
-   "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "eff": 2,
+   "pen": 1,
+   "defAfterHit": 2,
+   "dmgTaken": 19,
+   "deaths": 3,
    "games": 4,
    "onUser": 3
   },
@@ -132,10 +138,11 @@
    },
    "def": 36,
    "bai": 33,
-   "eff": 3,
-   "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "eff": 2,
+   "pen": 1,
+   "defAfterHit": 1,
+   "dmgTaken": 25,
+   "deaths": 5,
    "games": 5,
    "onUser": 3
   },
@@ -152,11 +159,12 @@
     "holo": 1
    },
    "def": 36,
-   "bai": 30,
-   "eff": 6,
-   "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "bai": 29,
+   "eff": 4,
+   "pen": 3,
+   "defAfterHit": 2,
+   "dmgTaken": 17,
+   "deaths": 3,
    "games": 3,
    "onUser": 4
   },
@@ -174,8 +182,9 @@
    "bai": 0,
    "eff": 0,
    "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "defAfterHit": 0,
+   "dmgTaken": 11,
+   "deaths": 2,
    "games": 2
   },
   "COMBO-s13": {
@@ -192,8 +201,9 @@
    "bai": 3,
    "eff": 0,
    "pen": 0,
-   "dmgTaken": 0,
-   "deaths": 0,
+   "defAfterHit": 0,
+   "dmgTaken": 12,
+   "deaths": 2,
    "games": 2,
    "onUser": 5
   }
@@ -215,7 +225,7 @@
   "bai": 0,
   "eff": 0,
   "pen": 0,
-  "dmgTaken": 0
+  "dmgTaken": 32
  },
  "games": [
   {
