@@ -1,0 +1,83 @@
+{
+ "base": 13,
+ "start": "scratch/obs4/KDO5C.bak",
+ "rounds": 2,
+ "branches": 3,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB2-R2S103437527.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB2-R1S773345716.js",
+   "champMean": 0.08904999999999999,
+   "pool": [
+    {
+     "label": "S773345716",
+     "pack": "docs/artifacts/night-adapt/MSB2-R1S773345716.js",
+     "mean": 0.08904999999999999,
+     "min": 0.0175
+    },
+    {
+     "label": "S1216168629",
+     "pack": "docs/artifacts/night-adapt/MSB2-R1S1216168629.js",
+     "mean": 0.0361,
+     "min": -0.0429
+    },
+    {
+     "label": "冠军",
+     "pack": "scratch/obs4/KDO5C.bak",
+     "mean": 0.01425,
+     "min": -0.0571
+    },
+    {
+     "label": "S151592686",
+     "pack": "docs/artifacts/night-adapt/MSB2-R1S151592686.js",
+     "mean": 0.01405,
+     "min": -0.0571
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB2-R1S773345716.js",
+    "docs/artifacts/night-adapt/MSB2-R1S773345716.js",
+    "docs/artifacts/night-adapt/MSB2-R1S1216168629.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB2-R2S103437527.js",
+   "champMean": 0.2306,
+   "pool": [
+    {
+     "label": "S103437527",
+     "pack": "docs/artifacts/night-adapt/MSB2-R2S103437527.js",
+     "mean": 0.2306,
+     "min": 0.0871
+    },
+    {
+     "label": "S78964838",
+     "pack": "docs/artifacts/night-adapt/MSB2-R2S78964838.js",
+     "mean": 0.16065000000000002,
+     "min": 0.0429
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB2-R1S773345716.js",
+     "mean": 0.08904999999999999,
+     "min": 0.0175
+    },
+    {
+     "label": "S14546465",
+     "pack": "docs/artifacts/night-adapt/MSB2-R2S14546465.js",
+     "mean": 0.050949999999999995,
+     "min": 0.0029
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB2-R2S103437527.js",
+    "docs/artifacts/night-adapt/MSB2-R2S103437527.js",
+    "docs/artifacts/night-adapt/MSB2-R2S78964838.js"
+   ]
+  }
+ ]
+}
