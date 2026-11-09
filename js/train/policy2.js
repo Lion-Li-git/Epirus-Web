@@ -23,7 +23,13 @@
   const SEAT_IN_B = 81 + 5 + 1;            // obs3b 逐席：81 公开（14 状态+30 键身份+1 none+3 目标+30 键 bag+3 目标 bag）
   const SELF_DIM = 5 + 2 + 48 + 1;         // obs3 局面侧：G(5) ‖ 私有(2) ‖ 序列(48) ‖ 全场合计(1，代 2 删了 pool.count)
   const SELF_DIM_B = 5 + 2 + 78 + 1;       // obs3b 局面侧：序列 78 = 32 Q.seq + 30 Q.bag（自身键 bag）+ 16 Q.out
-  const DOF = { obs3: 208, obs3b: 415 };   // 观测面总维（与训练侧 obs3.dims(R, ver) 同账，由 browser-parity 当场红）
+  const DOF = { obs3: 208, obs3b: 415, obs4: 292 };   // 观测面总维（与训练侧 obs3.dims(R, ver) 同账，由 browser-parity 当场红）
+  /* ⚑ obs4（11-10 深夜 · ZCode · 用户原则「正交维度信息全覆盖 + 不再因可变人数平均化」）：
+   *   固定 8 槽（slot = 座位 pid，每局随机指派 ⇒ 槽位身份不是脚本指纹）+ alive 位，**无 mean/max 池化**——
+   *   每个席位每一维都被直接读到，平均化从结构上不可能发生。对手侧**不给精确键**（断指纹通道），
+   *   改给风格不变量 + 威胁计数；候选侧保留精确键（「我要出什么」必须知道）。 */
+  const SEAT_IN_4 = 35;                    // obs4 逐席：29 公开（14 状态+1 alive+5 风格+2 穿透+3 目标+4 计数）‖ 5 关系 ‖ 1 isSelf
+  const SELF_DIM_4 = 5 + 2 + 48 + 1 + 4;   // obs4 局面侧：G5 ‖ 私有2 ‖ 序列48（类+果，无自身键 bag）‖ 合计1 ‖ 局面比较4
   const CAND_BASE = 30;                    // obs3 候选侧基础段（代 2 删了恒零的 `tgt.none`）
   const POOL_BLOCKS = 3;                   // h_self ‖ mean ‖ max
   const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
@@ -64,13 +70,41 @@
     }
     return head.concat(lsKey, [p.lastSkill ? 0 : 1], tail, bag, tbag);
   }
+  /* obs4 逐席公开段（29 维）：状态14 + alive1 + 风格5 + 穿透2 + 目标3 + 计数4 —— **无精确键**（断脚本指纹）。
+   *   已淘汰席位全零（alive 位 0）⇒ 槽位有牙只对活人。 */
+  function seatVec4(p, mePid, modeHp, R, recent) {
+    const N4 = 29;
+    if (!(p.hp > 0)) return new Array(N4).fill(0);
+    const st = p.stickers || [];
+    const head = [
+      Math.max(0, p.hp) / modeHp, Math.min(p.ep, 12) / 12,
+      Math.min(p.ringStreak || 0, 3) / 3, Math.min(p.cannonCount || 0, 9) / 9,
+      Math.min(p.rodGuard || 0, 3) / 3, Math.min(p.mineTurns || 0, 3) / 3,
+      p.baguaExtra ? 1 : 0, p.fireWeakNow ? 1 : 0,
+      p.tauntActive ? 1 : 0, p.nightmare ? 1 : 0, p.vampire ? 1 : 0, p.infiniteEnergy ? 1 : 0,
+      Math.min(st.length, 4) / 4, Math.min(st.reduce((a, s) => Math.max(a, (s && s.age) || 0), 0), 4) / 4,
+    ];
+    const def = p.lastSkill && R.byKey[p.lastSkill] ? R.byKey[p.lastSkill] : null;
+    const cat = def ? def.cat : null;
+    const ci = SKILL_CLASS.indexOf(cat);
+    const rec = recent && recent.get(p.id);
+    let streakDef = 0;
+    if (rec && rec.keys) for (const k of rec.keys) { const d = R.byKey[k]; if (d && d.cat === 'defense') streakDef++; else break; }
+    const hasBead = ((p.elec || 0) > 0 || (p.boom || 0) > 0) ? 1 : 0;
+    return head.concat([1],
+      [ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0, p.lastSkill ? 0 : 1],
+      [def && def.pierce && def.pierce.defense ? 1 : 0, def && def.pierce && def.pierce.reflect ? 1 : 0],
+      [p.lastTarget === p.id ? 1 : 0, (mePid >= 0 && p.lastTarget === mePid) ? 1 : 0,
+        (p.lastTarget != null && p.lastTarget !== p.id && p.lastTarget !== mePid) ? 1 : 0],
+      [rec ? rec.tgt[1] : 0, rec ? Math.min(rec.cnt || 0, 4) / 4 : 0, Math.min(streakDef, 4) / 4, hasBead]);
+  }
   /* 最近 K 回合的键/目标 bag（与 obs3.recentAll 同源：一次反扫、2^-age 衰减、/1.875；依赖 action 事件带 target） */
   function recentAll(state, R, ids, mePid, K) {
     const BAG_NORM = 1.875;
     const ev = state.events || [];
     const need = new Map(); for (const id of ids) need.set(id, K);
-    const bag = new Map(), tgt = new Map(), age = new Map();
-    for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); }
+    const bag = new Map(), tgt = new Map(), age = new Map(), keysSeq = new Map();
+    for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); keysSeq.set(id, []); }
     for (let i = ev.length - 1; i >= 0; i--) {
       let left = 0; for (const id of ids) left += need.get(id) || 0;
       if (!left) break;
@@ -84,9 +118,10 @@
       else if (e.target != null && e.target !== e.pid) tg[2] += w;
       need.set(e.pid, need.get(e.pid) - 1);
       age.set(e.pid, a + 1);
+      const ks = keysSeq.get(e.pid); ks.push(e.key); if (ks.length > K) ks.length = K;   // 反向扫描 ⇒ keys[0] = 最近一手
     }
     const out = new Map();
-    for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id) });
+    for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id), keys: keysSeq.get(id) || [], cnt: 4 - (need.get(id) || 0) });
     return out;
   }
 
@@ -94,6 +129,7 @@
   function scene(W, state, pid, ver) {
     const R = W.EpirusRules;
     const b = ver === 'obs3b';
+    const v4 = ver === 'obs4';
     const me = state.p[pid];
     const modeHp = (state.mode && state.mode.hp) || 3;
     const maxR = (state.mode && state.mode.maxRounds) || R.MAX_ROUNDS || 60;
@@ -103,12 +139,24 @@
     const g = [state.n / 10, alive.length / 10, modeHp / 5, Math.min(1, state.round / maxR),
       sd > 0 ? Math.min(1, state.round / sd) : 0];
     const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
-    const recentMap = b ? recentAll(state, R, alive.map((q) => q.id), pid, 4) : null;
+    /* obs4：全席位进 recent（含已淘汰 ⇒ 槽位恒零），威胁计数才有来源 */
+    const recentMap = (b || v4) ? recentAll(state, R, (v4 ? state.p.map((q) => q.id) : alive.map((q) => q.id)), pid, 4) : null;
+    /* obs4 局面比较 4 维：我的排名/8 ‖ 与领先者血差（clamp±1）‖ 存活总血比 ‖ 淘汰数/8 —— 场B「该收尾了」的输入依据 */
+    let sit = null;
+    if (v4) {
+      const al = alive.map((q) => q.hp);
+      const lead = al.length ? Math.max.apply(null, al) : 0;
+      sit = [(al.filter((h2) => h2 > me.hp).length + 1) / 8,
+        Math.max(-1, Math.min(1, (me.hp - lead) / modeHp)),
+        al.reduce((a, c) => a + c, 0) / Math.max(1, al.length * modeHp),
+        (state.n - alive.length) / 8];
+    }
     const seats = [];
     let sumSt = 0;
-    for (const q of alive) {
+    const seatList = v4 ? state.p : alive;
+    for (const q of seatList) {
       const rel = [0, 0, 0, 0, 0];
-      if (q.id !== pid) {
+      if (q.id !== pid && q.hp > 0) {
         if ((me.tauntBy || []).indexOf(q.id) >= 0) rel[0] = 1;
         if ((q.tauntBy || []).indexOf(pid) >= 0) rel[1] = 1;
         if ((me.chains || []).indexOf(q.id) >= 0) rel[2] = 1;
@@ -116,10 +164,10 @@
         if (q.lastTarget === pid) rel[4] = 1;
         sumSt += (q.stickers || []).length;
       }
-      seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R, b, recentMap), rel, isSelf: q.id === pid ? 1 : 0 });
+      seats.push({ id: q.id, public: v4 ? seatVec4(q, pid, modeHp, R, recentMap) : seatVec(q, pid, modeHp, R, b, recentMap), rel, isSelf: q.id === pid ? 1 : 0 });
     }
     const sums = [Math.min(sumSt, 12) / 12];
-    return { R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R, ver) };
+    return { R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, sit, seq: selfSeq(state, pid, R, ver) };
   }
 
   /* 自己最近 K=4 次出手：类别 ‖ 语义家族 ‖（obs3b：键身份 30，块连续）‖ 结果类 */
@@ -216,13 +264,15 @@
   function layoutOfPack(o, skills) {
     const d = o.dims;
     const isB = d.input === 'obs3b';
+    const is4 = d.input === 'obs4';
     /* 代 3：`keySplit` ⇒ 键层按决策键分组（charge 的 elec/boom 上提到键层）。DK 住在 forwardCands 里（那里有 R），
      *   与 arch2 同式；两边不一致会被 selftest3 腿 E（镜像 parity）+ browser-parity 当场红，不靠人记。 */
     const keySplit = (o.dims.keySplit || 0) > 0 ? 1 : 0;
     const L = { keySplit,
       input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, tinterK: d.tinter || 0, skills,
-      seatIn: isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: isB ? SELF_DIM_B : SELF_DIM, poolN: POOL_BLOCKS,
-      pubN: isB ? 81 : 22,
+      seatIn: is4 ? SEAT_IN_4 : isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: is4 ? SELF_DIM_4 : isB ? SELF_DIM_B : SELF_DIM,
+      poolN: is4 ? 8 : POOL_BLOCKS,                                       /* obs4：池化块 = **8 个槽位**（无 mean/max） */
+      pubN: is4 ? 29 : isB ? 81 : 22,
     };
     L.ctxDim = L.selfDim + L.poolN * L.seatH;
     L.candIn = L.hid + L.actH + L.seatH * 2;               // h_t1 ⊕ h_t2
@@ -257,7 +307,7 @@
     if (o.v !== V_GEN3) return { ok: false, reason: 'version', got: o.v, want: V_GEN3 };
     if (!o.dims) return { ok: false, reason: 'no-dims' };
     if (o.dims.gen !== GEN) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN };
-    if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b' };
+    if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b' && o.dims.input !== 'obs4') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b|obs4' };
     const skills = R.skills.length;
     const L = layoutOfPack(o, skills);
     const wantDof = DOF[o.dims.input] || 208;
@@ -323,10 +373,11 @@
 
     const svBuf = new Float64Array(L.seatIn);
     const enc = new Map();
+    const v4 = L.input === 'obs4';
     const mean = new Float64Array(L.seatH), mx = new Float64Array(L.seatH);
     const zeroSeat = new Float64Array(L.seatH);
     let hSelf = zeroSeat, poolN = 0;
-    const PUBN = L.pubN;                      /* obs3=22 ‖ obs3b=81（席位公开段宽，随面走） */
+    const PUBN = L.pubN;                      /* obs3=22 ‖ obs3b=81 ‖ obs4=29（席位公开段宽，随面走） */
     /* 梯度旁路（ZCode · 10-31）：wantTape=1 捎反传输入，与 arch2 forwardObs3 同位同序（selftest3 parity 腿钉） */
     const TP = (opts2 && opts2.wantTape) ? { svs: [], afs: [], t1: [], t2: [], keys: [], xin: null } : null;
     for (const s of sc.seats) {
@@ -339,12 +390,17 @@
       encode(params, svBuf, L.seatIn, L.seatH, WS, seatBias, e);
       enc.set(s.id, e);
       if (TP) TP.svs.push({ id: s.id, sv: Float64Array.from(svBuf) });
-      if (s.isSelf) { hSelf = e; continue; }
-      poolN++;
-      for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
+      /* obs4：槽位即席位（scene 里按 pid 序），无池化累积 */
+      if (!v4) {
+        if (s.isSelf) { hSelf = e; continue; }
+        poolN++;
+        for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
+      }
     }
-    const kk = Math.max(1, poolN);
-    for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
+    if (!v4) {
+      const kk = Math.max(1, poolN);
+      for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
+    }
 
     const xin = new Float64Array(L.ctxDim);
     let q2 = 0;
@@ -352,9 +408,15 @@
     for (let i = 0; i < sc.priv.length; i++) xin[q2++] = sc.priv[i];
     for (let i = 0; i < sc.seq.length; i++) xin[q2++] = sc.seq[i];
     for (let i = 0; i < sc.sums.length; i++) xin[q2++] = sc.sums[i];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = hSelf[j];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = mean[j];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = mx[j];
+    if (v4) {
+      /* obs4：局面比较 4 维 + **8 个槽位嵌入**（slot = pid 0..7；空槽/已淘汰 = 零向量）——没有 mean/max */
+      for (let i = 0; i < (sc.sit || []).length; i++) xin[q2++] = sc.sit[i];
+      for (let s = 0; s < 8; s++) { const e = enc.has(s) ? enc.get(s) : zeroSeat; for (let j = 0; j < L.seatH; j++) xin[q2++] = e[j]; }
+    } else {
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = hSelf[j];
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = mean[j];
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = mx[j];
+    }
     if (q2 !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + q2 + ' 而声明 ' + L.ctxDim);
     if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, new Float64Array(L.hid));

@@ -62,9 +62,32 @@ function manifest(R, ver) {
   if (_MAN && _SK === key) return _MAN;
   _SK = key;
   const b = ver === 'obs3b' || ver === 'obs3c';
+
   const c = ver === 'obs3c';
   const m = [];
   const add = (name, block, note) => m.push({ i: m.length, name, block, note: note || '' });
+  if (ver === 'obs4') {
+    const S4 = ['hp','ep','ringStreak','cannonCount','rodGuard','mineTurns','baguaExtra','fireWeakNow','tauntActive','nightmare','vampire','infiniteEnergy','stickers','stickerMaxAge'];
+    for (let s = 0; s < 8; s++) {
+      S4.forEach((n) => add('slot' + s + '.' + n, 'S4.slot'));
+      add('slot' + s + '.alive', 'S4.slot');
+      ['style.energy','style.attack','style.defense','style.special','style.none'].forEach((n) => add('slot' + s + '.' + n, 'S4.style'));
+      ['pierceDef','pierceReflect'].forEach((n) => add('slot' + s + '.' + n, 'S4.style'));
+      ['tgtSelf','tgtMe','tgtOther'].forEach((n) => add('slot' + s + '.' + n, 'S4.tgt'));
+      ['hitsOnMe','actsLast4','streakDef','hasBead'].forEach((n) => add('slot' + s + '.' + n, 'S4.count'));
+    }
+    ['n','alive','modeHp','round','shrink'].forEach((n) => add(n, 'G4'));
+    ['ownElec','ownBoom'].forEach((n) => add(n, 'S4.private'));
+    for (let k = 0; k < 4; k++) {
+      ['energy','attack','defense','special'].forEach((n) => add('seq' + k + '.cat.' + n, 'Q4.seq'));
+      ['atk','guard','thunder','reflectable'].forEach((n) => add('seq' + k + '.fam.' + n, 'Q4.seq'));
+    }
+    for (let k = 0; k < 4; k++) ['landed','blocked','nullified','none'].forEach((n) => add('seq' + k + '.out.' + n, 'Q4.out'));
+    add('sumStickers', 'S4.add');
+    ['myRank','leaderGap','totalHpRatio','deadCount'].forEach((n) => add(n, 'S4.sit'));
+    return m;   // 8×29 + (5+2+48+1+4) = 292
+  }
+
 
   ['n', 'alive', 'modeHp', 'round', 'shrink'].forEach((n) => add(n, 'G'));
   const SEAT = ['hp', 'ep', 'ringStreak', 'cannonCount', 'rodGuard', 'mineTurns', 'baguaExtra', 'fireWeakNow',
@@ -134,6 +157,32 @@ export function seqLayout(R, ver) {
 /* ---- 席位向量（obs3=22 维 / obs3b=81 维；**公开可读**；mePid<0 ⇒ lastTgtMe 自然全 0）---- */
 const NMAX = 10;              /* 2.0 的目标上限（用户 2.0 目标里写死 2–10 人）⇒ 人数族一律 /10，值域 ⊆ [0,1] */
 function seatVec(p, mePid, modeHp, R, ver, recent) {
+  if (ver === 'obs4') {
+    const N4 = 29;
+    if (!(p.hp > 0)) return new Array(N4).fill(0);   // 已淘汰席位全零（alive 位 0）
+    const st4 = (p.stickers || []);
+    const head4 = [
+      Math.max(0, p.hp) / modeHp, Math.min(p.ep, 12) / 12,
+      Math.min(p.ringStreak || 0, 3) / 3, Math.min(p.cannonCount || 0, 9) / 9,
+      Math.min(p.rodGuard || 0, 3) / 3, Math.min(p.mineTurns || 0, 3) / 3,
+      p.baguaExtra ? 1 : 0, p.fireWeakNow ? 1 : 0,
+      p.tauntActive ? 1 : 0, p.nightmare ? 1 : 0, p.vampire ? 1 : 0, p.infiniteEnergy ? 1 : 0,
+      Math.min(st4.length, 4) / 4, Math.min(st4.reduce((a, s2) => Math.max(a, (s2 && s2.age) || 0), 0), 4) / 4,
+    ];
+    const def4 = p.lastSkill && R.byKey[p.lastSkill] ? R.byKey[p.lastSkill] : null;
+    const ci4 = SKILL_CLASS.indexOf(def4 ? def4.cat : null);
+    const rec4 = recent && recent.get(p.id);
+    let sd4 = 0;
+    if (rec4 && rec4.keys) for (const k of rec4.keys) { const dd = R.byKey[k]; if (dd && dd.cat === 'defense') sd4++; else break; }
+    return head4.concat([1],
+      [ci4 === 0 ? 1 : 0, ci4 === 1 ? 1 : 0, ci4 === 2 ? 1 : 0, ci4 === 3 ? 1 : 0, p.lastSkill ? 0 : 1],
+      [def4 && def4.pierce && def4.pierce.defense ? 1 : 0, def4 && def4.pierce && def4.pierce.reflect ? 1 : 0],
+      [p.lastTarget === p.id ? 1 : 0, (mePid >= 0 && p.lastTarget === mePid) ? 1 : 0,
+        (p.lastTarget != null && p.lastTarget !== p.id && p.lastTarget !== mePid) ? 1 : 0],
+      [rec4 ? rec4.tgt[1] : 0, rec4 ? Math.min(rec4.cnt || 0, 4) / 4 : 0, Math.min(sd4, 4) / 4,
+        ((p.elec || 0) > 0 || (p.boom || 0) > 0) ? 1 : 0]);
+  }
+
   const b = ver === 'obs3b' || ver === 'obs3c';
   const c = ver === 'obs3c';
   const st = (p.stickers || []);
@@ -310,12 +359,18 @@ export function scene(W, state, pid, ver) {
   const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
   const b = ver === 'obs3b' || ver === 'obs3c';
   /* ⚑ obs3b/obs3c：最近 K=4 回合的键/目标 bag——一次反扫共用给所有活席（含自己：自己的 bag 也是"我最近打谁"） */
-  const recentMap = b ? recentAll(state, R, alive.map((q) => q.id), pid, BAG_K) : null;
+  const v4 = ver === 'obs4';   /* obs4：全席位进 recent（含已淘汰）；sit = 局面比较 4 维 */
+  let sit = null;
+  if (v4) { const al = alive.map((q) => q.hp); const lead = al.length ? Math.max.apply(null, al) : 0;
+    sit = [(al.filter((h2) => h2 > me.hp).length + 1) / 8, Math.max(-1, Math.min(1, (me.hp - lead) / modeHp)),
+      al.reduce((a, c) => a + c, 0) / Math.max(1, al.length * modeHp), (state.n - alive.length) / 8]; }
+  const recentMap = (b || v4) ? recentAll(state, R, (v4 ? state.p.map((q) => q.id) : alive.map((q) => q.id)), pid, BAG_K) : null;
   const seats = [];
   let sumSt = 0;
-  for (const q of alive) {
+  const seatList = v4 ? state.p : alive;
+  for (const q of seatList) {
     const rel = [0, 0, 0, 0, 0];
-    if (q.id !== pid) {
+    if (q.id !== pid && q.hp > 0) {
       if ((me.tauntBy || []).indexOf(q.id) >= 0) rel[0] = 1;
       if ((q.tauntBy || []).indexOf(pid) >= 0) rel[1] = 1;
       if ((me.chains || []).indexOf(q.id) >= 0) rel[2] = 1;
@@ -326,8 +381,8 @@ export function scene(W, state, pid, ver) {
     seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R, ver, recentMap), rel, isSelf: q.id === pid ? 1 : 0, p: q });
   }
   const sums = [Math.min(sumSt, 12) / 12];
-  const seatN = ver === 'obs3c' ? SEAT_NC : (b ? SEAT_NB : SEAT_N);
-  return { W, R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R, ver), SEAT_W: seatN + 6, seatN, ver };
+  const seatN = ver === 'obs3c' ? SEAT_NC : (b ? SEAT_NB : ver === 'obs4' ? 29 : SEAT_N);
+  return { W, R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, sit, seq: selfSeq(state, pid, R, ver), SEAT_W: seatN + 6, seatN, ver };
 }
 /** 由 scene 派生一个候选的部件（目标走 h_t ⇒ 这里**不再**给目标标量，除非装配平面向量） */
 export function candOf(sc, cand) {
