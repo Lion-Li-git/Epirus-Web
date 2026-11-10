@@ -214,12 +214,12 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 - `EPIRUS_CARD_ABORT=<K>` + `EPIRUS_CARD_MIN=<N>` + `EPIRUS_CARD_ABORT_GAMES=20`：**训练期**连续 K 代 top-1 用卡数 < N ⇒ `exit 13`，不写产物。它用与 `card-usage` 同一把 `cardUsageProfile`，只量 top-1；默认关；
 - 注意：`CARD_ABORT` 杀的是“当前 top-1”；若要杀“种群中位/冠军线”，要先改判据主语，别把 top-1 当全部。
 
-### 当前读数（2026-11-10）
+### 当前读数（2026-11-11 夜更新）
 
-- MSB5：3 臂 × 200 代，C = 0.0062 / 0.0268 / 0.0268，冠军 MSB4 C = 0.0285；无臂过 `margin=0.03`，冠军保留。
-- 2P multi 最好臂 −0.0800（冠军 −0.1419），2P long +0.1558（冠军 +0.0184）；但 5P multi 回退 5.1pt，净 C 不涨。
-- 用卡：冠军 2 张（ji+gun），S808 4 张（ji/snipe/gun/sword），防御均 0%。
-- 2P 页面仍走 v7 池；2.0 统一冠军尚在训练。详细账见 `docs/research/STATUS-2026-11-10-ds.md` / `PLAN-2026-11-10-afternoon-ds.md`。
+- **C 尺换代链（msbatch2 轮换 + 2P 谱系晋升，全程 multi/long 双尺重测）**：KDO5C(0.014) → S916R2B(0.0668) → **MSB6-R2S501866988(0.1049)** → charge/bagua 定向线 → **MSB10-R1S1149480262(0.2002，bagua 线终局冠军)**。
+- **过 0.079 验收线的 obs5 包一晚 9 枚**（0.08-0.20 带），性格各异：6 卡防御 31%、5 卡防御 30%、9 卡广谱（mine/ring/proto 新技能）……详见 docs/research/PLAN-2026-11-11-skill-coverage-zcode.md。
+- ⚠ **墙化警告**：charge 线 R2 的 0.3151 是纯反射墙（reflect 86%）——C 尺（可farm A + 陈旧 B 夹具）在系统选拔墙；反墙席已上训练桌（MSB11 在飞），**反墙能力应入池必量**。
+- B 轴夹具重测结论：夹具是双向扭曲（见 FINDING-2026-11-11-baxis-rebretest-zcode.md），滚动夹具 + champ 戳 + 换夹具换列族要三件一起做。
 
 ## 已知限制
 
