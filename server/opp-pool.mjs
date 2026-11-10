@@ -15,6 +15,8 @@
 export const OPP_SPECS = [
   { name: 'random', fn: 'pickRandom' },
   { name: 'balanced', fn: 'pickBalanced' },
+  /* 11-10（考卷 v3）：谨慎农民 —— 攒钱为主、上一回合被打就 guard */
+  { name: 'cautious', fn: 'pickCautiousFarmer' },
   { name: 'aggro', fn: 'pickAggro' },
   { name: 'defend', fn: 'pickDefend' },
   { name: 'wall', fn: 'pickWall' },
@@ -149,11 +151,16 @@ export const EXAM_POOL_V1 = EXAM_POOL.map(function (e) {
   const b = EXAM_V1_BACK[e.name];
   return b ? { name: b.name, axis: b.axis, minN: e.minN } : e;
 });
-export const EXAM_POOL_VERSIONS = ['v1', 'v2'];
+/* v3（11-10）：在 v2 的 28 席上**追加** 1 席谨慎农民（econ 角色）⇒ 29 席。
+ *   为什么单独版本化：D235 锚门钉死 EXAM_POOL 序列哈希；直接改 v2 会让 907 枚历史读数在无人察觉的情况下换尺。
+ *   v1/v2 逐位不变 ⇒ 历史读数仍可复算。 */
+export const EXAM_POOL_V3 = EXAM_POOL.concat([{ name: 'cautious', axis: 'econ', minN: 2 }]);
+export const EXAM_POOL_VERSIONS = ['v1', 'v2', 'v3'];
 export function examPool(version) {
   const v = (version == null || version === '') ? 'v2' : String(version);
   if (v === 'v2') return EXAM_POOL;
   if (v === 'v1') return EXAM_POOL_V1;
+  if (v === 'v3') return EXAM_POOL_V3;
   throw new Error('examPool: --expool 只认 ' + EXAM_POOL_VERSIONS.join('/') + '，收到 ' + JSON.stringify(version));
 }
 /* 名字 → 函数名 的查表（单一来源 OPP_SPECS；查不到 ⇒ 抛错，不静默跳过）。 */

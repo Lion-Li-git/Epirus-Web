@@ -27,7 +27,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { OPP_SPECS, examPool } from '../server/opp-pool.mjs';
 import { createHash } from 'node:crypto';
-import { planN } from './exam-pool.mjs';
+import { planN, planN3 } from './exam-pool.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
@@ -37,7 +37,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool', 'plan'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -123,7 +123,7 @@ const SUBJ = subjectSel();
 function evalAxis(champN) {
 const out = {};
 for (const n of NS) {
-  const plan = planN(n, R, SEED, POOL);
+  const plan = (FLAG.plan === 'v3') ? planN3(n, R, SEED, POOL) : planN(n, R, SEED, POOL);
   let first = 0;
   const seatFirst = new Array(n).fill(0), seatGames = new Array(n).fill(0);
   for (let j = 0; j < plan.length; j++) {

@@ -19,7 +19,7 @@ import { EXAM_POOL_VERSIONS } from '../server/opp-pool.mjs';   // 考卷池版�
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier', 'exam', 'champ', 'champn', 'expool'], 'exam-4n-full');
+rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier', 'exam', 'champ', 'champn', 'expool', 'plan'], 'exam-4n-full');
 
 const OUT = join(ROOT, 'champion-map', arg('out', ''));
 if (!arg('out', '')) { console.error('⛔ 必须 --out=<表>（四格卷读数落盘处）'); process.exit(2); }
@@ -83,6 +83,8 @@ if (CHAMP_L) a.push('--champ=' + CHAMP_L);
 const CHAMP_N_ARG = arg('champn', '');
 if (CHAMP_N_ARG) a.push('--champn=' + CHAMP_N_ARG);
   if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER);
+const PLAN_V = arg('plan', '');   /* 11-10：v3 分层抽席（不传 = 旧 planN，逐位不变） */
+if (PLAN_V) a.push('--plan=' + PLAN_V);
   return new Promise((res) => {
     const t0 = Date.now();
     execFile(process.execPath, a, { cwd: ROOT, maxBuffer: 1 << 26, timeout: 600000 },
