@@ -46,7 +46,27 @@ WSEL9（bagua 11/gun 13）、KDG-B（sword 17/guard 10.7）。
 
 `cov-contract.tsv`（本尺）与 `cov-{s916,msb,ref}.tsv`（long/30 普查尺）**是两把尺**，引用时注明。
 
-## 二、MSB8 定向轮设计（每技能一臂，cohort 研究）
+## 二′、MSB8 判定表（03:0x 收臂，合同口径卡谱）
+
+| 臂 | steering | C | 卡谱（multi/60） | 判定 |
+|---|---|---:|---|---|
+| **bagua** | WSEL9 课程 | **0.0800 ✓过线** | **用卡 9**：ji39/reflect37/mine7/gun9/guard2/proto2/ring1/bagua1，防御 42% | **命中**——第一枚用卡 ≥9 的 obs5 包；mine/ring/proto 全是新技能（bagua 本身只 1%，课程带的不是 bagua 是 WSEL9 的广度） |
+| charge | SEQ_W=2 + G5C 课程 | **0.1383** ✓换代 | 用卡 5，reflect 29/防御 30 | 意外大赢——charge 没抬，最优点移到 reflect/防御带（归因分解 MSB9-seq/g5c 在飞） |
+| sword | STYLE_TABLE=sword 0.3 | 0.0466 | sword 0.1%→**21%**，用卡 4 | 技能命中、C 付账 ⇒ 风格桌是"单技能雕刻刀"，不是免费午餐 |
+| guard | GUARD_HIT_W + KDG-B 课程 | 0.0469 | guard 0%（没抬） | 否证（此剂量） |
+| reflect | REFLECT_W + G5J 课程 | 0.0398 | reflect 4%（没抬） | 否证（此剂量） |
+| bigT | BIGCARD_W | −0.0027 | — | 否证 |
+| holo | HPSEED + CTRL2 课程 | −0.0099 | — | 否证 |
+| railgun | STYLE_TABLE=railgun 0.3 | exit=9 | 无产物（§E589：收敛回已有权重） | 否证 |
+
+**过 0.079 线的 obs5 包今晚 4 枚**：MSB8-charge 0.1383 / MSB6-R2S501866988 0.1049 / MSB6-R2S297540638 0.1032 / MSB8-bagua 0.0800——四枚四种性格（reflect 防御带 / 三件全开均衡 / 防御 24% / 9 卡广谱）。**种群在形成**。
+
+steering 方法学结论（给 recipes 用）：**课程席 steering > 奖励权重 steering**（bagua 命中 vs guard/reflect 双否证）；
+风格桌是单技能雕刻刀（sword 21% 但 C −0.03 代价）；exit=9 型否证（railgun）说明 STYLE_TABLE 全量桌+收敛守卫会
+把无效 steering 拒之门外——省了算力，但也意味着"纯风格桌训不出新东西"的假设未被测试（它连包都没产出）。
+
+
+## 二、设计（发射时原文，存档）
 
 驱动器机制：branches 共享一份配方 ⇒ 每技能一个**独立驱动器**（--branches=1 --arm=MSB8-<技能>，
 state/log 天然分家），8 个并行；起点 = 当时的 C 冠军；base=501..508；rounds=1 × 200 代；
