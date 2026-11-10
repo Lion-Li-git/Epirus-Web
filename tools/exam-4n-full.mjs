@@ -64,7 +64,8 @@ if (ONLY_FILE) {
 }
 if (existsSync(OUT)) { console.error('⛔ ' + OUT + ' 已存在 ⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
 
-const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'sec'];
+/* 11-11：行里原先漏写 pool ⇒ 19 格对 20 列表头，sec 串进 pool 列（所有历史批表都带着这个错位）；顺手补 champ 列（B 夹具戳——不同夹具的 B 读数不许混一张表，FINDING-2026-11-11 §三）。 */
+const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
 writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
 
 function one(id) {
@@ -108,7 +109,7 @@ async function worker() {
     done++;
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
-      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.sec];
+      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.kv.pool, r.kv.champ, r.sec];
     appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 25 === 0) console.error('  … ' + done + '/' + ids.length + '（失败 ' + fail + '）');
   }

@@ -38,6 +38,12 @@ for (const r of bt.slice(1)) {
 }
 if (seeds.size > 1 || rounds.size > 1) { console.error('⛔ 批表 seed/rounds 不齐：' + [...seeds] + ' / ' + [...rounds] + ' ⇒ 混批不许挂'); process.exit(2); }
 if (doses.size > 1) { console.error('⛔ 批表 dose 不齐：' + [...doses] + ' ⇒ 混批不许挂'); process.exit(2); }
+/* 11-11（FINDING-2026-11-11 §三）：B 族挂列必须校验夹具——同列名不同 champ 夹具 = 静默换尺。批表没 champ 列（旧表）⇒ 点名后放行（历史表只能靠人看）。 */
+if (bh.champ !== undefined) {
+  const champs = new Set(bt.slice(1).filter((r) => r[bh.id]).map((r) => r[bh.champ]));
+  if (champs.size > 1) { console.error('⛔ 批表 champ 夹具不齐：' + [...champs].join(' / ') + ' ⇒ 混夹具不许挂（换夹具 = 换尺，另起新表新列族）'); process.exit(2); }
+  if (SUF.includes('B') && [...champs][0] && [...champs][0] !== 'FAIL') console.error('[attach] B 族夹具 = ' + [...champs][0]);
+}
 if (doses.size === 1 && ![...doses][0].startsWith('page')) { console.error('⛔ 这张表的 dose=' + [...doses][0] + ' 不是页面剂量 ⇒ 该走 X 系挂列（scratch/zcode-1106/exam4-attach.mjs）'); process.exit(2); }
 console.log('批表：' + (bt.length - 1) + ' 枚 ‖ seed=' + [...seeds][0] + ' rounds=' + [...rounds][0] + ' dose=' + [...doses][0]);
 
