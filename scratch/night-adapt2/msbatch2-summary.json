@@ -1,11 +1,11 @@
 {
- "base": 303,
- "start": "docs/artifacts/night-adapt/S916-R1S1704335642.js",
- "rounds": 1,
- "branches": 12,
+ "base": 401,
+ "start": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "rounds": 2,
+ "branches": 8,
  "gens": 200,
  "margin": 0.03,
- "final": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "final": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
  "history": [
   {
    "round": 1,
@@ -13,97 +13,146 @@
    "champMean": 0.06675,
    "pool": [
     {
-     "label": "S685223462",
+     "label": "S1628871127",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S1628871127.js",
+     "mean": 0.0669825,
+     "min": 0.0191
+    },
+    {
+     "label": "冠军",
      "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
      "mean": 0.06675,
      "min": 0.0068
     },
     {
-     "label": "S1725743042",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
-     "mean": 0.04150499999999999,
-     "min": -0.0688
-    },
-    {
-     "label": "S1098066977",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
-     "mean": 0.03918,
-     "min": -0.1434
-    },
-    {
-     "label": "S1062426886",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
-     "mean": 0.029575,
-     "min": -0.0523
-    },
-    {
-     "label": "S997133553",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S997133553.js",
-     "mean": 0.019162500000000006,
-     "min": -0.1481
-    },
-    {
-     "label": "S1249867118",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1249867118.js",
-     "mean": 0.017292500000000002,
-     "min": -0.1692
-    },
-    {
-     "label": "S371963301",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S371963301.js",
-     "mean": 0.010337500000000001,
-     "min": -0.1492
-    },
-    {
-     "label": "S769889016",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S769889016.js",
-     "mean": 0.004020000000000001,
-     "min": -0.1416
-    },
-    {
-     "label": "S1408282248",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1408282248.js",
-     "mean": -0.0001299999999999999,
-     "min": -0.0738
-    },
-    {
-     "label": "S2000717743",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S2000717743.js",
-     "mean": -0.0036450000000000024,
-     "min": -0.14
-    },
-    {
      "label": "冠军",
-     "pack": "docs/artifacts/night-adapt/S916-R1S1704335642.js",
-     "mean": -0.0101725,
-     "min": -0.0505
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
     },
     {
-     "label": "S745300182",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S745300182.js",
-     "mean": -0.0324175,
-     "min": -0.205
+     "label": "S1921558624",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S1921558624.js",
+     "mean": 0.04846,
+     "min": -0.0542
     },
     {
-     "label": "S768291681",
-     "pack": "docs/artifacts/night-adapt/S916R2B-R1S768291681.js",
-     "mean": -0.04637,
-     "min": -0.1785
+     "label": "S1923454505",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S1923454505.js",
+     "mean": 0.042585000000000005,
+     "min": -0.0423
+    },
+    {
+     "label": "S949175392",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S949175392.js",
+     "mean": 0.028894999999999994,
+     "min": -0.0323
+    },
+    {
+     "label": "S1474868357",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S1474868357.js",
+     "mean": 0.020545,
+     "min": -0.2153
+    },
+    {
+     "label": "S739033611",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S739033611.js",
+     "mean": -0.011507499999999999,
+     "min": -0.1961
+    },
+    {
+     "label": "S262834093",
+     "pack": "docs/artifacts/night-adapt/MSB6-R1S262834093.js",
+     "mean": -0.0350875,
+     "min": -0.1546
     }
    ],
    "nextParents": [
+    "docs/artifacts/night-adapt/MSB6-R1S1628871127.js",
+    "docs/artifacts/night-adapt/MSB6-R1S1628871127.js",
+    "docs/artifacts/night-adapt/MSB6-R1S1628871127.js",
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
-    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js"
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+   "champMean": 0.104935,
+   "pool": [
+    {
+     "label": "S501866988",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+     "mean": 0.104935,
+     "min": 0.0457
+    },
+    {
+     "label": "S297540638",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+     "mean": 0.1031775,
+     "min": 0.0285
+    },
+    {
+     "label": "S197156432",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S197156432.js",
+     "mean": 0.07685249999999999,
+     "min": 0.0295
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "S792696",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S792696.js",
+     "mean": 0.0653575,
+     "min": 0.0069
+    },
+    {
+     "label": "S928798190",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S928798190.js",
+     "mean": 0.0488225,
+     "min": -0.1054
+    },
+    {
+     "label": "S1116161300",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1116161300.js",
+     "mean": 0.0423225,
+     "min": -0.0115
+    },
+    {
+     "label": "S1848977024",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1848977024.js",
+     "mean": 0.040255,
+     "min": -0.0865
+    },
+    {
+     "label": "S1902103616",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1902103616.js",
+     "mean": 0.0089675,
+     "min": -0.1038
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S197156432.js",
+    "docs/artifacts/night-adapt/MSB6-R2S197156432.js"
    ]
   }
  ]

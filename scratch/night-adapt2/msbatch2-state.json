@@ -6,13 +6,13 @@
  "gens": 200,
  "margin": 0.03,
  "start": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
- "champion": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "champion": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
  "champT": {
-  "mean": 0.06675,
-  "min": 0.0068,
-  "spread": 0.1893
+  "mean": 0.104935,
+  "min": 0.0457,
+  "spread": 0.18730000000000002
  },
- "seedIdx": 8,
+ "seedIdx": 16,
  "history": [
   {
    "round": 1,
@@ -83,6 +83,83 @@
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
     "docs/artifacts/night-adapt/S916R2B-R1S685223462.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+   "champMean": 0.104935,
+   "pool": [
+    {
+     "label": "S501866988",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+     "mean": 0.104935,
+     "min": 0.0457
+    },
+    {
+     "label": "S297540638",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+     "mean": 0.1031775,
+     "min": 0.0285
+    },
+    {
+     "label": "S197156432",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S197156432.js",
+     "mean": 0.07685249999999999,
+     "min": 0.0295
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "S792696",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S792696.js",
+     "mean": 0.0653575,
+     "min": 0.0069
+    },
+    {
+     "label": "S928798190",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S928798190.js",
+     "mean": 0.0488225,
+     "min": -0.1054
+    },
+    {
+     "label": "S1116161300",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1116161300.js",
+     "mean": 0.0423225,
+     "min": -0.0115
+    },
+    {
+     "label": "S1848977024",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1848977024.js",
+     "mean": 0.040255,
+     "min": -0.0865
+    },
+    {
+     "label": "S1902103616",
+     "pack": "docs/artifacts/night-adapt/MSB6-R2S1902103616.js",
+     "mean": 0.0089675,
+     "min": -0.1038
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S501866988.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S297540638.js",
+    "docs/artifacts/night-adapt/MSB6-R2S197156432.js",
+    "docs/artifacts/night-adapt/MSB6-R2S197156432.js"
    ]
   }
  ]

@@ -54,6 +54,8 @@ MSB_COURSE_PACK=scratch/ds-1109/G5J-50.js  MSB_FIT_CHAMP=scratch/ds-1109/G5C-100
 - msbatch2 的 state/summary 已按 ARM 分家（msbatch2-<ARM>-state.json），两个驱动器并行互不踩；启动配方已打进日志。
 - 判读：同 margin 换代；若 MSB7 的 C 明显高于 MSB8 同位臂 ⇒ 课程方向有效，写进 recipes。
 
+-串两个驱动器会复制出双份（state/log/产物路径三重踩）——并行驱动器必须逐个独立发射（本次 kill 重发，MSB9-seq 干净重来）。
+
 ## 四、性能与效率（用户令②③的交付）
 
 - **臂并行本来就有**（Promise.all；千问的 S916R2B 已跑过 12 臂并发）——18 核的吞吐瓶颈在**轮末重测**：4 包×2 尺串行 ≈8min/轮 ⇒ 本次改并发 ≈2min。

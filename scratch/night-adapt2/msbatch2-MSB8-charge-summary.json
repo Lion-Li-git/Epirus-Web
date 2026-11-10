@@ -1,0 +1,39 @@
+{
+ "base": 507,
+ "start": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+   "champMean": 0.13825749999999998,
+   "pool": [
+    {
+     "label": "S1861674281",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js"
+   ]
+  }
+ ]
+}

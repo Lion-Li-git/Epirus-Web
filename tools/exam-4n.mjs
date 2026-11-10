@@ -74,7 +74,10 @@ if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.
  *   obs5 时代的新冠军不在里面 ⇒ 图上 PB 靠"打旧天王"刷分。新夹具用 --champ= 显式点名（在册 id 才能用）。 */
 const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js',
   'MSB2-R1S1494663071': 'docs/artifacts/night-adapt/MSB2-R1S1494663071.js', 'MSB2-R2S103437527': 'docs/artifacts/night-adapt/MSB2-R2S103437527.js',
-  'OBS5-F-s13': 'docs/artifacts/night-adapt/OBS5-F-s13.js', 'OBS5-F-s41': 'docs/artifacts/night-adapt/OBS5-F-s41.js' };
+  'OBS5-F-s13': 'docs/artifacts/night-adapt/OBS5-F-s13.js', 'OBS5-F-s41': 'docs/artifacts/night-adapt/OBS5-F-s41.js',
+  /* 11-11 深夜：C 尺换代链的新冠军入册（MSB6-R2S501866988 C 0.1049 / MSB8-charge C 0.1383 / 前任 S916R2B 0.0668） */
+  'S916R2B-R1S685223462': 'docs/artifacts/night-adapt/S916R2B-R1S685223462.js',
+  'MSB6-R2S501866988': 'docs/artifacts/night-adapt/MSB6-R2S501866988.js', 'MSB8-charge-R1S1861674281': 'docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
