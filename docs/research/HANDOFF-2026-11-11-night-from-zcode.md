@@ -42,6 +42,17 @@ node scratch/night-adapt2/msbatch2.mjs --base=401 --start=docs/artifacts/night-a
 - 日志 `scratch/night-adapt2/msbatch2.log`；**断点**：`--resume` 读 `msbatch2-state.json`（每轮收尾写；臂内更细恢复用 `<ARM>-seg<k>.bak` 快照热启动）。
 - 预计 02:2x 收 2 轮；若第 1 轮就出 C≥0.079 的臂，按 margin 换代后第 2 轮继续。
 
+### 在飞追加：MSB7（01:12 发射，B 线课程轮）
+
+```
+MSB_COURSE_PACK=scratch/ds-1109/G5J-50.js  MSB_FIT_CHAMP=scratch/ds-1109/G5C-100.js  MSB_FIT_EVERY=2 \nnode scratch/night-adapt2/msbatch2.mjs --base=451 --start=docs/artifacts/night-adapt/S916R2B-R1S685223462.js --rounds=2 --branches=4 --gens=200 --arm=MSB7 --margin=0.03
+```
+
+- 问题 = FINDING §五：把冠军桌最强（G5J-50 C 尺 +0.54）放上课程席、G5C-100 上 fitness 席——「对着验收标准训」能否比纯轮换更快抬 C。两枚 G5 都是 v92（obs3b），policyChooserN 直接收。
+- 对照组就是 MSB6（同起点、同预算、纯轮换）——两轮同飞天然成对。
+- msbatch2 的 state/summary 已按 ARM 分家（msbatch2-<ARM>-state.json），两个驱动器并行互不踩；启动配方已打进日志。
+- 判读：同 margin 换代；若 MSB7 的 C 明显高于 MSB8 同位臂 ⇒ 课程方向有效，写进 recipes。
+
 ## 四、性能与效率（用户令②③的交付）
 
 - **臂并行本来就有**（Promise.all；千问的 S916R2B 已跑过 12 臂并发）——18 核的吞吐瓶颈在**轮末重测**：4 包×2 尺串行 ≈8min/轮 ⇒ 本次改并发 ≈2min。
@@ -55,6 +66,7 @@ node scratch/night-adapt2/msbatch2.mjs --base=401 --start=docs/artifacts/night-a
 2. **B 夹具滚动制落地**（FINDING §四.2-4）：定「当期 C 前三 + 反墙锚」名单机制 + 列族策略；这是**在册尺变更，动手前把方案给用户点头**。
 3. **evo.js 产品面/训练面物理拆分**（已研究未执行）：
    - 事实：4279 行单闭包 IIFE；产品真调的全局只有 ~8 个（pickChampion/correctedWinRate/mulberry32/setSupportPrior*/setBeliefSearch*/wrapBigTPush），Node 训练沙箱按文本装载同一文件；产品依赖训练侧的模拟核（oneGame），训练侧的奖励计数器又被 oneGameN 调用——**拆分必须经全局对象回呼重接 ~200 个调用点**。
+   - **钉面实测（01:2x）**：门体对 js/train/evo.js 的源码钉共 18 处 / 8 个部分文件（_ctx 沙箱清单 + meta-repo×4 + engine-rules×2 + engine-fuzz×1 + ship-promote×2 + ship-feas×3 + probe-libs×2 + ui-contract×2 + np-test 分类），其中相当一部分钉的是训练机器内部函数（trainChooser / mirrorHealth / epsMode soft 档）——正是要搬走的段落 ⇒ 拆分总成本 = ~200 调用点重接 + 18 处门钉逐条跟上，估 3-5 小时高风险。
    - 建议：先做「读集收缩」版——evo.js 保持单文件，但把 GA 机器（makeTrainer/step/finishStep/evalN/奖励 setter 族）标记为训练区段并从浏览器侧的死代码里确认无人调用（ui.js 已确认 0 处 makeTrainer/step）；物理拆分等有整段白班再做，拆完必须过 smoke+battle+ui-contract 三道。
 4. **旋钮 Tier2**：暗键剩 9 根（BATCH_MAX/CHROME/DEBUG_CDP/INSTR/REPO = 浏览器仪器家；SELF_TEACHER/TEACHER_GATE* = supfit-gd 一次性研究脚本家）——处置=物理删 supfit-gd 族或把 supfit-gd 转正为入口，先给方案再动。Tier1（单入口下放）与 recipes 机制照 v2 计划。
 5. **门禁分家**（v2 §三）：产品 CI 不跑训练门禁——paths 过滤 + workflow_dispatch 手动档；np 并集守卫同步。
@@ -66,6 +78,6 @@ node scratch/night-adapt2/msbatch2.mjs --base=401 --start=docs/artifacts/night-a
 - exam4-attach 的 champ 校卫对**旧表**（无 champ 列）只点名不拦——旧表混夹具风险要人肉看。
 - `training/knobs.mjs --check` 已进 CI；**改 env 读取或注解必须重生成册随改动提交**，否则 CI 红（这是故意的）。
 - promote-champion 现在是旋钮册第五入口：给它加旋钮同样要走 SELF_ENV_KEYS 注解（AGENTS.md 铁律 1）。
-- MSB6 若中途被杀：`--resume` 原样重启（base/start/形状不能变）；臂级 seg 快照在 `docs/artifacts/night-adapt/<ARM>-seg<k>.bak`（BAND_DIR 落点）。
+- MSB6 若中途被杀：`--resume` 原样重启（base/start/形状不能变）；臂级 seg 快照在 `docs/artifacts/<ARM>-seg<k>.bak`（BAND_DIR 缺省=docs/artifacts 根，不在 night-adapt/；01:2x 实测 MSB6/MSB7 各臂 seg1-2 已在落）。
 - B 重测的 N 夹具读数**不是**新在册尺——图上 P2B 还是旧夹具；对比新旧夹具读数时引用 FINDING 的表，别直接改图。
 - 时间线：本班实际开工 00:07；用户 00:0x 下令；全文书提交在 00:3x 前，搬家批 00:4x，性能批 01:0x，MSB6 01:04 发射。

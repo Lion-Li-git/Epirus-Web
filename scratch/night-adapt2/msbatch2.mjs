@@ -35,6 +35,7 @@ const log = (m) => { const line = '[' + new Date().toISOString().slice(11, 19) +
 function mulberry32(a) { return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= (t + Math.imul(t ^ (t >>> 7), t | 61)); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const rng = mulberry32(BASE);
 const SEEDS = Array.from({ length: ROUNDS * BRANCHES + 2 }, () => Math.floor(rng() * 0x7fffffff) + 1);   // 含冠军重测的余量
+log('MSB 配方：COURSE_PACK=' + (process.env.MSB_COURSE_PACK || '(无)') + ' ‖ FIT_CHAMP=' + (process.env.MSB_FIT_CHAMP || '(无)') + ' ‖ FIT_EVERY=' + (process.env.MSB_FIT_EVERY || '(默认)') + ' ‖ SEG=' + (process.env.MSB_SEG || '50(默认)'));
 log('base=' + BASE + ' ⇒ 派生种子 ' + JSON.stringify(SEEDS.slice(0, ROUNDS * BRANCHES)) + ' …');
 
 const RECIPE_ENV = {
@@ -117,7 +118,7 @@ function measureFromLedger() { return null; }
 if (!existsSync(START)) { console.error('⛔ 起点包不在：' + START); process.exit(5); }
 /* 断点续跑（11-11）：state = {base,arm,形状,champion,champT,seedIdx,history}，每轮收尾写盘。
  *   恢复时逐字校验形状（base/arm/rounds/branches/gens/margin/start）——任何一项不同 ⇒ 拒绝（种子流会错位）。 */
-const STATE_F = 'scratch/night-adapt2/msbatch2-state.json';
+const STATE_F = 'scratch/night-adapt2/msbatch2-' + ARM + '-state.json';   // 11-11：按 ARM 分家——两个驱动器可并行（MSB6 纯轮换 + MSB7 课程轮同飞）
 const RESUME = process.argv.includes('--resume');
 let champion = START;            // 现有冠军（绝不回退的对象）
 let champT = null;
@@ -183,5 +184,5 @@ for (let round = history.length + 1; round <= ROUNDS; round++) {
   /* 轮收尾即写 state（断点续跑的最小恢复粒度 = 一轮；臂内更细的恢复靠 HOLDOUT_SEG 的 seg 快照热启动） */
   writeFileSync(STATE_F, JSON.stringify({ base: BASE, arm: ARM, rounds: ROUNDS, branches: BRANCHES, gens: GENS, margin: MARGIN, start: START, champion, champT, seedIdx, history }, null, 1));
 }
-writeFileSync('scratch/night-adapt2/msbatch2-summary.json', JSON.stringify({ base: BASE, start: START, rounds: ROUNDS, branches: BRANCHES, gens: GENS, margin: MARGIN, final: champion, history }, null, 1));
+writeFileSync('scratch/night-adapt2/msbatch2-' + ARM + '-summary.json', JSON.stringify({ base: BASE, start: START, rounds: ROUNDS, branches: BRANCHES, gens: GENS, margin: MARGIN, final: champion, history }, null, 1));
 log('=== 终局冠军：' + champion + '（' + champT.mean.toFixed(4) + '）‖ 轮链 ' + history.map((h) => 'R' + h.round + '=' + h.champMean.toFixed(4)).join(' → '));
