@@ -38,10 +38,12 @@ const RECIPE_ENV = {
   EPIRUS_TRAIN_MODE: 'long',
   EPIRUS_KILL_REWARD: '2', EPIRUS_KILL_FIELD: '1',
   EPIRUS_MIX8: '4', EPIRUS_MIX2_EVERY: '4', EPIRUS_MIXHP_EVERY: '2',
-  EPIRUS_COURSE_EVERY: '1', EPIRUS_COURSE_BOT: 'pickFarmer',
+  EPIRUS_COURSE_EVERY: '1', EPIRUS_COURSE_BOT: process.env.MSB_COURSE_BOT || 'pickFarmer',
   EPIRUS_COUNTER_OPPS: 'gunFocus,gunSpam,guardSpam,targeter',
   EPIRUS_SEL_COUNTER: '1',
   EPIRUS_TRIPLET: '1', EPIRUS_TRIPLET_LOG: LEDGER,
+  /* 11-10（DS）：fitness 掺冠军桌（默认关；MSB_FIT_CHAMP 指包、MSB_FIT_EVERY 指每 k 局） */
+  ...(process.env.MSB_FIT_CHAMP ? { EPIRUS_FIT_CHAMP: process.env.MSB_FIT_CHAMP, EPIRUS_FIT_CHAMP_EVERY: process.env.MSB_FIT_EVERY || '4' } : {}),
 };
 
 function runArm(seed, seedpack, packPath, round) {
@@ -66,26 +68,35 @@ function runArm(seed, seedpack, packPath, round) {
 
 /* 同口径重测（2P 模式：现有冠军每轮都按同一把尺重测）⇒ triplet 的 JSON 只打 stdout（台账行是 train-3p 代写的）
  *   ⇒ 这里直接解析 stdout（v2 修：直调不落台账，v1 版因此秒退） */
+/* 11-10（DS 复核）：选择准则从 **A 轴 triplet** 换成 **C=(A+B)/2**（主尺）。
+ *   病：夜里那条 +0.014→+0.29 的链全在 A 轴上选，选出来的冠军在冠军桌 2P 只赢 15%（C≈0）。 */
+const W4 = { 2: 0.15, 3: 0.25, 5: 0.45, 8: 0.15 };
+function runExam(packPath, mode) {
+  const a = ['tools/exam-4n.mjs', '100', '77000', packPath, '--dose=page', '--exam=both'];
+  if (mode) a.push('--mode=' + mode);
+  const r = spawnSync('node', a, { stdio: 'pipe', encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  const line = out.split(/\r?\n/).find((l) => l.indexOf('[冠军4N-v2]') === 0);
+  if (!line) return null;
+  const g = (k) => { const m = new RegExp(k + '=(-?[0-9.]+)').exec(line); return m ? +m[1] : NaN; };
+  const cells = [2, 3, 5, 8].map((n) => g('x' + n));
+  if (cells.some((v) => !isFinite(v))) return null;
+  const x4 = cells.reduce((s, v, i) => s + v * W4[[2, 3, 5, 8][i]], 0);
+  return { cells, x4 };
+}
 function measure(packPath) {
   const t0 = Date.now();
-  const r = spawnSync('node', ['tools/exam4-triplet.mjs', packPath, '100', '77000'], { stdio: 'pipe', encoding: 'utf8' });
-  const min = ((Date.now() - t0) / 60000).toFixed(1);
-  const m = ((r.stdout || '') + (r.stderr || '')).match(/\{"pack":[\s\S]*\}/);
-  if (!m) { log('⚠ 重测无 JSON 输出：' + packPath + '（exit=' + r.status + '）'); return null; }
-  let row;
-  try { row = JSON.parse(m[0]); } catch (e) { log('⚠ 重测 JSON 解析失败：' + (e && e.message)); return null; }
-  const cells = (row.cells_S || []).concat(row.cells_L || []);
-  const t = { mean: (row.X4P_S + row.X4P_L) / 2, min: Math.min.apply(null, cells), spread: Math.max.apply(null, cells) - Math.min.apply(null, cells) };
-  log('重测 ' + packPath.split('/').pop().padEnd(26) + ' 均值 ' + t.mean.toFixed(4) + ' ‖ 批内最低 ' + t.min.toFixed(4) + ' ‖ 散布 ' + t.spread.toFixed(3) + '（' + min + 'min）');
+  const s = runExam(packPath, '');
+  const l = runExam(packPath, 'long');
+  const mins = ((Date.now() - t0) / 60000).toFixed(1);
+  if (!s || !l) { log('⚠ 重测失败（exam-4n both）：' + packPath); return null; }
+  const cells = s.cells.concat(l.cells);
+  const t = { mean: (s.x4 + l.x4) / 2, min: Math.min.apply(null, cells), spread: Math.max.apply(null, cells) - Math.min.apply(null, cells) };
+  log('重测C ' + packPath.split('/').pop().padEnd(26) + ' C均值 ' + t.mean.toFixed(4) + ' ‖ 批内最低 ' + t.min.toFixed(4) + ' ‖ 散布 ' + t.spread.toFixed(3) + '（' + mins + 'min）');
   return t;
 }
-function measureFromLedger(packPath) {
-  const rows = readFileSync(LEDGER, 'utf8').trim().split('\n').map((l) => { try { return JSON.parse(l); } catch (e) { return null; } }).filter(Boolean);
-  const row = rows.filter((x) => x.pack === packPath).pop();
-  if (!row) return null;
-  const cells = (row.cells_S || []).concat(row.cells_L || []);
-  return { mean: (row.X4P_S + row.X4P_L) / 2, min: Math.min.apply(null, cells), spread: Math.max.apply(null, cells) - Math.min.apply(null, cells) };
-}
+/* 台账是 triplet（A 轴）记的 ⇒ 换了 C 准则后不能再回读台账（两把尺混用 = 静默换尺）。一律现测。 */
+function measureFromLedger() { return null; }
 
 if (!existsSync(START)) { console.error('⛔ 起点包不在：' + START); process.exit(5); }
 let champion = START;            // 现有冠军（绝不回退的对象）
@@ -110,7 +121,8 @@ for (let round = 1; round <= ROUNDS; round++) {
   for (const d of done.filter((x) => x.code !== 0)) log('⚠ 臂败 seed=' + d.seed + ' exit=' + d.code + '（不进父母池）');
 
   /* 本轮收尾：各臂 triplet（臂自带）→ 父母池 = 臂们 + 现有冠军（同口径重测）→ √n 保留 → 2+1 分配 */
-  const pool = okArms.map((d) => { const t = measureFromLedger(d.packPath); return t ? { label: 'S' + d.seed, pack: d.packPath, t } : null; }).filter(Boolean);
+  /* ⚑ 11-10 修：原来这里走 measureFromLedger（A 轴台账）——换 C 准则后我把它置 null ⇒ 臂全被丢掉、只剩冠军（本轮就是这么白判的）。改为一律现测 C。 */
+  const pool = okArms.map((d) => { const t = measure(d.packPath); return t ? { label: 'S' + d.seed, pack: d.packPath, t } : null; }).filter(Boolean);
   const champRemeasured = measure(champion);   // 同口径重测（2P 模式每轮都重测现有冠军）
   if (champRemeasured) champT = champRemeasured;
   pool.push({ label: '冠军', pack: champion, t: champT });

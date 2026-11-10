@@ -172,3 +172,14 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-09T05:24:31.700Z	330226d3e823d715	docs/artifacts/night-adapt/WSEL9-200.js	scratch/ds-1109/WSEL10-200.js	train-3p	未复制：同一粒权重已有真身
 2026-11-09T10:41:22.723Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
 2026-11-09T10:41:22.731Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-09T20:55:04.358Z	418b9e4dcd84382a	docs/artifacts/night-adapt/OBS5-Q-s13.js	docs/artifacts/OBS5-D-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-09T20:55:04.364Z	018b98d97a5a6f30	docs/artifacts/OBS5-Q-s13-band2.bak	docs/artifacts/OBS5-D-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-09T20:55:04.374Z	303495cd9d25ebe5	docs/artifacts/OBS5-Q-s13-band3.bak	docs/artifacts/OBS5-D-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-09T20:55:04.379Z	c166a34112ce081e	docs/artifacts/OBS5-Q-s13-band4.bak	docs/artifacts/OBS5-D-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-09T20:55:04.384Z	3b971e258a542e55	docs/artifacts/OBS5-Q-s13-band5.bak	docs/artifacts/OBS5-D-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-09T20:55:04.390Z	418b9e4dcd84382a	docs/artifacts/night-adapt/OBS5-Q-s13.js	docs/artifacts/night-adapt/OBS5-D-s13.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T05:17:13.665Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/SMOKE-FITCHAMP-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T05:17:13.687Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	scratch/ds-1109/SMOKE-FITCHAMP.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T05:57:17.515Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/SMOKE-XB-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T05:57:17.520Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-XB-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T05:57:17.525Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	scratch/ds-1109/SMOKE-XB.js	train-3p	本臂零改包：产物 = 起点那一粒
