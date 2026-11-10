@@ -1,0 +1,17 @@
+{
+ "base": 652,
+ "arm": "MSB12-seqboom",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "champion": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "champT": {
+  "mean": 0.20021500000000003,
+  "min": 0.0943,
+  "spread": 0.193
+ },
+ "seedIdx": 0,
+ "history": []
+}

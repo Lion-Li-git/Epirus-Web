@@ -147,3 +147,37 @@ state/log 天然分家），8 个并行；起点 = 当时的 C 冠军；base=501
 定向包的课程席素材（G5J/G5C/KDG-B/CTRL2/WSEL9）本身就是 FINDING §五 说的"好考卷辅助训练"——
 冠军桌夹具滚动制落地后，这批定向包反过来成为**下一版 B 夹具的候选对手席**（obs5 自己的反墙/防御包
 顶掉 Q-s47 锚的那天，就是 B 夹具纯 2.0 化的节点）。
+
+## 四′、MSB11 反墙判定（06:0x 收）——反墙席上桌既治墙又不塌 C
+
+`EPIRUS_COUNTER_OPPS=reflectWall,...`（判它的对手上训练桌，§N35）从 MSB10 冠军续 2 轮：
+
+| 臂 | C | 卡谱（multi/60） | 判 |
+|---|---:|---|---|
+| **MSB11-R2S306293884** | **0.2828**（批内最低 +0.1485 全正） | 用卡 7，防御 35%，**reflect 32%**（对照墙的 86%）、ji38/gun19/snipe4/guard3/sword2/proto1 | **新夜冠军，不是墙**——reflect 高但配着正常进攻面 |
+| MSB11-R1S130778313 | 0.2123 | 用卡 **8**，防御 29%，reflect 27 + mine 1/proto 1/sword/guard | 父本，广度恢复中 |
+
+⇒ **反墙席是免费的课程压力**：线被推到 0.2828（+42% over MSB10），没有出现 MSB9 那种 86% 墙化——
+因为训练桌上一直坐着一个"打不死反弹席"，纯墙的适应度被压住了。**反墙席应进 rotation-obs5 基线配方**
+（ recipes 升级项，白天班定 COUNTER_OPPS 常设名单时一起裁）。
+
+## 五、MSB12 长程规划定向轮（用户 05:4x 纠偏后发射）
+
+> 用户问：「怎么技能铺开是在搞八卦和剑这些短技能，而不是长程规划」——认账：MSB8 的 steering 跟着
+> card-usage（逐卡占比）与池 v2.1 用卡数线走，全是短技能口径；长程规划轴的 knobs（SEQ_KIND 两条计划链、
+> BIGT_CHAIN_W 地雷连带、珠经济）与诊断仪（probe-seq-opportunity 三型分解）在册而我一次没接进循环。
+> 顺带一提：今晚最大的 C 跳变恰恰来自最接近规划的臂（MSB8-charge = SEQ_W，0.1383）——用户方向有据。
+
+| 臂 | steering（起点 = MSB10 冠军 0.2002） | 规划轴 |
+|---|---|---|
+| MSB12-seqelec | SEQ_W=2.5 | 蓄能→电磁炮（计划链一） |
+| MSB12-seqelec2 | 同上（复制臂，base=657） | 种子方差对照（MSB9 教训：单臂数字会骗） |
+| MSB12-seqboom | SEQ_W=2.5 + SEQ_KIND=boom | 蓄爆珠→激光眼两段计划（激光=穿防=兼反墙） |
+| MSB12-minechain | BIGT_CHAIN_W=1.5 | 地雷布防→隔回合兑现 |
+| MSB12-beadplan | BEAD_WASTE_W=1.0 + BIGCARD_W=0.5 | 珠经济：别囤死 + 大回合出手 |
+| MSB12-combo | SEQ_W + BIGT_CHAIN_W | 组合假设（MSB9：单 knob 都不够） |
+
+（lock 臂发过即杀：EPIRUS_LOCK_NARROW 本入口不读，且引擎窄锁只在 soft 口径生效——训练路锁不住，白给。）
+
+**量规（收臂后）**：probe-seq-opportunity（不蓄/蓄了出不起/出得起不打 三型分解，双口径）+ 珠浪费/局 +
+bigT 连带计数 + C——规划轴读数**不进** card-usage 的用卡数口径，两把尺分开报。

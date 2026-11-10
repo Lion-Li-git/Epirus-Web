@@ -243,3 +243,9 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T20:41:29.288Z	00c1fbe62465da9f	docs/artifacts/MSB10-R2S1668802756-seg4.bak	docs/artifacts/MSB10-R2S1668802756-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-10T20:43:47.746Z	5b3cfff377840b12	docs/artifacts/MSB10-R2S1698738428-seg1.bak	docs/artifacts/MSB10-R2S1698738428-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-10T20:43:47.774Z	5b3cfff377840b12	docs/artifacts/MSB10-R2S1698738428-seg1.bak	docs/artifacts/night-adapt/MSB10-R2S1698738428.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T21:07:48.962Z	c0cf6652d1e138d4	docs/artifacts/MSB11-R1S2127472120-seg4.bak	docs/artifacts/MSB11-R1S2127472120-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T21:07:48.973Z	d0099a5045f24240	docs/artifacts/MSB11-R1S2127472120-seg1.bak	docs/artifacts/MSB11-R1S2127472120-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T21:35:07.586Z	5738a2f38647e938	docs/artifacts/MSB11-R2S306293884-seg3.bak	docs/artifacts/MSB11-R2S306293884-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T21:41:54.005Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/MSB11-R2S1663363345-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T21:41:54.017Z	ecd209ccd4a5c394	docs/artifacts/MSB11-R2S1663363345-seg3.bak	docs/artifacts/MSB11-R2S1663363345-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T21:41:54.037Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/night-adapt/MSB11-R2S1663363345.js	train-3p	本臂零改包：产物 = 起点那一粒
