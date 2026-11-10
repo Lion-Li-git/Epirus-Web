@@ -106,3 +106,22 @@ MSB_COURSE_PACK=scratch/ds-1109/G5J-50.js  MSB_FIT_CHAMP=scratch/ds-1109/G5C-100
 - MSB6 若中途被杀：`--resume` 原样重启（base/start/形状不能变）；臂级 seg 快照在 `docs/artifacts/<ARM>-seg<k>.bak`（BAND_DIR 缺省=docs/artifacts 根，不在 night-adapt/；01:2x 实测 MSB6/MSB7 各臂 seg1-2 已在落）。
 - B 重测的 N 夹具读数**不是**新在册尺——图上 P2B 还是旧夹具；对比新旧夹具读数时引用 FINDING 的表，别直接改图。
 - 时间线：本班实际开工 00:07；用户 00:0x 下令；全文书提交在 00:3x 前，搬家批 00:4x，性能批 01:0x，MSB6 01:04 发射。
+
+## 七、MSB12 规划轮收尾（06:5x）——用户纠偏后的答案与规划链的根本结论
+
+七臂全收（harness 内监控自动注入 ✓）：beadplan **0.2448 换代**（用卡 7/防御 50%——reflect 48% 偏墙向，引用注意）、
+seqboom 0.2096（5 卡/防御 29% 健康）；seqelec 复制对 0.039/0.168（**种子方差巨大**，单臂读数不可信）；
+ring 1.0× 无抬升；minechain（大雷传导，战术）0.064 散布 0.6；combo **−0.16 塌**（双奖励旋钮互相拉扯）。
+
+**seq-opportunity 三型分解的根本结论**：beadplan/seqboom/起点包 armed≈0（~2000 决策）、beadSpent=0——
+三型全是 **(i) 根本不蓄能**；对照均匀策略 armed=46（探针自证 ✓）。
+⇒ **规划链不是没 steering，是稀疏奖励不可达**：SEQ_W 只付完成的链，GA 探索凑不出完整蓄→放，梯度无来源。
+beadplan/seqboom 的 C 来自同臂其他 fitness 项。且 beadplan 防御 50% —— **C 尺对防御漂移的偏置贯穿全夜**
+（MSB9 终局墙 0.3151 / beadplan 50% / bagua 线 31-42%），根因同源：A 可 farm + B 夹具陈旧。
+
+**白天班提案池（按优先级）**：
+1. **chargePush 同形件**（部署档软注入第一步蓄能 + 开火计数自证，drainPush/bigTPush 模式）+ IMIT 教师——让规划链"可达"，这是长程规划的正路（用户 05:4x 指向的方向）；
+2. **地雷归因工程**（伤害无来源 ⇒ 目标函数从不付账；先修归因再谈注入）；
+3. **反墙席进 rotation-obs5 基线配方**（MSB11 实证免费课程压力）+ 反墙能力入池必量；
+4. **F2 滚动夹具转正**（G5J 0.79→0.50 拉回演示；列族 PB2；旧 PB 冻结）；
+5. 12 线先量现役池做基线；recipes 吃 MSB 系配方名。
