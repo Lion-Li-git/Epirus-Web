@@ -12,7 +12,7 @@
   "min": 0.0068,
   "spread": 0.1893
  },
- "seedIdx": 4,
+ "seedIdx": 8,
  "history": [
   {
    "round": 1,
@@ -54,6 +54,55 @@
      "pack": "docs/artifacts/night-adapt/MSB7-R1S1020649171.js",
      "mean": 0.0461575,
      "min": -0.0692
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+   "champMean": 0.06675,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "S231868653",
+     "pack": "docs/artifacts/night-adapt/MSB7-R2S231868653.js",
+     "mean": 0.03741,
+     "min": -0.0045
+    },
+    {
+     "label": "S1318607149",
+     "pack": "docs/artifacts/night-adapt/MSB7-R2S1318607149.js",
+     "mean": -0.0026625,
+     "min": -0.062
+    },
+    {
+     "label": "S1457282484",
+     "pack": "docs/artifacts/night-adapt/MSB7-R2S1457282484.js",
+     "mean": -0.019522499999999998,
+     "min": -0.13
+    },
+    {
+     "label": "S1010066917",
+     "pack": "docs/artifacts/night-adapt/MSB7-R2S1010066917.js",
+     "mean": -0.06156749999999998,
+     "min": -0.3931
     }
    ],
    "nextParents": [

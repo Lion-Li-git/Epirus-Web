@@ -1,0 +1,17 @@
+{
+ "base": 631,
+ "arm": "MSB10",
+ "rounds": 2,
+ "branches": 4,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js",
+ "champion": "docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js",
+ "champT": {
+  "mean": 0.07998,
+  "min": 0.0357,
+  "spread": 0.1934
+ },
+ "seedIdx": 0,
+ "history": []
+}
