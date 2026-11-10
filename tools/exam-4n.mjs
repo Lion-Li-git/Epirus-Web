@@ -70,7 +70,11 @@ if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.
 /* 11-09 用户裁（方案 1，混合夹具）：B 轴 = **2.0 主力两枚 + 1 枚反墙锚**。
  *   为什么必须留 Q-s47：实测 2.0 池里没有任何包压得住反射墙（G5C 在 2.0 冠军桌上 2P 0.935 / 3P 0.502），
  *   只有 v7 的 Q-s47 能把 G5C 压到 3P 17%。⇒ Q-s47 是**临时锚**，等 2.0 造出反墙强包就替换（在册理由见 RESULTS §十三.18）。 */
-const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
+/* 11-11 夜（用户令"找代表重测 B 轴"）：夹具登记表补 2.0 现役强包——旧夹具三锚是 11-09 的天花板，
+ *   obs5 时代的新冠军不在里面 ⇒ 图上 PB 靠"打旧天王"刷分。新夹具用 --champ= 显式点名（在册 id 才能用）。 */
+const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js',
+  'MSB2-R1S1494663071': 'docs/artifacts/night-adapt/MSB2-R1S1494663071.js', 'MSB2-R2S103437527': 'docs/artifacts/night-adapt/MSB2-R2S103437527.js',
+  'OBS5-F-s13': 'docs/artifacts/night-adapt/OBS5-F-s13.js', 'OBS5-F-s41': 'docs/artifacts/night-adapt/OBS5-F-s41.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 

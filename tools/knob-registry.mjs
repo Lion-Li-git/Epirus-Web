@@ -82,7 +82,7 @@ for (const k of all) {
 const live = rows.filter((r) => r.status === '在用');
 const dark = rows.filter((r) => r.status === '暗键（被提及无人读）');
 const orphan = rows.filter((r) => r.status === '孤儿（只登记未实现）');
-const unreg = live.filter((r) => !r.inSelf);
+const unreg = live.filter((r) => !r.inSelf && !r.single);   /* 11-11：有单一来源表的算有家（它们的注解住在 econ/fight/train-env） */
 
 const md = [];
 md.push('# 训练侧旋钮册（生成物，勿手改）');
