@@ -13,8 +13,12 @@
  *   · 冠军座位 = 局序号 % N（轮转），对手槽位相对座位再旋转（eval-5p 656 行的"座位率 × 脚本强度"解耦教训）。
  * 桌形 = 引擎默认 multi（3 血短程）；四格卷考的是**人数轴**，桌形固定才可跨包比较。
  *
- * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2]
- * --expool=v2（缺省）= 现在的 28 席；`v1` = 11-09 `469dfdb1` 换席前那张卷 ⇒ **历史 X̄₄ 可复算**。
+ * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyn=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2|v3] [--plan=v3]
+ *   ⚠ 旗标名**只认小写**（`rejectUnknownFlags` 的名单是全小写，而 :40 的解析把大写原名存进 `FLAG`）⇒ 写 `--onlyN` 会被当场拒（不是静默忽略，但文档原来的写法确实骗过一次）。
+ * --expool=v2（缺省）= 现行 28 席；`v1` = 11-09 `469dfdb1` 换席前那张卷 ⇒ **历史 X̄₄ 可复算**；
+ *   `v3` = v2 的 28 席 + 第 29 席 `cautious`（ econ 轴），配 `--plan=v3` 才是"每局按 attack/pierce/defense/econ 各抽一席"的分层桌形
+ *   ⇒ 单给 `--expool=v3` 而 `--plan` 仍是缺省时，多出的那席只是按老规则被抽到，**不是**那张分层卷（两件事要一起给）。
+ *   读数行上的 `pool=<版本>#<sha8>` 戳只钉"坐的是哪 28/29 个脚本"，抽席规则另由 `plan` 说明 ⇒ 三者任换其一都换尺。
  *   为什么必须有：换席动的是默认表、没有旗标也没有戳，而 `POOL-CONTRACT §1` 明写"EXAM_POOL 一个不动"
  *   ⇒ 那之后同一条命令算出来的 X̄₄ 与图上 900+ 枚历史读数不是同一把尺，收据上却一模一样。
  * --dose=exam（缺省）：主体席 ε=0 贪心 —— 与旧卷的 exam 臂、与 `exam4-all-*.tsv` 那两批同口径（H 侧）。
@@ -160,7 +164,10 @@ function emit(prefix, o) {
   const fmt = (k) => NS.map((n) => k + n + '=' + o[n][k === 'h' ? 'h' : 'x']).join(' ');
   const fmtN = () => NS.map((n) => 'n' + n + '=' + o[n].G).join(' ');
   console.log(prefix + ' ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : '') +
-    ' pool=' + POOL_STAMP + ' K=' + POOL.length);   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
+    ' pool=' + POOL_STAMP + ' K=' + POOL.length +
+    /* 11-10（千问）：同一张池可以配两种抽席规则、也可以配带不带冠军席 ⇒ **只钉池的那枚戳不足以判"是不是同一把尺"**
+     *   （v3 分层卷与 v2 老规则同池 ⇒ 戳逐字相同）。把会换尺的另两维一并印出来，批量器与表都能按它筛。 */
+    ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }
 if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));

@@ -1,0 +1,26 @@
+[train-3p] ⚙ **架构 = 2.0 原型 `S1ob:input=obs5,gen=3,keySplit=1,seatH=24,actH=24,hid=32,hid2=24`**（§E821，`tools/proto2/arch2.mjs` 覆盖 paramCount/makePolicy/mutatePolicy/crossover/forwardCands/chooseCandidates/pack/unpack） ‖ paramCount=12393 ‖ **解析后的面=obs5**（与 spec 串分开印——11-01 冒烟：串写 obs3b 实际落 v7，别再让横幅说谎） ‖ 变异算子=seg ‖ 热启动=只认 v:92 包（v7 包读不进 ⇒ exit 5）
+[train-3p]   ⚠ 可比性：与本文件任何 v7 历史读数**不同源**（起点是随机、维度是新结构）⇒ 只在 2.0 臂之间横比，且只比评估次数
+[部署档] ⚠ 未下达 ⇒ 走引擎默认档：EPIRUS_BIGT_PUSH=12 ‖ EPIRUS_DRAIN_PUSH=1 ‖ EPIRUS_CURSE_PUSH=0 ‖ EPIRUS_SUPPORT_PRIOR=0（稍后按 CLI 默认取 2，不是 0） ‖ EPIRUS_MIX8=0 ‖ EPIRUS_MIX2_EVERY=0 ‖ EPIRUS_COURSE_EVERY=0 ‖ EPIRUS_MIXHP_EVERY=0 ‖ EPIRUS_HPSEED=0（已回读并写进产物 meta.deployKnobs）
+[train-3p] 送盾先验 = 2（读回一致）
+[train-3p] 随机起点幅度 = 0.25（出厂档 ⇒ 与历史臂同）
+[cardAbort] 训练期用卡地板：连续 999 代 top-1 的用卡数 < 30 ⇒ 整臂 exit 13（不写产物；终局 SEL_CARDS 仍是份额口径）
+[train-3p] 人数=3 代=1 种群=2 每代局数=2 参数=12393
+[cardAbort] gen 0 topCards=12 streak=0
+gen 0 bestFit=0.342 1st=0% top2=50% avgDealt=5.00 sigma=0.180 **连带=0 条/0.000每局** 出手=0 率=0.000 贵卡=0(0.000/局) 剂量[/局] 环打=0.000 压=2.000 穿=1.500 珠=0.000 爆珠花=0.000 威=0.000 场=0.000 挡=0.500 广max=8 激光=0.000 失效=0.000 失效理=0.000
+=== 名人堂验证（36 对 x 20 局 · 出厂那张桌：9 席两两）===
+[当选键] 每粒候选重验 4 粒 seedBase（987654 ‖ 1087654 ‖ 1187654 ‖ 1287654）取均值 ‖ 来源=默认
+  trainFit=0.342 -> 1st=12.3% top2=52.6% 零攻击局=0% （n=4 粒 seedBase ‖ 自身极差 2.4pt）
+  trainFit=0.327 -> 1st=12.6% top2=52.7% 零攻击局=0% （n=4 粒 seedBase ‖ 自身极差 1.0pt）
+[当选键] 两段式：第 1↔2 名分差 0.33pt ≤ 同分带 5.8pt ⇒ 追加 4 粒（k 4→8）后再选
+[当选键] 两段式之后：[当选键] 第 1 与第 2 名分差 0.10pt ‖ 两者自身极差较大者 8.1pt ‖ 同分带 2.9pt（各 n=8 粒；k 查表 ⇒ 按 k=8） ⇒ **分差落在同分带内 ⇒ 这一格基本是抽签**（要判就得加 seedBase 或换键）
+[当选键] 第 1 与第 2 名分差 0.10pt ‖ 两者自身极差较大者 8.1pt ‖ 同分带 2.9pt（各 n=8 粒；k 查表 ⇒ 按 k=8） ⇒ **分差落在同分带内 ⇒ 这一格基本是抽签**（要判就得加 seedBase 或换键）
+[band-save] QWIN1110BEF-band1.bak  trainFit=0.342（当选）
+[band-save] QWIN1110BEF-band2.bak  trainFit=0.327
+
+=== 3 人实测（最终冠军，36 对 × 20 局 × 4 粒 seedBase，座位轮换，temp0.15）===
+1st=12.9%  top2=54.1%   (1st/2nd/3rd = 743/2372/2645 of 5760)
+耗时 91.6s
+[train-3p] 落盘：新权重 ⇒ 写盘
+
+已写入 scratch/qoder-1110-win-smoke-before.js  (coldStart=true, seed=12345)
+exit=0

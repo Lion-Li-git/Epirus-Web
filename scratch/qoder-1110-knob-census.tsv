@@ -1,0 +1,246 @@
+knob	family	entries_reading	which	mention_sites	in_SELF_ENV_KEYS	removed
+EPIRUS_COURSE_EVERY	*_EVERY（隔 K 局/代注入）	1	train-3p	7	Y	
+EPIRUS_FIT_CHAMP_EVERY	*_EVERY（隔 K 局/代注入）	1	train-3p	3	-	
+EPIRUS_MIX2_EVERY	*_EVERY（隔 K 局/代注入）	1	train-3p	2	Y	
+EPIRUS_MIXHP_EVERY	*_EVERY（隔 K 局/代注入）	1	train-3p	7	Y	
+EPIRUS_AGGR_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-3p|train-best|train-server	0	-	
+EPIRUS_BATCH_MAX	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_BREADTH_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_CARD_ABORT_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	3	Y	
+EPIRUS_CARD_MIN	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	3	Y	
+EPIRUS_CHARGE_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-3p|train-best|train-server	0	-	
+EPIRUS_DEFQ_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_DENSITY_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-3p|train-best|train-server	0	-	
+EPIRUS_EFFSKILL_MIN	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	2	Y	
+EPIRUS_EFFSKILL_SHARE	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	3	Y	
+EPIRUS_FEAS_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-3p|train-best|train-server	0	-	
+EPIRUS_GA_GATE_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	2	Y	
+EPIRUS_GUARD_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_GUARD_SEEDS	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_MUT_MODE	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	3	Y	
+EPIRUS_PROXY_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_RING_FORCE_EPS	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-server	6	-	
+EPIRUS_S4_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-server	2	-	
+EPIRUS_SEAT_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-3p|train-best|train-server	1	-	
+EPIRUS_SHAPE_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_SNIPER_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_STYLE_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-server	1	-	
+EPIRUS_SUBSIDY_MIN	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-server	2	-	
+EPIRUS_TB3P_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-best	5	-	
+EPIRUS_TRAIN_EPS	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	11	-	
+EPIRUS_TRAIN_EPS_MODE	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-3p	2	-	
+EPIRUS_TRAIN_MODE	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	2	train-3p|train-server	9	Y	
+EPIRUS_TRAIN_SEAT_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	3	train-best|train-fast|train-server	3	-	
+EPIRUS_WALL_GAMES	*_MIN / *_MAX / *_GAMES / *_SEEDS（阈值与剂量）	1	train-server	0	-	
+EPIRUS_AGGRO_OPPS	*_OPPS（对手饮食）	1	train-3p	6	Y	
+EPIRUS_COUNTER_OPPS	*_OPPS（对手饮食）	1	train-3p	16	Y	
+EPIRUS_ECON_OPPS	*_OPPS（对手饮食）	1	train-3p	8	Y	
+EPIRUS_PASSIVE_OPPS	*_OPPS（对手饮食）	1	train-3p	6	Y	
+EPIRUS_POOL_OPPS	*_OPPS（对手饮食）	1	train-3p	14	Y	
+EPIRUS_POOL_OPPS_TABLE	*_OPPS（对手饮食）	1	train-3p	2	Y	
+EPIRUS_POOL_OPPS_TIER	*_OPPS（对手饮食）	1	train-3p	3	Y	
+EPIRUS_RING_OPPS	*_OPPS（对手饮食）	1	train-3p	7	Y	
+EPIRUS_TOOLKIT_OPPS	*_OPPS（对手饮食）	1	train-3p	6	Y	
+EPIRUS_BEAD_BOOM_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	0	-	
+EPIRUS_BEAD_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	7	-	
+EPIRUS_BEAD_WASTE_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	5	Y	
+EPIRUS_BIGCARD_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	0	-	
+EPIRUS_BIGT_CHAIN_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	0	-	
+EPIRUS_BIGT_PUSH	*_W / *_PUSH（奖励权重与推进）	1	train-3p	2	Y	
+EPIRUS_BLOCK_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	2	-	
+EPIRUS_CLEAR_W	*_W / *_PUSH（奖励权重与推进）	4	train-3p|train-best|train-fast|train-server	12	Y	
+EPIRUS_COSTLY_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_CURSE_PUSH	*_W / *_PUSH（奖励权重与推进）	1	train-3p	1	-	
+EPIRUS_DEF_ADAPT_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	4	Y	
+EPIRUS_DEF_IDLE_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	4	Y	
+EPIRUS_DIV_W	*_W / *_PUSH（奖励权重与推进）	3	train-3p|train-best|train-server	3	-	
+EPIRUS_DRAIN_HEAL_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	4	Y	
+EPIRUS_DRAIN_PUSH	*_W / *_PUSH（奖励权重与推进）	1	train-3p	3	Y	
+EPIRUS_FIT_G_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	0	-	
+EPIRUS_FIT_TAIL_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_FOCUS_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	4	Y	
+EPIRUS_GUARD_HIT_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	5	Y	
+EPIRUS_LASER_W	*_W / *_PUSH（奖励权重与推进）	2	train-3p|train-server	10	-	
+EPIRUS_REFLECT_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	5	Y	
+EPIRUS_RING_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_S4_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	0	-	
+EPIRUS_SEQ_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	6	Y	
+EPIRUS_STYLE_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_TGT_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	6	-	
+EPIRUS_VOID_IDEAL_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_VOID_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_WALL_BREAK_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	5	Y	
+EPIRUS_WIDTH_LAND_W	*_W / *_PUSH（奖励权重与推进）	1	train-3p	6	Y	
+EPIRUS_WIDTH_W	*_W / *_PUSH（奖励权重与推进）	1	train-server	1	-	
+EPIRUS_ALIAS_TSV	其它	3	train-3p|train-best|train-fast	0	-	
+EPIRUS_ALLOW_HEALTH_FAIL	其它	1	train-server	2	-	
+EPIRUS_ANCHOR	其它	1	train-3p	8	Y	
+EPIRUS_ANCHOR_TO	其它	1	train-3p	6	Y	
+EPIRUS_ARM	其它	2	train-3p|train-best	14	Y	
+EPIRUS_BEAD_SEED	其它	1	train-server	3	-	
+EPIRUS_BEAD_SEED_KIND	其它	1	train-server	0	-	
+EPIRUS_BREADTH_FLOOR	其它	1	train-3p	3	Y	
+EPIRUS_BUNDLE_IN	其它	1	train-server	4	-	
+EPIRUS_CHARGE_MIN_EP	其它	3	train-best|train-fast|train-server	2	-	
+EPIRUS_CHROME	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_CONV_OFFENSE	其它	1	train-server	0	-	
+EPIRUS_CONV_RATIO	其它	1	train-server	2	-	
+EPIRUS_COURSE_BOT	其它	1	train-3p	10	Y	
+EPIRUS_COURSE_PACK	其它	1	train-3p	10	-	
+EPIRUS_DEBUG_CDP	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_DIV_CATW	其它	1	train-server	1	-	
+EPIRUS_DIV_FORCE_GENS	其它	1	train-server	2	-	
+EPIRUS_DIV_K	其它	1	train-server	2	-	
+EPIRUS_DIV_ROLEW	其它	1	train-server	1	-	
+EPIRUS_ECO_CAP	其它	1	train-server	1	-	
+EPIRUS_ECO_DIVW	其它	1	train-server	1	-	
+EPIRUS_ECO_TARGET	其它	1	train-server	1	-	
+EPIRUS_FAMILY_FIELD	其它	1	train-3p	8	Y	
+EPIRUS_FEASIBILITY	其它	1	train-server	3	-	
+EPIRUS_FEASIBILITY_BLOCK	其它	1	train-server	2	-	
+EPIRUS_FEAT_MASK	其它	1	train-server	3	-	
+EPIRUS_FIGHT_DEAL	其它	1	train-server	1	-	
+EPIRUS_FIGHT_FIRST	其它	1	train-server	4	-	
+EPIRUS_FIGHT_WHISTLE	其它	1	train-server	1	-	
+EPIRUS_FIT_CAL	其它	1	train-server	1	-	
+EPIRUS_FIT_CHAMP	其它	1	train-3p	16	-	
+EPIRUS_FIT_G_FLOOR	其它	1	train-server	0	-	
+EPIRUS_FIT_TAIL_Q	其它	1	train-server	0	-	
+EPIRUS_FITGW	其它	1	train-3p	3	Y	
+EPIRUS_GA_BAND	其它	1	train-3p	2	Y	
+EPIRUS_GA_GATE	其它	1	train-3p	8	Y	
+EPIRUS_HALL_DEDUP	其它	1	train-3p	4	Y	
+EPIRUS_HALL_SEED	其它	1	train-3p	4	Y	
+EPIRUS_HALL_TRACE	其它	1	train-3p	9	Y	
+EPIRUS_HALL_TRACE_OUT	其它	1	train-3p	2	Y	
+EPIRUS_HALL_TRACE_PROBE	其它	1	train-3p	2	Y	
+EPIRUS_HOARD_CAP_MULT	其它	1	train-server	0	-	
+EPIRUS_HOARD_LEFTOVER	其它	1	train-server	1	-	
+EPIRUS_HOLO2PROTO	其它	1	train-3p	5	Y	
+EPIRUS_HOTSTART	其它	2	train-3p|train-best	9	Y	
+EPIRUS_IMIT_FRAC	其它	2	train-3p|train-server	8	-	
+EPIRUS_IMIT_GENS	其它	3	train-best|train-fast|train-server	6	-	
+EPIRUS_IMIT_ONLY	其它	4	train-3p|train-best|train-fast|train-server	6	-	
+EPIRUS_IMIT_OVERRIDE	其它	2	train-3p|train-server	7	-	
+EPIRUS_IMIT_PLAN	其它	3	train-best|train-fast|train-server	6	-	
+EPIRUS_IMIT_SUB_ONLY	其它	3	train-best|train-fast|train-server	2	-	
+EPIRUS_IMIT_SUBONLY	其它	1	train-3p	1	-	
+EPIRUS_IMIT_TEACHER	其它	2	train-3p|train-server	11	-	
+EPIRUS_INIT_ACT_K	其它	1	train-3p	0	-	
+EPIRUS_INIT_SCALE	其它	1	train-3p	4	Y	
+EPIRUS_INSTR	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_JSON	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_KILL_FIELD	其它	2	train-3p|train-server	10	Y	
+EPIRUS_KILL_REWARD	其它	1	train-3p	9	Y	
+EPIRUS_KR_TRANSFER	其它	1	train-3p	4	Y	
+EPIRUS_LOG_DEFAULT_OUT	其它	1	train-3p	4	-	
+EPIRUS_NO_DEFQ	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_NO_GUARD	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_NO_PROXY	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_NO_SHAPE	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_NORM	其它	1	train-3p	5	-	
+EPIRUS_OPP_BLOCK	其它	1	train-3p	8	Y	
+EPIRUS_OPP_HUMAN	其它	1	train-3p	11	Y	
+EPIRUS_OPP_HUMAN_FILE	其它	1	train-3p	2	Y	
+EPIRUS_OPP_HUMAN_SRC	其它	1	train-3p	2	Y	
+EPIRUS_OPP_HUMAN_TGT	其它	1	train-3p	3	Y	
+EPIRUS_OPP_N	其它	1	train-server	3	-	
+EPIRUS_OPP_SWEEP	其它	1	train-3p	6	Y	
+EPIRUS_PACK_OPP	其它	1	train-3p	4	-	
+EPIRUS_PAIRED	其它	1	train-3p	6	Y	
+EPIRUS_PASSIVE_FIELD	其它	0	（无入口读：只在别处/门体文本里出现）	3	-	GONE
+EPIRUS_POPSTAT	其它	1	train-3p	7	Y	
+EPIRUS_POPSTAT_K	其它	1	train-3p	2	Y	
+EPIRUS_POPSTAT_OUT	其它	1	train-3p	2	Y	
+EPIRUS_REGEN_GENS	其它	1	train-server	2	-	
+EPIRUS_REGEN_SLICE	其它	1	train-3p	9	-	
+EPIRUS_REPO	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_RING_FORCE_UNTIL	其它	1	train-server	2	-	
+EPIRUS_SEED	其它	3	train-3p|train-best|train-fast	19	Y	
+EPIRUS_SEED0	其它	1	train-server	5	-	
+EPIRUS_SEEDPACK	其它	1	train-3p	7	Y	
+EPIRUS_SELF_TEACHER	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_SEQ_KIND	其它	1	train-3p	5	Y	
+EPIRUS_SIGMA_DECAY	其它	1	train-3p	3	-	
+EPIRUS_SIGMA_FLOOR	其它	1	train-3p	3	-	
+EPIRUS_SIGMA_STALL	其它	1	train-3p	4	-	
+EPIRUS_STOCK_BONUS	其它	1	train-server	0	-	
+EPIRUS_STYLE_FRAC	其它	1	train-3p	2	-	
+EPIRUS_STYLE_TABLE	其它	1	train-3p	2	-	
+EPIRUS_SUB_BEAD	其它	4	train-3p|train-best|train-fast|train-server	12	Y	
+EPIRUS_SUB_BEAD_KIND	其它	1	train-server	2	-	
+EPIRUS_SUBSIDY_EP	其它	1	train-server	1	-	
+EPIRUS_SUBSIDY_H	其它	1	train-server	1	-	
+EPIRUS_SUPPORT_PRIOR	其它	1	train-3p	11	-	
+EPIRUS_T3P_BASELINE	其它	1	train-3p	5	-	
+EPIRUS_TB3P	其它	1	train-best	7	-	
+EPIRUS_TEACHER_GATE	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_TEACHER_GATE_HP	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_TEACHER_GATE_T	其它	0	（无入口读：只在别处/门体文本里出现）	0	-	
+EPIRUS_TRAIN_EPS_K	其它	1	train-3p	2	-	
+EPIRUS_TRAIN_TEMP	其它	1	train-3p	2	-	
+EPIRUS_TRIPLET	其它	1	train-3p	4	-	
+EPIRUS_TRIPLET_LOG	其它	1	train-3p	2	-	
+EPIRUS_WALL_FILTER	其它	1	train-server	2	-	
+EPIRUS_WALL_MS	其它	1	train-server	2	-	
+EPIRUS_WIDE_FINAL	其它	1	train-3p	3	Y	
+EPIRUS_WORKERS	其它	3	train-best|train-fast|train-server	2	-	
+EPIRUS_WR_TOL	其它	1	train-server	1	-	
+EPIRUS_XN2G	其它	1	train-3p	2	Y	
+EPIRUS_XN2REF	其它	1	train-3p	8	Y	
+EPIRUS_XN2SCRIPTS	其它	1	train-3p	3	Y	
+EPIRUS_XN2W	其它	1	train-3p	3	Y	
+EPIRUS_ALLOW_DARK	闸/杀臂（BREADTH_FATAL/CARD_ABORT/ALLOW_DARK）	4	train-3p|train-best|train-fast|train-server	5	-	
+EPIRUS_BREADTH_FATAL	闸/杀臂（BREADTH_FATAL/CARD_ABORT/ALLOW_DARK）	1	train-3p	3	Y	
+EPIRUS_CARD_ABORT	闸/杀臂（BREADTH_FATAL/CARD_ABORT/ALLOW_DARK）	1	train-3p	5	Y	
+EPIRUS_STALL_ABORT	闸/杀臂（BREADTH_FATAL/CARD_ABORT/ALLOW_DARK）	1	train-3p	5	Y	
+EPIRUS_HPSEED	桌形/人数（MIX/MIXHP/MIX8/TRAIN_MODE/HPSEED）	1	train-3p	2	Y	
+EPIRUS_MIX8	桌形/人数（MIX/MIXHP/MIX8/TRAIN_MODE/HPSEED）	1	train-3p	2	Y	
+EPIRUS_ARCH2	ARCH/面（obs3b/obs4/obs5 与架构）	1	train-3p	11	Y	
+EPIRUS_BAND_DIR	OUTPUT/路径（产物与落盘）	1	train-3p	8	Y	
+EPIRUS_BUNDLE_OUT	OUTPUT/路径（产物与落盘）	1	train-server	5	-	
+EPIRUS_HOLDOUT_SEG	OUTPUT/路径（产物与落盘）	1	train-3p	6	Y	
+EPIRUS_PUBLISH	OUTPUT/路径（产物与落盘）	2	train-3p|train-fast	14	Y	
+EPIRUS_T3P_OUT	OUTPUT/路径（产物与落盘）	1	train-3p	9	-	
+EPIRUS_TB_OUT	OUTPUT/路径（产物与落盘）	1	train-best	7	-	
+EPIRUS_SEL_BIGT	SEL_*（当选面/选拔键）	1	train-3p	9	Y	
+EPIRUS_SEL_BIGT_GAMES	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_BIGT_KEYS	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_BIGT_MODE	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_CARDS	SEL_*（当选面/选拔键）	1	train-3p	9	Y	
+EPIRUS_SEL_CARDS_GAMES	SEL_*（当选面/选拔键）	1	train-3p	4	Y	
+EPIRUS_SEL_CLEAR	SEL_*（当选面/选拔键）	1	train-3p	8	Y	
+EPIRUS_SEL_CLEAR_GAMES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_COUNTER	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_DEF	SEL_*（当选面/选拔键）	1	train-3p	28	Y	
+EPIRUS_SEL_DEF_GAMES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_DEF_MIN	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_DEF_MODE	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_DEFQ	SEL_*（当选面/选拔键）	1	train-3p	16	Y	
+EPIRUS_SEL_DEFQ_EPS	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_DEFQ_GAMES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_DEFQ_MINHANDS	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_DEFQ_MINSHARE	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_DEFQ_MODE	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_EVAL_SEEDS	SEL_*（当选面/选拔键）	2	train-3p|train-server	6	Y	
+EPIRUS_SEL_G45	SEL_*（当选面/选拔键）	1	train-3p	3	-	
+EPIRUS_SEL_G4LONG	SEL_*（当选面/选拔键）	1	train-3p	5	-	
+EPIRUS_SEL_GIFT_VETO	SEL_*（当选面/选拔键）	1	train-3p	6	Y	
+EPIRUS_SEL_GIFT_VETO_GAMES	SEL_*（当选面/选拔键）	1	train-3p	4	Y	
+EPIRUS_SEL_GRID	SEL_*（当选面/选拔键）	1	train-3p	9	Y	
+EPIRUS_SEL_GRID_GAMES	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_GRID_MODE	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_KEEP	SEL_*（当选面/选拔键）	1	train-3p	30	Y	
+EPIRUS_SEL_KEEP_CAL	SEL_*（当选面/选拔键）	1	train-3p	4	Y	
+EPIRUS_SEL_KEEP_CAST_KEYS	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_KEEP_KEYS	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_KEEP_MODES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_KEEP_PLAIN_GAMES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_KEEP_SEAT	SEL_*（当选面/选拔键）	1	train-3p	9	Y	
+EPIRUS_SEL_KEEP_SEAT_GAMES	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_KEEP_SEAT_MIN	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_LAND	SEL_*（当选面/选拔键）	1	train-3p	7	Y	
+EPIRUS_SEL_LAND_GAMES	SEL_*（当选面/选拔键）	1	train-3p	3	Y	
+EPIRUS_SEL_LAND_TOL	SEL_*（当选面/选拔键）	1	train-3p	2	Y	
+EPIRUS_SEL_POOL	SEL_*（当选面/选拔键）	1	train-3p	5	Y	
+EPIRUS_SEL_TWO_STAGE	SEL_*（当选面/选拔键）	1	train-3p	3	-	

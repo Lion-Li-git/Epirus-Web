@@ -812,7 +812,13 @@ if (process.env.EPIRUS_ARCH2) {
    *   而 `WIN` 是 `behavior-profile.mjs` 自己 `sandbox()` 出的**第二个引擎沙箱**，此前从没被 arch2 覆盖 ⇒
    *   在 2.0 臂里它拿 **v7 前向读代 3 权重**（`evo.js:21` 的 `LEGACY` 认形状那条老路）， ⇒ 排序键会拿"另一个世界的读数"换人，**且不崩不报错**。
    *   修法只在 2.0 分支里做（v7 路径、promote、门禁一个字节不动），装完立刻用 `verifyArch2Wired` 自证真被调用（"横幅证明变量、证明不了效果"是本页在册教训）。 */
-  if (SEL_BIGT > 0 || SEL_CLEAR > 0 || SEL_DEF > 0 || SEL_GRID > 0 || SEL_DEFQ > 0 || SEL_CARDS > 0) {
+  /* ⚑ 11-10 改判（千问 · 用户令"先做短的整理"）：**接线不再按名单例外，2.0 臂一律接**。
+   *   原条件是三行上面那份六根 SEL 旗标的硬编码 OR，而"谁在读 WIN 这把尺"是会长的：
+   *   `EPIRUS_CARD_ABORT`（:2486 `cardUsageProfile(WIN,…)`，11-10 才加的杀臂地板 ⇒ 一咬就 exit 13、产物不落）与
+   *   `SEL_KEEP`/`SEL_LAND`/`BREADTH_FLOOR`/`EFFSKILL_MIN` 那一段（:2891 → :2980 `fieldProfile(…)`，它内部用的就是 WIN）
+   *   **都不在那六根里** ⇒ 2.0 臂只开这两族时，当选面与早杀读的都是"v7 前向代 2.0 权重"，且不崩不报错（:809 那次同一个病）。
+   *   代价：多打一局 `games:1` 的自证；不消费 WIN 的臂行为逐字不变（没人读 ⇒ 装了也没人用）。 */
+  {
     let AW = null, wiredMsg = '';
     try {
       AW = installArch2(WIN, cfg);
@@ -827,11 +833,15 @@ if (process.env.EPIRUS_ARCH2) {
       console.error('[train-3p] ⛔ WIN 侧装出的面=' + AW.L.input + ' ≠ spec 的 ' + cfg.input + ' ⇒ 拒跑');
       process.exit(7);
     }
+    const WIN_READERS = [['SEL_BIGT', SEL_BIGT], ['SEL_CLEAR', SEL_CLEAR], ['SEL_DEF', SEL_DEF], ['SEL_GRID', SEL_GRID],
+      ['SEL_DEFQ', SEL_DEFQ], ['SEL_CARDS', SEL_CARDS], ['SEL_KEEP', SEL_KEEP], ['SEL_LAND', SEL_LAND],
+      ['BREADTH_FLOOR', BREADTH_FLOOR], ['EFFSKILL_MIN', EFFSKILL_MIN],
+      ['CARD_ABORT', Number(process.env.EPIRUS_CARD_ABORT || 0)]].filter(function (f) { return f[1] > 0; });
     console.log('[train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=' + AW.L.input +
       ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ ' + wiredMsg +
-      ' ⇒ `fieldProfile/aggressionProfile` 的当选面读数与产物同代（用到它的旗标：' +
-      ['SEL_BIGT=' + SEL_BIGT, 'SEL_CLEAR=' + SEL_CLEAR, 'SEL_DEF=' + SEL_DEF, 'SEL_GRID=' + SEL_GRID,
-        'SEL_DEFQ=' + SEL_DEFQ, 'SEL_CARDS=' + SEL_CARDS].join(' ') + '）');
+      ' ⇒ `fieldProfile/aggressionProfile/cardUsageProfile/measureDefenseQuality` 的读数与产物同代' +
+      ' ‖ 这一臂在读这把尺的旗标：' + (WIN_READERS.length ? WIN_READERS.map(function (f) { return f[0] + '=' + f[1]; }).join(' ') : '（无 ⇒ 接了但本臂不消费）') +
+      '【这份名单只点名，**不再决定接不接线**】');
   }
 }
 
