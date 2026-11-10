@@ -220,3 +220,4 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T16:38:26.570Z	900cb457bd922ba8	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/smoke-out-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-10T16:38:26.576Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/smoke-out-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-10T16:38:26.579Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	scratch/zcode-1111-bretest/smoke-out.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T17:27:06.823Z	cecfd10badfdc57e	docs/artifacts/MSB6-R1S1628871127-seg1.bak	docs/artifacts/MSB6-R1S1628871127-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
