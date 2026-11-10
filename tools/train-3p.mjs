@@ -741,6 +741,9 @@ if (KR_MODE === 1 || KR_MODE === 2) {
 }
 
 const P = sb.window.EpirusPolicy;
+/* 11-10（DS）：arch2.install 会把 P.unpack 覆盖成「只认 v92」的版本 ⇒ 先把**原始 legacy unpack** 留一份，
+ *   否则 v7 冠军（如 Q-s47）永远载不进来（报「同架构才行」）。 */
+const P_LEGACY_UNPACK = (typeof P.unpack === 'function') ? P.unpack.bind(P) : null;
 // setRng must run AFTER the engine is loaded.
 // I first put it before the vm.runInNewContext loop -> crashed with
 // Cannot read properties of undefined (reading 'setRng'),
@@ -2184,7 +2187,7 @@ if (process.env.EPIRUS_COURSE_PACK != null && process.env.EPIRUS_COURSE_PACK !==
       const blobC = JSON.parse(mC[1]);
       paramsC = (blobC && blobC.v === 92 && sb.window.EpirusPolicy2)
         ? sb.window.EpirusPolicy2.unpack(blobC, sb.window)
-        : P.unpack(blobC, true);
+        : (P_LEGACY_UNPACK ? P_LEGACY_UNPACK(blobC, true) : null);
     }
   } catch (e) { console.error('⛔ EPIRUS_COURSE_PACK 读不出：' + pp2 + ' ⇒ ' + e.message); process.exit(8); }
   if (!paramsC) { console.error('⛔ EPIRUS_COURSE_PACK 包不兼容（unpack 返回 null）：' + pp2); process.exit(8); }
@@ -2212,7 +2215,7 @@ if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '')
        *   不按当前 spec），v7 走 legacy unpack。P.unpack 的 v92 分支依赖 `global.EpirusPolicy2`（沙箱里可能没挂上）⇒ 显式双路。 */
       paramsF = (blobF && blobF.v === 92 && sb.window.EpirusPolicy2)
         ? sb.window.EpirusPolicy2.unpack(blobF, sb.window)
-        : P.unpack(blobF, true);
+        : (P_LEGACY_UNPACK ? P_LEGACY_UNPACK(blobF, true) : null);
     }
   } catch (e) { console.error('⛔ EPIRUS_FIT_CHAMP 读不出：' + pf + ' ⇒ ' + e.message); process.exit(8); }
   if (!paramsF) { console.error('⛔ EPIRUS_FIT_CHAMP 包不兼容（同架构才行）：' + pf); process.exit(8); }
