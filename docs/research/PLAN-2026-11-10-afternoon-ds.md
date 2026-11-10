@@ -26,13 +26,15 @@
 
 ## 三、候选方案（每条的判据与止损）
 
-### A. 先补教练池（最上游，先做）
+### A. 先让训练**直接吃得下 v7 / obs3 冠军**（用户 13:52 的提议，替代原来的「蒸馏教练」）
 
-- 做法：用 `tools/proto2/supfit-full.mjs`（已支持 2.0 教师）把 **KDG-B-Q-s13 / FOCUS-Q-s13 / CTRL2-Q-s7** 蒸馏成 **obs5 版**，当 `FIT_CHAMP`（跨架构蒸馏已有保真闸）。
-- 判据：蒸馏包在 obs5 上能装、`selftest3` 全绿、且**行为保真**（gun/guard/pierce 同键率 ≥0.8×教师）。
-- 成本：3 枚 × ~10 分钟 = 30 分钟。
-- 止损：保真闸不过 ⇒ 不加码，改用「脚本课程」（cautious farmer + pierce focus 两席常驻）。
-
+- 观察：`EpirusPolicy2.checkPack` 只按**包自己的 dims** 建布局（gen/input 白名单 + dof 表 + 段表对账），
+  并不依赖当前训练 spec ⇒ **obs3b/obs4 的包原则上能直接当对手**；v7 走 `policy.js` 的 legacy unpack（也已有）。
+- 阻塞点（我试出来的）：`tools/train-3p.mjs` 的负荷路径里没有稳定的 `EpirusPolicy2` 句柄（`installArch2` 装了面，但沙箱里取不到 Policy2 对象）⇒ 目前只能装同架构包。
+- 做法：在 `arch2.install()` 里把 `EpirusPolicy2` 挂到 `W`（一行），然后 `FIT_CHAMP/COURSE_PACK` 走「v92 → Policy2.unpack，v7 → P.unpack(legacy)」双路。
+- 判据：`FIT_CHAMP=G5C(obs3b)`、`FIT_CHAMP=Q-s47(v7)` 都能载入并出现在训练局（`FIT_STAT.fired > 0`），且 1 代 smoke 不崩。
+- 成本：~20 分钟（比蒸馏 30 分钟更省，且拿到的是**真冠军**而不是蒸馏仿品）。
+- 止损：载入后前向抛错（面/段不兼容）⇒ 退回蒸馏路线（supfit 已支持 2.0 教师）。
 ### B. 再改 objective（第二做）
 
 - 做法：fitness 桌固定为 **2 席冠军（教练池）+ 2 席脚本（分层：穿透/经济/防御/进攻）**，每局都有教练；选择准则保持 C。
