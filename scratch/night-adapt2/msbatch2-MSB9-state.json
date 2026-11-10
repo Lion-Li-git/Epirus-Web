@@ -6,13 +6,13 @@
  "gens": 200,
  "margin": 0.03,
  "start": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
- "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "champion": "docs/artifacts/night-adapt/MSB9-R2S1112532101.js",
  "champT": {
-  "mean": 0.13825749999999998,
-  "min": 0.06,
-  "spread": 0.1804
+  "mean": 0.31505000000000005,
+  "min": -0.0465,
+  "spread": 0.6019
  },
- "seedIdx": 4,
+ "seedIdx": 8,
  "history": [
   {
    "round": 1,
@@ -53,6 +53,55 @@
    "nextParents": [
     "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
     "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB9-R2S1112532101.js",
+   "champMean": 0.31505000000000005,
+   "pool": [
+    {
+     "label": "S1112532101",
+     "pack": "docs/artifacts/night-adapt/MSB9-R2S1112532101.js",
+     "mean": 0.31505000000000005,
+     "min": -0.0465
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "S443656264",
+     "pack": "docs/artifacts/night-adapt/MSB9-R2S443656264.js",
+     "mean": 0.1314975,
+     "min": 0.0728
+    },
+    {
+     "label": "S1597175670",
+     "pack": "docs/artifacts/night-adapt/MSB9-R2S1597175670.js",
+     "mean": 0.0326875,
+     "min": -0.0169
+    },
+    {
+     "label": "S1663058548",
+     "pack": "docs/artifacts/night-adapt/MSB9-R2S1663058548.js",
+     "mean": 0.0123075,
+     "min": -0.087
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB9-R2S1112532101.js",
+    "docs/artifacts/night-adapt/MSB9-R2S1112532101.js",
     "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
     "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js"
    ]
