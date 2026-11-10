@@ -12,6 +12,35 @@
   "min": 0.0943,
   "spread": 0.193
  },
- "seedIdx": 0,
- "history": []
+ "seedIdx": 1,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+   "champMean": 0.20021500000000003,
+   "pool": [
+    {
+     "label": "S1308870894",
+     "pack": "docs/artifacts/night-adapt/MSB12-seqboom-R1S1308870894.js",
+     "mean": 0.20958,
+     "min": 0.1186
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB12-seqboom-R1S1308870894.js"
+   ]
+  }
+ ]
 }

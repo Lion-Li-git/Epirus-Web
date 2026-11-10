@@ -78,7 +78,8 @@ const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'd
   /* 11-11 深夜：C 尺换代链的新冠军入册（MSB6-R2S501866988 C 0.1049 / MSB8-charge C 0.1383 / 前任 S916R2B 0.0668） */
   'S916R2B-R1S685223462': 'docs/artifacts/night-adapt/S916R2B-R1S685223462.js',
   'MSB6-R2S501866988': 'docs/artifacts/night-adapt/MSB6-R2S501866988.js', 'MSB8-charge-R1S1861674281': 'docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js',
-  'MSB10-R1S1149480262': 'docs/artifacts/night-adapt/MSB10-R1S1149480262.js', 'MSB8-bagua-R1S88974978': 'docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js' };
+  'MSB10-R1S1149480262': 'docs/artifacts/night-adapt/MSB10-R1S1149480262.js', 'MSB8-bagua-R1S88974978': 'docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js',
+  'MSB11-R2S306293884': 'docs/artifacts/night-adapt/MSB11-R2S306293884.js', 'MSB9-R2S1112532101': 'docs/artifacts/night-adapt/MSB9-R2S1112532101.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
