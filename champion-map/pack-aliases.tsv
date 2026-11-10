@@ -191,3 +191,6 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T18:36:00.005Z	ca7c04ccab25f5b6	docs/artifacts/night-adapt/MSB4-R1S1928336850.js	docs/artifacts/MSB4-R1S1928336850-band1.bak	train-3p:band	已登记的复制：同一次跑的第 1 席（产物 = 该臂终点）
 2026-11-10T18:36:00.006Z	ca992811b58d7aef	docs/artifacts/night-adapt/MSB4-R1S922202334.js	docs/artifacts/MSB4-R1S922202334-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席（产物 = 该臂终点）
 2026-11-10T18:36:00.007Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-FITCHAMP-band4.bak	train-3p:band	已登记的复制：同一次 SMOKE-FITCHAMP 跑的第 4 席
+2026-11-10T19:25:00.000Z	0277b4fc112c1037	docs/artifacts/MSB5-R1S808369991-band6.bak	docs/artifacts/night-adapt/MSB5-R1S808369991.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 6 席（11-10 MSB5 收尾补登记）
+2026-11-10T19:25:00.001Z	154df468fe284a51	docs/artifacts/MSB5-R1S928337601-band3.bak	docs/artifacts/night-adapt/MSB5-R1S928337601.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 3 席（11-10 MSB5 收尾补登记）
+2026-11-10T19:25:00.002Z	9d01d51f5d678846	docs/artifacts/MSB5-R1S942253744-band5.bak	docs/artifacts/night-adapt/MSB5-R1S942253744.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 5 席（11-10 MSB5 收尾补登记）
