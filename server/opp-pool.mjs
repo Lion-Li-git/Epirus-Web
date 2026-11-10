@@ -15,8 +15,6 @@
 export const OPP_SPECS = [
   { name: 'random', fn: 'pickRandom' },
   { name: 'balanced', fn: 'pickBalanced' },
-  /* 11-10（考卷 v3）：谨慎农民 —— 攒钱为主、上一回合被打就 guard */
-  { name: 'cautious', fn: 'pickCautiousFarmer' },
   { name: 'aggro', fn: 'pickAggro' },
   { name: 'defend', fn: 'pickDefend' },
   { name: 'wall', fn: 'pickWall' },
@@ -94,7 +92,11 @@ export const OPP_SPECS = [
    *  （§三处注释同一条协议：OPP_DEFAULT 取前 9 ⇒ 11-09 曾插在 index 2/3 把默认基线改了而门没红——
    *    已由名字集断言修好，见 tools/gates/ship-promote.mjs）。 */
   { name: 'swordspam', fn: 'pickSwordSpam' },
-  { name: 'piercemix', fn: 'pickPierceMix' }
+  { name: 'piercemix', fn: 'pickPierceMix' },
+  /* 11-10（考卷 v3）：谨慎农民 —— 攒钱为主、上一回合被打就 guard。
+   * ⚠ 必须追加在**尾部**：OPP_DEFAULT = slice(0,9) 是冻结的默认基线，插进前 9 会静默换人（D78 当场红）；
+   *   它只服务 EXAM_POOL_V3（v3 = v2 + 这一席），v1/v2 逐位不变。 */
+  { name: 'cautious', fn: 'pickCautiousFarmer' }
 ];
 
 /* 训练池的默认集合（名字数组）。默认**不含**四个 specialist —— 它们只在显式实验里按需加入

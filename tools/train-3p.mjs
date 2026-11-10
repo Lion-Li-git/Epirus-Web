@@ -3590,6 +3590,17 @@ if (Number(process.env.EPIRUS_COURSE_EVERY || 0) > 0) {
   }
 }
 
+/* ===== 11-10（用户：2P 也要统一冠军）：FIT_CHAMP 开火收据 =====
+ * 同 [course]/[kill] 纪律：下达了却一局未上桌 ⇒ 判据没接上（例如 2P 混桌被旧的 nG<3 挡掉）⇒ 本臂作废。 */
+if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '') {
+  const fst = (typeof T.fitStat === 'function') ? T.fitStat() : { fired: -1 };
+  console.log('[fitChamp] 开火计数：冠军席上桌 ' + fst.fired + ' 局 · 按人数 ' + JSON.stringify(fst.byN || {}) + '（fitChampEvery=' + (process.env.EPIRUS_FIT_CHAMP_EVERY || '4') + '）');
+  if (!(fst.fired > 0)) {
+    console.error('[train-3p] ⛔ 下达了 EPIRUS_FIT_CHAMP 却**一局未上桌** ⇒ 本臂作废');
+    process.exit(8);
+  }
+}
+
 /* =====（ZCode · 11-06 深夜）桌形混合 收据：同 [course] 的形状 =====
  * 一局未翻 ⇒ 判据没接上（k<2 被钳 / 表形不匹配）⇒ 本臂作废，不许静默空转。
  * （池对手席走在册 EPIRUS_POOL_OPPS——它的收据在 [pool-ops] 那一支，不在这里重复。） */

@@ -183,3 +183,11 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T05:57:17.515Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/SMOKE-XB-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-10T05:57:17.520Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-XB-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-10T05:57:17.525Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	scratch/ds-1109/SMOKE-XB.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T18:36:00.000Z	6581894d9055951f	docs/artifacts/MSB3-R1S1428643599-band2.bak	docs/artifacts/MSB3-R1S1428643599-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席与第 2 席同权重（11-10 复核补登记）
+2026-11-10T18:36:00.001Z	9229cb74f703cee8	docs/artifacts/night-adapt/MSB3-R1S1428643599.js	docs/artifacts/MSB3-R1S1428643599-band6.bak	train-3p:band	已登记的复制：同一次跑的第 6 席（产物 = 该臂终点）
+2026-11-10T18:36:00.002Z	adf0110e9f595b0a	docs/artifacts/night-adapt/MSB3-R1S2091617905.js	docs/artifacts/MSB3-R1S2091617905-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席（产物 = 该臂终点）
+2026-11-10T18:36:00.003Z	1c6462d0b133d85b	docs/artifacts/night-adapt/MSB3-R1S60338354.js	docs/artifacts/MSB3-R1S60338354-band6.bak	train-3p:band	已登记的复制：同一次跑的第 6 席（产物 = 该臂终点）
+2026-11-10T18:36:00.004Z	561d38226fa8357e	docs/artifacts/night-adapt/MSB4-R1S1335338872.js	docs/artifacts/MSB4-R1S1335338872-band1.bak	train-3p:band	已登记的复制：同一次跑的第 1 席（产物 = 该臂终点）
+2026-11-10T18:36:00.005Z	ca7c04ccab25f5b6	docs/artifacts/night-adapt/MSB4-R1S1928336850.js	docs/artifacts/MSB4-R1S1928336850-band1.bak	train-3p:band	已登记的复制：同一次跑的第 1 席（产物 = 该臂终点）
+2026-11-10T18:36:00.006Z	ca992811b58d7aef	docs/artifacts/night-adapt/MSB4-R1S922202334.js	docs/artifacts/MSB4-R1S922202334-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席（产物 = 该臂终点）
+2026-11-10T18:36:00.007Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-FITCHAMP-band4.bak	train-3p:band	已登记的复制：同一次 SMOKE-FITCHAMP 跑的第 4 席

@@ -1528,6 +1528,8 @@
    *   ⚠ 代价要说明白：并掉 ε 之后**最简单档变硬了** —— 统一剂量下 soft 带实测人类席夺冠 19.0%(multi) ‖ 20.6%(long)，
    *   而原来那一档（ε=1/uniform）是 61.9% ‖ 71.5%。想要"真简单"的杠杆只剩两个：给 soft 带添更弱的成员，
    *   或单独给简单档留一点 ε（`eps2` 之外再加一个 `epsEasy` 之类，那是下一次裁定）。 */
+  /* ⚠ 带内枚数现读 `champion-map/pool-members.tsv`（2026-11-09 现数 = 22 枚：hard 9 ‖ soft 13）；
+   *   下面各档 note 里的 11/16、12/13 等是历史读数，不再当现状。 */
   const DIFF_TIERS = [
     { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft',
       /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面，能用更多低性价比的技能…
