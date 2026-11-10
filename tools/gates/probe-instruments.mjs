@@ -695,7 +695,7 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
    * 修法：读集问 `knob-guard.readKeysOf`（与 `enforceKnobs` **同一份**），再取环境里真设了的键 ⇒ 加旋钮不用改这里。 */
   const t3 = readFileSync('training/train-3p.mjs', 'utf8');
   ok(/import \{ enforceKnobs, readKeysOf \}/.test(t3), '读集必须来自 knob-guard 单一来源');
-  ok(/readKeysOf\(\{ entry: 'tools\/train-3p\.mjs', extraReadKeys: SELF_ENV_KEYS \}\)/.test(t3),
+  ok(/readKeysOf\(\{ entry: 'training\/train-3p\.mjs', extraReadKeys: SELF_ENV_KEYS \}\)/.test(t3),
     '必须用**与 enforceKnobs 同一个读集**（entry + SELF_ENV_KEYS），不许另抄一份名单');
   ok(/const EFFECTIVE_ENV = \(function \(\) \{/.test(t3) && /env: EFFECTIVE_ENV, envKeys:/.test(t3),
     '主 meta 的 recipe 必须带 env + envKeys');
