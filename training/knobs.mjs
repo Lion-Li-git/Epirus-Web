@@ -23,12 +23,15 @@ import { TRAIN_ENV_KEYS, REMOVED_TRAIN_KEYS } from './server/train-env.mjs';
 const DOC = 'training/TRAINING-KNOBS.md';
 const CHECK = process.argv.includes('--check');
 
-/* —— 四入口的读集（opt 逐条抄自各文件的 enforceKnobs 调用；与 scratch/qoder-1110-knob-census.mjs 同源，改两处要一起改）—— */
+/* —— 五入口的读集（opt 逐条抄自各文件的 enforceKnobs 调用；与 scratch/qoder-1110-knob-census.mjs 同源，改两处要一起改）——
+ * 11-11 夜：补 promote-champion（第五入口）——体检探针的 NO_＊ 与 GAMES 族旋钮真读它，
+ *   此前四入口口径把它们误判成"暗键（删除候选）"——口径错了清单就危险。 */
 const ENTRIES = [
   { tool: 'train-3p', file: 'training/train-3p.mjs' },
   { tool: 'train-best', file: 'training/train-best.mjs' },
   { tool: 'train-fast', file: 'training/train-fast.mjs' },
   { tool: 'train-server', file: 'training/server/train-server.mjs' },
+  { tool: 'promote-champion', file: 'tools/promote-champion.mjs' },
 ];
 const src3p = readFileSync('training/train-3p.mjs', 'utf8');
 /* SELF_ENV_KEYS 数组块（含行尾注释——这就是注解的真源） */

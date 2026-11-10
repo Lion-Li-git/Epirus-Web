@@ -221,7 +221,15 @@ const SELF_ENV_KEYS = [
   'EPIRUS_NORM',   // 2.0 臂：输入标准化 {mean[],std[]} JSON 路径（读不出/形状不对 ⇒ exit 7）
   'EPIRUS_TRIPLET', 'EPIRUS_TRIPLET_LOG',   // 落盘后 triplet 读数（spawn exam4-triplet，JSON 上 stdout）/ 台账追加路径（设了才写）
   'EPIRUS_ALIAS_TSV',   // 包别名表路径（pack-resolve 链读；门体 _ctx 有自己的缺省）
-  'EPIRUS_INIT_ACT_K'   // 2.0 起点初始化的动作头振幅（arch2 缺省 1）
+  'EPIRUS_INIT_ACT_K',   // 2.0 起点初始化的动作头振幅（arch2 缺省 1）
+  /* ===== 11-11 夜：promote-champion（第五入口）的体检探针族——注解住在登记块，读取点在 promote ===== */
+  'EPIRUS_BREADTH_GAMES',   // promote 广度画像局数（long/multi 各一把，默认 20）
+  'EPIRUS_NO_PROXY', 'EPIRUS_PROXY_GAMES',   // promote 反弹代理探针：跳过旗（省 30s）/ 局数（默认 20；只打印不判定）
+  'EPIRUS_NO_GUARD', 'EPIRUS_GUARD_GAMES', 'EPIRUS_GUARD_SEEDS',   // promote 防御三件探针：跳过旗 / 局数（默认 40）/ 种子数（默认 2）
+  'EPIRUS_NO_SHAPE', 'EPIRUS_SHAPE_GAMES',   // promote 形状适应度探针：跳过旗 / 局数（默认 30；只打印不判定）
+  'EPIRUS_NO_DEFQ', 'EPIRUS_DEFQ_GAMES',   // promote 白防率探针：跳过旗 / 局数（默认 30；立线前只让读数可见）
+  'EPIRUS_SNIPER_GAMES',   // promote 狙击画像局数（默认 20，long/mixed）
+  'EPIRUS_JSON'   // promote 判据的机器可读投影行前缀（固定字面量，不是路径）
 ];
 /* v1.5.187：**大雷连带收益权重**（`evo.js` 的 `BIGT_CHAIN_W`，DS 交接 §2b 的唯一待做）走 econ 族，
  * 而它的 env 名按 D77 只许出现在 `server/econ-env.mjs` ⇒ 这里**不写字面量**，

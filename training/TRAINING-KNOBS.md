@@ -4,7 +4,7 @@
 > ① **代码读取**（server/knob-guard.mjs 解析四个入口，读集即闸真正认的集合）；
 > ② **注解**（`tools/train-3p.mjs` 的 `SELF_ENV_KEYS` 行尾注释——注解住在读取处旁边，删旋钮时自然消失）。
 > 改了任何一处的 env 读取 / 注解 ⇒ 跑 `node tools/knob-registry.mjs` 重生成；CI 每次 push 都会 `--check`。
-> 数据账：全集 245 ‖ 在用 223 ‖ 暗键 21 ‖ 孤儿 0 ‖ 在用未登记 0 ‖ 已删除台账 1
+> 数据账：全集 245 ‖ 在用 235 ‖ 暗键 9 ‖ 孤儿 0 ‖ 在用未登记 0 ‖ 已删除台账 1
 
 ## 状态速览
 
@@ -20,9 +20,9 @@
 | 旋钮 | 读它的入口 | 登记 | 单一来源表 | 状态 | 注解（SELF_ENV_KEYS 行尾） |
 |---|---|---|---|---|---|
 | `EPIRUS_AGGRO_OPPS` | train-3p | Y | — | 在用 | DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变） |
-| `EPIRUS_AGGR_GAMES` | train-3p train-best train-server | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
+| `EPIRUS_AGGR_GAMES` | train-3p train-best train-server promote-champion | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
 | `EPIRUS_ALIAS_TSV` | train-3p train-best train-fast | Y | — | 在用 | 包别名表路径（pack-resolve 链读；门体 _ctx 有自己的缺省） |
-| `EPIRUS_ALLOW_DARK` | train-3p train-best train-fast train-server | Y | — | 在用 | 闸放行旗（=1 放行「本入口读不到的键」）；用臂必须自己补回逐键回执证据（见上 ⚑ 块） |
+| `EPIRUS_ALLOW_DARK` | train-3p train-best train-fast train-server promote-champion | Y | — | 在用 | 闸放行旗（=1 放行「本入口读不到的键」）；用臂必须自己补回逐键回执证据（见上 ⚑ 块） |
 | `EPIRUS_ALLOW_HEALTH_FAIL` | train-3p train-server | Y | — | 在用 | 2P 服务：体检未过仍落盘（实验臂旗，默认关） |
 | `EPIRUS_ANCHOR` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_ANCHOR_TO` | train-3p | Y | — | 在用 |  |
@@ -41,13 +41,13 @@
 | `EPIRUS_BLOCK_W` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_BREADTH_FATAL` | train-3p | Y | — | 在用 | DS 11-03：名人堂全塌缩时中止（默认关 ⇒ 旧行为逐字同） |
 | `EPIRUS_BREADTH_FLOOR` | train-3p | Y | — | 在用 | v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数） |
-| `EPIRUS_BREADTH_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_BREADTH_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 广度画像局数（long/multi 各一把，默认 20） |
 | `EPIRUS_BUNDLE_IN` | train-3p train-server | Y | — | 在用 | 2P 服务：热启动源 / 产物落点（隔离模式；线上包只由 promote 写） |
 | `EPIRUS_BUNDLE_OUT` | train-3p train-server | Y | — | 在用 | 2P 服务：热启动源 / 产物落点（隔离模式；线上包只由 promote 写） |
 | `EPIRUS_CARD_ABORT` | train-3p | Y | — | 在用 | 11-10（用户：连续一段 <4 卡就杀，不等终局）：训练期 top-1 用卡数连续 K 代低于下限 ⇒ 整臂 exit 13，不写产物 |
 | `EPIRUS_CARD_ABORT_GAMES` | train-3p | Y | — | 在用 | 11-10（用户：连续一段 <4 卡就杀，不等终局）：训练期 top-1 用卡数连续 K 代低于下限 ⇒ 整臂 exit 13，不写产物 |
 | `EPIRUS_CARD_MIN` | train-3p | Y | — | 在用 | 11-10（用户：连续一段 <4 卡就杀，不等终局）：训练期 top-1 用卡数连续 K 代低于下限 ⇒ 整臂 exit 13，不写产物 |
-| `EPIRUS_CHARGE_GAMES` | train-3p train-best train-server | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
+| `EPIRUS_CHARGE_GAMES` | train-3p train-best train-server promote-champion | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
 | `EPIRUS_CHARGE_MIN_EP` | train-3p train-best train-fast train-server | Y | — | 在用 | 蓄能门槛（worker 下达，缺省 2 = v1.5.82 裁定） |
 | `EPIRUS_CHROME` | — | — | — | 暗键（被提及无人读） |  |
 | `EPIRUS_CLEAR_W` | train-3p train-best train-fast train-server | Y | — | 在用 |  |
@@ -60,15 +60,15 @@
 | `EPIRUS_COURSE_PACK` | train-3p | Y | — | 在用 | 11-10 DS：课程席放真实包 / fitness 掺冠军桌（包路径）/ 冠军席每 k 局一席（默认 4） |
 | `EPIRUS_CURSE_PUSH` | train-3p | Y | — | 在用 | 部署档把手：贴贴高 ep 软注入 / 送盾先验 0\|1\|2（本入口 CLI 默认 2） |
 | `EPIRUS_DEBUG_CDP` | — | — | — | 暗键（被提及无人读） |  |
-| `EPIRUS_DEFQ_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_DEFQ_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 白防率探针：跳过旗 / 局数（默认 30；立线前只让读数可见） |
 | `EPIRUS_DEF_ADAPT_W` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_DEF_IDLE_W` | train-3p | Y | — | 在用 |  |
-| `EPIRUS_DENSITY_GAMES` | train-3p train-best train-server | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
+| `EPIRUS_DENSITY_GAMES` | train-3p train-best train-server promote-champion | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
 | `EPIRUS_DIV_CATW` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_DIV_FORCE_GENS` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_DIV_K` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_DIV_ROLEW` | train-server | — | ECON_ENV_KEYS | 在用 |  |
-| `EPIRUS_DIV_W` | train-3p train-best train-server | — | ECON_ENV_KEYS | 在用 |  |
+| `EPIRUS_DIV_W` | train-3p train-best train-server promote-champion | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_DRAIN_HEAL_W` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_DRAIN_PUSH` | train-3p | Y | — | 在用 | §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读 |
 | `EPIRUS_ECON_OPPS` | train-3p | Y | — | 在用 | v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关） |
@@ -80,7 +80,7 @@
 | `EPIRUS_FAMILY_FIELD` | train-3p | Y | — | 在用 | §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数 |
 | `EPIRUS_FEASIBILITY` | train-3p train-server | Y | — | 在用 | 2P 服务：落盘前可行性体检（=0 关）/ 体检不过阻断落盘（默认关） |
 | `EPIRUS_FEASIBILITY_BLOCK` | train-3p train-server | Y | — | 在用 | 2P 服务：落盘前可行性体检（=0 关）/ 体检不过阻断落盘（默认关） |
-| `EPIRUS_FEAS_GAMES` | train-3p train-best train-server | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
+| `EPIRUS_FEAS_GAMES` | train-3p train-best train-server promote-champion | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
 | `EPIRUS_FEAT_MASK` | train-3p train-server | Y | — | 在用 | worker：特征掩码（policy.setFeatMask，训练侧砍维用） |
 | `EPIRUS_FIGHT_DEAL` | train-server | — | FIGHT_ENV_KEYS | 在用 |  |
 | `EPIRUS_FIGHT_FIRST` | train-server | — | FIGHT_ENV_KEYS | 在用 |  |
@@ -97,9 +97,9 @@
 | `EPIRUS_GA_BAND` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_GA_GATE` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_GA_GATE_GAMES` | train-3p | Y | — | 在用 |  |
-| `EPIRUS_GUARD_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_GUARD_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 防御三件探针：跳过旗 / 局数（默认 40）/ 种子数（默认 2） |
 | `EPIRUS_GUARD_HIT_W` | train-3p | Y | — | 在用 |  |
-| `EPIRUS_GUARD_SEEDS` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_GUARD_SEEDS` | train-3p promote-champion | Y | — | 在用 | promote 防御三件探针：跳过旗 / 局数（默认 40）/ 种子数（默认 2） |
 | `EPIRUS_HALL_DEDUP` | train-3p | Y | — | 在用 | v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变） |
 | `EPIRUS_HALL_SEED` | train-3p | Y | — | 在用 | v1.5.277 §E114：把起点补进终局重验的候选池（默认关） |
 | `EPIRUS_HALL_TRACE` | train-3p | Y | — | 在用 |  |
@@ -122,7 +122,7 @@
 | `EPIRUS_INIT_ACT_K` | train-3p | Y | — | 在用 | 2.0 起点初始化的动作头振幅（arch2 缺省 1） |
 | `EPIRUS_INIT_SCALE` | train-3p | Y | — | 在用 | 11-04 波 H（千问）：随机起点幅度（缺省 0.25 = 出厂） |
 | `EPIRUS_INSTR` | — | — | — | 暗键（被提及无人读） |  |
-| `EPIRUS_JSON` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_JSON` | train-3p promote-champion | Y | — | 在用 | promote 判据的机器可读投影行前缀（固定字面量，不是路径） |
 | `EPIRUS_KILL_FIELD` | train-3p train-server | Y | TRAIN_ENV_KEYS | 在用 | v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达" |
 | `EPIRUS_KILL_REWARD` | train-3p | Y | — | 在用 | v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎） |
 | `EPIRUS_KR_TRANSFER` | train-3p | Y | — | 在用 | v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎） |
@@ -133,10 +133,10 @@
 | `EPIRUS_MIXHP_EVERY` | train-3p | Y | — | 在用 | （ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌形（multi↔long；3血适应，默认 0=关） |
 | `EPIRUS_MUT_MODE` | train-3p | Y | — | 在用 | §E821（10-28 傍晚 · 千问）：2.0 架构原型 + 段感知/扁平变异算子档（默认关 ⇒ 逐字回到 v7） |
 | `EPIRUS_NORM` | train-3p | Y | — | 在用 | 2.0 臂：输入标准化 {mean[],std[]} JSON 路径（读不出/形状不对 ⇒ exit 7） |
-| `EPIRUS_NO_DEFQ` | — | — | — | 暗键（被提及无人读） |  |
-| `EPIRUS_NO_GUARD` | — | — | — | 暗键（被提及无人读） |  |
-| `EPIRUS_NO_PROXY` | — | — | — | 暗键（被提及无人读） |  |
-| `EPIRUS_NO_SHAPE` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_NO_DEFQ` | train-3p promote-champion | Y | — | 在用 | promote 白防率探针：跳过旗 / 局数（默认 30；立线前只让读数可见） |
+| `EPIRUS_NO_GUARD` | train-3p promote-champion | Y | — | 在用 | promote 防御三件探针：跳过旗 / 局数（默认 40）/ 种子数（默认 2） |
+| `EPIRUS_NO_PROXY` | train-3p promote-champion | Y | — | 在用 | promote 反弹代理探针：跳过旗（省 30s）/ 局数（默认 20；只打印不判定） |
+| `EPIRUS_NO_SHAPE` | train-3p promote-champion | Y | — | 在用 | promote 形状适应度探针：跳过旗 / 局数（默认 30；只打印不判定） |
 | `EPIRUS_OPP_BLOCK` | train-3p | Y | — | 在用 | v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆） |
 | `EPIRUS_OPP_HUMAN` | train-3p | Y | — | 在用 | v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变） |
 | `EPIRUS_OPP_HUMAN_FILE` | train-3p | Y | — | 在用 | v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变） |
@@ -154,7 +154,7 @@
 | `EPIRUS_POPSTAT` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
 | `EPIRUS_POPSTAT_K` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
 | `EPIRUS_POPSTAT_OUT` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
-| `EPIRUS_PROXY_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_PROXY_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 反弹代理探针：跳过旗（省 30s）/ 局数（默认 20；只打印不判定） |
 | `EPIRUS_PUBLISH` | train-3p train-fast | Y | — | 在用 |  |
 | `EPIRUS_REFLECT_W` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_REGEN_GENS` | train-3p train-server | Y | — | 在用 | 补贴族：补贴总代数 / 补贴率下达（本入口） |
@@ -166,7 +166,7 @@
 | `EPIRUS_RING_W` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_S4_GAMES` | train-3p train-server | Y | — | 在用 | 2P 服务：shapeScorer 量具局数（默认 8） |
 | `EPIRUS_S4_W` | train-server | — | ECON_ENV_KEYS | 在用 |  |
-| `EPIRUS_SEAT_GAMES` | train-3p train-best train-server | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
+| `EPIRUS_SEAT_GAMES` | train-3p train-best train-server promote-champion | Y | — | 在用 | 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS） |
 | `EPIRUS_SEED` | train-3p train-best train-fast | Y | — | 在用 |  |
 | `EPIRUS_SEED0` | train-3p train-server | Y | — | 在用 | 2P 服务：worker 播种根（服务端派生后下发） |
 | `EPIRUS_SEEDPACK` | train-3p | Y | — | 在用 |  |
@@ -214,11 +214,11 @@
 | `EPIRUS_SEL_TWO_STAGE` | train-3p | Y | — | 在用 | 选拔档：两段式（默认开，=0 关）/ G4/G5 最坏格否决（默认关）/ G4long 逐格否决（默认关） |
 | `EPIRUS_SEQ_KIND` | train-3p | Y | — | 在用 | v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼） |
 | `EPIRUS_SEQ_W` | train-3p | Y | — | 在用 | v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关） |
-| `EPIRUS_SHAPE_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_SHAPE_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 形状适应度探针：跳过旗 / 局数（默认 30；只打印不判定） |
 | `EPIRUS_SIGMA_DECAY` | train-3p | Y | — | 在用 | GA σ 调度：下限（0.06）/ 衰减（0.995）/ 停滞回抬档（K 代没进步 ×1.25，默认 0=关） |
 | `EPIRUS_SIGMA_FLOOR` | train-3p | Y | — | 在用 | GA σ 调度：下限（0.06）/ 衰减（0.995）/ 停滞回抬档（K 代没进步 ×1.25，默认 0=关） |
 | `EPIRUS_SIGMA_STALL` | train-3p | Y | — | 在用 | GA σ 调度：下限（0.06）/ 衰减（0.995）/ 停滞回抬档（K 代没进步 ×1.25，默认 0=关） |
-| `EPIRUS_SNIPER_GAMES` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_SNIPER_GAMES` | train-3p promote-champion | Y | — | 在用 | promote 狙击画像局数（默认 20，long/mixed） |
 | `EPIRUS_STALL_ABORT` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_STOCK_BONUS` | train-server | — | ECON_ENV_KEYS | 在用 |  |
 | `EPIRUS_STYLE_FRAC` | train-3p | Y | — | 在用 | 风格课程：指定风格桌 / 风格席混入比例 / 风格奖励权重（服务端，默认 0.5）/ 其量具局数（默认 2） |
@@ -268,23 +268,11 @@
 ## 暗键（删除候选，处置前先查启动器）
 
 - `EPIRUS_BATCH_MAX`
-- `EPIRUS_BREADTH_GAMES`
 - `EPIRUS_CHROME`
 - `EPIRUS_DEBUG_CDP`
-- `EPIRUS_DEFQ_GAMES`
-- `EPIRUS_GUARD_GAMES`
-- `EPIRUS_GUARD_SEEDS`
 - `EPIRUS_INSTR`
-- `EPIRUS_JSON`
-- `EPIRUS_NO_DEFQ`
-- `EPIRUS_NO_GUARD`
-- `EPIRUS_NO_PROXY`
-- `EPIRUS_NO_SHAPE`
-- `EPIRUS_PROXY_GAMES`
 - `EPIRUS_REPO`
 - `EPIRUS_SELF_TEACHER`
-- `EPIRUS_SHAPE_GAMES`
-- `EPIRUS_SNIPER_GAMES`
 - `EPIRUS_TEACHER_GATE`
 - `EPIRUS_TEACHER_GATE_HP`
 - `EPIRUS_TEACHER_GATE_T`
