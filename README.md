@@ -134,7 +134,9 @@ node tools/train-selftest.mjs                # 训练侧三条凭据
 
 ⚠ `--group=` / `--part=` / `--only=` 跑出来的都不是整轮认证（工具会自己印「只跑了 N / M 条」）；收工前那一遍要整轮。
 
-## 训练（Node 并行）
+## 训练
+
+### 旧入口（v7 / 2P 快速路径）
 
 ```bash
 node tools/train-fast.mjs 500    # 快速 500 代（产物落 docs/artifacts/train-fast-out.js；EPIRUS_PUBLISH=1 才写 js/bundled-champion.js）
@@ -145,6 +147,74 @@ node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每�
 - 评测口径与实战一致：`js/core/play.js` 的 `autoGame` 中双方都基于「行动前状态」决策。
 - 绝不空放：`autoGame` 对任何脚本/AI 返回的「买不起或条件不满足」的招一律兜底改按ジ（`policy.js` 另给了 `lastSkill` 的显式「上一招无效」特征）。
 - 连招反制训练：池内 `combocounter` 脚本会读对手最近 5 次出招并选克制技，模拟正常对局里被针对的局面；游戏内不再另做运行时连招防护，困难档直接用冠军策略。
+
+### 2.0 网络（obs5 / v92，2026-11-10）
+
+当前多人冠军池仍是 **obs3b 代 3（7993 参数）**；下面的 obs5 是**当前训练面**，尚未入池。三张容器/观测面：
+
+| 面 | 特征维 | 参数量 | 聚合 | 说明 |
+|---|---:|---:|---|---|
+| v7 | 213 | 5689 | 4 槽 + 单标量头 | 旧线，2P 池仍用 |
+| obs3b | 415 | 7993 | `h_self ‖ mean(对手) ‖ max(对手)` | 2.0 第一代，现池 |
+| obs4 | 292 | 12969 | 8 个固定槽，无 mean/max | 11-10 原型 |
+| obs5 | 292 | 12393 | 1 层自注意力 + PMA 4 seed | **当前训练面** |
+
+obs5 与 obs4 共用同一张 **292 维特征 manifest**：每席 35 维（29 公开 + 5 关系 + 1 isSelf），局面侧 60 维（G5 + 私有 2 + 序列 48 + 合计 1 + 比较 4），合计 292。差别只在聚合段：
+
+- 共享 `seatEnc` 35→24；
+- **1 层自注意力**（QKV 各 24×24，活席掩码 softmax，残差直连）；
+- **PMA 4 个 seed**（keys/values 读注意力后的语境），输出 pooled 96；
+- `xin = [局面 60 ‖ pooled 96] = 156`；
+- `actEnc` → 24；`cand` 层把 `[ctx 32 ‖ actH 24 ‖ 两个席位 enc 48]` → `hid2 24`，键层按 `keySplit` 输出；
+- 段序 = `seatEnc‖attn‖pma‖actEnc‖ctx‖cand‖head`，查找一律**按段名**（obs5 插段后下标不再可靠）。
+
+结构上的两个性质：**置换不变**（softmax 只作用在“在场席位集合”上，死亡席不编码、不占 softmax）；**跨人数**（K 只经 softmax 归一进入，权重和恒 1，没有 mean 的“除以 N”伪影；init 时注意力 logits≈0，从软均值起步特化）。浏览器侧 `js/train/policy2.js` 与训练侧 `tools/proto2/arch2.mjs` 同源；`tools/proto2/browser-parity.mjs` 用同一包、同一批决策点逐位对账 logits。
+
+### 2.0 训练流程
+
+```bash
+# 一条臂：200 代，5P，每代 24 局，种群 8；具体配方走 EPIRUS_* 环境变量
+node tools/train-3p.mjs 200 5 24 8
+
+# 多种子轮换 + 按 C 选冠军（3 臂 × 200 代，轮末重测）
+node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens=200 --arm=MSB5
+```
+
+一条臂里发生什么：
+
+1. **初始化/热启动**：`EPIRUS_HOTSTART=1` + `EPIRUS_SEEDPACK=<v92 包>`；v7 包不能直接热启动（只认 v:92）。
+2. **逐代评估**：每个个体跑 `GAMES` 局，`scoreMemberN` 算 fitness；`EPIRUS_MUT_MODE=seg` 做段感知变异/交叉。
+3. **逐代排序**：精英/父母抽取、名人堂写入；可选 `EPIRUS_GA_GATE` 每代 top-3 健康读。
+4. **终局**：名人堂重验、`SEL_*` 当选面 veto/排序、写 band 候选；产物 = 起点时 §E589 拒绝落盘（exit 9，不是 0）。
+
+2.0 产线当前的训练形状（不是所有键的默认值）：
+
+- **桌形混合**：`EPIRUS_MIX2_EVERY=4`（每 4 局一桌 2P）、`EPIRUS_MIX8=4`（8P）、`EPIRUS_MIXHP_EVERY=2`（3 血 ↔ 5 血），主桌 `EPIRUS_TRAIN_MODE=long`；
+- **教练**：`EPIRUS_FIT_CHAMP=<包>` 每 k 局把一席换成真实冠军；`EPIRUS_COURSE_PACK=<包>` 每 k 代把一席换成课程包；v92 走 `Policy2.unpack`，v7 走 legacy unpack；
+- **压力源**：脚本池 + 反制原型（`EPIRUS_COUNTER_OPPS`）+ 击杀/经济/防御 credit；具体权重在 `js/train/evo.js`，README 不手抄。
+
+### 主尺与选拔（A / B / C）
+
+- **A 轴**：v2 脚本考卷（9 个脚本两两），衡量“对脚本桌”的强度；
+- **B 轴**：冠军桌混合夹具 `KDG-B + FOCUS + Q-s47`（2.0 主力两枚 + 反墙锚），衡量“对会还手的冠军”；
+- **C = (A+B)/2**：4 个人数格按 `W4 = 2P .15 / 3P .25 / 5P .45 / 8P .15` 加权，再对 multi/long 取均值。
+
+训练 fitness 仍主要是 A 轴；C 是**晋级主尺**。`msbatch2` 每轮用 `exam-4n --dose=page --exam=both` 重测 C，只有超过现冠军 `margin` 才换代。⚠ 只看 A 会被“反射墙”农掉；只看 C 会掩盖 2P 单格（2P 只占 15%）——引用分数必须同时报 A/B/C 和用卡/防御。
+
+### 训练期的门与杀
+
+- `EPIRUS_GA_GATE=<K>`：每代 top-3 健康读，宽粒优先；全代不过线只“饿退”，**不杀**；
+- `EPIRUS_STALL_ABORT=<K>`：连续 K 代 `bestFit` 不进步 ⇒ 整臂终止；
+- `EPIRUS_SEL_CARDS=<N>`：**终局**用卡数地板（`card-usage` 的 ≥0.5% 份额口径）；
+- `EPIRUS_CARD_ABORT=<K>` + `EPIRUS_CARD_MIN=<N>` + `EPIRUS_CARD_ABORT_GAMES=20`：**训练期**连续 K 代 top-1 用卡数 < N ⇒ `exit 13`，不写产物。它用与 `card-usage` 同一把 `cardUsageProfile`，只量 top-1；默认关；
+- 注意：`CARD_ABORT` 杀的是“当前 top-1”；若要杀“种群中位/冠军线”，要先改判据主语，别把 top-1 当全部。
+
+### 当前读数（2026-11-10）
+
+- MSB5：3 臂 × 200 代，C = 0.0062 / 0.0268 / 0.0268，冠军 MSB4 C = 0.0285；无臂过 `margin=0.03`，冠军保留。
+- 2P multi 最好臂 −0.0800（冠军 −0.1419），2P long +0.1558（冠军 +0.0184）；但 5P multi 回退 5.1pt，净 C 不涨。
+- 用卡：冠军 2 张（ji+gun），S808 4 张（ji/snipe/gun/sword），防御均 0%。
+- 2P 页面仍走 v7 池；2.0 统一冠军尚在训练。详细账见 `docs/research/STATUS-2026-11-10-ds.md` / `PLAN-2026-11-10-afternoon-ds.md`。
 
 ## 已知限制
 
