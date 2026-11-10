@@ -668,7 +668,7 @@ if (!(KR_MODE === 0 || KR_MODE === 1 || KR_MODE === 2)) {
 }
 for (const f of [
   'js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js'
+  'js/train/bots.js', 'js/train/policy.js', 'js/train/policy2.js', 'js/train/evo.js'
 ]) {
   let txt = readFileSync(f, 'utf8');
   if (KR_MODE === 1 || KR_MODE === 2) {
@@ -2180,7 +2180,12 @@ if (process.env.EPIRUS_COURSE_PACK != null && process.env.EPIRUS_COURSE_PACK !==
   try {
     const srcC = readFileSync(pp2, 'utf8');
     const mC = srcC.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (mC) paramsC = P.unpack(JSON.parse(mC[1]), true);
+    if (mC) {
+      const blobC = JSON.parse(mC[1]);
+      paramsC = (blobC && blobC.v === 92 && sb.window.EpirusPolicy2)
+        ? sb.window.EpirusPolicy2.unpack(blobC, sb.window)
+        : P.unpack(blobC, true);
+    }
   } catch (e) { console.error('⛔ EPIRUS_COURSE_PACK 读不出：' + pp2 + ' ⇒ ' + e.message); process.exit(8); }
   if (!paramsC) { console.error('⛔ EPIRUS_COURSE_PACK 包不兼容（unpack 返回 null）：' + pp2); process.exit(8); }
   T.setCoursePack(T.policyChooserN(paramsC, 0.15));
@@ -2201,7 +2206,14 @@ if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '')
   try {
     const srcF = readFileSync(pf, 'utf8');
     const mF = srcF.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
-    if (mF) paramsF = P.unpack(JSON.parse(mF[1]), true);
+    if (mF) {
+      const blobF = JSON.parse(mF[1]);
+      /* 11-10（用户：给训练增加兼容性，v7/obs3 冠军直接拉来当对手）：v:92 走 Policy2（按**包自己的 dims** 建布局，
+       *   不按当前 spec），v7 走 legacy unpack。P.unpack 的 v92 分支依赖 `global.EpirusPolicy2`（沙箱里可能没挂上）⇒ 显式双路。 */
+      paramsF = (blobF && blobF.v === 92 && sb.window.EpirusPolicy2)
+        ? sb.window.EpirusPolicy2.unpack(blobF, sb.window)
+        : P.unpack(blobF, true);
+    }
   } catch (e) { console.error('⛔ EPIRUS_FIT_CHAMP 读不出：' + pf + ' ⇒ ' + e.message); process.exit(8); }
   if (!paramsF) { console.error('⛔ EPIRUS_FIT_CHAMP 包不兼容（同架构才行）：' + pf); process.exit(8); }
   const st = T.setFitChamp(T.policyChooserN(paramsF, 0.15), every);
