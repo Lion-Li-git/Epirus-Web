@@ -150,6 +150,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
   'EPIRUS_SEL_DEFQ', 'EPIRUS_SEL_DEFQ_MINHANDS', 'EPIRUS_SEL_DEFQ_MINSHARE', 'EPIRUS_SEL_DEFQ_GAMES', 'EPIRUS_SEL_DEFQ_MODE', 'EPIRUS_SEL_DEFQ_EPS',   // 11-09 P1（用户三条裁定：容差带内**排序键**不是硬地板 ‖ 防御手 n≥30 才算数、不够按"没量到"跳过 ‖ 只筛新候选不动现役池）：带内把**白防率低**的挤上当选席，默认 0=关 ⇒ 当选者逐字不变
   'EPIRUS_SEL_CARDS', 'EPIRUS_SEL_CARDS_GAMES',   // 11-09 P2（用户裁定：只筛新候选、不回筛现役池）：当选面**用卡数地板 veto**，度量复用 fieldProfile 的逐卡计数（份额 ≥0.5%，与 tools/card-usage.mjs 同定义），默认 0=关
+  'EPIRUS_CARD_ABORT', 'EPIRUS_CARD_MIN', 'EPIRUS_CARD_ABORT_GAMES',   // 11-10（用户：连续一段 <4 卡就杀，不等终局）：训练期 top-1 用卡数连续 K 代低于下限 ⇒ 整臂 exit 13，不写产物
   'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
   'EPIRUS_OPP_SWEEP',       // DS 11-03：对手池每代轮齐（旧公式每代只覆盖 11 位；默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
@@ -2285,11 +2286,28 @@ const SIG_FLOOR = Number(process.env.EPIRUS_SIGMA_FLOOR || 0.06);
 const SIG_DECAY = Number(process.env.EPIRUS_SIGMA_DECAY || 0.995);
 const SIG_STALL = Number(process.env.EPIRUS_SIGMA_STALL || 0);
 let sigStall = 0, sigBumps = 0, noProg = 0;
+let cardStreak = 0;   // 11-10：连续多少代 top-1 的动作种类 < CARD_MIN
 /* EPIRUS_STALL_ABORT=<K>（用户 11-01 傍晚提的"连续 n 代完全一样就提前报错终止"，GA 侧）：
  *   在册的 EPIRUS_SIGMA_STALL 已经在数"连续几代 bestFit 没进步"，但它的动作是**抬 σ 继续跑**（恢复）。
  *   这条复用同一个"没进步"计数器（只在真进步时归零，抬 σ 不算进步），超过 K 代就整个终止 ⇒ 一支注定没动静的臂
  *   不再把 400 代 × 25k 局跑满。默认 0=关（关时今天的形状一字不变）。 */
 const STALL_ABORT = Math.max(0, Number(process.env.EPIRUS_STALL_ABORT || 0));
+/* ===== 11-10（用户裁："4 张卡这个要求太低；训练过程中连续一段 <4 卡就直接杀，不要等结束再看"）=====
+ * 现成的两根都不是这个形状：SEL_CARDS 只在**终局当选面**做一次份额地板；GA_GATE 是每代 top-3 的**饿退**（照样写产物）。
+ * 本键用 fitness 自带的 `r.distinct`（本代 24 局里用过的**动作种类**，含ジ；与终局 card-usage 的 ≥0.5% 份额不是同一把尺）
+ * 做便宜的早杀：连续 K 代 top-1 的 distinct < CARD_MIN ⇒ exit 13，不写产物。默认 0=关 ⇒ 历史轨迹逐字不变。 */
+const CARD_ABORT = Math.max(0, Number(process.env.EPIRUS_CARD_ABORT || 0));
+const CARD_MIN = Math.max(1, Number(process.env.EPIRUS_CARD_MIN || 4));
+const CARD_ABORT_GAMES = Math.max(10, Number(process.env.EPIRUS_CARD_ABORT_GAMES || 20) || 20);
+if (CARD_ABORT > 0 && (CARD_MIN < 2 || CARD_MIN > 30)) {
+  console.error('[train-3p] ⛔ EPIRUS_CARD_MIN 必须在 2..30（收到 ' + CARD_MIN + '）⇒ 这是恒真/恒假判据，拒跑');
+  process.exit(2);
+}
+if (CARD_ABORT > 0 && CARD_ABORT_GAMES < 10) {
+  console.error('[train-3p] ⛔ EPIRUS_CARD_ABORT_GAMES 太短（<10 局 ⇒ 逐卡份额不稳）');
+  process.exit(2);
+}
+if (CARD_ABORT > 0) console.log('[cardAbort] 训练期用卡地板：连续 ' + CARD_ABORT + ' 代 top-1 的用卡数 < ' + CARD_MIN + ' ⇒ 整臂 exit 13（不写产物；终局 SEL_CARDS 仍是份额口径）');
 if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
   console.log('[sigma 档] floor=' + SIG_FLOOR + ' decay=' + SIG_DECAY + ' stall=' + SIG_STALL +
     '（默认档是 floor=0.06 decay=0.995 stall=0 ‖ 而 `evo.js:2464` 那份写的是 0.10/0.999 —— 两份口径的账记在日志 E2）');
@@ -2461,6 +2479,21 @@ for (let gen = 0; gen < GENS; gen++) {
   scored.sort(function (a, b) { return b.r.fit - a.r.fit; });
   if (scored[0].r.fit > bestFit) { bestFit = scored[0].r.fit; bestParams = scored[0].params; sigStall = 0; noProg = 0; }
   else { sigStall++; noProg++; }
+  if (CARD_ABORT > 0) {
+    /* 11-10 修：`r.distinct` / `spDistinct` 都受探索温度影响（MSB4 在 fitness 里读出 11 种，而 ε=0 的
+     *   card-usage 只有 2 种）⇒ 早杀必须用**与终局 SEL_CARDS / card-usage 同一把尺**的 greedy 份额口径。
+     *   每代只量 top-1、局数可调（默认 20；比终局 60 便宜，且是同一 `cardUsageProfile`）。 */
+    const cu = cardUsageProfile(WIN, scored[0].params, { games: CARD_ABORT_GAMES, mode: 'multi' });
+    const topCards = (cu && typeof cu.distinct === 'number') ? cu.distinct : null;
+    if (gen % 10 === 0 || cardStreak > 0) console.log('[cardAbort] gen ' + gen + ' topCards=' + topCards + ' streak=' + cardStreak);
+    if (topCards != null && topCards < CARD_MIN) cardStreak++;
+    else cardStreak = 0;
+    if (cardStreak >= CARD_ABORT) {
+      console.error('\n⛔ **训练期用卡地板杀臂**：连续 ' + cardStreak + ' 代 top-1 的用卡数 < ' + CARD_MIN +
+        '（本代 ' + topCards + '；线 ' + CARD_MIN + '）⇒ exit 13，不写产物。');
+      process.exit(13);
+    }
+  }
   /* #46：逐代种群统计（默认关 ⇒ 这一段一行都不跑）。口径纪律：
    *   ‣ `null` 就写 `null`，**不许**把"没量到"聚成 0（`varietyMaxEv` 在 `doseOn=false` 时是 null）；
    *   ‣ 分母（种群大小、参与均值的个体数）跟着数一起落，否则以后没人知道那个均值是几粒算的。 */
