@@ -41,6 +41,7 @@ node scratch/night-adapt2/msbatch2.mjs --base=401 --start=docs/artifacts/night-a
 - 配方 = S916 同款纯轮换（RECIPE_ENV 未动）+ **`EPIRUS_HOLDOUT_SEG=50`（新开的中途节点）**；判据：换代 margin 0.03（C 尺），验收线沿用 **C ≥0.079 且用卡 ≥4、防御 ≥5%**。
 - 日志 `scratch/night-adapt2/msbatch2.log`；**断点**：`--resume` 读 `msbatch2-state.json`（每轮收尾写；臂内更细恢复用 `<ARM>-seg<k>.bak` 快照热启动）。
 - 预计 02:2x 收 2 轮；若第 1 轮就出 C≥0.079 的臂，按 margin 换代后第 2 轮继续。
+- **起点验收基线（01:2x 实测，card-usage 40 局 long）**：现冠军 S916R2B-R1S685223462 **用卡 7（≥4 ✓）、防御 10%（≥5 ✓）**、谱 ji53/gun25/snipe10/reflect6/bagua4/guard1/sword1——千问 ADAPT-DEF 种子已治好玻璃炮；验收线只差 C 0.0668→0.079。
 
 ### 在飞追加：MSB7（01:12 发射，B 线课程轮）
 

@@ -38,25 +38,14 @@ const SEEDS = Array.from({ length: ROUNDS * BRANCHES + 2 }, () => Math.floor(rng
 log('MSB 配方：COURSE_PACK=' + (process.env.MSB_COURSE_PACK || '(无)') + ' ‖ FIT_CHAMP=' + (process.env.MSB_FIT_CHAMP || '(无)') + ' ‖ FIT_EVERY=' + (process.env.MSB_FIT_EVERY || '(默认)') + ' ‖ SEG=' + (process.env.MSB_SEG || '50(默认)'));
 log('base=' + BASE + ' ⇒ 派生种子 ' + JSON.stringify(SEEDS.slice(0, ROUNDS * BRANCHES)) + ' …');
 
-const RECIPE_ENV = {
-  EPIRUS_ARCH2: 'S1ob:input=obs5,gen=3,keySplit=1,seatH=24,actH=24,hid=32,hid2=24',
-  EPIRUS_MUT_MODE: 'seg',
-  EPIRUS_TRAIN_MODE: 'long',
-  EPIRUS_KILL_REWARD: '2', EPIRUS_KILL_FIELD: '1',
-  EPIRUS_MIX8: '4', EPIRUS_MIX2_EVERY: '4', EPIRUS_MIXHP_EVERY: '2',
-  EPIRUS_COURSE_EVERY: '1', EPIRUS_COURSE_BOT: process.env.MSB_COURSE_BOT || 'pickFarmer',
-  /* 11-10（用户：2P 统一冠军 + 不同人数/血量）：课程席可换成真实冠军包；
-   * 与 FIT_CHAMP 合起来 = 5P 桌 2 席冠军 + 2 席脚本（plan B 的形状），2P 桌只落 FIT_CHAMP 一席。 */
-  ...(process.env.MSB_COURSE_PACK ? { EPIRUS_COURSE_PACK: process.env.MSB_COURSE_PACK } : {}),
-  EPIRUS_COUNTER_OPPS: 'gunFocus,gunSpam,guardSpam,targeter',
-  EPIRUS_SEL_COUNTER: '1',
-  EPIRUS_TRIPLET: '1', EPIRUS_TRIPLET_LOG: LEDGER,
-  /* 11-11（用户令"中途节点保存"）：臂级每 K 代快照当代最优粒（当场落盘，11-03 修过内存蒸发坑）——
-   *   杀进程/断电只丢最后一个 K 段；恢复 = 新臂 EPIRUS_SEEDPACK=<seg 快照> 热启动。 */
-  EPIRUS_HOLDOUT_SEG: process.env.MSB_SEG || '50',
-  /* 11-10（DS）：fitness 掺冠军桌（默认关；MSB_FIT_CHAMP 指包、MSB_FIT_EVERY 指每 k 局） */
-  ...(process.env.MSB_FIT_CHAMP ? { EPIRUS_FIT_CHAMP: process.env.MSB_FIT_CHAMP, EPIRUS_FIT_CHAMP_EVERY: process.env.MSB_FIT_EVERY || '1' } : {}),
-};
+/* 配方单一来源：training/recipes/<名>.mjs（11-11 夜起；本文件不再内联配方）。
+ *   EPIRUS_TRIPLET_LOG 由驱动器注入（LEDGER 路径在这边）；COURSE_BOT 的 MSB_COURSE_BOT 覆盖也留在这边。 */
+const RECIPE_NAME = arg('recipe', 'rotation-obs5');
+const { RECIPE_ENV: BASE_RECIPE } = await import('../../training/recipes/' + RECIPE_NAME + '.mjs');
+const RECIPE_ENV = Object.assign({}, BASE_RECIPE, { EPIRUS_TRIPLET_LOG: LEDGER },
+  process.env.MSB_COURSE_BOT ? { EPIRUS_COURSE_BOT: process.env.MSB_COURSE_BOT } : {},
+  process.env.MSB_COURSE_PACK ? { EPIRUS_COURSE_PACK: process.env.MSB_COURSE_PACK } : {},
+  process.env.MSB_FIT_CHAMP ? { EPIRUS_FIT_CHAMP: process.env.MSB_FIT_CHAMP, EPIRUS_FIT_CHAMP_EVERY: process.env.MSB_FIT_EVERY || '1' } : {});
 
 function runArm(seed, seedpack, packPath, round) {
   return new Promise((resolve) => {
