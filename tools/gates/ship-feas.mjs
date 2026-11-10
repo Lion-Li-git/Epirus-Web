@@ -315,7 +315,7 @@ t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hil
   ok(tb.indexOf('vetoBy3p(') >= 0 && tb.indexOf('process.exit(9)') >= 0, 'train-best 必须接 vetoBy3p 并有全否决的 exit 9');
   ok(tb.indexOf('pickBestByExam(pool') >= 0 && tb.indexOf('vetoBy3p(cands)') < tb.indexOf('pickBestByExam(pool'),
     '否决必须发生在择优**之前**（之后改结果就是暗改）');
-  ok(tb.indexOf("from './audit-lib.mjs'") >= 0 && tb.indexOf('feasibilityOf(') >= 0,
+  ok(tb.indexOf("from '../tools/audit-lib.mjs'") >= 0 && tb.indexOf('feasibilityOf(') >= 0,
     '3P 栏必须复用 audit-lib 的 feasibilityOf/量具（另抄一份 = 本仓栽过四次的"两处各写一遍"）');
   ok(tb.indexOf('EPIRUS_TB_OUT') >= 0 && tb.indexOf('if (OUT === dest)') >= 0,
     '产物必须可改道，且**只有真覆写 2P 槽时**才动 index.html 的缓存戳（§N14 实测：还原了槽、忘了还原戳 ⇒ 工作区脏）');
@@ -382,7 +382,7 @@ t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测
   /* ② 反抄：五道用到的四个 n 的字面默认值，**只许出现在 audit-lib** */
   const dupes = [];
   const mjsFiles = readdirSync('tools').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'tools/' + x; })
-    .concat(readdirSync('server').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'server/' + x; })).concat(NP_GATE_FILES);   /* v1.7.8：门体源码原先在 tools/np-test.mjs 的读取面上 ⇒ 拆分后把 tools/gates/** 补回这条腿的读取面 */
+    .concat(readdirSync('training/server').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'training/server/' + x; })).concat(NP_GATE_FILES);   /* v1.7.8：门体源码原先在 tools/np-test.mjs 的读取面上 ⇒ 拆分后把 tools/gates/** 补回这条腿的读取面 */
   for (const f of mjsFiles) {
     if (f.indexOf('audit-lib') >= 0) continue;
     const hits = (readFileSync(f, 'utf8').match(/EPIRUS_(SEAT|AGGR|DENSITY|CHARGE)_GAMES\s*\|\|\s*\d/g) || []);
@@ -691,7 +691,7 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
   const firstSpawn = npCode.indexOf("spawnSync(process.execPath, ['training/train-3p.mjs'");
   ok(firstSpawn > 0 && pinAt < firstSpawn, '⑧ 包装必须定义在**第一处 spawn 之前**（写在后面 = 前面那几处已经按 4 粒跑完了）');
   ok(npCode.indexOf('function spawnSync(') < firstSpawn, '⑧ 包装本体要在第一处 spawn 之前（否则那些调用拿到的是原始 import）');
-  const nSpawn = (npCode.match(/spawnSync\(process\.execPath, \['tools\/train-3p\.mjs'/g) || []).length;
+  const nSpawn = (npCode.match(/spawnSync\(process\.execPath, \['training\/train-3p\.mjs'/g) || []).length;
   ok(nSpawn >= 5, '⑧ 训练组 108 条删除后（2026-10-27）本套只剩这几处 `spawn train-3p`（实测 ' + nSpawn + '）——这条是给"处数"那句注释兜底的：'
     + '我一度以为是 5 处、实为 28 处，靠单点改动去提速会漏掉大半 ⇒ 有人加腿/删腿时这里要响，别让人凭印象写注释');
   /* 包装"显式给了就尊重"这条也得有牙，否则 ⑦ 会被静默压回 1 粒、而 ⑦ 看起来还是绿的 */
