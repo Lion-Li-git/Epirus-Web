@@ -1,0 +1,17 @@
+{
+ "base": 502,
+ "arm": "MSB8-sword",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "champion": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "champT": {
+  "mean": 0.06675,
+  "min": 0.0068,
+  "spread": 0.1893
+ },
+ "seedIdx": 0,
+ "history": []
+}

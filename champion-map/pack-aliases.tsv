@@ -221,3 +221,6 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T16:38:26.576Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/smoke-out-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-10T16:38:26.579Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	scratch/zcode-1111-bretest/smoke-out.js	train-3p	未复制：同一粒权重已有真身
 2026-11-10T17:27:06.823Z	cecfd10badfdc57e	docs/artifacts/MSB6-R1S1628871127-seg1.bak	docs/artifacts/MSB6-R1S1628871127-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T17:39:08.194Z	5fbcc91cf25fde32	docs/artifacts/MSB6-R1S949175392-seg4.bak	docs/artifacts/MSB6-R1S949175392-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T17:51:08.086Z	d7dcb6a89b3a2df4	docs/artifacts/MSB6-R1S105176564-seg2.bak	docs/artifacts/MSB6-R1S105176564-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T17:51:08.111Z	d7dcb6a89b3a2df4	docs/artifacts/MSB6-R1S105176564-seg2.bak	docs/artifacts/night-adapt/MSB6-R1S105176564.js	train-3p	未复制：同一粒权重已有真身
