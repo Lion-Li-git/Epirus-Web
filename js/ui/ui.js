@@ -1449,7 +1449,7 @@
     fetchProbe(base).then(function (res) { if (res.ok) openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); else waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); });
   }
   function waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers) {
-    $('tr-remote').textContent = '服务未启动。请双击 tools/start-train-server.cmd 启动（或 node server/train-server.mjs）——检测到后自动连接…';
+    $('tr-remote').textContent = '服务未启动。请双击 training/start-train-server.cmd 启动（或 node training/server/train-server.mjs）——检测到后自动连接…';
     if (remoteRetry) clearInterval(remoteRetry);
     remoteRetry = setInterval(function () {
       fetchProbe(base).then(function (res) { if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); } });
@@ -1575,7 +1575,7 @@
     };
     es.onerror = function () {
       remoteActive = false;
-      $('tr-remote').textContent = '连接中断。请确认服务仍在运行（tools/start-train-server.cmd）。';
+      $('tr-remote').textContent = '连接中断。请确认服务仍在运行（training/start-train-server.cmd）。';
       es.close(); remoteES = null;
     };
   }

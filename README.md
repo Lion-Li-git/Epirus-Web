@@ -6,14 +6,14 @@
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；逐版改动只记 [`CHANGELOG.md`](CHANGELOG.md)。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。
-- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（发布白名单 `index.html ‖ css/ ‖ js/ ‖ champion-map/`；`docs/` `tools/` `server/` 不发布）。在线只能对局与看冠军查看器；**「训练」需要另起本机服务**。
+- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（发布白名单 `index.html ‖ css/ ‖ js/ ‖ champion-map/`；`docs/` `tools/` `training/` 不发布）。在线只能对局与看冠军查看器；**「训练」需要另起本机服务**。
 - **训练部分可选**：另起一个只用 Node 内置模块（`http` / `worker_threads` / `vm`）的本机服务，用于练出冠军 AI。
 - 规则的玩家向说明在对局页第三个 tab「📖 规则说明」，三张表由 `js/ui/rules-panel.js` 现读引擎常量渲染。
 
 ## 快速开始
 
 1. 双击 `index.html`。默认「**3 人 · 3 血** + 普通难度」直接开打：点技能出招，所有席位同时行动，回合日志逐条结算；技能按钮按当前资源实时置灰（ジ/珠不足或条件不满足直接不可点）。
-2. 想打练出来的 AI：双击 `tools/start-train-server.cmd` 启动训练服务 → 训练场点「开始训练(Node服务)」→ 页面自动连接并显示进度 → 训练完自动写入内置包并载入内存 → 对局难度切到「困难 · 冠军」。
+2. 想打练出来的 AI：双击 `training/start-train-server.cmd` 启动训练服务 → 训练场点「开始训练(Node服务)」→ 页面自动连接并显示进度 → 训练完自动写入内置包并载入内存 → 对局难度切到「困难 · 冠军」。
 3. 冠军策略可「导出 JSON」分享，也可「导入」别人的冠军。
 
 > 本机包（`localStorage['epirus.champion']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**；本机包在场时冠军池整桌不生效（判定只在 `js/ui/ui.js` 的 `poolPlan` 一处）。想打「每席随机抽一枚冠军」的桌子，先清掉本机包。
@@ -33,7 +33,7 @@
 
 ### 训练场
 
-- 轻量对抗自对战（类 GAN 的对抗思想，无 AI 框架）：候选策略群每代与「当前冠军 + 脚本基准群」对战打分。基准名单两处真源：2P 侧 `js/train/evo.js` 的 `buildOpps`（1 枚冠军 + 19 条脚本基准），多人侧 `server/opp-pool.mjs` 的 `OPP_SPECS`（默认取前 9 条，其余是专项压迫线，只在显式实验里按名字加入）。
+- 轻量对抗自对战（类 GAN 的对抗思想，无 AI 框架）：候选策略群每代与「当前冠军 + 脚本基准群」对战打分。基准名单两处真源：2P 侧 `js/train/evo.js` 的 `buildOpps`（1 枚冠军 + 19 条脚本基准），多人侧 `training/server/opp-pool.mjs` 的 `OPP_SPECS`（默认取前 9 条，其余是专项压迫线，只在显式实验里按名字加入）。
 - 精英保留 + 变异/交叉繁殖；适应度 = 胜负 + 换血 + 拖时长惩罚 + 出招多样性（熵）奖励。
 - **冠军按真实胜率挑选**：任一基准不高于 50% 直接失去资格（纯平局 0.5 也不过门），过门后按 `0.5×平均 + 0.5×最差对局` 排序；另有一层「不回归」：把现有冠军已过的基准打回 ≤50% 的候选一律不许当选。
 - 训练跑在 Node 多核并行（`worker_threads`）；页面 SSE 实时进度 + 多条种子曲线。
@@ -63,7 +63,7 @@ Epirus-Web/
 │   ├─ train/                    AI 与训练器
 │   │   ├─ policy.js               策略网络 + 状态特征（v7 容器：FEAT_S=213 ‖ 5689 参数）
 │   ├─ policy2.js                2.0 代 3 的读写与校验（`v:92` ‖ arch `S1o` ‖ 7993 参数 ‖ 键层按决策键分组、无价值头）
-│   │   ├─ evo.js                  对抗进化 + 冠军出牌口径（policyChooserN / pickChampion）
+│   │   ├─ evo.js                  对抗进化 + 冠军出牌口径（policyChooserN / pickChampion）‖ 混合体：产品 AI 面（浏览器 bundle）+ 训练引擎核（Node 沙箱按文本装载同一份）
 │   │   ├─ bots.js                 脚本基准 AI 与难度阶梯（DIFF_TIERS 是档位表唯一来源）
 │   │   └─ trainer.js              冠军存取（localStorage / 导入导出）+ 训练 CSV
 │   ├─ ui/                       界面（ui.js 交互主逻辑 / skill-tip.js / rules-panel.js / bead-choice.js）
@@ -73,11 +73,18 @@ Epirus-Web/
 │   ├─ bundled-champion-3p.js    多人内置冠军（池不生效时的回退包）
 │   ├─ bundled-champion-pool.js     多人冠军池 bundle（真源 champion-map/pool-members.tsv）
 │   └─ bundled-champion-pool-2p.js  2P 原生冠军池 bundle（真源 pool-members-2p.tsv）
-├─ server/                       可选训练服务（Node，内置 http / worker_threads / vm）
-│   ├─ train-server.mjs            SSE 实时进度：/train /champion /reset
-│   ├─ paralleltrain.mjs           worker_threads 多核并行评估池
-│   ├─ train-worker.mjs            单 worker 评估入口
-│   └─ opp-pool.mjs / opp-champs.mjs   对手池 + 「名字→包」唯一入口
+├─ training/                     ★ 训练侧独立子仓（2026-11-11 起：入口/服务/旋钮册都住这里；产品侧零依赖，详见 training/README.md）
+│   ├─ knobs.mjs                   ★ 旋钮单一真源生成器（--check 供 CI 防腐烂；册 = TRAINING-KNOBS.md 唯一配置真源）
+│   ├─ train-3p.mjs                ★ 2.0 GA 训练入口（多人臂，obs5 产线主力）‖ train-best/fast = 2 人 v7 旧线 ‖ train-selftest.mjs = 训练侧自检
+│   ├─ start-train-server.cmd      双击启动训练服务（训练场 tab 连它）
+│   ├─ server/                     训练服务 + 旋钮单一来源（原 server/ 整体迁入）
+│   │   ├─ train-server.mjs          SSE 实时进度：/train /champion /reset
+│   │   ├─ paralleltrain.mjs         worker_threads 多核并行评估池（EPIRUS_WORKERS）
+│   │   ├─ train-worker.mjs          单 worker 评估入口
+│   │   ├─ opp-pool.mjs / opp-champs.mjs   对手池 + 「名字→包」唯一入口（考卷也吃它）
+│   │   └─ knob-guard.mjs / econ-env / fight-env / train-env   旋钮闸 + 奖励旋钮三份单一来源表
+│   ├─ proto2/                     2.0 研究栈（arch2=网络孪生 / pg-lib=重放反传 / supfit-full=蒸馏 / selftest3）
+│   └─ recipes/                    命名配方（规划中：替代手抄 env 启动器）
 ├─ tools/                        量具与门禁（每个 .mjs 都自带头注；这里只列入口）
 │   ├─ gate-all.mjs                ★ 一条命令跑完五道门禁（np + spec 并发，浏览器三道随后）‖ --group= 只跑一组 ‖ --auto 按 git status 判断该跑哪几组
 │   ├─ np-test.mjs                 ★ 门禁 runner（注册 / 过滤 / 计数 / 收尾；门体不在这个文件里）‖ --group= 累计深度 / --part= 互不相交分区
@@ -85,14 +92,12 @@ Epirus-Web/
 │   ├─ gate-parts-check.mjs        并集守卫：所有段拼回来必须正好等于全量
 │   ├─ spec-run.mjs                2 人引擎自测 + 500 局 fuzz
 │   ├─ smoke.mjs / battle-test.mjs / np-probe.mjs   CDP 真 Chrome 三台页面仪器
-│   ├─ train-3p.mjs / train-best.mjs / train-fast.mjs   训练入口（多人 / 2 人多种子择优 / 快速）
 │   ├─ build-pool-bundle.mjs       把池真源烘成页面用的 bundle（派生物不许手改）
 │   ├─ eval-5p.mjs / eval-3p.mjs   产品考卷（5 人 / 3 人）
 │   ├─ promote-champion.mjs        换包前体检（可行性闸 + G4/G5 + 珠经济闭环；--dry 只体检不写盘）
 │   ├─ log-behavior.mjs            真机栏：按席位统计实机对局记录（只读 results/*.txt）
 │   ├─ score13.mjs                 13 行「无短板」判语器（伤/平/墙/架/还/座/广/场B/G4/G5/珍/珠/强）
-│   ├─ train-selftest.mjs          训练侧自检（回执往返 / 出厂默认清单 / econ 往返）
-│   └─ start-train-server.cmd      双击启动训练服务
+│   └─（训练侧入口/服务/旋钮册全部在 training/ —— 见上）
 ├─ champion-map/                 冠军演化图 / 谱系图（现行产物 = 单页 index.html，版本切换在页内换投影）
 │   ├─ index.html                  ★ 产物（自包含、双击即开；由 viewer.mjs 烘，不许手改）
 │   ├─ viewer.mjs                  ★ 烘页面那台：四个视图 + 页内自检
@@ -129,7 +134,7 @@ node tools/np-test.mjs --only=D193           # 单条门：--only= 是子串匹�
 node tools/spec-run.mjs                      # 2 人引擎用例
 node champion-map/shot.mjs "--hash=mode=map&check=1" --dump   # 演化页页内自检（四视图换 mode=）
 node tools/score13.mjs --selftest            # 13 行判语器的夹具
-node tools/train-selftest.mjs                # 训练侧三条凭据
+node training/train-selftest.mjs             # 训练侧三条凭据
 ```
 
 ⚠ `--group=` / `--part=` / `--only=` 跑出来的都不是整轮认证（工具会自己印「只跑了 N / M 条」）；收工前那一遍要整轮。
@@ -139,9 +144,9 @@ node tools/train-selftest.mjs                # 训练侧三条凭据
 ### 旧入口（v7 / 2P 快速路径）
 
 ```bash
-node tools/train-fast.mjs 500    # 快速 500 代（产物落 docs/artifacts/train-fast-out.js；EPIRUS_PUBLISH=1 才写 js/bundled-champion.js）
-node tools/train-best.mjs 4 600  # 4 个候选择优（推荐）
-node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+node training/train-fast.mjs 500    # 快速 500 代（产物落 docs/artifacts/train-fast-out.js；EPIRUS_PUBLISH=1 才写 js/bundled-champion.js）
+node training/train-best.mjs 4 600  # 4 个候选择优（推荐）
+node training/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
 ```
 
 - 评测口径与实战一致：`js/core/play.js` 的 `autoGame` 中双方都基于「行动前状态」决策。
@@ -168,13 +173,13 @@ obs5 与 obs4 共用同一张 **292 维特征 manifest**：每席 35 维（29 �
 - `actEnc` → 24；`cand` 层把 `[ctx 32 ‖ actH 24 ‖ 两个席位 enc 48]` → `hid2 24`，键层按 `keySplit` 输出；
 - 段序 = `seatEnc‖attn‖pma‖actEnc‖ctx‖cand‖head`，查找一律**按段名**（obs5 插段后下标不再可靠）。
 
-结构上的两个性质：**置换不变**（softmax 只作用在“在场席位集合”上，死亡席不编码、不占 softmax）；**跨人数**（K 只经 softmax 归一进入，权重和恒 1，没有 mean 的“除以 N”伪影；init 时注意力 logits≈0，从软均值起步特化）。浏览器侧 `js/train/policy2.js` 与训练侧 `tools/proto2/arch2.mjs` 同源；`tools/proto2/browser-parity.mjs` 用同一包、同一批决策点逐位对账 logits。
+结构上的两个性质：**置换不变**（softmax 只作用在“在场席位集合”上，死亡席不编码、不占 softmax）；**跨人数**（K 只经 softmax 归一进入，权重和恒 1，没有 mean 的“除以 N”伪影；init 时注意力 logits≈0，从软均值起步特化）。浏览器侧 `js/train/policy2.js` 与训练侧 `training/proto2/arch2.mjs` 同源；`training/proto2/browser-parity.mjs` 用同一包、同一批决策点逐位对账 logits。
 
 ### 2.0 训练流程
 
 ```bash
 # 一条臂：200 代，5P，每代 24 局，种群 8；具体配方走 EPIRUS_* 环境变量
-node tools/train-3p.mjs 200 5 24 8
+node training/train-3p.mjs 200 5 24 8
 
 # 多种子轮换 + 按 C 选冠军（3 臂 × 200 代，轮末重测）
 node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens=200 --arm=MSB5
@@ -196,7 +201,7 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 ### 主尺与选拔（A / B / C）
 
 - **A 轴**：v2 脚本考卷（9 个脚本两两），衡量“对脚本桌”的强度；
-- **B 轴**：冠军桌混合夹具 `KDG-B + FOCUS + Q-s47`（2.0 主力两枚 + 反墙锚），衡量“对会还手的冠军”；
+- **B 轴**：冠军桌混合夹具 `KDG-B + FOCUS + Q-s47`（2.0 主力两枚 + 反墙锚），衡量“对会还手的冠军”。⚠ 11-11 代表重测（`scratch/zcode-1111-bretest/`）：夹具新旧是双向扭曲——obs5 冠军链在冠军桌真实负（MSB2-R1 −0.271/−0.089），A 轴选拔 ≠ 冠军桌强度；夹具滚动与 champ 戳入表的调整见交接文档。
 - **C = (A+B)/2**：4 个人数格按 `W4 = 2P .15 / 3P .25 / 5P .45 / 8P .15` 加权，再对 multi/long 取均值。
 
 训练 fitness 仍主要是 A 轴；C 是**晋级主尺**。`msbatch2` 每轮用 `exam-4n --dose=page --exam=both` 重测 C，只有超过现冠军 `margin` 才换代。⚠ 只看 A 会被“反射墙”农掉；只看 C 会掩盖 2P 单格（2P 只占 15%）——引用分数必须同时报 A/B/C 和用卡/防御。
