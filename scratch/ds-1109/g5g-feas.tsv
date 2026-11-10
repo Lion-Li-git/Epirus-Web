@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+G5G-50	1	0		4.5	4.75	3.05	0.22	1.76	ok	15.9	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

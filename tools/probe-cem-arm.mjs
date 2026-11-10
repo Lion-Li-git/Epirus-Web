@@ -24,11 +24,11 @@ import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
-import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from './proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
-import { createArena2 } from './proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
-import { auditCells } from './proto2/skill-mastery.mjs';                      // 10-31 凌晨：mastery 门骑同一把审计尺
-import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from './proto2/head-health.mjs';
-import { rosterFromArg, shapesFromArg } from './proto2/roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
+import { install as installArch2, verifyWired as verifyArch2Wired, readPack2 } from '../training/proto2/arch2.mjs';   // §E821：默认关（不带 EPIRUS_ARCH2 ⇒ 逐字照旧）
+import { createArena2 } from '../training/proto2/arena2.mjs';   // 10-29 夜：扩表考卷（--arena2=1 才开）
+import { auditCells } from '../training/proto2/skill-mastery.mjs';                      // 10-31 凌晨：mastery 门骑同一把审计尺
+import { collectFixtures, headHealth, agreeVsRandom, fmtHead, HEAD_FLAT_AGREE } from '../training/proto2/head-health.mjs';
+import { rosterFromArg, shapesFromArg } from '../training/proto2/roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 /* §E679 补（10-22）：这台量具原先**没有输入消毒层**（D218 那条门当场抓到，是我今夜建它时就漏的）。
  * 拼错的旗标被静默忽略 = 读数按默认档跑完而没人知道 ⇒ 与"黑键"同族。名单跟着 `arg('…')` 走。 */

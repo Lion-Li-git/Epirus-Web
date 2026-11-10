@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+DEFQ2-100	0	1	场A 还手 17.0% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕	3.28	3.64	5.2	0.17	4	ok	14.4	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

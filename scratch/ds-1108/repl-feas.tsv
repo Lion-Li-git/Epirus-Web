@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+REPL-Q47-400	1	0		8.23	6.41	8.7	0.33	0.45	ok	14.4	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

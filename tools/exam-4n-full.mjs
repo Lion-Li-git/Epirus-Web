@@ -14,7 +14,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rejectUnknownFlags } from './audit-lib.mjs';
-import { EXAM_POOL_VERSIONS } from '../server/opp-pool.mjs';   // 考卷池版本名单的单一来源（不在这儿抄第二份）
+import { EXAM_POOL_VERSIONS } from '../training/server/opp-pool.mjs';   // 考卷池版本名单的单一来源（不在这儿抄第二份）
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');

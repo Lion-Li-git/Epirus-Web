@@ -24,7 +24,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
 /* 11-04 晚（千问）：`coverageOf` 要能读 **2.0（v:92）** 候选 ⇒ 装面的那条路（只在容器版本是 92 时才进，见 :205）。 */
-import { readPack2, packCfgExit, install as installArch2 } from './proto2/arch2.mjs';
+import { readPack2, packCfgExit, install as installArch2 } from '../training/proto2/arch2.mjs';
 
 const REPO = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1').replace(/\/$/, '');
 

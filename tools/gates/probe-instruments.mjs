@@ -693,7 +693,7 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
    * （METHODOLOGY 13「白名单两处各写一遍必出事」的同族）。后果很具体：想问"哪根旋钮养出这粒包"，
    * 查 meta 却没有 env ⇒ 只能归因到"抽奖"，并用**前瞻实验绕道**才把问题问出来（千问 E9/E10）。
    * 修法：读集问 `knob-guard.readKeysOf`（与 `enforceKnobs` **同一份**），再取环境里真设了的键 ⇒ 加旋钮不用改这里。 */
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
   ok(/import \{ enforceKnobs, readKeysOf \}/.test(t3), '读集必须来自 knob-guard 单一来源');
   ok(/readKeysOf\(\{ entry: 'tools\/train-3p\.mjs', extraReadKeys: SELF_ENV_KEYS \}\)/.test(t3),
     '必须用**与 enforceKnobs 同一个读集**（entry + SELF_ENV_KEYS），不许另抄一份名单');
@@ -707,7 +707,7 @@ t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · �
    *   `docs/artifacts/train-3p-out.js` —— 而那是 `train-evo` 的 D123/D162 拿来当 CLI 基线的**同一个文件**
    *   ⇒ CI 上没事（每个部分一台机），本机并行跑门时就变成"隔壁部分把我的基线文件写脏了"（实测 D162 红）。
    *   本门要读的是 `EPIRUS_BAND_DIR` 里的 `.bak`，改道不影响它。 */
-  const r = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'], {
+  const r = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'], {
     env: Object.assign({}, process.env, {
       EPIRUS_BAND_DIR: d, EPIRUS_T3P_OUT: join(d, 'd158probe.js'), EPIRUS_ARM: 'd158probe', EPIRUS_KILL_REWARD: '2', EPIRUS_BIGT_CHAIN_W: '0.5'
     }), encoding: 'utf8', timeout: 600000

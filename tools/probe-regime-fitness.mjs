@@ -19,7 +19,7 @@
  * ==========================================================================*/
 import { existsSync, writeFileSync } from 'node:fs';
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 /* `--panel=archive` 用的等价类定义与 probe-pool-frontier **同一个真源**（METHODOLOGY 62） */
 import { listArchiveFiles, collectClasses } from './archive-classes.mjs';
 import { poolFromSpecs, heldFromNames, HELDOUT } from './regime-panel.mjs';

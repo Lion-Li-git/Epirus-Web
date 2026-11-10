@@ -1,0 +1,88 @@
+id	fam	famLabel	ts	metaSeed	nameSeed	parent	parentOf	parentName	wid	parentSrc	tsSrc
+BAS-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:54:39.277Z		s41	G3C-s13	G3C-s13	G3C-s13	00d7557d00a1	seedpack-wid	product
+CBG-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:27:00.968Z		s13	WIDEFIX-s7			b2ed8fdb41ca	demoted-time	product
+G3C-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:38:21.271Z		s13				f34e5ba5dbbd		product
+V7C-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:33:54.889Z		s13				d778963c2808		product
+V7M-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:20:08.426Z		s13	T8-s114	T8-s114	T8-s114	aa63c7697958	seedpack-wid	product
+BREAD-W05-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:24:34.940Z		s13	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	a52e93558dfd	seedpack-wid	product
+CBG-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:27:05.714Z		s41	WIDEFIX-s7			302c7935514f	demoted-time	product
+G3C-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:38:30.410Z		s41				551e1e51917c		product
+V7C-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:34:45.087Z		s41				44b1ef55ba43		product
+V7M-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:20:33.293Z		s41	T8-s114	T8-s114	T8-s114	08b04b32e185	seedpack-wid	product
+BREAD-W05-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:25:50.111Z		s41	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	9407a697e106	seedpack-wid	product
+CBG-s7	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:25:41.324Z		s7	WIDEFIX-s7			a04a07777b75	demoted-time	product
+G3M-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:21:16.295Z		s13	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	c52cf410c5d1	seedpack-wid	product
+V7L-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:23:09.779Z		s13	T8-s114	T8-s114	T8-s114	7fb9fa87f286	seedpack-wid	product
+BAS-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:54:48.710Z		s13	G3C-s13	G3C-s13	G3C-s13	b3aa469c841c	seedpack-wid	product
+BREAD-W05-s7	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T06:26:14.298Z		s7	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	d583ca5d8197	seedpack-wid	product
+CBGG-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T09:15:07.003Z		s13	WIDEFIX-s7			b2ed8fdb41ca	demoted-time	product
+G3M-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:21:11.680Z		s41	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	70803b68189c	seedpack-wid	product
+V7L-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T07:22:44.197Z		s41	T8-s114	T8-s114	T8-s114	b7b73727bc36	seedpack-wid	product
+GD3-RATION	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-01T02:43:20.774Z			OB3S-C2-s7			12dc98cc2d37		mtime
+L5-D4a-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T11:49:19.375Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	66bc2f92eb80	seedpack-wid	product
+GD3ALL-PLAIN-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T18:45:04.129Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	94d8a25a2e66	seedpack-wid	product
+GD3ALL-PUSHON-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T23:48:43.997Z		s41	GD3-SWORD	GD3-SWORD	GD3-SWORD	6217a168a8df	seedpack-wid	product
+G5DEF-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T16:08:12.822Z		s41	wid:792f3caacf06	GD3ALL-G5-8p-s41	GD3ALL-G5-8p-s41	f0619898f1a3	hash	product
+CLONE-D4a	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T11:11:38.191Z			GD3-SWORD	GD3-SWORD	GD3-SWORD	4de326c6c458	arm	mtime
+D-a底座	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T18:35:26.409Z			GA-ration-s41	GA-ration-s41	GA-ration-s41	3554dce2e90f	arm	mtime
+D-a-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T16:19:26.874Z		s13	wid:3554dce2e90f			ec6eee25c35c		product
+GD3ALL-G5-8p-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T16:50:17.780Z		s41	GD3-SWORD	GD3-SWORD	GD3-SWORD	792f3caacf06	seedpack-wid	product
+TPG-s41	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T19:36:39.014Z		s41	wid:22f1014a39c2	L5-1200-s13	L5-1200-s13	aefa6f05d573	hash	product
+EFFG-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T15:32:59.498Z		s41	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	21f5f4fee00f	seedpack-wid	product
+D1200-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T15:58:32.150Z		s13	wid:ec6eee25c35c	D-a-s13	D-a-s13	4a22d739a27c	hash	product
+HPG-s7	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T19:05:23.700Z		s7	wid:22f1014a39c2	L5-1200-s13	L5-1200-s13	e017304ed917	hash	product
+GD3-SWORD	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-01T06:38:18.184Z			GD3-RATION	GD3-RATION	GD3-RATION	04907be16715	arm	mtime
+CB-combo-v2	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T00:00:51.409Z			GA-ration-s41	GA-ration-s41	GA-ration-s41	67f23c7e371f	arm	mtime
+GD3ALL-POPP-s17	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T19:45:06.795Z		s17	GD3-SWORD	GD3-SWORD	GD3-SWORD	498de838db92	seedpack-wid	product
+GD3ALL-NGA2R-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T18:23:08.092Z		s41	wid:0db60b97fc25			a271d866fafa		product
+L5-1200-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T15:53:15.830Z		s13	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	22f1014a39c2	seedpack-wid	product
+CB3-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T18:18:32.617Z		s13	wid:3489c16057e7			f681313eba6a		product
+KDFULL400-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T12:43:00.967Z		s13	KDFULLGA-s13	KDFULLGA-s13	KDFULLGA-s13	d4a7cf2cb551	seedpack-wid	product
+KDFULLGA-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T12:13:19.312Z		s13	KDFULL2	KDFULL2	KDFULL2	f760760f80b8	seedpack-wid	product
+GA-ration-s41	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-01T05:05:12.648Z		s41	GD3-RATION	GD3-RATION	GD3-RATION	7504d506c8b5	seedpack-wid	product
+WIDEFIX-s7	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-03T13:18:55.752Z		s7				559a8105e849		product
+KDFULL2	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T12:01:38.394Z			KD-V7	KD-V7	KD-V7	1529c10b509c	arm	mtime
+KD-V7	16	KD 蒸馏链（v7 教师全模型）	2026-11-04T11:16:40.504Z			L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	61164b09cac4	arm	mtime
+DSTR4-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:46:57.183Z		s13	wid:7e5247918994			80e3486ccc4d		product
+EFFG-s5	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-03T16:06:31.396Z		s5	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	789f16ba247d	seedpack-wid	product
+EFFG-s7	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-05T17:21:14.512Z		s7	L5-D4a-s13	L5-D4a-s13	L5-D4a-s13	3c1040bf7bbb	seedpack-wid	mtime
+GD3ALL-POPP-s41	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T18:57:16.011Z		s41	GD3-SWORD	GD3-SWORD	GD3-SWORD	cc9bf7e50f96	seedpack-wid	product
+GD3ALL-PUSHON-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T23:48:30.585Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	93b11437bafb	seedpack-wid	product
+D-b-hpseed-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T16:05:43.028Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	e882bc170d6d	seedpack-wid	product
+DDEF-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:20:11.246Z		s13	wid:ec6eee25c35c	D-a-s13	D-a-s13	ccd075761423	hash	product
+DSTR-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T17:32:06.973Z		s13	wid:ec6eee25c35c	D-a-s13	D-a-s13	5c0f7b54832d	hash	product
+LE-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-02T23:10:55.101Z		s13	wid:0290df82ac5e			c318e3dc096a		product
+GD3ALL-G5-s13	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）	2026-11-01T16:40:32.793Z		s13	GD3-SWORD	GD3-SWORD	GD3-SWORD	13327686160d	seedpack-wid	product
+DEF-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-06T16:25:42.109Z		s13	KDFULL400-s13	KDFULL400-s13	KDFULL400-s13	e7ce9136170a	seedpack-wid	product
+DEF-s15	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-06T17:23:29.409Z		s15	KDFULL400-s13	KDFULL400-s13	KDFULL400-s13	797a3c24c832	seedpack-wid	product
+DEF-s16	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-06T17:27:31.832Z		s16	KDFULL400-s13	KDFULL400-s13	KDFULL400-s13	4f53c20de51d	seedpack-wid	product
+COMBO-s13	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-06T16:30:29.912Z		s13	KDFULL400-s13	KDFULL400-s13	KDFULL400-s13	e3bab4929e8e	seedpack-wid	product
+COMBO-s16	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-06T17:32:46.317Z		s16	KDFULL400-s13	KDFULL400-s13	KDFULL400-s13	4f53c20de51d	seedpack-wid	product
+OB3S-C2-s7	14	2.0 蒸馏根与 L5/CB/D 产线			s7	arch2随机					
+wid:792f3caacf06	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:3554dce2e90f	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:22f1014a39c2	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:ec6eee25c35c	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:0db60b97fc25	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:3489c16057e7	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:7e5247918994	14	2.0 蒸馏根与 L5/CB/D 产线									
+wid:0290df82ac5e	14	2.0 蒸馏根与 L5/CB/D 产线									
+KD-Qg	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:20:00.000Z		s13	KD-Qg-l	KD-Qg-l	KD-Qg-l	fa28800eae6a3d7c	seedpack-wid	product
+CTRL2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:02.829Z		s7	KD-Qg	KD-Qg	KD-Qg	5a1d3ce77b2fd2c3	seedpack-wid	product
+CTRL2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:25:35.822Z		s13	KD-Qg	KD-Qg	KD-Qg	9b0cc330a1598a2a	seedpack-wid	product
+ADAPT2-Q-s7	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:45:53.171Z		s7	KD-Qg	KD-Qg	KD-Qg	6c84d61da4bd9a17	seedpack-wid	product
+KD-K2	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T23:35:20.681Z		s13	KD-K2-l	KD-K2-l	KD-K2-l	9ed57f4e9a3d98e1	seedpack-wid	product
+KD-K2-l	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T23:35:19.453Z		s13	KD-V7	KD-V7	KD-V7	9ed57f4e9a3d98e1	seedpack-wid	product
+PASS2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T00:44:35.803Z		s13	KD-Qg	KD-Qg	KD-Qg	e500051a05802cb8	seedpack-wid	product
+STR-B-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T07:44:12.287Z		s13	PASS2-Q-s13	PASS2-Q-s13	PASS2-Q-s13	64e0e62c5056f1f0	seedpack-wid	product
+STR-B-Q-s41	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T08:01:18.508Z		s41	PASS2-Q-s13	PASS2-Q-s13	PASS2-Q-s13	b8e43dcc73db7bf8	seedpack-wid	product
+KDG-B-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:14:56.193Z		s13	KD-G2	KD-G2	KD-G2	29dc059ae61dcf1f	seedpack-wid	product
+KD-Qg-l	16	KD 蒸馏链（v7 教师全模型）	2026-11-07T17:12:26.319Z		s13	KD-V7	KD-V7	KD-V7	472e50814709da66	seedpack-wid	product
+KD-G2	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T09:09:21.325Z		s41	KD-Qg-l	KD-Qg-l	KD-Qg-l	8d5dcee382388482	seedpack-wid	product
+FOCUS-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T12:41:04.185Z			KD-G2	KD-G2	KD-G2	46ca109c8ed7e41e	seedpack-wid	
+CLEAR-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T12:17:04.254Z			KD-G2	KD-G2	KD-G2	d5e326e38202644e	seedpack-wid	
+WIDE-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T11:48:09.657Z			KD-Qg	KD-Qg	KD-Qg	4b55611e3c5513e3	seedpack-wid	
+WIDE2-Q-s13	16	KD 蒸馏链（v7 教师全模型）	2026-11-08T11:52:50.331Z			KD-Qg	KD-Qg	KD-Qg	43b8263321947245	seedpack-wid	
+WIDE2-200	16	KD 蒸馏链（v7 教师全模型）	2026-11-09T04:35:58.981Z			WIDE2-Q-s13	WIDE2-Q-s13	WIDE2-Q-s13	7e1d5cd3e7f5d1c6	seedpack-wid	
+WIDE2-300	16	KD 蒸馏链（v7 教师全模型）	2026-11-09T04:41:03.549Z			WIDE2-200	WIDE2-200	WIDE2-200	2f1dfbe414db2fee	seedpack-wid	
+WSEL9-200	16	KD 蒸馏链（v7 教师全模型）	2026-11-09T04:57:52.026Z			KD-Qg	KD-Qg	KD-Qg	330226d3e823d715	seedpack-wid	

@@ -29,7 +29,7 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { OPP_SPECS, examPool } from '../server/opp-pool.mjs';
+import { OPP_SPECS, examPool } from '../training/server/opp-pool.mjs';
 import { createHash } from 'node:crypto';
 import { planN, planN3 } from './exam-pool.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';

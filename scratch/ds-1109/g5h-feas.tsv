@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+G5H-50	0	4	G 2.50 < 3（短程有效技能数只有 2.50，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕；G(long) 2.66 < 3（长程有效技能数只有 2.66，线 3） ——【会用的招不止两三种】不成立〔原机器名：广·长程〕；场A 还手 17.6% < 20%（被四席围殴时的还手率）	2.5	2.66	20	0.176	0	ok	12.2	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

@@ -18,7 +18,7 @@
  *   node tools/exam-pool.mjs --check --rounds=10 --json
  *   代码里：`planN(n, rounds, seed)` → [{seats:[名字,…]}, …]；`seatsFor(n)` → 该人数的合法席。
  */
-import { EXAM_POOL } from '../server/opp-pool.mjs';
+import { EXAM_POOL } from '../training/server/opp-pool.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 /* 池里该人数可用的席（minN 过滤；2 人局拿掉镜面/双枪这类要 ≥3 人的线）。

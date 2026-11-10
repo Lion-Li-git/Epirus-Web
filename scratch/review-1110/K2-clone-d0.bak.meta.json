@@ -1,0 +1,142 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "pack:docs/artifacts/kept/e70-out__D02-31.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 733,
+  "moved": 67,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "ji": 428,
+   "gun": 154,
+   "guard": 28,
+   "bagua": 39,
+   "sword": 70,
+   "charge": 11,
+   "railgun": 7,
+   "reflect": 37,
+   "ring": 1,
+   "bigT": 4,
+   "holo": 21
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.375,
+    "teacherLl": -5.132417331648935,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.345,
+  "startLl": -2.1186423814085362,
+  "agree": 0.375,
+  "ll": -5.132417331648935,
+  "wAgree": 0.33202617843538873,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 113,
+    "hit": 48
+   },
+   {
+    "key": "gun",
+    "n": 16,
+    "hit": 3
+   },
+   {
+    "key": "sword",
+    "n": 27,
+    "hit": 18
+   },
+   {
+    "key": "reflect",
+    "n": 12,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 15,
+    "hit": 0
+   },
+   {
+    "key": "holo",
+    "n": 4,
+    "hit": 3
+   },
+   {
+    "key": "bigT",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "guard",
+    "n": 7,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 2,
+    "hit": 1
+   },
+   {
+    "key": "railgun",
+    "n": 1,
+    "hit": 1
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

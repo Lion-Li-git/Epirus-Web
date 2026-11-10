@@ -1,0 +1,87 @@
+/* Epirus — Node 快速训练器（并行加速：worker_threads 多核跑评估）。
+ * 用法：node tools/train-fast.mjs [世代数=500] [worker数=auto]
+ * 产物：js/bundled-champion.js —— 一个设置 window.EPIRUS_CHAMPION 的脚本，页面自动加载作为回退冠军。
+ * 好处：并行后 500 代可在几十秒内出强冠军（视 CPU 核心数）；训练完直接随项目分发，双击即玩。
+ */
+import { readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+import { makeAsyncStep } from './server/paralleltrain.mjs';
+import { rulesFingerprint } from '../tools/rules-fingerprint.mjs';
+import { guardWrite } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
+/* v1.5.200：同 train-best —— 读不到的旋钮不许静默（判定单一来源 `server/knob-guard.mjs`）。 */
+import { enforceKnobs } from './server/knob-guard.mjs';
+enforceKnobs({ tool: 'train-fast', env: process.env, entry: 'training/train-fast.mjs' });
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = join(__dirname, '..');
+
+/* 输出保护（千问复核的延伸）：训练工具的产出**默认不写线下冠军文件**。
+ * 起因：一次 60 代/40 代的测试跑把 js/bundled-champion*.js 覆写成测试冠军，
+ * 并被 git add -A 提交（线下冠军就这么被换掉了，我还据此写错过文档）。
+ * 规则：只有显式 EPIRUS_PUBLISH=1 才写线下路径；否则写 docs/artifacts/train-fast-out.js。
+ *
+ * ⚠️ v1.5.18 修：原写法 `const __OUT = <cond> ? __OUT : '<路径>'` 是**自引用**（TDZ）⇒
+ * 本脚本一加载就 `ReferenceError: Cannot access '__OUT' before initialization`（工具等于坏的；
+ * 文件头注释里"由 tools/train-fast.mjs 生成"的 2P 包是更早版本留下的）；而且末尾的写入
+ * **根本没用它**、写的是硬编码线下路径 ⇒ 保护双层失效。两处一起修。 */
+const OUT = process.env.EPIRUS_PUBLISH === '1'
+  ? join(root, 'js', 'bundled-champion.js')
+  : join(root, 'docs', 'artifacts', 'train-fast-out.js');
+
+const sb = { console, Math, JSON, Object, Array, Number, String, Error,
+  localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
+sb.globalThis = sb;
+for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/evo.js','js/train/trainer.js']) {
+  vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
+}
+const T = sb.EpirusTrainer, P = sb.EpirusPolicy;
+
+const __SEED = Number(process.env.EPIRUS_SEED || 1);
+__seedSandbox(sb, __SEED);
+if (P.setRng && T.mulberry32) P.setRng(T.mulberry32(__SEED * 7919 + 13));
+
+
+/* 可复现性（千问复核指出）：CLI 训练器原先**完全没播种**——沙箱直接塞宿主 Math，
+ * 而 evo.js 的 breed() 用裸 Math.random ⇒ 走 CLI 的任何训练，种子从头到尾不起作用，
+ * 产出的对照数字（WR_TOL 0.03 vs 0.01、3x200 vs 1x600 等）都是**未配对的噪声**。
+ * 用法：EPIRUS_SEED=N node tools/xxx.mjs ...   （默认 1） */
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  sbox.Math = M;
+}
+
+
+const gens = Number(process.argv[2] || 500);
+const workers = Number(process.argv[3]) || 0;
+const stepAsync = makeAsyncStep(T, workers ? { workers: workers } : {});
+console.log('[parallel] 训练 worker 数：' + stepAsync.workers);
+const t = T.makeTrainer({ popSize: 16, gamesPerOpp: 6 });
+const t0 = Date.now();
+let last;
+for (let g = 0; g < gens; g++) last = await stepAsync(t);
+const secs = ((Date.now() - t0) / 1000).toFixed(1);
+const pack = JSON.stringify(P.pack(t.champion));
+/* v1.5.18：写盘时一并记 meta（含**规则指纹**）。2P 包此前完全没有 meta ⇒ `np-test D16`
+ * （"成绩已过期"守门）只罩住多人包，2P 侧换过 11 次 rules/resolve 都没人发现。 */
+const meta = { source: 'training/train-fast.mjs', gens: gens, ts: new Date().toISOString(),
+  seed: __SEED, workers: stepAsync.workers, rulesFingerprint: rulesFingerprint() };
+const GUARD = guardWrite({ root, dest: OUT, tool: 'train-fast', force: process.argv.includes('--force-copy'),
+  why: '2P 快跑产物', text:
+  '/* Epirus 内置冠军：由 tools/train-fast.mjs 生成（' + gens + ' 代，' + secs + 's）。不要手改。 */\n' +
+  'window.EPIRUS_CHAMPION_META = ' + JSON.stringify(meta) + ';\n' +
+  'window.EPIRUS_CHAMPION = ' + pack + ';\n' });
+console.log('[train-fast] 落盘：' + GUARD.note);
+console.log(`训练完成 ${gens} 代，用时 ${secs}s；冠军 score=${t.bestChampScore.toFixed(3)}，attackShare=${(t.bestChampAttack||0).toFixed(2)}`);
+console.log(GUARD.wrote ? '已写入 ' + OUT + '（' + pack.length + ' 字节；其中 2P 线下路径只在 EPIRUS_PUBLISH=1 时才会被写）'
+  : '✘ 没写文件（§E589 守卫）：' + GUARD.note);
+stepAsync.close();   // 关停 worker 池，让进程正常结束（否则 worker 会让进程挂住）

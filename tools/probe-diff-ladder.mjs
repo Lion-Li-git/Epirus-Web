@@ -29,7 +29,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
 import { sandbox, mulberry32, ROOT, extractJsonObject, rejectUnknownFlags, loadChamp } from './audit-lib.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
-import { loadChampParams } from '../server/opp-champs.mjs';
+import { loadChampParams } from '../training/server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',

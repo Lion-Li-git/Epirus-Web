@@ -46,7 +46,7 @@ async function startServer(workers, port) {
   await sleep(300);
   const env = Object.assign({}, process.env);
   const pre = workers ? ('$env:EPIRUS_WORKERS=' + workers + '; ') : '';
-  const cmd = pre + "Start-Process -FilePath node -ArgumentList 'server/train-server.mjs','" + port + "' -WorkingDirectory '" + process.cwd() + "' -WindowStyle Hidden";
+  const cmd = pre + "Start-Process -FilePath node -ArgumentList 'training/server/train-server.mjs','" + port + "' -WorkingDirectory '" + process.cwd() + "' -WindowStyle Hidden";
   spawnSync('pwsh', ['-NoProfile', '-Command', cmd], { stdio: 'ignore' });
   for (let i = 0; i < 50; i++) {
     await sleep(300);
@@ -128,7 +128,7 @@ async function main() {
   console.log('\n[D] cold start reproducible (artifact deleted between runs)');
   const ckD = (nm, okk) => { console.log((okk ? '  PASS ' : '  FAIL ') + nm); if (!okk) fail++; };
   const cliOut = 'docs/artifacts/train-3p-out.js';
-  const cliScript = 'tools/train-3p.mjs';
+  const cliScript = 'training/train-3p.mjs';
   if (!existsSync(cliScript)) { console.log('  (skip: no ' + cliScript + ')'); }
   else {
     const runCli = () => spawnSync('pwsh', ['-NoProfile', '-Command',

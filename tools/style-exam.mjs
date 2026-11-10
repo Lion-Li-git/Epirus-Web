@@ -22,8 +22,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
-import { OPP_FN } from '../server/opp-pool.mjs';
-import { makeOppSelResolver, loadChampParams, champOppAbs } from '../server/opp-champs.mjs';
+import { OPP_FN } from '../training/server/opp-pool.mjs';
+import { makeOppSelResolver, loadChampParams, champOppAbs } from '../training/server/opp-champs.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');

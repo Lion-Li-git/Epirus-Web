@@ -10,7 +10,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { ECON_REWARD_KEYS } from '../server/econ-env.mjs';
+import { ECON_REWARD_KEYS } from '../training/server/econ-env.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 rejectUnknownFlags(process.argv.slice(2), ['pack', 'games', 'json', 'w'], 'probe-econ-reset-audit');
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };

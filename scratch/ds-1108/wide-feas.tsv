@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+WIDE-Q-s13	0	2	座位偏座（极差≥21.0pt(该 n 的零分布 p99)）：12%/17%/17%/20%/33% ——【公平：坐哪个位置都一样能打】不成立〔原机器名：座〕；场A 还手 15.0% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕	7.26	7.51	3.5	0.15	2.98	biased	21.2	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

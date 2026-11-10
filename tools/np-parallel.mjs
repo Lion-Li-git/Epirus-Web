@@ -22,7 +22,7 @@
  *
  * ## 用法
  *   import { spawnBatch } from './np-parallel.mjs';
- *   const r = spawnBatch([{ tag:'ctl', argv:['tools/train-3p.mjs','60'], env:{...} }, ...], { max: 7 });
+ *   const r = spawnBatch([{ tag:'ctl', argv:['training/train-3p.mjs','60'], env:{...} }, ...], { max: 7 });
  *   r.ctl.status / r.ctl.stdout / r.ctl.stderr
  * 本文件被 `--run` 直接调用时充当并发执行体（父进程用 spawnSync 等它，从而保持门的同步写法）。
  * ==========================================================================*/

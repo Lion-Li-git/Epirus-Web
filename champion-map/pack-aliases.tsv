@@ -217,3 +217,6 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T22:40:11.000Z	6c7c3f55ea22472c	docs/artifacts/S916R2B-R1S769889016-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S769889016.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
 2026-11-10T22:40:12.000Z	7aede7e7223ca03b	docs/artifacts/S916R2B-R1S997133553-band3.bak	docs/artifacts/night-adapt/S916R2B-R1S997133553.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
 2026-11-10T22:40:13.000Z	c12641786de8dfc4	docs/artifacts/S916R2B-R1S745300182-band2.bak	docs/artifacts/S916R2B-R1S745300182-band3.bak	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T16:38:26.570Z	900cb457bd922ba8	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/smoke-out-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T16:38:26.576Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/smoke-out-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T16:38:26.579Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	scratch/zcode-1111-bretest/smoke-out.js	train-3p	未复制：同一粒权重已有真身

@@ -1,0 +1,160 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 1,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "pack:docs/artifacts/kept/e70-out__D02-31.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 809,
+  "hit": 234,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 1370,
+  "moved": 230,
+  "gone": 0,
+  "keys": 1600,
+  "rare": 0,
+  "byKey": {
+   "ji": 877,
+   "gun": 228,
+   "guard": 109,
+   "bagua": 110,
+   "sword": 90,
+   "charge": 12,
+   "railgun": 7,
+   "reflect": 127,
+   "ring": 2,
+   "bigT": 4,
+   "holo": 33,
+   "snipe": 1
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 1,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.375,
+    "teacherLl": -5.132417331648935,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.085,
+    "teacherLl": -5.620974646019492,
+    "studentAgree": 0.1,
+    "studentLl": -1.5706834870082278,
+    "studentN": 200
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 5681,
+    "firstDiff": 0,
+    "dim": 12393
+   }
+  ],
+  "startAgree": 0.345,
+  "startLl": -2.1186423814085362,
+  "agree": 0.085,
+  "ll": -5.620974646019492,
+  "wAgree": 0.31835177894653327,
+  "nTest": 200,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.1,
+  "studentN": 200,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 113,
+    "hit": 0
+   },
+   {
+    "key": "gun",
+    "n": 16,
+    "hit": 2
+   },
+   {
+    "key": "sword",
+    "n": 27,
+    "hit": 3
+   },
+   {
+    "key": "reflect",
+    "n": 12,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 15,
+    "hit": 6
+   },
+   {
+    "key": "holo",
+    "n": 4,
+    "hit": 4
+   },
+   {
+    "key": "bigT",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "guard",
+    "n": 7,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "railgun",
+    "n": 1,
+    "hit": 1
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x1"
+  }
+ }
+}

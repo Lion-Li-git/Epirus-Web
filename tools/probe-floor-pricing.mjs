@@ -17,7 +17,7 @@
  *   ③ 环境块名字全部来自 `regime-panel` 与 `OPP_SPECS`，取不到函数就退出（少一格就是一根空枪）。
  * ==========================================================================*/
 import { sandbox, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { HELDOUT } from './regime-panel.mjs';
 import { buildGuarded, formatGuardCost } from './guard-cost-lib.mjs';
 import { build } from './probe-layer-caliber.mjs';

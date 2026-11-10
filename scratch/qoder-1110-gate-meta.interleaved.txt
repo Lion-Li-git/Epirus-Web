@@ -1,0 +1,20 @@
+▶ 起跑 np/meta …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+⛔ np/meta 红（exit=1）· 完整输出：（⚠ 落盘失败：ENOENT: no such file or directory, open 'D:\code\Epirus-Web\docs\artifacts\gate-fail-np\meta.txt' ⇒ 只有下面的尾部）
+   失败的门（共 1 条）：
+   ✘ D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"  → ④ 未登记的重复必须为 0（实测 2 ‖ 点名：docs/artifacts/QWIN1110AFT-band1.bak docs/artifacts/QW
+  ✔ D218 研究工具的旗标登记结构（v1.5.318）：读了却没登记的旗标必须为 0，且假旗标必须 exit 64
+  ✔ D194 `--only` 复跑单道门不许伪装成全绿（v1.5.288）：跳过的条数必须响亮印出、打错字要拒绝、注册数守卫要把跳过算进去
+
+⚠ `--group=meta`：**只跑了 16 / 172 条**（跳过 156 条；累计含 meta）⇒ 这不是全量门禁，**不许当整轮全绿引用**。
+
+N人测试：通过 15 / 16
+
+
+门禁：np/meta 15/16（29.1s） · spec 63/63（0.7s） · smoke OK（11.4s） · battle OK（40.1s） · map OK（8.6s）
+⛔ 结论：**不是全绿** —— np/meta 红
+exit=7

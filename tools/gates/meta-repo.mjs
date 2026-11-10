@@ -2,7 +2,7 @@
 {"file":"tools/gates/meta-repo.mjs","part":"meta-repo","group":"meta","ranges":[[661,704],[863,883],[917,1002],[2253,2288],[2416,2432],[5078,5110],[9554,9573],[9613,9679],[11116,11215]],"gates":[661,863,917,944,971,2253,2416,5078,9554,9613,11116,11158],"patched":[11121]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
-import { EXAM_POOL, EXAM_POOL_V1, EXAM_POOL_V3 } from '../../server/opp-pool.mjs';
+import { EXAM_POOL, EXAM_POOL_V1, EXAM_POOL_V3 } from '../../training/server/opp-pool.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -46,8 +46,8 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
   ];
   /* 扩面（千问复核指出）：原先只扫 server/*.mjs —— **恰好只保护了刚修好的那条路**，
    * 而 tools/train-*.mjs 三个 CLI 训练器完全没播种，研究数字多半出自它们。 */
-  const files = ['server/train-server.mjs', 'server/train-worker.mjs', 'server/paralleltrain.mjs',
-    'tools/train-fast.mjs', 'tools/train-best.mjs', 'tools/train-3p.mjs', 'js/train/evo.js'];
+  const files = ['training/server/train-server.mjs', 'training/server/train-worker.mjs', 'training/server/paralleltrain.mjs',
+    'training/train-fast.mjs', 'training/train-best.mjs', 'training/train-3p.mjs', 'js/train/evo.js'];
   /* v1.8.13：把"扫一个文件"抽成一个函数，好让这条门能**自己喂自己一行坏代码**（下面三条自检）。
    *   为什么必须有：这条门的白名单已经长到 9 条 `indexOf(...) >= 0 ⇒ continue`，
    *   于是"白名单把真违规也一起吃掉"这件事**只会让它变绿、不会让它变红** ⇒ 没有正对照的扫描器就是装饰
@@ -131,7 +131,7 @@ t('L3 复现工具必须保留冷/热启动断言（v1.5.128 诚实化：原名�
    * 浏览器按钮走 Node 服务，而 index.html 的"从头训练"默认不勾 ⇒ 默认热启动，
    * 种群围绕 js/bundled-champion*.js 长出来。那个文件会随每次训练变化 ⇒ 输入变了。
    * 修法与 v1.3.50 给 CLI 定的规矩一致：把输入标识记进产物。 */
-  const srv = readFileSync('server/train-server.mjs', 'utf8');
+  const srv = readFileSync('training/server/train-server.mjs', 'utf8');
   ok(srv.indexOf('weightsId') >= 0,
     'server 必须能把"输入冠军"算成标识（weightsId）——否则热启动产物无法复现');
   ok((srv.match(/hotstartFrom/g) || []).length >= 3,
@@ -210,7 +210,7 @@ t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）',
   ok(gi.indexOf('-out.js') >= 0, '.gitignore 必须忽略训练工具的非发布输出（docs/artifacts/*-out.js）');
 
   // 反向：真的会写那个落点的工具，必须同时有 EPIRUS_PUBLISH 门槛（否则它会写线下路径）
-  for (const f of ['tools/train-3p.mjs', 'tools/train-fast.mjs', 'tools/train-best.mjs']) {
+  for (const f of ['training/train-3p.mjs', 'training/train-fast.mjs', 'training/train-best.mjs']) {
     const src = readFileSync(f, 'utf8');
     if (src.indexOf('-out.js') >= 0) {
       ok(src.indexOf('EPIRUS_PUBLISH') >= 0, f + ' 用了 -out.js 落点，就必须有 EPIRUS_PUBLISH 门槛');

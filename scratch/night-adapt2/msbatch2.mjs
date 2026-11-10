@@ -57,7 +57,7 @@ function runArm(seed, seedpack, packPath, round) {
       EPIRUS_ARM: armName, EPIRUS_T3P_OUT: packPath,
     });
     const t0 = Date.now();
-    const child = spawn('node', ['tools/train-3p.mjs', String(GENS), '5', '24', '8'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn('node', ['training/train-3p.mjs', String(GENS), '5', '24', '8'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
     child.stdout.on('data', (d) => { out += d; });
     child.stderr.on('data', (d) => { out += d; });

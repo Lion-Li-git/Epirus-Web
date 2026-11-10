@@ -46,7 +46,7 @@
  * ==========================================================================*/
 import { writeFileSync, readFileSync } from 'node:fs';
 import { sandbox, rejectUnknownFlags, mulberry32 } from './audit-lib.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { poolFromSpecs, heldFromNames, HELDOUT } from './regime-panel.mjs';
 import { separabilityOf, euclid } from './routing-gain-lib.mjs';
 
