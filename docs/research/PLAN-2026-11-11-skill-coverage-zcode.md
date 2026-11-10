@@ -74,6 +74,18 @@ WSEL9（bagua 11/gun 13）、KDG-B（sword 17/guard 10.7）。
 这正是 FINDING 说的"夹具过时 + A 可farm"叠加症状的直接实证，**入池排序应以同桌 H2H 为主、C 为辅**。
 MSB10 已发射（bagua 线续跑，同 WSEL9 课程制度，4 臂 × 2 轮）。
 
+### MSB9 归因闭合（03:5x，charge 线三路分解）
+
+| 配置（起点都是 MSB8-charge） | C 读数 |
+|---|---|
+| **SEQ_W=2 + G5C 课程**（= charge 臂原生配方） | **0.1383** |
+| 只 SEQ_W（MSB9-seq） | 0.0370 / 0.0713 |
+| 只 G5C 课程（MSB9-g5c） | 0.0734 / 0.0260 |
+| 都不带（MSB9-plain） | 0.0807 / 0.0827 / 0.0827 |
+
+**0.1383 单旋钮不可复制**——组合效应 + 种子方差的交点；charge 线的可持续水位 ≈ 0.081-0.083（plain 三臂齐过 0.079 线）。
+诚实记法：MSB8-charge 的 0.1383 当"上限样本"引用，不当代绩效承诺；过线种群的主体是 0.08 带。
+
 steering 方法学结论（给 recipes 用）：**课程席 steering > 奖励权重 steering**（bagua 命中 vs guard/reflect 双否证）；
 风格桌是单技能雕刻刀（sword 21% 但 C −0.03 代价）；exit=9 型否证（railgun）说明 STYLE_TABLE 全量桌+收敛守卫会
 把无效 steering 拒之门外——省了算力，但也意味着"纯风格桌训不出新东西"的假设未被测试（它连包都没产出）。

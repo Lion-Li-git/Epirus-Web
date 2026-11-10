@@ -12,6 +12,50 @@
   "min": 0.06,
   "spread": 0.1804
  },
- "seedIdx": 0,
- "history": []
+ "seedIdx": 4,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+   "champMean": 0.13825749999999998,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "S1918573253",
+     "pack": "docs/artifacts/night-adapt/MSB9-R1S1918573253.js",
+     "mean": 0.0827175,
+     "min": -0.0169
+    },
+    {
+     "label": "S333453513",
+     "pack": "docs/artifacts/night-adapt/MSB9-R1S333453513.js",
+     "mean": 0.0826675,
+     "min": 0.0363
+    },
+    {
+     "label": "S2056215739",
+     "pack": "docs/artifacts/night-adapt/MSB9-R1S2056215739.js",
+     "mean": 0.08073,
+     "min": -0.0208
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js"
+   ]
+  }
+ ]
 }
