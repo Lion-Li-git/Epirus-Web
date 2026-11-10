@@ -2167,6 +2167,48 @@ if (process.env.EPIRUS_HOTSTART === '1') {
     process.exit(5);
   }
 }
+
+/* ===== 11-10（DS）：课程席换成**一枚真实冠军包**（EPIRUS_COURSE_PACK=<path>）=====
+ * 动因：复核发现训练 objective 仍停在 A 轴脚本桌，而主尺已换 C（脚本桌 + 冠军桌）；
+ *   反射墙能 farm 脚本桌、却打不过冠军桌 ⇒ 不给它见冠军，GA 永远学不会打冠军。
+ * 纪律：① 读不出 / 不兼容 ⇒ exit 8（不许静默退回脚本课程）；② 设了 pack 就覆盖 COURSE_BOT；③ 印回执。
+ * ⚠ 位置在种子包装载**之后**：同一条 unpack 路径（P.unpack(o,true)）在两种外壳上都被验证过。 */
+if (process.env.EPIRUS_COURSE_PACK != null && process.env.EPIRUS_COURSE_PACK !== '') {
+  const pp2 = String(process.env.EPIRUS_COURSE_PACK).trim();
+  if (typeof T.setCoursePack !== 'function') { console.error('⛔ EPIRUS_COURSE_PACK 下达了，但引擎没有 setCoursePack ⇒ 黑键，拒跑'); process.exit(6); }
+  let paramsC = null;
+  try {
+    const srcC = readFileSync(pp2, 'utf8');
+    const mC = srcC.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (mC) paramsC = P.unpack(JSON.parse(mC[1]), true);
+  } catch (e) { console.error('⛔ EPIRUS_COURSE_PACK 读不出：' + pp2 + ' ⇒ ' + e.message); process.exit(8); }
+  if (!paramsC) { console.error('⛔ EPIRUS_COURSE_PACK 包不兼容（unpack 返回 null）：' + pp2); process.exit(8); }
+  T.setCoursePack(T.policyChooserN(paramsC, 0.15));
+  if (typeof T.coursePackOn === 'function' && !T.coursePackOn()) { console.error('⛔ EPIRUS_COURSE_PACK 没生效 ⇒ 拒静默空转'); process.exit(7); }
+  console.log('[部署档] EPIRUS_COURSE_PACK ⇒ ' + pp2 + ' 作为课程席（覆盖 COURSE_BOT），参数量 ' + paramsC.length);
+  DEPLOY_REC.EPIRUS_COURSE_PACK = { path: pp2, n: paramsC.length };
+}
+
+/* ===== 11-10（DS）：**fitness 掺冠军桌**（EPIRUS_FIT_CHAMP=<包> [EPIRUS_FIT_CHAMP_EVERY=<k>]）=====
+ * 为什么：课程席只占 1 席/代，GA 梯度主体仍是脚本局 ⇒ 反射墙在 fitness 里不吃亏。
+ *   这里每 k 局（默认 4）把一席对手换成**真实冠军包**，打不过会还手的人就直接扣分。
+ * 兼容性：包必须与当前架构同源（obs5 包才能装进 obs5 布局）。 */
+if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '') {
+  const pf = String(process.env.EPIRUS_FIT_CHAMP).trim();
+  const every = Math.max(1, Math.floor(Number(process.env.EPIRUS_FIT_CHAMP_EVERY || 4) || 4));
+  if (typeof T.setFitChamp !== 'function') { console.error('⛔ EPIRUS_FIT_CHAMP 下达了，但引擎没有 setFitChamp ⇒ 黑键，拒跑'); process.exit(6); }
+  let paramsF = null;
+  try {
+    const srcF = readFileSync(pf, 'utf8');
+    const mF = srcF.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
+    if (mF) paramsF = P.unpack(JSON.parse(mF[1]), true);
+  } catch (e) { console.error('⛔ EPIRUS_FIT_CHAMP 读不出：' + pf + ' ⇒ ' + e.message); process.exit(8); }
+  if (!paramsF) { console.error('⛔ EPIRUS_FIT_CHAMP 包不兼容（同架构才行）：' + pf); process.exit(8); }
+  const st = T.setFitChamp(T.policyChooserN(paramsF, 0.15), every);
+  if (!st || !st.on) { console.error('⛔ EPIRUS_FIT_CHAMP 没生效 ⇒ 拒静默空转'); process.exit(7); }
+  console.log('[部署档] EPIRUS_FIT_CHAMP ⇒ ' + pf + '（每 ' + st.every + ' 局一席；参数量 ' + paramsF.length + '）');
+  DEPLOY_REC.EPIRUS_FIT_CHAMP = { path: pf, every: st.every, n: paramsF.length };
+}
 /* v1.5.265b：**开 veto 就必须有参照**，而且要在开跑之前查（跑到 1200 代才发现参照缺失 = 白烧十分钟）。
  * 卡名也在这里验：非法名会让那一维"永远判不到" ⇒ 与静默空转同族，直接 `exit 7`。 */
 if (SEL_KEEP > 0) {
