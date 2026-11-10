@@ -249,3 +249,4 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T21:41:54.005Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/MSB11-R2S1663363345-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
 2026-11-10T21:41:54.017Z	ecd209ccd4a5c394	docs/artifacts/MSB11-R2S1663363345-seg3.bak	docs/artifacts/MSB11-R2S1663363345-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
 2026-11-10T21:41:54.037Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/night-adapt/MSB11-R2S1663363345.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T23:44:23.345Z	90feb44206d9379c	docs/artifacts/MSB14-drain-R1S1309859507-seg4.bak	docs/artifacts/MSB14-drain-R1S1309859507-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）

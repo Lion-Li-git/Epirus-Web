@@ -79,7 +79,8 @@ const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'd
   'S916R2B-R1S685223462': 'docs/artifacts/night-adapt/S916R2B-R1S685223462.js',
   'MSB6-R2S501866988': 'docs/artifacts/night-adapt/MSB6-R2S501866988.js', 'MSB8-charge-R1S1861674281': 'docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js',
   'MSB10-R1S1149480262': 'docs/artifacts/night-adapt/MSB10-R1S1149480262.js', 'MSB8-bagua-R1S88974978': 'docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js',
-  'MSB11-R2S306293884': 'docs/artifacts/night-adapt/MSB11-R2S306293884.js', 'MSB9-R2S1112532101': 'docs/artifacts/night-adapt/MSB9-R2S1112532101.js' };
+  'MSB11-R2S306293884': 'docs/artifacts/night-adapt/MSB11-R2S306293884.js', 'MSB9-R2S1112532101': 'docs/artifacts/night-adapt/MSB9-R2S1112532101.js',
+  'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
