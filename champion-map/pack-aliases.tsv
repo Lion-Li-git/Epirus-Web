@@ -194,3 +194,26 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-10T19:25:00.000Z	0277b4fc112c1037	docs/artifacts/MSB5-R1S808369991-band6.bak	docs/artifacts/night-adapt/MSB5-R1S808369991.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 6 席（11-10 MSB5 收尾补登记）
 2026-11-10T19:25:00.001Z	154df468fe284a51	docs/artifacts/MSB5-R1S928337601-band3.bak	docs/artifacts/night-adapt/MSB5-R1S928337601.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 3 席（11-10 MSB5 收尾补登记）
 2026-11-10T19:25:00.002Z	9d01d51f5d678846	docs/artifacts/MSB5-R1S942253744-band5.bak	docs/artifacts/night-adapt/MSB5-R1S942253744.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 5 席（11-10 MSB5 收尾补登记）
+2026-11-10T20:50:00.000Z	a4b86904af55ce55	docs/artifacts/ADAPT-DEF-O5-s915-band3.bak	docs/artifacts/ADAPT-DEF-O5-s915-band5.bak	train-3p:band	已登记的复制：同次 ADAPT-DEF-O5-s915 跑的第 5 席与第 3 席同权重
+2026-11-10T20:50:00.001Z	d3444092a9ac703f	docs/artifacts/ADAPT-DEF-O5-s915-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF-O5-s915.js	train-3p:band	已登记的复制：产物 = 同次跑的第 4 席（SEL_DEFQ 改判后当选）
+2026-11-10T20:50:00.002Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	train-3p:band	已登记的复制：产物 = 同次跑的第 4 席（SEL_DEFQ 改判后当选）
+2026-11-10T12:59:32.781Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T12:59:32.789Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF2-O5-s917.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T21:00:00.000Z	297b116efe29890a	docs/artifacts/ADAPT-DEF2-O5-s917-band2.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band3.bak	train-3p:band	已登记的复制：同次 ADAPT-DEF2-O5-s917 跑的第 3 席与第 2 席同权重
+2026-11-10T21:42:00.000Z	cf1d3f0b3bb079db	docs/artifacts/S916-R1S1060412595-band6.bak	docs/artifacts/night-adapt/S916-R1S1060412595.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 6 席
+2026-11-10T21:42:00.001Z	829d9efa67c49d23	docs/artifacts/S916-R1S1704335642-band4.bak	docs/artifacts/night-adapt/S916-R1S1704335642.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 4 席（本轮冠军）
+2026-11-10T21:42:00.002Z	99e90e0394d88940	docs/artifacts/S916-R1S573569134-band3.bak	docs/artifacts/night-adapt/S916-R1S573569134.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 3 席
+2026-11-10T22:40:00.000Z	ab81ea46f97544c9	docs/artifacts/S916R2B-R1S1062426886-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S1062426886.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:01.000Z	1c1c6a10daa0e561	docs/artifacts/S916R2B-R1S1098066977-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S1098066977.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:02.000Z	75287066827c3ccb	docs/artifacts/S916R2B-R1S1249867118-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S1249867118.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:03.000Z	bec1689a0bb02896	docs/artifacts/S916R2B-R1S1408282248-band1.bak	docs/artifacts/S916R2B-R1S1408282248-band4.bak	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:04.000Z	bec1689a0bb02896	docs/artifacts/S916R2B-R1S1408282248-band1.bak	docs/artifacts/night-adapt/S916R2B-R1S1408282248.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:05.000Z	ee4362e815f26cc0	docs/artifacts/S916R2B-R1S1725743042-band4.bak	docs/artifacts/night-adapt/S916R2B-R1S1725743042.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:06.000Z	22f260e072c7add4	docs/artifacts/S916R2B-R1S2000717743-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S2000717743.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:07.000Z	2e9b09f1a7084b3f	docs/artifacts/S916R2B-R1S371963301-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S371963301.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:08.000Z	8ae650b32e5e1009	docs/artifacts/S916R2B-R1S685223462-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:09.000Z	8e3377412c1cb686	docs/artifacts/S916R2B-R1S745300182-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S745300182.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:10.000Z	a75704b530262da8	docs/artifacts/S916R2B-R1S768291681-band3.bak	docs/artifacts/night-adapt/S916R2B-R1S768291681.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:11.000Z	6c7c3f55ea22472c	docs/artifacts/S916R2B-R1S769889016-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S769889016.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:12.000Z	7aede7e7223ca03b	docs/artifacts/S916R2B-R1S997133553-band3.bak	docs/artifacts/night-adapt/S916R2B-R1S997133553.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:13.000Z	c12641786de8dfc4	docs/artifacts/S916R2B-R1S745300182-band2.bak	docs/artifacts/S916R2B-R1S745300182-band3.bak	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具

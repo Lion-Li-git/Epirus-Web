@@ -1,46 +1,109 @@
 {
- "base": 201,
- "start": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+ "base": 303,
+ "start": "docs/artifacts/night-adapt/S916-R1S1704335642.js",
  "rounds": 1,
- "branches": 3,
+ "branches": 12,
  "gens": 200,
  "margin": 0.03,
- "final": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
+ "final": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
  "history": [
   {
    "round": 1,
-   "champion": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
-   "champMean": 0.028542500000000002,
+   "champion": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+   "champMean": 0.06675,
    "pool": [
     {
+     "label": "S685223462",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "S1725743042",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
+     "mean": 0.04150499999999999,
+     "min": -0.0688
+    },
+    {
+     "label": "S1098066977",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
+     "mean": 0.03918,
+     "min": -0.1434
+    },
+    {
+     "label": "S1062426886",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
+     "mean": 0.029575,
+     "min": -0.0523
+    },
+    {
+     "label": "S997133553",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S997133553.js",
+     "mean": 0.019162500000000006,
+     "min": -0.1481
+    },
+    {
+     "label": "S1249867118",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1249867118.js",
+     "mean": 0.017292500000000002,
+     "min": -0.1692
+    },
+    {
+     "label": "S371963301",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S371963301.js",
+     "mean": 0.010337500000000001,
+     "min": -0.1492
+    },
+    {
+     "label": "S769889016",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S769889016.js",
+     "mean": 0.004020000000000001,
+     "min": -0.1416
+    },
+    {
+     "label": "S1408282248",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S1408282248.js",
+     "mean": -0.0001299999999999999,
+     "min": -0.0738
+    },
+    {
+     "label": "S2000717743",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S2000717743.js",
+     "mean": -0.0036450000000000024,
+     "min": -0.14
+    },
+    {
      "label": "冠军",
-     "pack": "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
-     "mean": 0.028542500000000002,
-     "min": -0.1419
+     "pack": "docs/artifacts/night-adapt/S916-R1S1704335642.js",
+     "mean": -0.0101725,
+     "min": -0.0505
     },
     {
-     "label": "S808369991",
-     "pack": "docs/artifacts/night-adapt/MSB5-R1S808369991.js",
-     "mean": 0.026805,
-     "min": -0.08
+     "label": "S745300182",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S745300182.js",
+     "mean": -0.0324175,
+     "min": -0.205
     },
     {
-     "label": "S928337601",
-     "pack": "docs/artifacts/night-adapt/MSB5-R1S928337601.js",
-     "mean": 0.026782500000000004,
-     "min": -0.1197
-    },
-    {
-     "label": "S942253744",
-     "pack": "docs/artifacts/night-adapt/MSB5-R1S942253744.js",
-     "mean": 0.006170000000000001,
-     "min": -0.1743
+     "label": "S768291681",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S768291681.js",
+     "mean": -0.04637,
+     "min": -0.1785
     }
    ],
    "nextParents": [
-    "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
-    "docs/artifacts/night-adapt/MSB4-R1S1928336850.js",
-    "docs/artifacts/night-adapt/MSB5-R1S808369991.js"
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1725743042.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1098066977.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js",
+    "docs/artifacts/night-adapt/S916R2B-R1S1062426886.js"
    ]
   }
  ]
