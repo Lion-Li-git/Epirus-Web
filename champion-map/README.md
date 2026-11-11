@@ -15,7 +15,7 @@
 | **攒 ep 的时机**（环/ジ 在什么局面用） | `archive/usage-buckets-2026-10-20.tsv`（归档；`behavior-profile --buckets=1` 再生） | 四格 = 能不能开环 × 这一回合挨没挨打；long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`（`FINDING-2026-10-20-ring-payoff-ds.md` §十） |
 | **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 时代的 per-experiment 尺表+考卷表，信息已并入 `coords.tsv`；`e328-*`/`e370-*`/`e287-ruler` 因仍是链上缺省参数留在顶层 |
 | **对打结果** | `duel*.tsv` | `duel-run.mjs` 产出 |
-| **谱系图上的坐标与各列** | `coords.tsv`（1.8 面板）‖ `coords-gen3-1105.tsv`（2.0 系 884，现役真源）‖ `coords-projcols.tsv`（烘焙 fit 表） | 宽表（H 系列读数**已改名 H5 参照系**：`H5/Hp5/De5/Hlong5/Hplong5/Flong5` = 旧 5P 单卷读数，新四格卷上线后整列退出）；**由链生成，别手改** |
+| **谱系图上的坐标与各列** | `coords.tsv`（1.8 面板）‖ `coords-gen3-1105.tsv`（2.0 系 926，现役真源）‖ `coords-projcols.tsv`（烘焙 fit 表） | 宽表（H 系列读数**已改名 H5 参照系**：`H5/Hp5/De5/Hlong5/Hplong5/Flong5` = 旧 5P 单卷读数，新四格卷上线后整列退出）；**由链生成，别手改** |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |
 
