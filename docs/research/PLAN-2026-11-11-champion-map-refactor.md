@@ -170,8 +170,9 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 - 阶段 1 已落：champion-map/map-table.mjs（resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp）+
   map-table-selftest.mjs（15/15）；feas.mjs 改走单一入口，缺省 gen3（旧 coords.tsv 显式），每次打印
   [map-table] rows/cols/sha。
-- 未接 viewer：--fit 仍默认 coords-projcols.tsv —— gen3 缺 xt18/yt18/xt20/yt20（1.8/2.0 预设要读）。
-  阶段 3 要么固定 rebuild-map.mjs（先 attach-projcols 再 viewer），要么把四列并进 gen3；不能只改默认值。
+- 阶段 3 已落：viewer --fit 默认改 coords-projcols.tsv；新增 rebuild-map.mjs（attach-exam-stamp --check →
+  attach-projcols → viewer → shot 98/0）；viewer 在 --projcols=1 且缺 xt18/yt18/xt20/yt20 时 exit 2，
+  不再静默退回 xt/yt；attach-projcols 改 map-table + 幂等（已有四列原位覆盖）。
 - 额外（考卷方向）：attach-exam-stamp.mjs 给 coords 追加 examA/examAL/examBs/examBl/examFix/examC 六列 +
   EXAM-BATCHES.tsv（fixture/champ + run id）；attach-cmean-r.mjs 加夹具守卫。926/926 覆盖，B 夹具唯一 F2，
   旧 obs5 夹具 0 行。详见 docs/research/FINDING-2026-11-11-exam-old-vs-new.md §3.6。
