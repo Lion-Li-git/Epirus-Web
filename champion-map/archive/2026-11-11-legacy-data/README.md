@@ -14,6 +14,9 @@
 | e370-ruler.tsv | 旧 rebuild-coords --extra 默认；路径已指向本目录 |
 | eps.tsv | 旧 eps-scan 产物；路径已指向本目录 |
 | _e321-job1/2.tsv | 旧 attach-sc 输入；路径已指向本目录 |
+| packs/ | 旧实验包（仅历史） |
+| build-1105/ | coords-gen3 的冻结建造输入 |
+| coords-view-18 / 零引用 exam4/extra/feas/only/ruler 表 | 旧批次读数，仅审计 |
 | eps04-check.mjs / reproj-check.mjs | 一次性探针，仅审计 |
 | duel.tsv / duelscan.mjs | 已删除（用户 2026-11-11：对旧冠军 Ldemo 的决斗着色无用） |
 

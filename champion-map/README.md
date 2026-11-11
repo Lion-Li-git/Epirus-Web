@@ -85,7 +85,7 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 ## 八、2026-11-07 整理（229 → ~100 项）+ H 系列改名 H5 参照系
 
 - **归档**：`archive/`（103 份：已并入联合表的历史批次 e608~e825 对、一次性探针、退役分页图、旧考卷快照；`archive/README.md` 有逐组"信息现居地"对照表）。
-- **建造源归拢**：`build-1105/`（9 份 = `coords-gen3-1105.tsv` 的 night6-join 冻结输入；join 路径已同步，重放前先核头注）。
+- **建造源归拢**：`build-1105/` 与 `packs/` 已移入 `archive/2026-11-11-legacy-data/`（冻结输入/旧实验包；页面与新链不再读）。
 - **留下的判据**：活脚本 + 活表全在顶层；`pool-seat-ml2-*`（ship 门读）、`holo.tsv`（promscan 读）、`oldpacks.tsv`（dedupe 门读）等真活件逐一核过引用才留；`panel/feas-s*/duel/fit/coords-projcols` 已迁入 `data/` 或归档。
 - **H 系列改名（用户令）**：旧 5P 单卷读数整族改参照名 —— `H→H5 ‖ Hp→Hp5 ‖ De→De5 ‖ Hlong→Hlong5 ‖ Hplong→Hplong5 ‖ Flong→Flong5`，
   五张 coords 表 + viewer（字段/图例/tooltip/页检）+ attach-hp/hlong/sc + switch-gear/fold/dups/rebuild/repair + night6-join/r64-attach 全链同步；
