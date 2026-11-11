@@ -2,6 +2,7 @@
 {"file":"tools/gates/probe-instruments.mjs","part":"probe-instruments","group":"probe","ranges":[[3662,3696],[5111,5126],[5303,5314],[6946,7059],[7435,7472],[7531,7660],[7744,7786],[7824,7928],[8052,8077],[8462,8497],[9121,9175],[9332,9373],[9507,9553],[9680,9994],[10313,10390],[10418,10449],[10468,10489],[10507,10513],[10783,10897],[11242,11361],[11419,11525],[11855,12020]],"gates":[3662,5111,5303,6946,7015,7435,7531,7595,7637,7744,7824,7850,8052,8462,9121,9140,9332,9507,9680,9716,9921,9959,10313,10418,10468,10783,10875,11242,11262,11303,11419,11484,11855],"patched":[]}
 #np-part-header-end*/
 import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
+import { humanPrototypes } from '../audit-lib.mjs';
 /* §改（2026-10-22 千问·第九批）：D178 原来用三条正则钉 `probe-human-seat.mjs` 的**源码形状**
  * （必须 import duelAssembly ‖ 不许出现 autoGameN( ‖ 不许写 `pickDefend ||` 兜底链）⇒ 换成**数值同一性**。
  * §再改（2026-10-23 千问·v1.8.18）：那"一遍重算"以前是在**门自己的进程**里做的 ⇒ 整轮里被前面某条门留在共享沙箱的
@@ -767,7 +768,9 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
     '--packs=' + FIXTURE_PACK, '--games=40'].concat(extra || []), { encoding: 'utf8', timeout: 420000 });
   const r1 = run(), r2 = run();
   eq(r1.status, 0, '正常包必须 exit 0：' + String(r1.stderr || '').slice(0, 160));
-  const nm = ['全程刷反弹', '全程只防御', '只攒不打(农民)', '只枪压制', '攒钱+反弹(会玩)', '重火力+反弹'];
+  const HP = humanPrototypes(sandbox().EpirusBots);
+  const HN = HP.length;
+  const nm = HP.map(function (x) { return x[0]; });
   const out1 = String(r1.stdout);
   /* ①′ **数值同一性**（v1.8.18 改：重算搬到**干净子进程**里做）。
    *   原来这七行在门自己的进程里直接 `duelAssembly(...)` ⇒ 它比的是"**这台机器此刻的配置**算出来的数"对"子进程里出厂配置算出来的数"。
@@ -816,15 +819,15 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
         const q = line.split('\t');
         if (q.length === 4) ref[q[0] + '|' + q[1]] = { win: q[2], draw: q[3] };
       }
-      eq(Object.keys(ref).length, 12, '①′ 参考必须给满 12 格（实测 ' + Object.keys(ref).length +
+      eq(Object.keys(ref).length, HN * 2, '①′ 参考必须给满 ' + (HN * 2) + ' 格（实测 ' + Object.keys(ref).length +
         '）⇒ 子进程少跑了一档或原型表变短；同一性不许在缺格上"对得上"');
     } finally { rmSync(refDir, { recursive: true, force: true }); }
     for (const mode of ['multi', 'long']) {
       const cells = seen[mode] || [];
-      eq(cells.length, 6, '①′ ' + mode + ' 那行必须 6 格（实测 ' + cells.length + '）');
+      eq(cells.length, HN, '①′ ' + mode + ' 那行必须 ' + HN + ' 格（实测 ' + cells.length + '）');
       for (let i = 0; i < cells.length; i++) {
         const key = mode + '|' + cells[i].name;
-        ok(!!ref[key], '①′ 工具印的"人类原型"「' + cells[i].name + '」不在参考那 12 格里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
+        ok(!!ref[key], '①′ 工具印的"人类原型"「' + cells[i].name + '」不在参考那 ' + (HN * 2) + ' 格里 ⇒ 它在用另一组人（与 G4 不同尺，数不能并排读）');
         if (!ref[key]) continue;
         eq(cells[i].win, ref[key].win, '①′ 同一性：' + mode + ' × ' + cells[i].name + ' 工具印 ' + cells[i].win +
           '% 而同一份 `duelAssembly` 在**干净进程**里算出 ' + ref[key].win + '% ⇒ 它没走那份装配（或偷偷改了参数）');
@@ -866,7 +869,7 @@ t('D178 人类那一席量具（v1.5.271 · §E82）：单一来源装配 + 可�
   eq(String(r2.stdout), out1, '② 同 seed0 两次必须逐字相同（量具不可复现 = 读数无意义）');
   ok(!/所有"人"都 0%/.test(out1), '④ 这一格必须有判别力（全行 0% 时工具自己会警告）—— 注意它现在量的是夹具包，不是线上那枚');
   const cells = (out1.match(/(\d+\.\d)%\(和\d+%\)/g) || []);
-  eq(cells.length, 12, '④ 必须正好 6 原型 × 2 模式 = 12 格（少一格 = 有原型静默失败）');
+  eq(cells.length, HN * 2, '④ 必须正好 ' + HN + ' 原型 × 2 模式 = ' + (HN * 2) + ' 格（少一格 = 有原型静默失败）');
   const rBad = spawnSync(process.execPath, ['tools/probe-human-seat.mjs',
     '--packs=' + FIXTURE_PACK + ',docs/artifacts/__d178_missing__.bak', '--games=20'], { encoding: 'utf8', timeout: 420000 });
   eq(rBad.status, 7, '③ 缺包必须非零退出（缺行 ≠ 量了没测出来）');
