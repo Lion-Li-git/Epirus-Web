@@ -1,6 +1,8 @@
 # 重构方案 · champion-map 输入表单一入口（2026-11-11）
 
-> 状态：提案（待用户点头）。触发事件：给 19 个 obs5 新点补短/长过线时，因为 `eps-full.mjs` / `feas.mjs` / `attach-hp.mjs` 硬编码 `coords.tsv`，只能临时把 926 行的 `coords-gen3-1105.tsv` 拷成 `coords.tsv`，跑完再还原。这是“输入表没有单一入口”的直接症状，不是数据问题。
+> 状态：阶段 1–3 已实施（本地提交 13d47061 / e2361bc3 / 15176e30，未推）。实施偏差：viewer 默认吃 coords-projcols.tsv（页面表），不是 gen3——gen3 缺 xt18/yt18/xt20/yt20；页面入口改为 rebuild-map.mjs。§3.2/§5 中“viewer 默认 gen3”的旧句按此偏差读。阶段 4（目录分层）未做。
+>
+> 触发事件：给 19 个 obs5 新点补短/长过线时，因为 `eps-full.mjs` / `feas.mjs` / `attach-hp.mjs` 硬编码 `coords.tsv`，只能临时把 926 行的 `coords-gen3-1105.tsv` 拷成 `coords.tsv`，跑完再还原。这是“输入表没有单一入口”的直接症状，不是数据问题。
 
 ## 1. 现状
 
