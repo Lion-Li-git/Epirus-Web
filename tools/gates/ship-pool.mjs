@@ -261,6 +261,9 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
   const BF = 'champion-map/bake-flags.txt';
   const BF_FLAGS = existsSync(BF) ? readFileSync(BF, 'utf8').trim().split(/\s+/).filter(Boolean) : [];
   if (!existsSync(BF)) { console.error('⛔ ⑩c 的规范烘焙旗标不在册：' + BF + ' ⇒ 不许退回"裸默认"烘（那与 §G3 之后的产物必然不等，是假红）'); }
+  /* 2026-11-11：页面源改为 data/build/coords-view.tsv（干净克隆里 build/ 是 gitignore）⇒ 先编译，再烘。 */
+  const bv = spawnSync(process.execPath, ['champion-map/pipeline/build-view.mjs'], { cwd: process.cwd(), encoding: 'utf8' });
+  eq(bv.status, 0, '⑩c build-view 编译必须成功：' + String(bv.stdout || bv.stderr || '').trim().split('\n').slice(-2).join(' ‖ ').slice(0, 220));
   const bk = spawnSync(process.execPath, ['champion-map/viewer.mjs'].concat(BF_FLAGS, ['--out=' + bakeFix]),
     { cwd: process.cwd(), encoding: 'utf8' });
   eq(bk.status, 0, '⑩c 烘焙必须成功（失败 ⇒ 页面产物是旧的，判据与截图都跑在上一版上）：' +

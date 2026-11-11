@@ -107,6 +107,9 @@ if (CHECK) {
 if (!before.nDrift) { say('✔ 无需同步（逐枚一致）'); process.exit(0); }
 
 /* ---- 重烘 + 回读复核 ---- */
+/* 页面已改吃 data/build/coords-view.tsv；干净克隆里这个目录不存在，先编译再烘（D234⑩c 的 CI 路径）。 */
+try { execFileSync(process.execPath, [join(HERE, 'pipeline/build-view.mjs')], { cwd: ROOT, stdio: QUIET ? 'pipe' : 'inherit' }); }
+catch (e) { console.error('⛔ build-view 失败：' + e.message); process.exit(2); }
 const OUT = arg('out', 'index.html');                       /* viewer 的 `--out` 按 champion-map/ 解析 */
 const bak = CHART + '.bak';
 copyFileSync(CHART, bak);
