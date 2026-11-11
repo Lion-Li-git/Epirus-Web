@@ -37,7 +37,7 @@ const DUMPDEFS = process.argv.includes('--dumpdefs');
 /* ⚠ 读表一律先把 CRLF 归一成 LF：本仓工作树是 CRLF，`split('\n')` 会把**末列**留成带裸 \r 的串
  *   ⇒ `indexOf('path')` 返回 −1（path 恰好就是 coords.tsv 的末列，实测被 git checkout 兜一圈后就是这样）。*/
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
-const ids = rd(join(HERE, 'coords.tsv')).trim().split('\n').slice(1).map(l => l.split('\t')[0]);
+const ids = rd(join(HERE, 'data/page/coords.tsv')).trim().split('\n').slice(1).map(l => l.split('\t')[0]);
 
 /* ===== §E613 包内没自报 `ts` 时的**补录表**（10-16 早上用户看图抓出来的那条静默病）=====
  *   病：查看器的横轴就是训出时刻，`viewer.mjs:1781` 对 `Date.parse(ts)` 非有限值**直接不定位**（`PT(i)` 返回 null）
@@ -64,7 +64,7 @@ let nTsFix = 0;
  *   名单和路径同表同序，下游（本文件、`feas.mjs`）不再各自拼约定路径。 */
 const PATHOF = {};
 {
-  const CL = rd(join(HERE, 'coords.tsv')).trim().split('\n');
+  const CL = rd(join(HERE, 'data/page/coords.tsv')).trim().split('\n');
   const ch = CL[0].split('\t'), iId = ch.indexOf('id'), iPath = ch.indexOf('path');
   if (iPath < 0) { console.error('⛔ coords.tsv 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
   for (const l of CL.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPath]) PATHOF[c[iId]] = c[iPath]; }
@@ -327,7 +327,7 @@ const ARMPAR = {};
  *   ⚠ 时区：表里的 shipWhen 是**提交时间的本地格式（+08）**，而包 META 的 ts 是 **UTC（Z）** ⇒ 显式补 +08:00 再比，
  *     不许拿字符串大小直接比（本仓已四次把 UTC/本地混着当）。 */
 const SLOT_TL = [];
-{ const sp = join(HERE, 'ship-times.tsv');
+{ const sp = join(HERE, 'data/page/ship-times.tsv');
   if (existsSync(sp)) { const S = rd(sp).trim().split('\n'), sh = S[0].split('\t');
     const ii = sh.indexOf('id'), iw = sh.indexOf('wid'), iwh = sh.indexOf('shipWhen');
     for (const l of S.slice(1)) { const c = l.split('\t'); if (!c[iw] || !c[iwh]) continue;
@@ -347,7 +347,7 @@ const SLOT_TL = [];
  *   ⚠ 时间轴必须**追到今天**（最后一段的权重 == 当下槽文件里的权重）：追不上 ⇒ 最后一段之后的区间"当时是谁"
  *     是不知道的 ⇒ 这一级整体不生效，并**响亮印出来**（不静默降级）。 */
 const SLOT_FULL = [];
-{ const f = join(HERE, 'slot-timeline.tsv');
+{ const f = join(HERE, 'data/page/slot-timeline.tsv');
   if (existsSync(f)) { const S = rd(f).trim().split('\n'), sh = S[0].split('\t');
     const iw = sh.indexOf('wid'), ip = sh.indexOf('panelId'), iu = sh.indexOf('fromUTC'), ia = sh.indexOf('metaArm');
     for (const l of S.slice(1)) { const c = l.split('\t'); const t = Date.parse(c[iu] || '');
@@ -878,7 +878,7 @@ for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); 
  *   而且"工作区干净 ⇒ 按 meta 跑一遍仓库纪律"这条路在整轮之后就不成立了。
  * 同款写法（不是我新发明的）：`champion-map/attach-sc.mjs` 的 `const eol = raw.indexOf('\r\n') >= 0 ? '\r\n' : '\n';`
  *   与 `champion-map/fold-coords.mjs` 的 `EOL`。**新写的落盘器请一律照这个来。** */
-const __linPath = join(HERE, 'lineage.tsv');
+const __linPath = join(HERE, 'data/page/lineage.tsv');
 const __linEol = (existsSync(__linPath) && readFileSync(__linPath, 'utf8').indexOf('\r\n') >= 0) ? '\r\n' : '\n';
 writeFileSync(__linPath, out.join(__linEol) + __linEol);
 console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族 ‖ 双父的融合粒 ' +

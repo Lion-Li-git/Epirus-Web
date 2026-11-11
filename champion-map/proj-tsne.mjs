@@ -37,7 +37,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   为什么现在要这个：11-05 夜班把 2.0 点并进旧图时用了"kNN 插值"，因为投影只在 `coords.tsv` 上算过一次 ⇒
  *   并集里的新点没有自己的投影，只能借邻域。重投影一遍就不借了：**一张图只许有一套 fit**。
  *   路径口径与 `viewer.mjs` / `pool-sync.mjs` 同族（§E608）：带盘符或前导 `/` 的不再 join。 */
-const IN = arg('in', 'coords.tsv');
+const IN = arg('in', 'data/page/coords.tsv');
 /* 路径口径（§E608 同族）：**先按调用方给的原样试**（相对 cwd），再试 HERE 拼，再试只取文件名 ⇒
  *   原来只 `join(HERE, IN)`，于是 `--in=champion-map/coords-gen3-1105.tsv` 拼成 `champion-map/champion-map/…` ENOENT。
  *   三个都不存在 ⇒ 响亮报错并列出试过的路径（不许退默认表偷偷投影另一批点）。 */

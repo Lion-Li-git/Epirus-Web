@@ -26,7 +26,7 @@ function sameWeights(root, rel, wid) {
 /** 读 `champion-map/slot-history.tsv`（活槽住过谁）；缺文件返回 []，由调用方决定要不要红 */
 export function slotHistory(root) {
   let t;
-  try { t = readFileSync(join(root, 'champion-map', 'slot-history.tsv'), 'utf8').replace(/\r\n/g, '\n'); } catch (e) { return []; }
+  try { t = readFileSync(join(root, 'champion-map', 'data/page/slot-history.tsv'), 'utf8').replace(/\r\n/g, '\n'); } catch (e) { return []; }
   const L = t.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
   if (L.length < 2) return [];
   const h = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));

@@ -53,11 +53,13 @@ export function humanPrototypes(B) {
     ['只枪压制', B.pickGunSpam, 'gunspam'],
     ['攒钱+反弹(会玩)', function (st, pid, legal) {
       const k = B.pickReflectSpam(st, pid, legal);
+      if (typeof k === 'string' && k) return k;
       if (k && k.key) return k;
       return B.pickDeepSaver(st, pid, legal);
     }, 'deepsaver+reflect'],
     ['重火力+反弹', function (st, pid, legal) {
       const k = B.pickReflectSpam(st, pid, legal);
+      if (typeof k === 'string' && k) return k;
       if (k && k.key) return k;
       return B.pickHeavyFire(st, pid, legal);
     }, 'heavyfire+reflect']

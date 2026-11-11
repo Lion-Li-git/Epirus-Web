@@ -16,6 +16,7 @@
 | features.tsv | 一行 = 一份权重 | 行为列（rounds/dmg/.../S/Geff） |
 | projections.tsv | 一行 = 一份权重 | xt/yt/xt3/yt3/zt3/xt18/yt18/xt20/yt20；换尺不动 |
 | fit.tsv | 宽表 | 页面 fit 说明 |
+| page/coords.tsv / lineage*.tsv / pool-members.tsv / promote.tsv / ship-times.tsv / slot-*.tsv | 页面元数据 | viewer/slot-identity 的页面输入；P0 从根目录迁入，根目录不再放这些表 |
 | build/exam-view.tsv | 视图 | readings + rulers；与 coords-gen3 逐值对照 |
 | build/coords-view.tsv | 页面视图 | display + canonical 编译；rebuild-map 直接吃 |
 | build/report.json | 报告 | 行数/覆盖/对照 max diff/文件 sha（gitignore） |

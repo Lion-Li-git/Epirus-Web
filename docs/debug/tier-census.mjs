@@ -58,7 +58,7 @@ const MODE = flag('mode', 'multi');
  *   ⚠ **换人数 = 换分布**：n=2 只有 1 个 AI 席 ⇒ 分母、"全同"概念、掺席可行性都跟着变（下面各处按 `AI` 走，不写死 4）。 */
 const N = Math.max(2, Number(flag('n', 5)) || 5);
 const AI = N - 1;
-const TABLE = flag('members', '') || (N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
+const TABLE = flag('members', '') || (N > 2 ? 'champion-map/data/page/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
 const SEEDS = String(flag('seeds', '90210,90211,90212')).split(',').map(Number).filter(x => !Number.isNaN(x));
 const TIERS = String(flag('tiers', 'lv:sparring,lv:regular,lv:hard')).split(',').filter(Boolean);
 

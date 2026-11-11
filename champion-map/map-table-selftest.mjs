@@ -24,7 +24,7 @@ ok(gt.rowsN === 926 && gt.header.length === 142, '默认表行/列 = 926 × 142�
 ok(!existsSync(join(HERE, 'coords.tsv.tmp-' + process.pid)), '默认解析不产生临时文件');
 
 /* 2. 旧表只显式 */
-const legacy = resolveTable(['--table=coords.tsv'], { baseDir: HERE });
+const legacy = resolveTable(['--table=data/page/coords.tsv'], { baseDir: HERE });
 const lt = readTable(legacy);
 ok(basename(legacy) === 'coords.tsv' && lt.rowsN === 825, '显式 --table=coords.tsv 读到 825 行（实际 ' + lt.rowsN + '）');
 

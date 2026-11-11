@@ -40,7 +40,7 @@ if (process.argv[1] && process.argv[1].endsWith("pool-add.mjs")) {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
-const MAP = join(ROOT, 'champion-map', 'pool-members.tsv');
+const MAP = join(ROOT, 'champion-map', 'data/page/pool-members.tsv');
 const COLS = ['id', 'wid', 'path', 'tier', 'invited', 'promoteVerdict', 'seatKill', 'addedAt', 'note'];
 /* 池的**带名**（`pool-members.tsv` 的 `tier` 列取值）—— §E596（10-12 下半场）把带定成**三带**：
  *   `hard`（最强，现役钉在这一带）/ `mid` / `soft`（最软）。§E594 那版"两带"已被三带取代。
@@ -143,7 +143,7 @@ function seatKillOf(wid, seatFiles, pendingTier) {
 
 /* ---------- 上槽体检：查表；表里没有就（按点名）现跑一次 ---------- */
 function promoteInfoOf(id, pack, runPromote) {
-  const PT = join(ROOT, 'champion-map', 'promote.tsv');
+  const PT = join(ROOT, 'champion-map', 'data/page/promote.tsv');
   const look = () => {
     if (!existsSync(PT)) return null;
     const t = rd(PT);

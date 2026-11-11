@@ -26,7 +26,8 @@
 - `viewer.mjs` —— 页面源码（内含自检；`node champion-map/lint-viewer.mjs` 先绿再烘）。
 - `map-table.mjs` —— 输入表单一入口（阶段 1）：`resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp`；`map-table-selftest.mjs` 15 条。
 - `attach-exam-stamp.mjs` —— 给 coords 盖 `examA/examAL/examBs/examBl/examFix/examC` 六列；`--check` 只读，拦 unknown/旧夹具/C 不符。
-- `data/` + `pipeline/` —— 数据模型 A/B：registry/rulers/batches/readings/features/projections/display + 换尺接口 + add-point/measure-point；详见 `pipeline/README.md`。
+- `data/` + `pipeline/` —— 统一数据：registry/rulers/batches/readings/features/projections/display/feasibility + page 元数据（lineage/pool/promote/ship/slot/coords）+ 换尺接口 + add-point/measure-point；详见 `pipeline/README.md`。
+- `trends.html` —— A/B/C 考卷趋势（30 枚滑动，按 ts；由 pipeline/build-trends.mjs 生成，页面左上角有入口）。
 - `rebuild-map.mjs` —— 页面唯一入口（戳 → build-view(data) → viewer → shot 98/0）；页面吃 `data/build/coords-view.tsv`，不再吃散表。
 - `rebuild-coords.mjs` —— **九步链**：把所有 `attach-*.mjs` 串起来重建 `coords.tsv`（漏一步就丢列，v1.7.97 那次的 `Hlong` 就是这么丢的）。
 

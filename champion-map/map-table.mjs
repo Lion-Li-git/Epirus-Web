@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_TABLE = 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv';
-export const LEGACY_TABLE = 'coords.tsv';
+export const LEGACY_TABLE = 'data/page/coords.tsv';
 
 function unique(a) { const o = []; for (const x of a) if (o.indexOf(x) < 0) o.push(x); return o; }
 

@@ -29,7 +29,7 @@ const co = readTable(CO);
 const pj = readTable(PROJ);
 if (co.rowsN !== pj.rowsN) throw new Error('coords/proj 行数不同：' + co.rowsN + ' vs ' + pj.rowsN);
 const lin = new Map();
-for (const f of ['champion-map/lineage.tsv', 'champion-map/lineage-g3.tsv']) {
+for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
   if (!existsSync(f)) continue;
   const t = readTable(f);
   for (const r of t.rows) {

@@ -40,7 +40,7 @@ const ONLY_FILE = arg('only', '');
 const EXTRA = arg('extra', '');
 
 /* 名单：coords.tsv 面板 + extra（与 eps-full 同一条路径解析链：extra 映射 → 在册 path → .bak 兜底） */
-const CO = readFileSync(join(ROOT, 'champion-map/coords.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
+const CO = readFileSync(join(ROOT, 'champion-map/data/page/coords.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
 const ch = Object.fromEntries(CO[0].map((c, i) => [c, i]));
 const CO_PATH = {};
 const ids = [];

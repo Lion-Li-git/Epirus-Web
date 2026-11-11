@@ -33,7 +33,7 @@ const git = a => execFileSync('git', a, { cwd: ROOT, maxBuffer: 1 << 26, encodin
 
 /* ---- 1) 面板身份表：wid → id（①号来路）---- */
 const WID2ID = {}; const WID2ALT = {};
-{ const lp = join(HERE, 'lineage.tsv');
+{ const lp = join(HERE, 'data/page/lineage.tsv');
   if (existsSync(lp)) { const L = rd(lp).trim().split('\n'), h = L[0].split('\t');
     const iw = h.indexOf('wid');
     for (const l of L.slice(1)) { const c = l.split('\t'); if (iw < 0 || !c[iw]) continue;
@@ -77,7 +77,7 @@ for (const s of segs) {
   s.alt = WID2ALT[s.wid] || 1;
   out.push([s.from, s.wid, s.sha, s.panelId, s.alt, s.arm, s.mts, s.namedBy, s.subject.replace(/\t/g, ' ')].join('\t'));
 }
-writeFileSync(join(HERE, 'slot-timeline.tsv'), out.join('\n') + '\n');
+writeFileSync(join(HERE, 'data/page/slot-timeline.tsv'), out.join('\n') + '\n');
 const named = segs.filter(s => s.panelId).length;
 console.log('已写 slot-timeline.tsv：' + segs.length + ' 段（' + SLOT + '）‖ 其中 ' + named + ' 段能对上面板上的枚 ‖ '
   + (segs.length - named) + ' 段只能靠 META/提交标题命名');

@@ -27,7 +27,7 @@ const has = k => process.argv.includes('--' + k);
 /* 路径口径与 `seat-rule.mjs` 的 `resolve()` 同族：带盘符（`C:/…`）或前导 `/` 视为**绝对路径**，
  * 不再无条件 join（本仓今晚第三次撞这一类：`--seat=`/`--in=`/`--chart=` 都栽在"多拼了一层"上）。 */
 const abs = p => (p.indexOf(':') >= 0 || p[0] === '/' || /^[A-Za-z]:[\/\\]/.test(p)) ? p : join(ROOT, p);
-const TABLE = abs(arg('table', 'champion-map/pool-members.tsv'));
+const TABLE = abs(arg('table', 'champion-map/data/page/pool-members.tsv'));
 const CHART = abs(arg('chart', 'champion-map/index.html'));
 const CHECK = has('check'), QUIET = has('quiet');
 const say = m => { if (!QUIET) console.log(m); };

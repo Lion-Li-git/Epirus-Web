@@ -254,7 +254,7 @@ const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [
 /* 过线/混合桌闸：2026-11-11 数据模型统一后只读 data/feasibility.tsv。
  *   ok/okLong/okShort 均由 backfill/add-point 写入；旧 feas-s 分片/panel 已退役。 */
 const feasP = join(HERE, 'data/feasibility.tsv');
-const linP = join(HERE, 'lineage.tsv');
+const linP = join(HERE, 'data/page/lineage.tsv');
 let LIN = {};
 if (existsSync(linP)) {
   const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
@@ -267,7 +267,7 @@ if (existsSync(linP)) {
  *     sidecar 是 14~19，而 14~19 正好落在它说"不相撞"的那个区间里。防撞靠的是**两表 id 交集为 0**
  *     （11-11 实测 825 × 108 行零重合），不是号段错开。别再照那句话发明族号。
  *   版本判定从此只有一处：`G3IDS` = sidecar 的 id 集 ⇒ DATA.ver / batchOf 都读它。 */
-const g3linP = join(HERE, arg('g3lin', 'lineage-g3.tsv'));
+const g3linP = join(HERE, arg('g3lin', 'data/page/lineage-g3.tsv'));
 let G3IDS = new Set();
 if (existsSync(g3linP)) {
   const gl = readFileSync(g3linP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n'); const gh = gl[0].split('\t');
@@ -327,7 +327,7 @@ const MSRC = legsSrcOf(['feas-short-s1.tsv', 'feas-short-s2.tsv', 'feas-short-s3
  *   —— G4（不许被一行脚本打穿 >60%）‖ G5（面对"只防御不还手"必须清场 ≤25%）‖ 送盾硬门槛（不可 --force）。
  *   §E305/§E307 一枚一枚数出来的结论就是：F 前沿**系统性死在这三条腿上**，而它们在图上原本完全隐形。
  *   代价：一枚 `--dry` ≈ 2.5 分钟（要跑考卷 + 行为门），所以只覆盖实测过的那几十枚 ⇒ 未测的显灰，不当"没过"。*/
-const promP = join(HERE, 'promote.tsv');
+const promP = join(HERE, 'data/page/promote.tsv');
 let PROM = {};
 if (existsSync(promP)) {
   const pr2 = readFileSync(promP, 'utf8').trim().split('\n'); const p2h = pr2[0].split('\t');
@@ -343,7 +343,7 @@ if (existsSync(promP)) {
  *   而谱系图原来只有"这一枚强不强"的三条腿（过线 / 体检 / 决斗）⇒ 玩家问"我现在遇到的这枚在池里是哪一档、
  *   它给人送过分没有"，图上完全读不出来，只能去翻 tsv。
  *   ⚠ 这里**只读不判**：谁是成员、踩了几格，全由 pool-add/seat-rule 那边算完落表；图抄数不重算（单一来源）。 */
-const poolP = join(HERE, 'pool-members.tsv');
+const poolP = join(HERE, 'data/page/pool-members.tsv');
 let POOLM = {};
 const POOL_ALIAS = {};    /* §E604：池表里经由副名归到主名的那几个（要打出来给人看见，不许静默合并） */
 const POOL_CLASH = [];    /* 同一枚被池表两个名字占了不同档 ⇒ 只点名，不自己裁决 */
@@ -389,7 +389,7 @@ if (existsSync(poolP)) {
  *   ⚠ 不能用 coords.tsv 的 `ts` 顶替 —— 那是**训出**时刻；上线是另一次动作（用户 GO 之后换包），
  *   两者能差好几天（实测 v7cmin4-31 训出于 09-20 前后、09-21 18:49 才上槽）。
  *   表由 `ship-scan.mjs` 从 git 里**逐提交算槽文件权重指纹**抽出来（不是按提交标题点名，那条会造假账）。 */
-const shipP = join(HERE, 'ship-times.tsv');
+const shipP = join(HERE, 'data/page/ship-times.tsv');
 let SHIP = {};
 /* §E378 旧槽位冠军的两把钟（§E376 只留了一把）：`SLOT_FIRST` = **第一次**进槽的时刻，
  *   `SLOT_META` = 那枚包自己 META 里的写盘时刻（= 训出）。横轴用的是后者，理由见 §E378 那一节。 */
@@ -6844,6 +6844,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}\n' +
 '</style></head><body>\n' +
 '<div id="bar">' +
+'<a href="trends.html" style="color:#9fc3ff;text-decoration:none;padding:0 4px" title="A/B/C 考卷趋势（30 枚滑动，按 ts）">A/B 趋势 ↗</a>' +
 '<label class="tbgrp" data-m="map" title="第一段：换的是「看哪张图」">视图 <select id="modeSel"><option value="1d">一维（F 排序带）</option><option value="map" selected>地图（缩放/平移）</option><option value="tree">谱系（时间 × 家族）</option><option value="3db">三维行为轴</option></select></label>' +
 '<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +

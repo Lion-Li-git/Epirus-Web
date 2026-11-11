@@ -71,7 +71,7 @@ Epirus-Web/
 │   ├─ pool-draw.js              冠军池抽签与装配（byTier / compose / scriptSeats）
 │   ├─ bundled-champion.js       2 人内置冠军
 │   ├─ bundled-champion-3p.js    多人内置冠军（池不生效时的回退包）
-│   ├─ bundled-champion-pool.js     多人冠军池 bundle（真源 champion-map/pool-members.tsv）
+│   ├─ bundled-champion-pool.js     多人冠军池 bundle（真源 champion-map/data/page/pool-members.tsv）
 │   └─ bundled-champion-pool-2p.js  2P 原生冠军池 bundle（真源 pool-members-2p.tsv）
 ├─ training/                     ★ 训练侧独立子仓（2026-11-11 起：入口/服务/旋钮册都住这里；产品侧零依赖，详见 training/README.md）
 │   ├─ knobs.mjs                   ★ 旋钮单一真源生成器（--check 供 CI 防腐烂；册 = TRAINING-KNOBS.md 唯一配置真源）
@@ -219,6 +219,8 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 
 **数据模型 / 新点进图（2026-11-11）**：源表在 champion-map/data/（registry/rulers/batches/readings/features/projections/display），页面由 build-view 编译成 coords-view 后交给 rebuild-map。换尺只追加 readings 并切 rulers.tsv 的 current；新点用 pipeline/measure-point.mjs 自动跑四腿+feas+投影，再经 add-point 写入并重烘。
 
+**页面元数据 / 趋势**：lineage/pool/promote/ship/slot/coords 已收进 champion-map/data/page/；A/B/C 趋势页是 champion-map/trends.html（30 枚滑动，按 ts），页面左上角有入口。
+
 ### 训练期的门与杀
 
 - `EPIRUS_GA_GATE=<K>`：每代 top-3 健康读，宽粒优先；全代不过线只“饿退”，**不杀**；
@@ -254,7 +256,7 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 ⇒ 上表 11-07 的困难行（19.6 回合 / 19 种 / 防御类 0.9%）已经不能描述现池：困难档现在**更慢、更窄、防御更多**。
 正式 2880 局口径重跑前，引用请带批次与样本量，不要把这两组数混读。
 
-带内枚数现读 `champion-map/pool-members.tsv`。台阶（**11-07 午重测，当时 23 枚池**；8 seed × 1000 局逐局配对，n=5，`--pool=1`）：multi 简单−普通 **+0.95±0.30**（3.2σ，6/8 同向）、普通−困难 **+2.34±0.51**（4.6σ，8/8）；long **+0.97±0.53**（1.8σ，7/8）、**+2.13±0.41**（5.2σ，7/8 另 1 粒并列 0）。原件 `scratch/qoder-1107-ladder-multi.txt` ‖ `…-ladder-long.txt`。
+带内枚数现读 `champion-map/data/page/pool-members.tsv`。台阶（**11-07 午重测，当时 23 枚池**；8 seed × 1000 局逐局配对，n=5，`--pool=1`）：multi 简单−普通 **+0.95±0.30**（3.2σ，6/8 同向）、普通−困难 **+2.34±0.51**（4.6σ，8/8）；long **+0.97±0.53**（1.8σ，7/8）、**+2.13±0.41**（5.2σ，7/8 另 1 粒并列 0）。原件 `scratch/qoder-1107-ladder-multi.txt` ‖ `…-ladder-long.txt`。
 ⚠ **这把尺已到分辨力下限**：rand 替身夺冠均值掉到 困难 11.1/11.0 ‖ 普通 13.5/13.2 ‖ 简单 14.4/14.2（multi/long），地板区里幅度读数不稳 ⇒ **换尺待裁（D-28）**；跨批漂移约 1pt，幅度 <1pt 的行只当批条件读数。判宽度用普查的 `perGameKinds`（逐局），不要用并集种类。
 
 > ⚠ **2P 池现状（11-10 复核）**：9 枚成员全是 v7（5689 参数），最后更新 10-21；2.0 统一冠军尚在训练，2P 暂走旧池。2.0 的目标是**一个包按人数自适应**，不再维护独立的 2P 专家池。

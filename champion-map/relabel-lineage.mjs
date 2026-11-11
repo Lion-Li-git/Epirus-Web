@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import * as SI from './slot-identity.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const T = join(HERE, 'coords.tsv');
+const T = join(HERE, 'data/page/coords.tsv');
 const has = k => process.argv.includes('--' + k);
 const CHECK = has('check'), DRY = has('dry');
 

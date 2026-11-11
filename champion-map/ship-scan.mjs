@@ -89,7 +89,7 @@ for (const w of Object.keys(W2ID)) {
 for (const id of CLAIM) rows.push({ id: id, wid: '', when: '', hash: '', ver: '',
   share: '解析在槽位时间轴里找不到它（lineage 却写着上过槽）⇒ 查看器退回训出时刻并显式标' });
 rows.sort((a, b) => String(a.when || '~~~').localeCompare(String(b.when || '~~~')));
-writeFileSync(join(HERE, 'ship-times.tsv'),
+writeFileSync(join(HERE, 'data/page/ship-times.tsv'),
   'id\tshipWhen\thash\tversion\twid\t同权重几枚\n' +
   rows.map(r => [r.id, r.when, r.hash, r.ver, r.wid, r.share].join('\t')).join('\n') + '\n');
 console.log('\n上线时刻（按时间正序）：');

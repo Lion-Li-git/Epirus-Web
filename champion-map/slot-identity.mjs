@@ -54,7 +54,7 @@ export function verOf(sub) { const t = String(sub || '');
 
 export function load(root) {
   const R = root || ROOT;
-  const CM = f => join(R, 'champion-map', f);
+  const CM = f => join(R, 'champion-map', 'data/page', f);
 
   /* ---- 图上的行 + 同权重组 ----
    * §E604（10-14 折行之后）：`coords.tsv` 一行 = 一份权重，组内其它名字搬到 **`aliasIds`** 这一列（用户裁：

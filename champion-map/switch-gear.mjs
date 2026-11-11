@@ -66,7 +66,7 @@ if (existsSync(R120)) {
   if (n === 0 || rate > 0.02) { console.error('⛔ 守卫② 不过 ⇒ 两张同档表对不上，说明换的不只是档（前 8 条：\n  ' + names.join('\n  ') + '）'); process.exit(2); }
 } else { console.error('⛔ 守卫② 无从执行：' + R120 + ' 不在盘上 ⇒ 不许换（本笔的凭据要求两台仪器互相复现）'); process.exit(2); }
 
-const CO = rd(join(HERE, 'coords.tsv')), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
+const CO = rd(join(HERE, 'data/page/coords.tsv')), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const iId = ch.id, iH = ch.H5, iHp = ch.Hp5, iDe = ch.De5, iF = ch.F, iS = ch.S;
 if ([iId, iH, iHp, iDe, iF, iS].some((x) => x === undefined)) { console.error('⛔ coords 缺 id/H5/Hp5/De5/F/S 某一列'); process.exit(2); }
 const iH120 = ch.H120, iExamG = ch.examG;
@@ -127,7 +127,7 @@ if (widthBad) { console.error('⛔ 守卫④：有 ' + widthBad + ' 行换完宽
 
 /* 幂等自证：目标内容与盘上现有表若逐字节相同，就直说"已经换过了" */
 const out = newRows.map((r) => r.join('\t')).join('\n') + '\n';
-const nowTxt = readFileSync(join(HERE, 'coords.tsv'), 'utf8').replace(/\r\n/g, '\n');
+const nowTxt = readFileSync(join(HERE, 'data/page/coords.tsv'), 'utf8').replace(/\r\n/g, '\n');
 console.log('守卫④ 宽度 ✅ 每行 ' + head.length + ' 列（写 ' + kept + ' 行 ‖ 覆写读数 ' + replaced + ' 枚）‖' +
   (nowTxt === out ? ' **本次内容与盘上逐字节相同 ⇒ 幂等：已换过**' : ' 目标内容与盘上不同（本次是真换档）'));
 console.log('列操作：删 H120 = ' + (iH120 === undefined ? '（本来就没有）' : '第 ' + (iH120 + 1) + ' 列') +
@@ -138,5 +138,5 @@ if (!incAfter) { console.error('⛔ 换档后的表里找不到现役那一行�
 if (!(incAfter.H > 0 && incAfter.H < 100 && incAfter.gear === String(GEAR))) { console.error('⛔ 现役换完不合法（H 或档没落上）'); process.exit(2); }
 
 if (CHECK) { console.log('--check ⇒ 不落盘（守卫全过：' + [1, 2, 3, 4].join('/') + '）'); process.exit(0); }
-writeFileSync(join(HERE, 'coords.tsv'), out.replace(/\n/g, '\r\n'), 'utf8');
+writeFileSync(join(HERE, 'data/page/coords.tsv'), out.replace(/\n/g, '\r\n'), 'utf8');
 console.log('已写 champion-map/coords.tsv（' + kept + ' 行 × ' + head.length + ' 列，CRLF 工作树）');

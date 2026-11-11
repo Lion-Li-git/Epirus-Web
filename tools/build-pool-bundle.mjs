@@ -35,7 +35,7 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   ⚠ 2P 包的外壳是 `EPIRUS_CHAMPION`（3P 池成员是 `EPIRUS_CHAMPION_3P`）⇒ `--key=` 不是装饰，
  *     传错会**响亮**红在"解不出权重数组"上，不会静默出空池。 */
 const absPath = p => (p.indexOf(':') >= 0 || p[0] === '/' || /^[A-Za-z]:[\/\\]/.test(p)) ? p : join(ROOT, p);
-const MAP = absPath(arg('table', 'champion-map/pool-members.tsv'));
+const MAP = absPath(arg('table', 'champion-map/data/page/pool-members.tsv'));
 const KEY = arg('key', 'EPIRUS_CHAMPION_3P');
 /* 2026-10-21（用户裁定 A · 2P 软档掺多人包）：成员文件的**外壳键**可以与被嵌入的全局名不同 ——
  *   2P 池里掺进来的成员是 3P 训练出来的包（外壳 `EPIRUS_CHAMPION_3P`），而页面只读 bundle 里的 `pack`（与外壳无关）。
@@ -92,7 +92,7 @@ for (const r of rows) {
 const byTier = {};
 for (const m of members) byTier[m.tier] = (byTier[m.tier] || 0) + 1;
 
-const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真源 ' + arg('table', 'champion-map/pool-members.tsv') + '）。不要手改。\n' +
+const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真源 ' + arg('table', 'champion-map/data/page/pool-members.tsv') + '）。不要手改。\n' +
   ' * 成员 ' + members.length + ' 枚 ' + JSON.stringify(byTier) + ' ‖ 源文件合计 ' + (bytes / 1024).toFixed(0) + ' KB ‖ 生成于 ' + new Date().toString() + '\n' +
   ' * 契约（装配语义 / 抽签 / 降级）见 docs/POOL-CONTRACT.md —— 本页与量具、门禁 D234 必须逐字对齐那份契约。 */\n' +
   '(function (global) {\n  \'use strict\';\n' +

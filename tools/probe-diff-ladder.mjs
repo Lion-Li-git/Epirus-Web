@@ -196,7 +196,7 @@ const LADDER_NOTED = {};
 if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
 if (USE_POOL) {
   if (!PD || typeof PD.compose !== 'function') { console.error('⛔ js/pool-draw.js 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
-  const PT = join(ROOT, N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
+  const PT = join(ROOT, N > 2 ? 'champion-map/data/page/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
   /* §E609：`--n=2 --pool=1` 以前**根本走不到这里**（下面那句装配判定写死 N>2）⇒ 2 人桌的三档从来没有一条池装配读数。
    *   补上之后按人数选表：2 人桌用的是 2P 原生那份（`pool-members-2p.tsv`，§E599 的裁定），不是把 3P 池搬过去。 */
   if (!existsSync(PT)) { console.error('⛔ 池真源表不在：' + PT + '（先跑 tools/pool-add.mjs）'); process.exit(2); }

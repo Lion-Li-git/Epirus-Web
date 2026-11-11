@@ -86,7 +86,7 @@ for (const k in BYID) rows.push(BYID[k]);
  *   （**这正是"回滚依据自己覆盖了回滚依据"那一族**：`if (!files.length)` 只挡住了"零份"，挡不住"少了一份"）。
  *   ⇒ 缺原始件的那些 id **沿用表里的旧行**，并在 stdout 点名数量；要真全量重算得先补跑 `--dry`。 */
 rows.sort((a, b) => (a[1] === b[1] ? a[0].localeCompare(b[0]) : a[1] === 'pass' ? -1 : 1));
-const PT = join(HERE, 'promote.tsv');
+const PT = join(HERE, 'data/page/promote.tsv');
 const OLD = existsSync(PT) ? readFileSync(PT, 'utf8').replace(/\r/g, '').trim().split('\n').slice(1) : [];
 const NEWIDS = new Set(rows.map((r) => r[0]));
 const kept = [];

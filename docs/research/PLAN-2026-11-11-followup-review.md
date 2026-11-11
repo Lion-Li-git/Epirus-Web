@@ -1,7 +1,8 @@
 # 后续计划（2026-11-11 下午复核后）
 
-> 状态：**计划，不动工**。来源 = 本轮的只读体检（scratch/my-review-1111/REPORT.md）+ 上一个会话遗留的
-> docs/research/PLAN-2026-11-11-champion-map-refactor.md。
+> 状态（2026-11-11 20:30 更新）：**计划文档，部分已实施**。champion-map 输入表/数据模型 A/B/旧数据归档已完成；
+> P0 页面元数据进 `data/page/`、P1 humanPrototypes 修复、A/B/C 趋势页已落。后续只剩产品 AI/档位/工程债。
+> 来源 = 本轮只读体检 + 上一个会话遗留的 docs/research/PLAN-2026-11-11-champion-map-refactor.md。
 > 原则：先修“读数不可信”，再修“AI 不会玩”；任何一条都先立判据、再改产品。
 
 ## 0. 本批已修（随本次提交）

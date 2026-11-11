@@ -34,7 +34,7 @@ export const ords = [12021];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话', function () {
-  const TS = 'champion-map/pool-members.tsv', BD = 'js/bundled-champion-pool.js';
+  const TS = 'champion-map/data/page/pool-members.tsv', BD = 'js/bundled-champion-pool.js';
   const AU = spawnSync(process.execPath, ['tools/pool-add.mjs', '--audit'], { encoding: 'utf8', timeout: 600000 });
   const aLine = String(AU.stdout || '').trim().split('\n').filter(l => /^\{/.test(l)).pop();
   ok(!!aLine, '① `pool-add --audit` 必须吐出机器可读那一行（stdout 尾部：' + String(AU.stdout || AU.stderr || '').slice(-220) + '）');
@@ -215,7 +215,7 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
   const kHit = ixOk.get(killedPath);
   ok(kHit && kHit.kills > 0, '⑧ 已知送分包 ' + killedPath + ' 必须被判出踩线（实测 ' + (kHit ? kHit.kills : '索引里没有') +
     '）⇒ 判据读不到格就别说自己在守门');
-  ok(readFileSync('champion-map/pool-members.tsv', 'utf8').indexOf(killedPath) < 0,
+  ok(readFileSync('champion-map/data/page/pool-members.tsv', 'utf8').indexOf(killedPath) < 0,
     '⑧ 已被人席判死的 ' + killedPath + ' 不许还在池里（腿③ 只查自动成员的 seatKill>0，这条钉的是"路径也别留在表里"）');
 
   /* ⑨ **回显与决策必须走同一个判定**（10-12 03:0x~03:1x 浏览器实机抓到的一条真撒谎；时间更正见 `js/ui/ui.js` 的 `poolPlan` 头注）：
@@ -433,7 +433,7 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
    *        ⇒ 解析必须认不出（`live.ok` 为假），否则这条腿只是"跑了个命令"。 */
   {
     const SIDI = loadSlotId();
-    const LV = String(readFileSync('champion-map/coords.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
+    const LV = String(readFileSync('champion-map/data/page/coords.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
     const lset = new Set(); const lIdx = LV[0].split('\t').indexOf('lineage');
     for (let k = 1; k < LV.length; k++) { const c = LV[k].split('\t'); if (c[lIdx]) lset.add(c[lIdx]); }
     ok(!lset.has('当前线上'), '⑪a 名册里不许再有「当前线上」这一类身份（现值：' + Array.from(lset).join(' ‖ ') + '）');
@@ -452,30 +452,30 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     ok(mSh && mSh[1], '⑪b 活槽现主那一行必须带着上线时刻（sh 空 = 换包那笔没同步进图 ‖ 实测 sh=' + JSON.stringify(mSh && mSh[1]) + ' ‖ sv=' + JSON.stringify(mSv && mSv[1]) + ' ‖ 期望 wid=' + String(SIDI.live.wid).slice(0, 8) + '）');
     { /* ⑪c 正对照：造一棵"换了包但什么都没同步"的临时树 */
       const fx = mkdtempSync(join(tmpdir(), 'np-d234-slot-'));
-      mkdirSync(join(fx, 'champion-map'), { recursive: true }); mkdirSync(join(fx, 'js'), { recursive: true });
-      copyFileSync('champion-map/coords.tsv', join(fx, 'champion-map/coords.tsv'));
-      copyFileSync('champion-map/lineage.tsv', join(fx, 'champion-map/lineage.tsv'));
+      mkdirSync(join(fx, 'champion-map/data/page'), { recursive: true }); mkdirSync(join(fx, 'js'), { recursive: true });
+      copyFileSync('champion-map/data/page/coords.tsv', join(fx, 'champion-map/data/page/coords.tsv'));
+      copyFileSync('champion-map/data/page/lineage.tsv', join(fx, 'champion-map/data/page/lineage.tsv'));
       copyFileSync('js/bundled-champion-3p.js', join(fx, 'js/bundled-champion-3p.js'));
-      const tlF = String(readFileSync('champion-map/slot-timeline.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+      const tlF = String(readFileSync('champion-map/data/page/slot-timeline.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
       const th = tlF[0].split('\t'), iw = th.indexOf('wid'), ip = th.indexOf('panelId'), ia = th.indexOf('metaArm');
       let cut = 0;
       for (let k = tlF.length - 1; k >= 1; k--) { const c = tlF[k].split('\t');
         if (c[iw] === SIDI.live.wid) { c[ip] = ''; c[ia] = '不存在的名字-' + k; tlF[k] = c.join('\t'); cut++; } }
-      writeFileSync(join(fx, 'champion-map/slot-timeline.tsv'), tlF.join('\n') + '\n', 'utf8');
+      writeFileSync(join(fx, 'champion-map/data/page/slot-timeline.tsv'), tlF.join('\n') + '\n', 'utf8');
       /* 第一版正对照只挖了 panelId/metaArm，结果**没咬下来**：解析还有第三跳 `ID_OF_WID[wid]`（按 `lineage.tsv` 的
        *   wid 列认行）照样把它认成了 T8-s114。这不是解析器的错，是我这只眼做得太浅 ——
        *   正对照要挖的是**整条兜底链**：面板名、合成行名（SLOT-<wid8> 在 coords 里没有对应行）、声明行、wid 跳。 */
-      const lgF = String(readFileSync('champion-map/lineage.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+      const lgF = String(readFileSync('champion-map/data/page/lineage.tsv', 'utf8')).replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
       const lh = lgF[0].split('\t'), lw = lh.indexOf('wid');
       let lgcut = 0;
       if (lw >= 0) for (let k = 1; k < lgF.length; k++) { const c = lgF[k].split('\t');
         if (c[lw] === SIDI.live.wid) { c[lw] = ''; lgF[k] = c.join('\t'); lgcut++; } }
-      writeFileSync(join(fx, 'champion-map/lineage.tsv'), lgF.join('\n') + '\n', 'utf8');
+      writeFileSync(join(fx, 'champion-map/data/page/lineage.tsv'), lgF.join('\n') + '\n', 'utf8');
       ok(lgcut > 0, '⑪c 前提：lineage.tsv 里找不到活槽 wid 那一行（' + String(SIDI.live.wid).slice(0, 8) + '）⇒ 正对照没改到东西，这只眼是瞎的');
-      const hist = String(readFileSync('champion-map/slot-history.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
+      const hist = String(readFileSync('champion-map/data/page/slot-history.tsv', 'utf8')).replace(/\r\n/g, '\n').split('\n');
       for (let k = hist.length - 1; k >= 0; k--) if (hist[k] && hist[k].charAt(0) !== '#' && hist[k].split('\t')[1]) {
         const c = hist[k].split('\t'); c[1] = '不存在的名字-declared'; hist[k] = c.join('\t'); }
-      writeFileSync(join(fx, 'champion-map/slot-history.tsv'), hist.join('\n') + '\n', 'utf8');
+      writeFileSync(join(fx, 'champion-map/data/page/slot-history.tsv'), hist.join('\n') + '\n', 'utf8');
       const FX = loadSlotId(fx);
       ok(cut > 0, '⑪c 前提：正对照没能改到活槽那一段（时间轴里找不到 wid=' + String(SIDI.live.wid).slice(0, 8) + '）⇒ 这只眼是瞎的');
       ok(!FX.live.coordsId, '⑪c 合成正对照：时间轴身份挖掉 + 声明改指不存在的名字 ⇒ 解析必须认不出（实测认成「' + (FX.live.coordsId || '(空)') + '」）');

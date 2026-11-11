@@ -16,6 +16,7 @@
 | data/display.tsv | 一份权重的展示行 | 146 列；旧 926 + 新点都在这里；--bake 时新点必给 |
 | data/feasibility.tsv | 一份权重的过线 | ok/okLong/okShort/fails；绿环读纯桌列 |
 | data/fit.tsv | 页面 fit 说明 | 从旧 fit 迁入 |
+| data/page/ | 页面元数据 | coords/lineage/lineage-g3/pool-members/promote/ship-times/slot-*；viewer 与 slot-identity 只读这里 |
 
 ## 换尺接口
 

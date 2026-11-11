@@ -294,7 +294,7 @@ async function pool(games, onlyPaths, seats, rawPaths) {
     const list = rawPaths.map(s => ({ id: s.split('/').pop().replace(/\.(js|bak)$/, ''), path: s }));
     return poolReport(list, games, seats);
   }
-  const raw = fs.readFileSync(REPO + '/champion-map/pool-members.tsv', 'utf8').replace(/^﻿/, '');
+  const raw = fs.readFileSync(REPO + '/champion-map/data/page/pool-members.tsv', 'utf8').replace(/^﻿/, '');
   const col = {}; raw.split('\n')[0].split('\t').forEach((h, i) => { col[h.trim()] = i; });
   const list = raw.split('\n').slice(1).filter(l => l.trim())
     .map(l => ({ id: l.split('\t')[col.id], path: (l.split('\t')[col.path] || '').trim() }))

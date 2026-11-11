@@ -83,7 +83,7 @@ const MODES = String(flag('modes', 'multi,long')).split(',').filter(Boolean);
 /* v1.7.110：`--seat=<0..4>` 把被测钉在固定席（不设 = 照旧逐局轮换）。0 = 玩家席。 */
 const SEATFIX = flag('seat', '') === '' ? null : Number(flag('seat', ''));
 if (SEATFIX !== null && !(SEATFIX >= 0 && SEATFIX <= 4)) { console.error('⛔ --seat= 只能是 0..4（收到 `' + flag('seat', '') + '`）'); process.exit(2); }
-const TABLE = flag('members', 'champion-map/pool-members.tsv');
+const TABLE = flag('members', 'champion-map/data/page/pool-members.tsv');
 
 if (SEEDS.length < 2) { console.error('⛔ 至少两枚 seed ⇒ 不然量不出批间抖动（σ），只能给一个孤零零的均值'); process.exit(2); }
 const PT = join(ROOT, TABLE);

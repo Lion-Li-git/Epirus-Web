@@ -80,7 +80,7 @@ for (const s of SCOPE) {
 const tracked = new Set(execSync('git ls-files ' + SCOPE.map(s => JSON.stringify(s)).join(' '), { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }).trim().split('\n').filter(Boolean));
 
 /* ---------- 2. 引用数：下游表 + 门体面里出现这个相对路径的次数 ---------- */
-const REF_FILES = ['champion-map/coords.tsv', 'champion-map/lineage.tsv', 'champion-map/ruler-all.tsv',
+const REF_FILES = ['champion-map/data/page/coords.tsv', 'champion-map/data/page/lineage.tsv', 'champion-map/archive/2026-11-11-legacy-data/ruler-all.tsv',
   'champion-map/e328-ruler-s1.tsv', 'champion-map/e328-ruler-s2.tsv', 'champion-map/e328-ruler-s3.tsv',
   'champion-map/feas.tsv', 'champion-map/feas-s1.tsv', 'champion-map/feas-s2.tsv', 'champion-map/feas-s3.tsv', 'champion-map/feas-s4.tsv',
   'champion-map/oldpacks.tsv'].concat(gateBodyFiles());

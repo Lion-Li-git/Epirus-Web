@@ -38,12 +38,14 @@ run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
   '--compare=champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
-/* ③ 烘页面：flags 以 bake-flags.txt 为单一来源；--fit 固定到 data 编译产物 */
+/* ③ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */
+run([join(HERE, 'pipeline/build-trends.mjs')], '③ build-trends 趋势页');
+/* ④ 烘页面：flags 以 bake-flags.txt 为单一来源；--fit 固定到 data 编译产物 */
 const flagFile = join(HERE, 'bake-flags.txt');
 const flags = (existsSync(flagFile)
   ? readFileSync(flagFile, 'utf8').replace(/\r/g, '').trim().split(/\s+/).filter(Boolean)
   : ['--preset=all', '--projcols=1', '--verpages=0']).filter((x) => !x.startsWith('--fit='));
-run([join(HERE, 'viewer.mjs'), '--fit=' + viewPath, ...flags], '③ viewer 烘 index.html');
+run([join(HERE, 'viewer.mjs'), '--fit=' + viewPath, ...flags], '④ viewer 烘 index.html');
 /* ④ 页内自检 */
 if (!SKIP_SHOT) {
   const out = run([join(HERE, 'shot.mjs'), '--hash=mode=tree&check=1', '--dump'], '④ shot 页内自检');

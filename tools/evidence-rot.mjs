@@ -16,7 +16,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const TSV = join(ROOT, 'champion-map', 'coords.tsv');
+const TSV = join(ROOT, 'champion-map', 'data/page', 'coords.tsv');
 
 const tracked = new Set(execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 << 20 })
   .split(/\r?\n/).filter(Boolean));

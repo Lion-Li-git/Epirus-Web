@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = (f) => readFileSync(join(HERE, f), 'utf8').trim().split('\n').map((l) => l.split('\t'));
-const LIN = rd('lineage.tsv'), CO = rd('coords.tsv');
+const LIN = rd('data/page/lineage.tsv'), CO = rd('data/page/coords.tsv');
 const LH = Object.fromEntries(LIN[0].map((h, i) => [h, i]));
 const CH = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const LR = LIN.slice(1), CR = CO.slice(1);

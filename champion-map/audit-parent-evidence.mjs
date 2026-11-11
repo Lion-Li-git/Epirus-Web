@@ -32,7 +32,7 @@ const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 const SLOT_REL = 'js/bundled-champion-3p.js';
 const LVL = (process.argv[2] || 'slot-wid').trim();
 
-const lin = rd(join(HERE, 'lineage.tsv')).trim().split('\n');
+const lin = rd(join(HERE, 'data/page/lineage.tsv')).trim().split('\n');
 const H = lin[0].split('\t');
 const iId = H.indexOf('id'), iTs = H.indexOf('ts'), iPsrc = H.indexOf('parentSrc'),
   iPof = H.indexOf('parentOf'), iName = H.indexOf('parentName'), iWid = H.indexOf('wid');
@@ -42,7 +42,7 @@ const WIDOF = {}; for (const r of ROWS) WIDOF[r[iId]] = r[iWid];
 /* 找包：**先按 `coords.tsv` 的 `path` 列**（与 `lineage.mjs` 同一个真源 —— 名字≠文件名的那几枚
  * 只有它认得，实测 `T8-s120` 的真包叫 `docs/artifacts/e521-out/T-s120.js`），再退到臂表与文件名。 */
 const PATHOF = {};
-{ const f = join(HERE, 'coords.tsv');
+{ const f = join(HERE, 'data/page/coords.tsv');
   if (existsSync(f)) { const L = rd(f).trim().split('\n'), ch = L[0].split('\t');
     const iI = ch.indexOf('id'), iP = ch.indexOf('path');
     for (const l of L.slice(1)) { const c = l.split('\t'); if (iI >= 0 && iP >= 0 && c[iI] && c[iP]) PATHOF[c[iI]] = c[iP]; } } }
@@ -67,7 +67,7 @@ function metaOf(p) { const txt = rd(p); const mi = txt.indexOf('EPIRUS_CHAMPION_
     sp: g(/"EPIRUS_SEEDPACK"\s*:\s*"([^"]*)"/) }; }
 
 /* 完整时间轴（槽文件侧） */
-const tl = rd(join(HERE, 'slot-timeline.tsv')).trim().split('\n'), th = tl[0].split('\t');
+const tl = rd(join(HERE, 'data/page/slot-timeline.tsv')).trim().split('\n'), th = tl[0].split('\t');
 const iU = th.indexOf('fromUTC'), iW = th.indexOf('wid'), iP = th.indexOf('panelId');
 const SEG = tl.slice(1).map(l => { const c = l.split('\t'); return { t: Date.parse(c[iU]), wid: (c[iW] || '').trim(), pid: (c[iP] || '').trim() }; })
   .filter(s => isFinite(s.t)).sort((a, b) => a.t - b.t);
