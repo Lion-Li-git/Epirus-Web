@@ -81,17 +81,18 @@ const unknownIds = [];
 for (const r of T.rows) {
   const id = baseId(r[idI]);
   const a = A.get(id), al = AL.get(id), bs = BS.get(id), bl = BL.get(id);
-  r[xA] = a ? a.tag : ''; r[xAL] = al ? al.tag : '';
-  r[xBs] = bs ? bs.tag : ''; r[xBl] = bl ? bl.tag : '';
+  /* 源表可能已归档/删除；已有戳的行走“保留旧戳”，不因源表缺失把历史读成 unknown。 */
+  r[xA] = a ? a.tag : (r[xA] || ''); r[xAL] = al ? al.tag : (r[xAL] || '');
+  r[xBs] = bs ? bs.tag : (r[xBs] || ''); r[xBl] = bl ? bl.tag : (r[xBl] || '');
   r[xFix] = FIX[0];
   r[xC] = 'A+B/2';
   if (a) nA++;
   if (bs) nBs++;
   if (bl) nBl++;
   const need = (r[p5] !== '' && r[p5] !== undefined) || (r[p5l] !== '' && r[p5l] !== undefined);
-  if (need && (!a || !al)) { unknown++; unknownIds.push(id + ' A'); }
-  if (r[p5r] !== '' && r[p5r] !== undefined && !bs) { unknown++; unknownIds.push(id + ' Bs'); }
-  if (r[p5rl] !== '' && r[p5rl] !== undefined && !bl) { unknown++; unknownIds.push(id + ' Bl'); }
+  if (need && (!r[xA] || !r[xAL])) { unknown++; unknownIds.push(id + ' A'); }
+  if (r[p5r] !== '' && r[p5r] !== undefined && !r[xBs]) { unknown++; unknownIds.push(id + ' Bs'); }
+  if (r[p5rl] !== '' && r[p5rl] !== undefined && !r[xBl]) { unknown++; unknownIds.push(id + ' Bl'); }
   for (const src of [r[xBs], r[xBl]]) if (/-obs5/.test(src)) mixedOld++;
   if (r[p5] !== '' && r[p5r] !== '' && r[c5] !== '') {
     const d = Math.abs(((+r[p5]) + (+r[p5r])) / 2 - (+r[c5]));

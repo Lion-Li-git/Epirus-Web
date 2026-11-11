@@ -18,7 +18,7 @@ V111 在新考卷上仍是底部（C 第 8 低 / 926；B 轴全库最低），�
 - 新考卷：A 轴 = P5/P5L（P 族，页面剂量）；B 轴 = P5R/P5RL（R 后缀，F2 冠军夹具）；
   C5R/C5RL = (P + P_R)/2（已逐行验证 maxdiff=0.0）。
 - 滑动平均：按 ts 排序后的 **30 枚窗口**（min 15），点画在窗口末端；图只画 1.8 代（v7），2.0 另标。
-- 图/表：scratch/my-review-1111/exam-old-vs-new.png / .csv；脚本 plot_exam.py、exam_corr.py。
+- 图/表：docs/research/assets/exam-old-vs-new.png / .csv；脚本 plot_exam.py、exam_corr.py。
 
 ## 2. 结果（v7，831 枚）
 
@@ -140,7 +140,7 @@ A 轴奖励 dmg/charges/低回合 ⇒ A 升；B 轴奖励 rwDmg、惩罚 fieldAA
 
 ## 7. 复现
 
-- 图：scratch/my-review-1111/exam-old-vs-new.png
-- 数据：scratch/my-review-1111/exam-old-vs-new.csv
-- 脚本：scratch/my-review-1111/plot_exam.py（绘图）/ exam_corr.py（相关与斜率）/ exam_ab2.py（C 公式验证）
+- 图：docs/research/assets/exam-old-vs-new.png
+- 数据：docs/research/assets/exam-old-vs-new.csv
+- 脚本：docs/research/assets/plot_exam.py（绘图）/ exam_corr.py（相关与斜率）/ exam_ab2.py（C 公式验证）
 - 命令：python plot_exam.py（需 Pillow；本机 DSH Python 已带）

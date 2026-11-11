@@ -66,6 +66,8 @@ if (DISP) {
   if (D.rows.length !== 1) { console.error('⛔ display 必须恰好 1 行'); process.exit(2); }
   if (D.rows[0][D.ix.id] !== ID) { console.error('⛔ display.id=' + D.rows[0][D.ix.id] + ' ≠ --id=' + ID); process.exit(2); }
   dispRow = D.rows[0].slice();
+  /* 新点不继承旧 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账，页面按 C·R 重算。 */
+  for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5', 'F', 'rank']) if (display.ix[c] !== undefined) dispRow[display.ix[c]] = '';
 }
 const sha = createHash('sha256').update(readFileSync(PACK)).digest('hex');
 const now = new Date().toISOString();

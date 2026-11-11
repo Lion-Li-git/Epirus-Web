@@ -108,7 +108,7 @@ Epirus-Web/
 │   ├─ attach-exam-stamp.mjs        给 coords 盖 exam 批次戳（A/B/C 六列 + EXAM-BATCHES.tsv）
 │   ├─ shot.mjs                    无头复验（截图 / --dump 打逐条自检结果）
 │   ├─ coords.tsv                  基础面板（825 枚，一行 = 一份权重；训练与普查的公共底表）
-│   ├─ coords-gen3-1105.tsv        ★ 现行全库面板 926 枚（含 2.0 代 3 与池成员；142 列，含 6 列 exam 批次戳）‖ coords-projcols.tsv = 页面吃的那张（926 行 × 146 列，挂三套投影列；由 attach-projcols 从 gen3 生成）
+│   ├─ coords-gen3-1105.tsv        ★ 现行全库面板 926 枚（含 2.0 代 3 与池成员；142 列，含 6 列 exam 批次戳）‖ coords-projcols.tsv = 146 列展示模板/派生表；页面实际吃 data/build/coords-view.tsv
 │   ├─ EXAM-BATCHES.tsv            A/B/C 考卷批次戳（fixture/champ + run id；attach-exam-stamp 生成）
 │   ├─ lineage.tsv                   谱系图底表（由 lineage.mjs 现算）
 │   ├─ pool-members.tsv / -2p.tsv    ★ 冠军池真源（页面 bundle 由它烘）
@@ -214,6 +214,10 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 
 > ⚠ **2026-11-11 晚复核**：v7 内 A 升（+0.0096 /100 枚）、B 降（−0.0052），C=(A+B)/2 正好抵消 ⇒ C 走平不是训练停滞。
 > 趋势与档位引用必须 A/B 分列；V111 的 B 轴全库最低（1/926），C 第 8 低。详见 docs/research/FINDING-2026-11-11-exam-old-vs-new.md。
+
+**旧 H5 系列 / 当前 F**：H5/Hp5/Hlong5/Hplong5/Flong5 是旧 5P 单卷的参考读数（H5=考卷 ε=0，Hp5=页面剂量），**已冻结、不再更新**；表里的 F/rank 是旧尺出厂账。页面实际用 Fv = X̄₄(C·R) + T·S，名次每次按当前尺重算；新点不再写 H5/F/rank。
+
+**数据模型 / 新点进图（2026-11-11）**：源表在 champion-map/data/（registry/rulers/batches/readings/features/projections/display），页面由 build-view 编译成 coords-view 后交给 rebuild-map。换尺只追加 readings 并切 rulers.tsv 的 current；新点用 pipeline/measure-point.mjs 自动跑四腿+feas+投影，再经 add-point 写入并重烘。
 
 ### 训练期的门与杀
 

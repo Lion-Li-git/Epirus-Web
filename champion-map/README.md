@@ -22,12 +22,12 @@
 
 ## 二、页面（产物，不许手改）
 
-- `index.html` —— 谱系图页面，**是产物**：改 `viewer.mjs` 后必须 `node champion-map/viewer.mjs` 重烘。
+- `index.html` —— 谱系图页面，**是产物**：改 `viewer.mjs` 后必须 `node champion-map/rebuild-map.mjs` 重烘。
 - `viewer.mjs` —— 页面源码（内含自检；`node champion-map/lint-viewer.mjs` 先绿再烘）。
 - `map-table.mjs` —— 输入表单一入口（阶段 1）：`resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp`；`map-table-selftest.mjs` 15 条。
 - `attach-exam-stamp.mjs` —— 给 coords 盖 `examA/examAL/examBs/examBl/examFix/examC` 六列；`--check` 只读，拦 unknown/旧夹具/C 不符。
-- `data/` + `pipeline/` —— 数据模型 A：长表 readings + rulers 换尺接口 + `build-view` 对照；详见 `pipeline/README.md`。
-- `rebuild-map.mjs` —— 页面唯一入口（戳 → projcols → viewer → shot 98/0）；`viewer` 默认已改吃 `coords-projcols.tsv`。
+- `data/` + `pipeline/` —— 数据模型 A/B：registry/rulers/batches/readings/features/projections/display + 换尺接口 + add-point/measure-point；详见 `pipeline/README.md`。
+- `rebuild-map.mjs` —— 页面唯一入口（戳 → build-view(data) → viewer → shot 98/0）；页面吃 `data/build/coords-view.tsv`，不再吃散表。
 - `rebuild-coords.mjs` —— **九步链**：把所有 `attach-*.mjs` 串起来重建 `coords.tsv`（漏一步就丢列，v1.7.97 那次的 `Hlong` 就是这么丢的）。
 
 ## 三、`attach-*.mjs`：每列一个脚本
@@ -53,7 +53,7 @@
 
 1. **`coords.tsv` 不手改**：它由九步链生成；手改会在下次重建时被覆盖，而且会让页面显示与表不一致。
 2. **`index.html` 不手改**：它是产物，改源码再重烘。
-3. **口径要写清**：同一枚包在 `holo.tsv` 有两个送盾数（裸包 `holoOther` 与开档 `holoOtherPrior2`），**报告里引哪个要写明**。
+3. **口径要写清**：同一枚包在 `holo.tsv` 有两个送盾数（裸包 `holoOther` 与开档 `holoOtherPrior2`），**报告里引哪个要写明**；H5 是冻结旧尺，F/rank 是旧尺出厂账，页面名次按 C·R 重算。
 
 ## 六、常用命令
 
@@ -61,6 +61,8 @@
 node champion-map/rebuild-coords.mjs          # 重建 coords.tsv（九步链）
 node champion-map/attach-hlong.mjs --check    # 检查长程列在不在
 node champion-map/rebuild-map.mjs             # 页面唯一入口：戳 → build-view(data) → viewer → shot 98/0
+node champion-map/pipeline/measure-point.mjs --pack=<权重> --id=<id> --ver=2.0  # 新点四腿+feas+投影
+node champion-map/pipeline/validate.mjs --strict   # 数据模型门；--bake 会跑页检
 node champion-map/viewer.mjs                  # 仅当 coords-projcols.tsv 已是最新时才直接烘
 node tools/promote-champion.mjs <pack> --dry  # 单枚上槽体检（≈2.5 分钟）
 node tools/probe-pool.mjs --subject=<pack>    # 池尺对打（默认 support=2）
@@ -87,4 +89,4 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 - **留下的判据**：活脚本 + 活表全在顶层；`pool-seat-ml2-*`（ship 门读）、`holo.tsv`（promscan 读）、`panel.tsv`（viewer 读）、`oldpacks.tsv`（dedupe 门读）等真活件逐一核过引用才留。
 - **H 系列改名（用户令）**：旧 5P 单卷读数整族改参照名 —— `H→H5 ‖ Hp→Hp5 ‖ De→De5 ‖ Hlong→Hlong5 ‖ Hplong→Hplong5 ‖ Flong→Flong5`，
   五张 coords 表 + viewer（字段/图例/tooltip/页检）+ attach-hp/hlong/sc + switch-gear/fold/dups/rebuild/repair + night6-join/r64-attach 全链同步；
-  仪器 `eps-full` 的 `page/d` 输出 schema 不变（历史考卷表保持可比）。**等新四格卷（X2/X3/X5/X8）上线后，H5 参照列整列退出图**。
+  仪器 `eps-full` 的 `page/d` 输出 schema 不变（历史考卷表保持可比）。**H5 已退出页面主排序，只留参考**：旧 926 行冻结在 `data/readings/h5-frozen.tsv`，新点不再写 H5/F/rank。

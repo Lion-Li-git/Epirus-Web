@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* measure-point.mjs —— 新点测量编排（2026-11-11 · add-point 的上游第一版）
  * 只做四件事：跑 A/B × multi/long 四张 exam4、跑 ruler-measure、拼 readings/display、调用 add-point。
- * 不跑 feas（ok 环暂空）；不自动生成投影/rank/F（display 里这些列留空，--bake 可能过不了页检）。
+ * 跑 feas(allLong/allMulti) + proj-tsne 整表重投影；新点不写 H5/F/rank（H5 是冻结旧尺，页面按 C·R 重算名次）。
  * 用法：
  *   node champion-map/pipeline/measure-point.mjs --pack=<权重> --id=<id> --ver=2.0 [--rounds=12]
  *     [--no-add] [--bake] [--dry] [--skip-long] [--skip-b]
@@ -106,17 +106,8 @@ for (const c of cell) {
   if (vals['a' + c + 'L'] !== undefined && vals['b' + c + 'L'] !== undefined) setD('C' + c + 'RL', (Number(vals['a' + c + 'L']) + Number(vals['b' + c + 'L'])) / 2);
 }
 setD('examG', fr[ft.ix.examG] || '120');
-/* H5 参考：ruler-measure 的 H 是旧考卷口径（120 局）；新点只写参考值，不改旧 H5 表。 */
-const H = Number(fr[ft.ix.H]), S = Number(fr[ft.ix.S]);
-if (isFinite(H)) setD('H5', H.toFixed(2));
-if (isFinite(H) && isFinite(S)) setD('F', (H / 100 + 0.1 * S).toFixed(6));
-/* rank：按 F 降序，现有 926 + 新点一起算 */
-if (isFinite(H) && isFinite(S)) {
-  const base = readTable(join(HERE, 'coords-projcols.tsv'));
-  const newF = H / 100 + 0.1 * S;
-  const rank = 1 + base.rows.filter((r) => Number(r[base.ix.F]) > newF).length;
-  setD('rank', String(rank));
-}
+/* 新点不写 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账；
+ *   当前页面名次由 viewer 按 C·R 重算，新点没有“旧尺出厂名次”。旧 926 行保留历史值。 */
 /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */
 if (!SKIP_FEAS) {
   const fIn = join(ST, ID + '-feas-input.tsv');
