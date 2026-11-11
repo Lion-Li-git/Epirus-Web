@@ -1886,7 +1886,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
    *     ⑵ 必须真的把表写出来（`champion-map/lineage.tsv` 的 mtime 必须被这次运行推后）——
    *        崩在写表之前会被 ⑵ 抓住；而“崩了”与“缺件”在退出码上同形，只有看落盘才分得开。
    *   ORPH 那个数改为**只记录不进判据**（它是本机产物面的函数，钉它等于钉“我这台盘很全”）。 */
-  const LIN_TSV = 'champion-map/lineage.tsv';
+  const LIN_TSV = 'champion-map/data/page/lineage.tsv';
   let linBefore = -1;
   try { linBefore = statSync(LIN_TSV).mtimeMs; } catch (e) { linBefore = -1; }
   const r = spawnSync(process.execPath, [SRC, '--soup-thin-ok'], { encoding: 'utf8', timeout: 300000 });
@@ -1926,7 +1926,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
     console.log('   ⚑ ⑤ 薄图口径：lineage 报 ' + thinN + ' 枚解不开（' + ids.join(' ‖ ') + '）‖ 门扫 meta 共 ' + soupMeta.length + ' 枚 ‖ 每条缺失都能指到具体来源');
   }
   /* ⑥ 新列不许被删：删掉 `parentOf2` 就等于把"融合粒有两个父"这件事从数据面上抹掉（比薄图更彻底） */
-  const LT = readFileSync('champion-map/lineage.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+  const LT = readFileSync('champion-map/data/page/lineage.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
   const hd = LT[0].split('\t');
   ok(['parentOf2', 'parentName2', 'parentSrc2'].every(c => hd.indexOf(c) >= 0), '⑥ lineage.tsv 表尾三条融合列必须还在');
   ok(hd.indexOf('parentOf2') > hd.indexOf('parentSrc'), '⑥ 新列必须在表尾（插在中间会让按下标取数的下游静默错位 —— §E367 的规矩）');
