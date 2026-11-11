@@ -97,11 +97,14 @@ const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=
  *   文件名一律去掉 `e287-` 前缀；**输入表是拷进来的**：`coords.tsv` 由 `docs/artifacts/e287-out/e287-figs.mjs`
  *   算出来（它吃 `results/`〔用户私有〕+ gitignored 的臂产物 ⇒ 换机不能重算），重算后要手工拷到本目录。*/
 const OUT = arg('out', 'index.html');
-/* 四格卷读哪一族列（11-10 用户令：图上只留最新综合分 ⇒ 默认读 C 族 = (A+B)/2）。
- *   C = 综合分（A 轴 P 族脚本桌 + B 轴 PB 族冠军桌，页面级均值，D-33 主尺）
- *   ‖ P = 页面剂量（A 轴单侧，数据层在册）‖ X = ε=0 考卷口径（历史对照，数据层在册）。
- *   ⚑ 必须在这里定义：生成侧的空洞守卫（比 `var st` 更早执行）要读它。 */
+/* 四格卷读哪一族列（11-11 用户令「转正：先跑 long 批再切显示」⇒ 主尺 = F2 滚动夹具的综合分 C·R）。
+ *   列名 = XCOL + 格数 + XSUF + 桌形后缀：C2R/C2RL = (P2 + P2R)/2，A 轴脚本桌 v2 ‖ B 轴 F2 滚动夹具。
+ *   XSUF='' 是旧固定夹具那一族（C2/C2L = (P2+P2B)/2，D-33），**冻结在数据层**不再当显示源。
+ *   ‖ P = 页面剂量（A 轴单侧）‖ X = ε=0 考卷口径（历史对照）。
+ *   ⚑ 必须在这里定义：生成侧的空洞守卫（比 var st 更早执行）要读它；页内 st.XP/st.XSUF 由这里插值，
+ *     不许在页面里再写死一份（两处各写一遍 = 早晚漂移，白名单同族病）。 */
 const XCOL = 'C';
+const XSUF = 'R';
 /* §G3：三张预置图的初始版本模式。
  *   ⚠ 11-05 傍晚的实测事故（本班自己造的）：按文件名习惯传了 `--preset=20`，而合法取值是 `all/1.8/2.0`
  *     ⇒ 原来这一行**静默回落成 'all'** ⇒ 子集页丢掉 SUBSETP 判据域，页内自检从 `74/3/22 SKIP` 变成
@@ -216,13 +219,22 @@ if (PROJTSNE) {
  *   「Hp 线上口径夺1率 = 0.0%（图上的尺就是它）」；补测之后是 51.8 / 52.8 / 53.0（现役 47.3）⇒ 完全反过来。
  *   这与 §E308 那条"空串必须是 null，不许当 0"是同一条规矩，只是这次漏在 Hp 上。
  *   ⇒ 这里**不留退路**：要出图就得补测（命令照抄下面那句）。留一个 --allow-no-hp 就等于把这条守卫变成建议。 */
- { const XPF = XCOL;   /* 跟着 XP 走：P = 页面剂量族，X = ε=0 族 */
-   const noX = rows.filter(r => String(r[XPF + '2'] === undefined ? '' : r[XPF + '2']).trim() === '');
-   const noXL = rows.filter(r => String(r[XPF + '2L'] === undefined ? '' : r[XPF + '2L']).trim() === '');
-   if (noX.length || noXL.length) { console.error('⛔ 四格卷读数有空洞：' + XPF + '2 空 ' + noX.length + ' 枚 ‖ ' + XPF + '2L 空 ' + noXL.length +
+ { /* 列名 = XCOL + 格数 + XSUF + 桌形后缀（与页内 CK(n,L) 同一条拼法）。
+    *   ⚠ 后缀在**格数之后**：C2R 不是 CR2。第一版写成 XCOL+XSUF+格数 ⇒ 守卫去查一个不存在的列，
+    *     838 枚全报"空"而拒绝出图（接线干烘当场抓到）。族前缀单独拼是错的，必须走这个函数。 */
+   const XC = (n, L) => XCOL + n + XSUF + (L || '');
+   const noX = rows.filter(r => String(r[XC(2)] === undefined ? '' : r[XC(2)]).trim() === '');
+   const noXL = rows.filter(r => String(r[XC(2, 'L')] === undefined ? '' : r[XC(2, 'L')]).trim() === '');
+   if (noX.length || noXL.length) { console.error('⛔ 四格卷读数有空洞：' + XC(2) + ' 空 ' + noX.length + ' 枚 ‖ ' + XC(2, 'L') + ' 空 ' + noXL.length +
      '\n       前 8 枚：' + noX.concat(noXL).slice(0, 8).map(r => r.id).join(' ') +
-     '\n       ⇒ F = X̄₄ + T·S 是图上**所有**排序的底，空格会被当“未测”灰掉 ⇒ 先补测再烘。'); process.exit(2); }
-   console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 ' + XPF + '2/' + XPF + '2L 全部在册（' + (XPF === 'C' ? '综合分 C=(A+B)/2' : XPF === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') + ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ A=exam4-page-1109 · B=exam4-B-page-1110）'); }
+     '\n       ⇒ F = X̄₄ + T·S 是图上**所有**排序的底，空格会被当“未测”灰掉 ⇒ 先补测再烘。' +
+     '\n       补测（multi + long 必须一起跑，仓规）：node tools/exam-4n-full.mjs --out=… --extra=… --only=… --mode=multi|long' +
+     ' --dose=page --exam=B --champ=MSB11-R2S306293884,MSB10-R1S1149480262,MSB8-charge-R1S1861674281,Q-s47 --champn=1' +
+     '\n       再 intake ⇒ node champion-map/attach-cmean-r.mjs'); process.exit(2); }
+   console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 ' + XC(2) + '/' + XC(2, 'L') + ' 全部在册（' +
+     (XSUF === 'R' ? '综合分 C·R=(A+B)/2：A=脚本桌 v2，B=F2 滚动夹具 MSB11+MSB10+MSB8-charge+Q-s47'
+       : XCOL === 'C' ? '综合分 C=(A+B)/2（旧固定夹具）' : XCOL === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') +
+     ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ A=exam4-page-1109 · B=exam4-F2-page-1111 + -long-1111）'); }
 const fitP = join(HERE, 'fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
@@ -245,16 +257,20 @@ if (existsSync(linP)) {
 } else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
 /* ===== §G3（11-05 深夜 · 用户令「2.0 点放进旧演化图」）：2.0 谱系 sidecar 并进 LIN =====
  *   lineage.tsv 由 lineage.mjs 从 git/面板生成 ⇒ 2.0 节点不在其中（它们没有 v7 面板行）。
- *   sidecar = `lineage-g3.tsv`（ZCode 维护，列同构：id/fam/famLabel/ts/parent/wid），
- *   fam 从 900 起（v7 家族号 1~24 ⇒ 不相撞；fam ≥900 = 2.0 的树行）。
+ *   sidecar = `lineage-g3.tsv`（多班共维：ZCode 起，DS 补 fam18，Qoder 11-11 补 fam19，列同构：id/fam/famLabel/ts/parent/wid），
+ *   ⚠ 这句原来写"fam 从 900 起（与 v7 家族号 1~24 不相撞）"——**早就不成立了**：实测 lineage.tsv 是 0~13，
+ *     sidecar 是 14~19，而 14~19 正好落在它说"不相撞"的那个区间里。防撞靠的是**两表 id 交集为 0**
+ *     （11-11 实测 825 × 108 行零重合），不是号段错开。别再照那句话发明族号。
  *   版本判定从此只有一处：`G3IDS` = sidecar 的 id 集 ⇒ DATA.ver / batchOf 都读它。 */
 const g3linP = join(HERE, arg('g3lin', 'lineage-g3.tsv'));
 let G3IDS = new Set();
 if (existsSync(g3linP)) {
   const gl = readFileSync(g3linP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n'); const gh = gl[0].split('\t');
+  const iFam = gh.indexOf('fam'); const fams = new Set();
   for (const l of gl.slice(1)) { const c = l.split('\t'); const o = {}; gh.forEach((k, i) => { o[k] = c[i]; });
-    LIN[o.id] = Object.assign({}, LIN[o.id] || {}, o); G3IDS.add(o.id); }
-  console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN（fam 900+）');
+    LIN[o.id] = Object.assign({}, LIN[o.id] || {}, o); G3IDS.add(o.id);
+    if (iFam >= 0 && o.fam !== '' && o.fam !== undefined) fams.add(Number(o.fam)); }
+  console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN ‖ 族号 ' + [...fams].sort((a, b) => a - b).join(','));
 } else console.log('⚠ 没有 ' + g3linP + ' ⇒ 2.0 点没有家族/树行（fam 全落 0）');
 let OKM = null, POK = 0, OKSRC = '', OKTAG = '';
 if (FEAS_FILES.length) {
@@ -494,8 +510,9 @@ const DATA = rows.map(r => ({
   m3L: (r.m3L === '' || r.m3L === undefined) ? null : +r.m3L,
   m5L: (r.m5L === '' || r.m5L === undefined) ? null : +r.m5L,
   m8L: (r.m8L === '' || r.m8L === undefined) ? null : +r.m8L,
-  /* 综合分族（11-10 · D-33 主尺）：C<n> = (P<n> + P<n>B)/2 页面级均值，长程带 L —— F 的默认读数族（XCOL='C'）。
-   *   C 侧不设独立计数列：X4T 的"有格"判定沿用 n 族（X 侧考卷计数全库在册，C 与 P 的完整性与 n 同步——都是 907/907 全填）。 */
+  /* 综合分族（11-10 · D-33 固定夹具）：C<n> = (P<n> + P<n>B)/2 页面级均值，长程带 L。
+   *   11-11 起**冻结在数据层**（显示主尺换成下面的 C·R 族），留着是为了两把尺可对账。
+   *   C 侧不设独立计数列：X4T 在 XSUF='' 时的"有格"判定沿用 n 族（X 侧考卷计数全库在册）。 */
   C2: (r.C2 === '' || r.C2 === undefined) ? null : +r.C2,
   C3: (r.C3 === '' || r.C3 === undefined) ? null : +r.C3,
   C5: (r.C5 === '' || r.C5 === undefined) ? null : +r.C5,
@@ -504,6 +521,13 @@ const DATA = rows.map(r => ({
   C3L: (r.C3L === '' || r.C3L === undefined) ? null : +r.C3L,
   C5L: (r.C5L === '' || r.C5L === undefined) ? null : +r.C5L,
   C8L: (r.C8L === '' || r.C8L === undefined) ? null : +r.C8L,
+  /* F2 滚动夹具族（11-11 转正 · 新尺新列族）：P·R = B 轴单侧读数，C·R = (P + P·R)/2 = 现在的显示主尺。
+   *   这一族**自带计数列 m·R**（X4T 的"有格"判定读它，不再借 n 族 —— 借别的尺的分母就是 R8 那条"算不出当算过"）。
+   *   ⚠ 名单必须显式：DATA 是白名单，表里有列不等于 d 上有字段，漏一个 = 那一格静默变未测。 */
+  ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
+    'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
+    'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
+    .map(k => [k, (r[k] === '' || r[k] === undefined) ? null : +r[k]])),
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
    *   原来这里写 `(G3IDS.has(r.id) || r.ver === '2.0')` ⇒ **"在 2.0 谱系 sidecar 里"被当成了版本判据**，
@@ -845,7 +869,11 @@ var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ft
   wTilt: 0.5,   /* 统一权重参数（用户令）：0 = 最倾向 2P/3P ‖ 0.5 = 现状（15/25/45/15）‖ 1 = 最倾向 5P/8P；w2..w8 由 deriveW 派生 */
   w2: 0.15, w3: 0.25, w5: 0.45, w8: 0.15,
   /* 四格名单提前到 st 处声明：INC 锚构建（先于 X4 定义行）就会走 Fv→X4，var 赋值晚于调用 = 初始化序 bug（11-07 实测抓回） */
-  NS4: [2, 3, 5, 8], XP: 'C',   /* 四格卷读哪一族列：C = 综合分 (A+B)/2（D-33 主尺，11-10 用户令"图上只留最新综合分"）‖ P = A 轴单侧（数据层）‖ X = ε=0 考卷（历史对照，数据层） */
+  NS4: [2, 3, 5, 8], XP: '${XCOL}', XSUF: '${XSUF}',
+  /* 四格卷读哪一族列：列名 = XP + 格数 + XSUF + 桌形后缀（''=短程 / 'L'=长程）。
+   *   XP='C' + XSUF='R' ⇒ C2R/C2RL = F2 滚动夹具综合分（11-11 用户令转正的主尺）；
+   *   XSUF='' ⇒ C2/C2L 旧固定夹具（数据层冻结）‖ XP='P' ⇒ A 轴单侧 ‖ XP='X' ⇒ ε=0 考卷（历史对照）。
+   *   ⚑ 这两个值由生成侧 XCOL/XSUF 插值，页面里不许再写死第二份。 */
   elaw: 'log',        /* §E673 谱系图线条叠加的法律：'log' = 每条线静态 alpha + 像素累加之后过对数表（**默认，用户 10-20 下午点名换的**）
                          ‖ 'attr' = 旧的"密度压进每条线的属性"，仍可达（#elaw=attr），页内那两条 §E467/§E469 判据各自钉的是它 */
   lgPos: null,        /* §E462 图例被拖到哪儿（相对 #wrap 的 CSS px）；null = 出厂那角 */
@@ -982,6 +1010,11 @@ var INC = (function () {
     C5: mean(function (d) { return d.C5; }), C8: mean(function (d) { return d.C8; }),
     C2L: mean(function (d) { return d.C2L; }), C3L: mean(function (d) { return d.C3L; }),
     C5L: mean(function (d) { return d.C5L; }), C8L: mean(function (d) { return d.C8L; }),
+    /* 伪行也要带 F2 那一族（11-11 主尺切 C·R：Fv(INC) 读的是 C·R 列；漏了 = 锚点在默认尺下变 NaN） */
+    ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
+      'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
+      'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
+      .map(function (k) { return [k, mean(function (d) { return d[k]; })]; })),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     pt: ANCH_TIER, ts: '', lin: false };
 })();
@@ -1096,36 +1129,45 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *   ⚠ 只改长程档；默认档（Hp）仍由 §E491 那道生成侧守卫保证全在册，走不到非有限这一支。
  *   ⚑ 这段注释里不许出现反引号：本文件的注释嵌在模板字符串里，一个反引号就把生成器打断（v1.8.27 第一次生成就挂在这也）。 */
 /* 四格加权 excess（§10.6）：缺格按**有格重归一**（缺格不许当 0），一格都没有 = 未测 */
+/* 列名键（11-11 主尺转正）：一族 = XP + 格数 + XSUF + 桌形后缀（''=短程 / 'L'=长程）。
+ *   计数列跟着**同一族**走：C·R 族自带 m·R；旧 C/P/X 族没有自己的计数列，沿用 n 族（考卷计数，全库在册）。
+ *   ⛔ 不许跨族借分母，也不许某族缺列时静默退回另一族 —— 那就是"一张图上混两把尺"。 */
+function CK(n, L) { return st.XP + n + st.XSUF + L; }
+function XK(n, L) { return st.XSUF ? 'm' + n + st.XSUF + L : 'n' + n + L; }
 function X4T(d, L) {
   /* 11-07 长程批并入：四格卷也有桌形维（multi=3血短程 ‖ long=5血长程），列名带 L 后缀 ⇒ Fv 的桌形自由度回来了 */
   var sw = 0, acc = 0;
-  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[st.XP + n + L];
-    if (x !== null && x !== undefined && isFinite(x) && d['n' + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
+  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[CK(n, L)];
+    if (x !== null && x !== undefined && isFinite(x) && d[XK(n, L)]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
 function X4(d) { return X4T(d, (st.ftab === 'long') ? 'L' : ''); }
 /* Δε（11-07 用户令「小标签里 Δε 没上，现在有结果了也可以加上」）：同一条形上 **页面剂量 − 考卷口径**。
- *   单位与 X̄₄ 一致（excess）；正 = 开探索反而更高，负 = 开探索掉分（旧 Hp−H 的同族读法）。 */
+ *   单位与 X̄₄ 一致（excess）；正 = 开探索反而更高，负 = 开探索掉分（旧 Hp−H 的同族读法）。
+ *   ⚠ 两侧必须同族（都带 XSUF）：F2 夹具那一族的 ε=0 半边还没量 ⇒ 这里如实印"未测"，
+ *     不许拿旧考卷的 X 族顶上（那会把"换夹具"的差读成"开探索"的差）。 */
 function X4P(d, L, pref) {
   var sw = 0, acc = 0;
-  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[pref + n + L];
-    if (x !== null && x !== undefined && isFinite(x) && d[(pref === 'P' ? 'm' : 'n') + n + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
+  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[pref + n + st.XSUF + L];
+    if (x !== null && x !== undefined && isFinite(x) && d[(pref === 'P' ? 'm' : 'n') + n + st.XSUF + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
 function DE4(d, L) { var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
   return (p === null || x === null) ? '未测' : ((p - x >= 0 ? '+' : '') + (p - x).toFixed(3)); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
-  for (var i = 0; i < st.NS4.length; i++) { var x = d[st.XP + st.NS4[i] + L];
+  for (var i = 0; i < st.NS4.length; i++) { var x = d[CK(st.NS4[i], L)];
     if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }
 function WSTR() { return '2P:' + Math.round(st.w2 * 100) + ' 3P:' + Math.round(st.w3 * 100) + ' 5P:' + Math.round(st.w5 * 100) + ' 8P:' + Math.round(st.w8 * 100); }
 /* 当前桌的四格夺1率串（由 excess 反解 p = X·(1−1/N)+1/N）；缺格 = – */
 function H4STR(d, L) { L = (L === undefined) ? ((st.ftab === 'long') ? 'L' : '') : L;
-  return st.NS4.map(function (n) { var x = d[st.XP + n + L];
+  return st.NS4.map(function (n) { var x = d[CK(n, L)];
     return (x === null || x === undefined || !isFinite(x)) ? '–' : ((x * (1 - 1 / n) + 1 / n) * 100).toFixed(1); }).join('/'); }
 function X4F(d, L) { var x = X4T(d, L); return (x === null || !isFinite(x)) ? '未测' : x.toFixed(3); }
 function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
-function FLBL() { return 'F = X̄₄(C) + T·S（X̄₄ = 四格加权 excess · 综合 C=(A+B)/2：A=脚本桌 v2，B=冠军桌' + (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
+function FLBL() { return 'F = X̄₄(' + st.XP + st.XSUF + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=脚本桌 v2，B=' +
+  (st.XSUF === 'R' ? 'F2 滚动夹具（MSB11+MSB10+MSB8-charge+Q-s47）' : '冠军桌固定夹具') +
+  (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
   var x = X4(d);
@@ -1513,7 +1555,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000（2026-11-07 全图批）· 页面剂量 lv:regular' +
+    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 F2 滚动夹具' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
@@ -1632,7 +1674,7 @@ function buildNB(key, bx, byy) {
   var dispX = (x1 - x0) * bx, dispY = (y1 - y0) * byy;
   /* 正方形计算域配正方形网格；约 4 显示像素一格，最多 200×200，初始重建不随屏幕尺寸失控。 */
   var gx = Math.max(40, Math.min(200, Math.round(Math.max(dispX, dispY) / 4) || 40)), gy = gx;
-  var idx = new Int16Array(gx * gy * KF), dst = new Float32Array(gx * gy * KF);
+  var idx = new Int16Array(gx * gy * KF), dst = new Float64Array(gx * gy * KF);   /* §E573：距离用双精度，与独立暴力同串（Float32 在 1e-15 tie 上会翻 membership） */
   /* E388 DS（用户 10-07 第三件）：地板的值从 **H（考卷口径）** 换成 **Hp（页面口径）**。
  *   原来吃 H 而色带/点/图例读 Fv = Hp/100 + T·S ⇒ 两条尺 ⇒ 一收窄范围场值就跑出可见点的 F 区间 ⇒
  *   被「带外收尾」涂成底色 = 黑洞的一半成因（另 half 是加权没按可见名单过滤，§E381 已修）。
@@ -1641,12 +1683,20 @@ function buildNB(key, bx, byy) {
    *   但 §E381 之后加权必须按**可见名单**每帧现算 ⇒ 那两张表**只写不读**，而且硬编码 Hp ——
    *   留着就是下一次"第二处取数"的温床（这张缓存**不按桌形作废**，接回去就会静默把长程档画成默认桌的场），已删。 */
 var SW = new Float32Array(gx * gy);
+  /* §E573（11-11 夜）：LIB 与 visKNN 必须用**同一把距离尺**。原来这里按数据坐标算、visKNN 按格坐标算
+   *   （代数同式、浮点不同串）⇒ 新点把某个 1e-15 级 tie 翻到 12 名边界上，快路取 925、独立暴力取 920，
+   *   页内自检红。改成两边都先映射到格坐标，再乘同一对 csx/csy ⇒ 逐位同串。 */
+  var csx = (x1 - x0) * bx / (gx - 1), csy = (y1 - y0) * byy / (gy - 1);
+  var gxs = new Float64Array(N), gys = new Float64Array(N);
+  for (var gi0 = 0; gi0 < N; gi0++) {
+    gxs[gi0] = (xs[gi0] - x0) / (x1 - x0) * (gx - 1);
+    gys[gi0] = (ys[gi0] - y0) / (y1 - y0) * (gy - 1);
+  }
   for (var gj = 0; gj < gy; gj++) for (var gi = 0; gi < gx; gi++) {
-    var X = x0 + (x1 - x0) * gi / (gx - 1), Y = y0 + (y1 - y0) * gj / (gy - 1);
     var ci = gj * gx + gi, base = ci * KF;
     for (var q = 0; q < KF; q++) { idx[base + q] = -1; dst[base + q] = 1e18; }
     for (var c2 = 0; c2 < N; c2++) {
-      var ex2 = (xs[c2] - X) * bx, ey2 = (ys[c2] - Y) * byy, ds2 = ex2 * ex2 + ey2 * ey2;
+      var ex2 = (gxs[c2] - gi) * csx, ey2 = (gys[c2] - gj) * csy, ds2 = ex2 * ex2 + ey2 * ey2;
       if (ds2 < dst[base + KF - 1] * dst[base + KF - 1]) {
         var d2 = Math.sqrt(ds2), pos = KF - 1;
         while (pos > 0 && dst[base + pos - 1] > d2) { dst[base + pos] = dst[base + pos - 1]; idx[base + pos] = idx[base + pos - 1]; pos--; }
@@ -1708,7 +1758,7 @@ function knnPut(dst, idx, b0, dd, pi) {
 function visKNN(nb, sig, SHOWN) {
   if (VK && VK.sig === sig) return VK;
   var gx = nb.gx, gy = nb.gy, cells = gx * gy;
-  var idx = new Int16Array(cells * KF), dst = new Float32Array(cells * KF);
+  var idx = new Int16Array(cells * KF), dst = new Float64Array(cells * KF);
   for (var z = 0; z < cells * KF; z++) { idx[z] = -1; dst[z] = 1e18; }
   /* ⚠ 这里必须是**双精度**：第一版我写成 Float32Array，每格距离就被削到 ~1e-4px ⇒ 与原来的逐位不同，
    *   而近 tied 的两枚点完全可能因此换名次（等价性实测当场抓到：idx 全同、dst 全项不等）。 */
@@ -4993,7 +5043,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     放大到 18px 反而断开，读数会给出 0.59× 这种反号（本班第一版就栽在这儿，改成量"往左顶了多少"）。 */
   function inkRuns() {
     var x1 = Math.max(24, Math.round(TPAD.l - 14 * devicePixelRatio));
-    var y0 = Math.round(TPAD.t), y1 = Math.round(TPAD.t + 0.30 * (cv.height - TPAD.t));
+    var y0 = Math.round(TPAD.t), y1 = Math.round(cv.height - 2 * devicePixelRatio);   /* 11-11：旧 30% 窗口在 2× 时只截到半行 ⇒ 量到 1.13 倍；全左栏取最高墨柱 */
     var W = x1, H = y1 - y0, px;
     try { px = g.getImageData(0, y0, W, H).data; } catch (E1) { return null; }
     var BGS = hexSum(st.bg), n = W * H, ink = new Uint8Array(n);
@@ -5550,6 +5600,46 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       T('新标尺（exam4）：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
     }
   })();
+  /* ===== 11-11 主尺转正自己的牙（新尺新列族 ⇒ 配一条新门，三 clause 并在一起）=====
+   *   ① 白名单真落地：C·R 八列在 DATA 上**逐枚**有值（漏映射 = 全页 F=NaN，§E491 同族病）；
+   *   ② 接线对：抽 5 枚手算 Σw·C·R/Σw + T·S 必须等于 Fv（CK/XK 借错分母、族后缀漏拼当场红）；
+   *   ③ 不是恒绿装饰：同一批用**旧 C 族**手算，不许与 Fv 全等 —— 否则"切了族"其实没切，这条门就白加。 */
+  (function () {
+    try {
+      var L = (st.ftab === 'long') ? 'L' : '', NS = st.NS4, i, k;
+      var have = 0;
+      for (i = 0; i < N; i++) {
+        for (k = 0; k < NS.length; k++) { var v = P[i]['C' + NS[k] + 'R' + L];
+          if (v !== null && v !== undefined && isFinite(v)) { have++; break; } }
+      }
+      var samp = [], stride = Math.max(1, Math.floor(N / 40));
+      for (i = 0; i < N && samp.length < 5; i += stride) if (isFinite(Fv(P[i]))) samp.push(P[i]);
+      var newSame = 0, oldSame = 0, oldCalc = 0;
+      for (i = 0; i < samp.length; i++) {
+        var d = samp[i], sw = 0, acc = 0, sw0 = 0, acc0 = 0;
+        for (k = 0; k < NS.length; k++) {
+          var n = NS[k], w = st['w' + n];
+          var x = d['C' + n + 'R' + L], c = d['m' + n + 'R' + L];
+          if (x !== null && x !== undefined && isFinite(x) && c) { acc += w * x; sw += w; }
+          var y = d['C' + n + L], c0 = d['n' + n + L];
+          if (y !== null && y !== undefined && isFinite(y) && c0) { acc0 += w * y; sw0 += w; }
+        }
+        var fNew = sw > 0 ? acc / sw + st.T * d.S : NaN;
+        var fOld = sw0 > 0 ? acc0 / sw0 + st.T * d.S : NaN;
+        if (isFinite(fNew) && Math.abs(fNew - Fv(d)) < 1e-9) newSame++;
+        /* "算不出"不许当成"算过且不同"：旧 C 族整个不在表里时 fOld 全是 NaN ⇒ oldSame=0，
+         *   而那正是这条 clause 什么都没判的形状（gate-audit R8）⇒ 另数 oldCalc，要求它 > 0。 */
+        if (isFinite(fOld)) { oldCalc++; if (Math.abs(fOld - Fv(d)) < 1e-9) oldSame++; }
+      }
+      T('主尺（C·R = F2 滚动夹具综合分）：白名单逐枚落地 ‖ Fv 等于手算 C·R ‖ 与旧 C 族不是同一串数',
+        have === N && samp.length > 0 && newSame === samp.length && oldCalc > 0 && oldSame < oldCalc,
+        'C·R 至少一格有值 ' + have + '/' + N + ' 枚 ‖ 抽样 ' + samp.length + ' 枚：合 C·R ' + newSame +
+        ' ‖ 旧 C 算得出 ' + oldCalc + ' 枚其中合 Fv ' + oldSame +
+        '（桌形=' + (L ? 'long' : 'multi') + ' ‖ 族=' + st.XP + st.XSUF + '）');
+    } catch (E) {
+      T('主尺（C·R）：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
+    }
+  })();
   /* ===== §E763（用户 10-26 00:3x 提、00:5x 收窄主语）：追溯链这一层与它那句"链上点要上名" =====
    *   两条腿各自独立，因为它们是两件事：
    *   ① 几何腿 —— 开关 ON vs OFF 的两帧差分必须数得到墨，且差分那批像素里**过半要是链色那一支**。
@@ -5688,10 +5778,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     pot 场的壳由上面「壳内过线率 > 底率」与「同场」那两条覆盖，它们与选哪个场无关。*/
   var BWF = 'ok', BWT = (st.isoField === 'ok' ? st.isoT : st.isoTok);
   var _tbw1 = performance.now(); var BW1 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 1); BW1.ms = performance.now() - _tbw1;
-  var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.2); BW2.ms = performance.now() - _tbw2;
-  T('壳：带宽真的改场（c=1 → 0.2 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
+  var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.15); BW2.ms = performance.now() - _tbw2;   /* 11-11 重标定：926 点后 0.20 档丢 1 枚，拐点下移到 0.15 */
+  T('壳：带宽真的改场（c=1 → 0.15 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
     BW2.miss === 0 && BW2.cov === BW2.nOk && BW2.ins !== BW1.ins && BW2.bad < BW1.bad && BW2.quads.length > 0,
-    '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.2：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
+    '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.15：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
     '% ‖ 误包 ' + BW2.bad + '（c=1 是 ' + BW1.bad + '）‖ 漏画 ' + BW2.miss + '（c=1 是 ' + BW1.miss + '）‖ 片数 ' + BW2.quads.length +
     '（c=1 是 ' + BW1.quads.length + '）‖ 建壳 ' + BW2.ms.toFixed(0) + 'ms（c=1 是 ' + BW1.ms.toFixed(0) + 'ms）');
   st.mode = SNISO.mode; st.iso = SNISO.iso; st.elev = SNISO.elev;
@@ -6723,7 +6813,7 @@ st.flo = SN5.flo; st.fhi = SN5.fhi; st.labels = SN5.labels;
         for (var i9 = 0; i9 < N; i9++) SH9[i9] = (VIS[i9] && inWin(P[i9])) ? 1 : 0;
         var TB9 = visKNN(nb9, 'selfchk@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3), SH9);
         var g9 = nb9.gx, g9y = nb9.gy, cs9x = (nb9.x1 - nb9.x0) * nb9.bx / (g9 - 1), cs9y = (nb9.y1 - nb9.y0) * nb9.byy / (g9y - 1);
-        var F9 = new Float32Array(1);
+        var F9 = new Float64Array(1);   /* §E573：快路 dst 已是 double；这里用 Float32 会把暴力值先削一截 ⇒ 假红 */
         for (var s9 = 0; s9 < g9 * g9y && !bad; s9 += 197) {
           var cg9i = s9 % g9, cg9j = (s9 / g9) | 0, cd9 = [];
           for (var q9 = 0; q9 < N; q9++) { if (!SH9[q9]) continue;
