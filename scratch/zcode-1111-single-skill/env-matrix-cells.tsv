@@ -1,0 +1,13 @@
+pack	table	mode	actions	distinct	keys
+soup-15c	self	multi	20	4	reflect:20%|gun:45%|snipe:30%|sword:5%
+soup-15c	script	multi	5	3	snipe:20%|reflect:20%|gun:60%
+soup-15c	f2	multi	7	3	reflect:29%|gun:57%|snipe:14%
+soup-15c	farmer	multi	39	7	snipe:31%|reflect:33%|gun:13%|mine:13%|guard:3%|sword:5%|transfer:3%
+soup-15c	wall	multi	33	7	snipe:30%|mine:30%|reflect:27%|gun:3%|proto:3%|charge:3%|tank:3%
+soup-15c	aggro	multi	9	3	snipe:33%|gun:33%|reflect:33%
+soup-15c	self	long	31	5	bagua:3%|reflect:10%|gun:45%|snipe:32%|sword:10%
+soup-15c	script	long	19	7	reflect:26%|gun:47%|tank:5%|guard:5%|snipe:5%|mine:5%|sword:5%
+soup-15c	f2	long	18	3	reflect:17%|gun:56%|snipe:28%
+soup-15c	farmer	long	66	7	snipe:50%|reflect:29%|sword:3%|mine:6%|proto:2%|gun:8%|taunt:3%
+soup-15c	wall	long	73	5	snipe:44%|reflect:30%|mine:22%|sword:3%|proto:1%
+soup-15c	aggro	long	11	5	reflect:36%|gun:27%|snipe:18%|mine:9%|sword:9%

@@ -219,7 +219,21 @@ if (COPY) {
 } else {
   const m = mix(src.map(s => s.params), WS); params = m.params; w = m.w; MODE = 'mean';
 }
-const pack = P.pack(params);
+/* v92（2.0/gen3）容器保真（2026-11-12 凌晨 · soup 头注的"形状 v7"是 v7 时代写的）：
+ * `mix` 产的新数组丢了 `p2` 布局 ⇒ 补挂第一粒的；写包走 `EpirusPolicy2.pack`（v7 的 `P.pack` 会把
+ * 2.0 张量按 v7 外壳写出去 ⇒ `unpack` 读回 null，第一锅 soup-15a 实测"不兼容"）。
+ * 门查**来源粒**的 p2（mix 产物必丢 p2，查自己永远不成立——第一版补丁实测）；
+ * `arch/dims/layout/n` 逐字抄第一粒容器（形状一致性在 :177 已守卫 ⇒ 同形才走到这里）。 */
+if (params && src[0].params && src[0].params.p2) {
+  params.p2 = src[0].params.p2;
+  const P2 = W.EpirusPolicy2;
+  const pack2 = P2.pack(params, W);
+  Object.assign(pack2, { arch: s0.pack.arch, dims: s0.pack.dims, layout: s0.pack.layout, n: s0.pack.n });
+  var PACK_OUT = pack2;
+} else {
+  var PACK_OUT = P.pack(params);
+}
+const pack = PACK_OUT;
 const meta = {
   generatedBy: 'tools/soup-pack.mjs',
   soup: {

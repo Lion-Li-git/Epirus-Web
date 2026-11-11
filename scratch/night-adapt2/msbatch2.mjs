@@ -139,9 +139,16 @@ for (let round = history.length + 1; round <= ROUNDS; round++) {
     jobs.push(runArm(seed, parents[b], OUTDIR + '/' + ARM + '-R' + round + 'S' + seed + '.js', round));
   }
   const done = await Promise.all(jobs);
-  const okArms = done.filter((d) => d.code === 0 && existsSync(d.packPath));
+  /* 11-12 凌晨修（curse-R3 实测）：exit 9 = §E589 守卫拦"产物与已有粒逐位相同"（最常见 = 和自己的 seg
+   *   中途节点相同——peak 早熟臂的常态，训练本身完整跑完了）。按"无改良臂"处理：该席用父代包顶上、
+   *   轮继续；不再把单臂轮炸成"全败"自杀（昨晚 12 次 exit=9 都被多臂轮兜住，branches=1 才露馅）。 */
+  const done2 = done.map((d, i) => {
+    if (d.code === 9) { log('⚠ 臂 S' + d.seed + ' exit=9（守卫拦重 = 产物与已有粒同权重）⇒ 按**无改良**计，用父代 ' + parents[i].split('/').pop() + ' 顶替该席'); return { seed: d.seed, packPath: parents[i], code: 0, dup: true }; }
+    return d;
+  });
+  const okArms = done2.filter((d) => d.code === 0 && existsSync(d.packPath));
   if (!okArms.length) { log('⛔ 轮 ' + round + ' 全败'); process.exit(9); }
-  for (const d of done.filter((x) => x.code !== 0)) log('⚠ 臂败 seed=' + d.seed + ' exit=' + d.code + '（不进父母池）');
+  for (const d of done2.filter((x) => x.code !== 0)) log('⚠ 臂败 seed=' + d.seed + ' exit=' + d.code + '（不进父母池）');
 
   /* 本轮收尾：各臂 triplet（臂自带）→ 父母池 = 臂们 + 现有冠军（同口径重测）→ √n 保留 → 2+1 分配 */
   /* ⚑ 11-10 修：原来这里走 measureFromLedger（A 轴台账）——换 C 准则后我把它置 null ⇒ 臂全被丢掉、只剩冠军（本轮就是这么白判的）。改为一律现测 C。 */

@@ -443,3 +443,24 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-11T04:23:04.023Z	330226d3e823d715	docs/artifacts/WSEL9-200-band3.bak	docs/artifacts/WSEL10-200-band3.bak	dedupe:register	D191 清账：已登记的复制（2026-11-11）
 2026-11-11T04:23:04.023Z	93e9b15fbeac6809	docs/artifacts/WIDE-Q-s13-band4.bak	docs/artifacts/WIDE-Q-s13-band5.bak	dedupe:register	D191 清账：已登记的复制（2026-11-11）
 2026-11-11T04:23:04.023Z	8d72614132cb563b	docs/artifacts/WPROBE-w05-band1.bak	docs/artifacts/WPROBE-w05-band6.bak	dedupe:register	D191 清账：已登记的复制（2026-11-11）
+2026-11-11T16:22:31.922Z	9b6d904c09aa807c	docs/artifacts/MSB15-ring-R1S307147650-seg3.bak	docs/artifacts/MSB15-ring-R1S307147650-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-11T16:31:10.286Z	6f29d7e0b70e4255	docs/artifacts/MSB15-curse-R1S1094478832-seg4.bak	docs/artifacts/MSB15-curse-R1S1094478832-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-11T16:31:10.318Z	ffb6e1422d3810c3	docs/artifacts/MSB15-curse-R1S1094478832-seg1.bak	docs/artifacts/MSB15-curse-R1S1094478832-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-11T16:32:35.808Z	431db399724b678f	docs/artifacts/MSB15-elec-R1S599417655-seg1.bak	docs/artifacts/MSB15-elec-R1S599417655-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-11T16:32:35.818Z	431db399724b678f	docs/artifacts/MSB15-elec-R1S599417655-seg1.bak	docs/artifacts/night-adapt/MSB15-elec-R1S599417655.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T16:39:01.780Z	5c036b5bdfeccbb2	docs/artifacts/MSB15-breadth-R1S1124697562-seg4.bak	docs/artifacts/MSB15-breadth-R1S1124697562-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-11T17:13:54.824Z	6c6f2b62a29ed387	docs/artifacts/MSB15-elec-R2S519673310-seg4.bak	docs/artifacts/MSB15-elec-R2S519673310-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-11T17:15:08.135Z	a8e82fb715c91906	docs/artifacts/MSB15-elec-R2S880603932-seg4.bak	docs/artifacts/MSB15-elec-R2S880603932-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-11T17:17:18.506Z	41c7a35923051d2e	docs/artifacts/MSB15-bigt-R2S1931337189-seg1.bak	docs/artifacts/MSB15-bigt-R2S1931337189-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-11T17:21:19.463Z	a413fa2b84eccfc8	docs/artifacts/MSB15-drain2-R2S703929909-seg2.bak	docs/artifacts/MSB15-drain2-R2S703929909-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-11T17:41:48.619Z	3daa99db3fe9f96f	docs/artifacts/MSB15-curse-R3S2005890385-seg1.bak	docs/artifacts/MSB15-curse-R3S2005890385-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-11T17:41:48.645Z	3daa99db3fe9f96f	docs/artifacts/MSB15-curse-R3S2005890385-seg1.bak	docs/artifacts/night-adapt/MSB15-curse-R3S2005890385.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T17:58:21.136Z	6443fb1be4e7f2c1	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	docs/artifacts/MSB15-elec-R3S1097843063-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-11T17:58:21.144Z	6443fb1be4e7f2c1	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	docs/artifacts/MSB15-elec-R3S1097843063-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-11T17:58:21.156Z	6443fb1be4e7f2c1	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	docs/artifacts/night-adapt/MSB15-elec-R3S1097843063.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T18:01:43.276Z	c08eb3b8b9e7c248	docs/artifacts/MSB15-laser-R3S1859130085-seg1.bak	docs/artifacts/MSB15-laser-R3S1859130085-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-11T18:02:19.662Z	8ca8b4c208f623c9	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	docs/artifacts/MSB15-drain2-R3S1318458355-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-11T18:02:19.694Z	8ca8b4c208f623c9	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	docs/artifacts/MSB15-drain2-R3S1318458355-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-11T18:06:22.137Z	66f784dd32afc460	docs/artifacts/MSB15-soupb-R3S1828856017-seg2.bak	docs/artifacts/MSB15-soupb-R3S1828856017-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-11T18:06:22.143Z	1d8610a5ae2502f9	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	docs/artifacts/MSB15-soupb-R3S1828856017-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-11T18:06:22.166Z	1d8610a5ae2502f9	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	docs/artifacts/night-adapt/MSB15-soupb-R3S1828856017.js	train-3p	未复制：同一粒权重已有真身
