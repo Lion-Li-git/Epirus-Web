@@ -1,0 +1,46 @@
+{
+ "base": 214,
+ "start": "scratch/arms/GD4-RATION.bak",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js",
+   "champMean": 0.022340000000000006,
+   "pool": [
+    {
+     "label": "S1155875730",
+     "pack": "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js",
+     "mean": 0.022340000000000006,
+     "min": -0.1774
+    },
+    {
+     "label": "S680041201",
+     "pack": "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S680041201.js",
+     "mean": -0.019680000000000003,
+     "min": -0.2316
+    },
+    {
+     "label": "冠军",
+     "pack": "scratch/arms/GD4-RATION.bak",
+     "mean": -0.29789,
+     "min": -0.7908
+    },
+    {
+     "label": "冠军",
+     "pack": "scratch/arms/GD4-RATION.bak",
+     "mean": -0.29789,
+     "min": -0.7908
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js",
+    "docs/artifacts/night-adapt/MSB15R-gd4rat-R1S680041201.js"
+   ]
+  }
+ ]
+}

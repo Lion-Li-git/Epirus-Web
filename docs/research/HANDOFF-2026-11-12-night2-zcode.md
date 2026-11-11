@@ -31,13 +31,19 @@
 - 长臂（已按用户令关停）：elec/ring/drain2/breadth/laser/bigt/curse——**特化注入全部 0% 转行为**（部署档给机会、
   奖励没钉住），breadth 广度 50→200 代衰减。laser 是例外（A/B 同升到 seg3-4，C 峰 0.30）。产物/节点全在盘上可复算。
 - soupb：soup-15b 热启动 + GA_GATE=4，R2 换代自产冠军 C 0.2101，续跑到轮 4。
-- **研究矩阵（已收官，FINDING §7 有全表）**：机会侧方法全败（IMIT/SEL_BIGT/SEQ_W=10/LASER_W 都 0%）；
-  R5 是无效实验（RING_FORCE 只在 train-worker 路径上，train-3p 产线**没接**——D 级接线缺口）；
-  R2 响亮拒（PACK_OPP 不支持 .bak）。**已实现 `SEQ_KIND=hit:<键,键>` 命中奖励档**（复用 SEQ_W，零新旋钮）：
-  R9/R10 付款 89 万次实证机件通，但成品粒仍 0.0 ⇒ **根因在局内经济**（ep 常年 <5，5ジ 够不着 + 大雷本身净期望负）。
-  R11（ECO_TARGET=5 三层全配）exit 7：econ target 的 CLI 回执 undefined——经济层接线也是坏的，白天先修再验。
-- **副产品**：全库 807 枚贪婪出手谱普查意外完成（champion-map/usage.tsv）——按卡维度的全量数据，图上从没有过。
-- **量具缺口记两笔**：usage.tsv 没有 laserEye/curse 等新卡列；PACK_OPP 不吃 .bak（pack-resolve 链没覆盖）。
+- **研究矩阵（已收官，FINDING §7/§7.1/§7.2 有全表）**：
+  - GA 注入路线全败：机会侧（IMIT/SEL_BIGT/PUSH）与奖励侧（SEQ_W=10、hit 档付款 89 万次实证）成品粒全 0.0；
+    R5 是无效实验（RING_FORCE 只在 train-worker 路径——D 级接线缺口）；R2 响亮拒（PACK_OPP 不吃 .bak）；
+    R11（ECO_TARGET）exit 7（econ 回执 undefined）。
+  - **破局 = obs3 的蒸馏教师路线**（用户点名考古）：`supfit-gd --teacher=ration/bigt` 搬到 obs5 基座，45 秒/次。
+    **完整管线当晚打通**：蒸馏（GD4-RATION ring ✔3 段三连 / GD4-BIGT railgun ✔452.5% 浪费 0%）→
+    GA 续训 100 代（hit:bigT 付费）→ **bigT ✔ 540-677%/局 + railgun ✔147.5%，C 同时回正**（R14）——
+    "环=大雷经济底座"第四次复现且首次被设计；缺口地图时代"bigT 0/11"被打破。
+    开放题：ring 过蒸馏但过不了 GA 保持（R15 棘轮也没保住）——多线同时保持 = 白天班的第一题（激光眼线 §E793 同构）。
+  - 配方卡（激光眼线杠杆栈 → 今晚映射）在 FINDING §7.1；验收一律 `training/proto2/skill-mastery.mjs` 预注册尺。
+- **副产品**：全库 807 枚贪婪出手谱普查（champion-map/usage.tsv）；usage.tsv 缺 laserEye/curse 列（量具缺口）。
+- **接线缺口三笔（D 级，白天修）**：RING_FORCE 只在 train-worker；ECO_TARGET 的 CLI 回执 undefined；
+  PACK_OPP 不吃 .bak。另：SEL_KEEP 棘轮要求起点有特征锚（R12 exit 7 实证，fail-fast 正确）——**管线顺序 = 先蒸馏造特征、再棘轮**。
 
 ## 3. 遗留给白天班
 

@@ -1,0 +1,17 @@
+{
+ "base": 213,
+ "arm": "MSB15R-hit-keep13",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champT": {
+  "mean": 0.4103925,
+  "min": 0.2177,
+  "spread": 0.3468
+ },
+ "seedIdx": 0,
+ "history": []
+}
