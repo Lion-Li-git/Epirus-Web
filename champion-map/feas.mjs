@@ -71,7 +71,7 @@ const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fie
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ----
  * 11-11 起走 map-table.mjs 单一入口：默认 gen3（旧 coords.tsv 只能显式 --table=coords.tsv）。
  * 这样 2.0 那 95 枚不会再因为"名单源少一批"被静默漏判。 */
-const ROSTER = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv' });
+const ROSTER = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv' });
 let ct;
 try { ct = readTable(ROSTER); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
 const ci = ct.ix.id, cpi = ct.ix.path;

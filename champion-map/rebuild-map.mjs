@@ -35,7 +35,7 @@ run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
 if (DRY) process.exit(0);
 /* ② 从 data/ 编译完整页面视图（canonical + display 模板） */
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=champion-map/coords-gen3-1105.tsv'], '② build-view 编译 coords-view');
+  '--compare=champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 烘页面：flags 以 bake-flags.txt 为单一来源；--fit 固定到 data 编译产物 */

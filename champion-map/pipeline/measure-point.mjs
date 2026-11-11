@@ -111,7 +111,7 @@ setD('examG', fr[ft.ix.examG] || '120');
 /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */
 if (!SKIP_FEAS) {
   const fIn = join(ST, ID + '-feas-input.tsv');
-  const bg = readTable(join(HERE, 'coords-gen3-1105.tsv'));
+  const bg = readTable(join(HERE, 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'));
   const row = new Array(bg.header.length).fill('');
   row[bg.ix.id] = ID; row[bg.ix.path] = rel;
   writeTable(fIn, { header: bg.header, rows: bg.rows.concat([row]) }, { backup: false });

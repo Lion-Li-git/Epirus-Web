@@ -18,7 +18,7 @@ function throws(fn, re, msg) {
 
 /* 1. 默认 gen3，且不是旧表 */
 const def = resolveTable([], { baseDir: HERE });
-ok(basename(def) === DEFAULT_TABLE, '默认表 = ' + DEFAULT_TABLE + '（实际 ' + basename(def) + '）');
+ok(basename(def) === 'coords-gen3-1105.tsv', '默认表 = coords-gen3-1105.tsv（实际 ' + basename(def) + '）');
 const gt = readTable(def);
 ok(gt.rowsN === 926 && gt.header.length === 142, '默认表行/列 = 926 × 142（实际 ' + gt.rowsN + ' × ' + gt.header.length + '）');
 ok(!existsSync(join(HERE, 'coords.tsv.tmp-' + process.pid)), '默认解析不产生临时文件');

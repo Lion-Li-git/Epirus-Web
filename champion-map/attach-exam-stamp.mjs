@@ -15,7 +15,7 @@ import { basename, join } from 'node:path';
 import { readTable, writeTable } from './map-table.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const IN = arg('in', 'champion-map/coords-gen3-1105.tsv');
+const IN = arg('in', 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv');
 const CHECK = process.argv.indexOf('--check') >= 0;
 const ALLOW = process.argv.indexOf('--allow-unknown') >= 0;
 const ROOT = 'champion-map/';
@@ -37,11 +37,11 @@ function addMap(map, f, tag, fixture) {
 }
 const A = new Map(), AL = new Map(), BS = new Map(), BL = new Map();
 console.log('A 短：');
-addMap(A, ROOT + 'exam4-page-1109.tsv', 'A-1109/main');
-addMap(A, ROOT + 'exam4-page-1109-6par.tsv', 'A-1109/6par');
+addMap(A, ROOT + 'archive/2026-11-11-legacy-data/exam4-page-1109.tsv', 'A-1109/main');
+addMap(A, ROOT + 'archive/2026-11-11-legacy-data/exam4-page-1109-6par.tsv', 'A-1109/6par');
 console.log('A 长：');
-addMap(AL, ROOT + 'exam4-page-long-1109.tsv', 'A-1109L/main');
-addMap(AL, ROOT + 'exam4-page-long-1109-6par.tsv', 'A-1109L/6par');
+addMap(AL, ROOT + 'archive/2026-11-11-legacy-data/exam4-page-long-1109.tsv', 'A-1109L/main');
+addMap(AL, ROOT + 'archive/2026-11-11-legacy-data/exam4-page-long-1109-6par.tsv', 'A-1109L/6par');
 /* obs5 13 枚的 A 值住在 triplet-ledger（cells_S/L[2]） */
 const LED = 'scratch/night-adapt2/triplet-ledger.tsv';
 if (existsSync(LED)) {
@@ -56,14 +56,14 @@ if (existsSync(LED)) {
   console.log('  ' + LED + ' ⇒ ' + n + ' 枚（A-ledger/night-adapt2）');
 }
 console.log('B 短：');
-addMap(BS, ROOT + 'exam4-F2-page-1111.tsv', 'F2s-1111/main');
-addMap(BS, ROOT + 'exam4-F2-page-1111-msb1314.tsv', 'F2s-1111/msb1314');
-addMap(BS, ROOT + 'exam4-F2-page-1111-86.tsv', 'F2s-1111/86');
-addMap(BS, ROOT + 'exam4-F2-page-1111-6par.tsv', 'F2s-1111/6par');
+addMap(BS, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-1111.tsv', 'F2s-1111/main');
+addMap(BS, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-1111-msb1314.tsv', 'F2s-1111/msb1314');
+addMap(BS, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-1111-86.tsv', 'F2s-1111/86');
+addMap(BS, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-1111-6par.tsv', 'F2s-1111/6par');
 console.log('B 长：');
-addMap(BL, ROOT + 'exam4-F2-page-long-1111.tsv', 'F2l-1111/main');
-addMap(BL, ROOT + 'exam4-F2-page-long-1111-86.tsv', 'F2l-1111/86');
-addMap(BL, ROOT + 'exam4-F2-page-long-1111-6par.tsv', 'F2l-1111/6par');
+addMap(BL, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-long-1111.tsv', 'F2l-1111/main');
+addMap(BL, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-long-1111-86.tsv', 'F2l-1111/86');
+addMap(BL, ROOT + 'archive/2026-11-11-legacy-data/exam4-F2-page-long-1111-6par.tsv', 'F2l-1111/6par');
 
 const fixtures = new Set();
 for (const m of [BS, BL]) for (const v of m.values()) if (v.fixture) fixtures.add(v.fixture);

@@ -17,7 +17,7 @@ const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + 
 const FORCE = process.argv.includes('--force');
 const DRY = process.argv.includes('--dry');
 const NO_SHA = process.argv.includes('--no-sha');
-const CO = resolve(arg('coords', 'champion-map/coords-gen3-1105.tsv'));
+const CO = resolve(arg('coords', 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'));
 const PROJ = resolve(arg('proj', 'champion-map/archive/2026-11-11-legacy-data/coords-projcols.tsv'));
 const HERE = resolve('champion-map');
 const DATA = resolve(arg('out', 'champion-map/data'));

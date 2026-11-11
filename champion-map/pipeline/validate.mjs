@@ -78,7 +78,7 @@ if (missing.length) {
   if (STRICT) errs.push(msg); else warns.push(msg);
 }
 let cmp = null;
-try { cmp = buildView({ data: DATA, compare: join(DATA, '..', 'coords-gen3-1105.tsv'), noWrite: true }).report.compare; }
+try { cmp = buildView({ data: DATA, compare: join(DATA, '..', 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'), noWrite: true }).report.compare; }
 catch (e) { errs.push('build-view 对照失败：' + e.message); }
 console.log('registry ' + regIds.size + ' ‖ rulers A=' + A + ' B=' + B + ' ‖ batches ' + batchIds.size + ' ‖ readings ' + rd.rows.length);
 console.log('readings 按尺 ' + Object.entries(perRuler).map(([k, v]) => k + '=' + v).join(' ‖ '));

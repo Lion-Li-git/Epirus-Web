@@ -15,7 +15,7 @@
 | **攒 ep 的时机**（环/ジ 在什么局面用） | `archive/usage-buckets-2026-10-20.tsv`（归档；`behavior-profile --buckets=1` 再生） | 四格 = 能不能开环 × 这一回合挨没挨打；long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`（`FINDING-2026-10-20-ring-payoff-ds.md` §十） |
 | **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 的 per-experiment 尺表+考卷表；`e328-*`/`e370-*` 已移入 `archive/2026-11-11-legacy-data/`，旧链按归档路径读 |
 | **对打结果（旧）** | `duel-run.mjs` 产出 | 页面不再读；`duel.tsv` / `duelscan.mjs` 已删除（用户 2026-11-11） |
-| **谱系图上的坐标与各列** | `coords.tsv`（1.8 遗留）‖ `coords-gen3-1105.tsv`（2.0 系 926，历史源）‖ `data/display.tsv`（统一展示表） | 页面由 `data/build/coords-view.tsv` 编译；旧 `coords-projcols.tsv` 已归档到 `archive/2026-11-11-legacy-data/` |
+| **谱系图上的坐标与各列** | `coords.tsv`（活槽解析仍需）‖ `archive/2026-11-11-legacy-data/coords-gen3-1105.tsv`（2.0 历史源）‖ `data/display.tsv`（统一展示表） | 页面由 `data/build/coords-view.tsv` 编译；旧 `coords-projcols.tsv` 已归档到 `archive/2026-11-11-legacy-data/` |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |
 | **这一行的 A/B/C 读数来自哪批** | `EXAM-BATCHES.tsv` + coords 的 `examA/examAL/examBs/examBl/examFix/examC` 六列 | 由 `attach-exam-stamp.mjs` 生成；`--check` 会拦 unknown / 旧夹具 / C 不符 |

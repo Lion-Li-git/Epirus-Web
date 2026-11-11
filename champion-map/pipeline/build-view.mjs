@@ -28,7 +28,7 @@ function put(row, ix, v) { if (v === null) return; row[ix] = String(v); }
 export function buildView(opts) {
   opts = opts || {};
   const data = resolve(opts.data || 'champion-map/data');
-  const comparePath = resolve(opts.compare || 'champion-map/coords-gen3-1105.tsv');
+  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv');
   const reg = readTable(join(data, 'registry.tsv'));
   const rd = readTable(join(data, 'readings/current.tsv'));
   const rulers = loadRulers(join(data, 'rulers.tsv'));
@@ -202,7 +202,7 @@ export function buildCoordsView(opts) {
 const IS_MAIN = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_MAIN) {
   try {
-    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/coords-gen3-1105.tsv'), noWrite: process.argv.includes('--no-write') });
+    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'), noWrite: process.argv.includes('--no-write') });
     const cv = buildCoordsView({ data: arg('data', 'champion-map/data'), noWrite: process.argv.includes('--no-write') });
     console.log('exam-view: ' + r.rows.length + ' 行 × ' + r.header.length + ' 列 ⇒ ' + r.viewPath);
     console.log('coords-view: ' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);
