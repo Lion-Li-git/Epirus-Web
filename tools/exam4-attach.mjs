@@ -75,4 +75,4 @@ if (miss.length && !ALLOW_MISSING) {
 if (APPEND) co[0] = co[0].concat(NEWC);
 writeFileSync(IN, co.map((r) => r.join('\t')).join('\n') + '\n');
 console.log((miss.length ? '⚠ ' + miss.length + ' 行缺测（占位空串） ‖ ' : '') + (APPEND ? '已追加 ' : '已原位覆盖 ') + NEWC.join('/') + ' ⇒ ' + IN);
-console.log('下一步：node champion-map/attach-projcols.mjs（重建 coords-projcols.tsv）⇒ 按 bake-flags 重烘 index.html');
+console.log('下一步：node champion-map/pipeline/build-view.mjs ⇒ node champion-map/rebuild-map.mjs（页面吃 data/build/coords-view.tsv）');

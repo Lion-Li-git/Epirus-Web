@@ -17,8 +17,8 @@
  *
  * 自包含：数据内联进 HTML、纯原生 JS + Canvas，**不引任何 CDN**（离线可开）。
  * 坐标来自 `coords.tsv`（由 `docs/artifacts/e287-out/e287-figs.mjs` 算好后拷进来）⇒ 交互页与静态图共用同一批坐标，不重算不漂移。
- * 用法：node champion-map/rebuild-map.mjs   # 正路（先 attach-projcols 再烘）
- *       node champion-map/viewer.mjs [--fit=coords-projcols.tsv] [--out=index.html]   # 直烘仅当 projcols 已最新
+ * 用法：node champion-map/rebuild-map.mjs   # 正路（先 build-view/data 再烘）
+ *       node champion-map/viewer.mjs [--fit=data/build/coords-view.tsv] [--out=index.html]   # 直烘仅当 build-view 已最新
  *
  * §E294 追加（用户 10-04 第二轮：「旋转和缩放中心出问题了，一维也因此被裁掉了一块。
  *   二维的背景图能不能直接扩散到所有点的范围并且卡住缩放上界，不要看起来背景图很割裂」）：
@@ -49,7 +49,7 @@
  *      （bx≈295 px/单位 vs byy≈74）⇒ 数据空间的圆上屏是 4:1 扁椭圆，且扁轴上淡出半径只盖 ~8px、
  *      点距 ~37px ⇒ 中间空位。修法 = 距离一律按**屏幕度量**（dx·bx, dy·byy），网格按显示跨度分配
  *      （显示空间里格子是正方形）；淡出尺度 3.5×（屏幕度量下的）最近邻中位数。
- *   ⑯ **过线范围**（§E287 判据 = e287-panel.tsv 的 ok 列，43/94）：过线包周围 1.2×nmed 的**盘并**——
+ *   ⑯ **过线范围**（§E287 判据；2026-11-11 后数据在 data/feasibility.tsv）：过线包周围 1.2×nmed 的**盘并**——
  *      烘一张与场同网格的绿色 overlay（同一矩阵贴上，alpha 0.13）+ 走格边画并盘边界线（旧静态图
  *      edgesOf 的移植）；平面/立体两态都画；悬停明细里标注 过线✓/未过线。
  *
@@ -154,7 +154,7 @@ const PROJTSNE = arg('proj', 'tsne') !== 'old';
 /* §G3（11-05 上午 · 千问）：`--fit` 的路径口径必须与下面 `OUT` 同族（§E608）——
  *   原来写死 `join(HERE, arg('fit',…))` ⇒ 传绝对路径会被拼成 `champion-map\D:\code\…` 而"表不存在"，
  *   看起来像"表坏了/没跑成"。这是本仓第五个栽在同一族上的旗标（`--out/--in/--seat/--chart` 都栽过）。 */
-const FITARG = arg('fit', 'coords-projcols.tsv');
+const FITARG = arg('fit', 'data/build/coords-view.tsv');
 /* 与 `proj-tsne --in` 同一条口径：原样(cwd 相对) → HERE 拼 → 只取文件名；三个都没有 ⇒ 报错列出试过的路径
  *   （原来只 `join(HERE, FITARG)` ⇒ 传 `champion-map/xxx.tsv` 会拼成双层而报"表不存在"，看着像表坏了）。 */
 const FITCAND = [FITARG, join(HERE, FITARG), join(HERE, FITARG.split(/[\\/]/).pop())];
@@ -164,15 +164,15 @@ if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/arti
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
 /* 阶段 3 守卫：--projcols=1 要吃 18/20 四列；gen3 没有这四列 ⇒ 必须走 rebuild-map.mjs
- *   （先生成 coords-projcols.tsv）。不许静默退回 xt/yt，否则 1.8/2.0 预设会混用两套坐标。 */
+ *   （rebuild-map 会先 build-view/data）。不许静默退回 xt/yt，否则 1.8/2.0 预设会混用两套坐标。 */
 if (PROJCOLS) {
   const need = ['xt18', 'yt18', 'xt20', 'yt20'];
   const miss = need.filter(c => head.indexOf(c) < 0);
   if (miss.length) {
     console.error('⛔ 表 ' + CF + ' 缺 18/20 投影列 ' + miss.join('/') + '（表头 ' + head.length + ' 列）' +
       '\n       ⇒ --projcols=1 会退化成 xt/yt 一套坐标，1.8/2.0 预设就混轴了。' +
-      '\n         正路：node champion-map/rebuild-map.mjs（先 attach-projcols 再 viewer）' +
-      '\n         或：--fit=coords-projcols.tsv（页面吃的就是这张）‖ 确实不要分版投影：--projcols=0');
+      '\n         正路：node champion-map/rebuild-map.mjs（先 build-view/data 再 viewer）' +
+      '\n         或：--fit=data/build/coords-view.tsv（页面吃的就是这张）‖ 确实不要分版投影：--projcols=0');
     process.exit(2);
   }
 }
@@ -249,20 +249,11 @@ if (PROJTSNE) {
      (XSUF === 'R' ? '综合分 C·R=(A+B)/2：A=脚本桌 v2，B=F2 滚动夹具 MSB11+MSB10+MSB8-charge+Q-s47'
        : XCOL === 'C' ? '综合分 C=(A+B)/2（旧固定夹具）' : XCOL === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') +
      ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ A=exam4-page-1109 · B=exam4-F2-page-1111 + -long-1111）'); }
-const fitP = join(HERE, 'fit.tsv');
+const fitP = join(HERE, 'data/fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
-/* 过线来源（§E298）：**优先**用现跑的同一道闸 `feas-s*.tsv`（覆盖全 718 枚、样本量统一 n=20/aggr40/seat100）；
- *   没有才退回包自己 META 里的历史 feasibility.ok（`panel.tsv` 只有 94 枚，且那 482 枚有值的还跨 6 个 opps 层
- *   ⇒ §E287 实测"只换 opps 池过线率 45.7%→6.4%"，混在一起画就是假范围）。 */
-/* §E556：`feas-s4.tsv` = 10-09 那 63 枚**代表臂**现跑同一道闸的判定（`feas.mjs --ids=…`，tag 同为 n=20/aggr100/seat100）。
- *   为什么不并进 s1~s3 那张：那三片是 10-08 全库 920 枚的一次性跑批，混写会让"哪一行是哪一批"从文件上消失；
- *   分开一片，代价只是这一行多一个名字，换来的是 §E492 那道 tag 对账仍然指着"每片自己是什么档"说得清。 */
-const FEAS_FILES = ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv', 'feas-mixed-g3-1105.tsv'].filter(f => existsSync(join(HERE, f)));
-const panelP = join(HERE, 'panel.tsv');
-/* §E304 家族表（`lineage.mjs` 生成）：**家族 = 训练方法/目标配置的等价类**，不是 seed。
- *   为什么必须换：coords 的 seed 列只有 14 个取值（31~36 / 81~96），它就是包名尾部那个数 = META.seed
- *   ⇒ 同一个 seed 被几十上百枚毫不相干的臂复用 ⇒ 标的是 RNG、不是血统（用户 10-05 的怀疑成立）。
- *   META.seed 其实有 84 个取值 ⇒ 连"这一列是不是 seed"都要分清楚，别把名字后缀当元数据。*/
+/* 过线/混合桌闸：2026-11-11 数据模型统一后只读 data/feasibility.tsv。
+ *   ok/okLong/okShort 均由 backfill/add-point 写入；旧 feas-s 分片/panel 已退役。 */
+const feasP = join(HERE, 'data/feasibility.tsv');
 const linP = join(HERE, 'lineage.tsv');
 let LIN = {};
 if (existsSync(linP)) {
@@ -287,38 +278,25 @@ if (existsSync(g3linP)) {
   console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN ‖ 族号 ' + [...fams].sort((a, b) => a - b).join(','));
 } else console.log('⚠ 没有 ' + g3linP + ' ⇒ 2.0 点没有家族/树行（fam 全落 0）');
 let OKM = null, POK = 0, OKSRC = '', OKTAG = '';
-if (FEAS_FILES.length) {
+if (existsSync(feasP)) {
+  const L = readFileSync(feasP, 'utf8').trim().split('\n');
+  const hd = L[0].split('\t');
+  const iId = hd.indexOf('pack_id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails'), iG = hd.indexOf('g2'), iT = hd.indexOf('tag');
   OKM = {}; const TAGS = {};
-  for (const f of FEAS_FILES) {
-    const L = readFileSync(join(HERE, f), 'utf8').trim().split('\n');
-    const hd = L[0].split('\t'), iId = hd.indexOf('id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails'), iT = hd.indexOf('tag');
-    for (const l of L.slice(1)) { const c = l.split('\t'); const id = c[iId]; if (!id) continue;
-      /* §E307 顺手把 G(long) 也带进来：它是闸卡住前沿的那条腿（前 30 名里 16 枚未过线，多数栽在这儿），
-       *   图上原本完全看不见 ⇒ 多一个着色口径就能当场指出"该往哪儿训"。 */
-      if (c[iOk] === '0' || c[iOk] === '1') {
-        OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160), g2: Number(c[hd.indexOf('G2')]) };
-        /* §E492 样本量随行读进来并**对账**：`fieldA` 那一栏的分辨率直接由 n 决定（n=40 ⇒ ±12.4pt，n=100 ⇒ ±7.8pt），
-         *   而这张表是四张文件按"后写覆盖先写"合并的 ⇒ 混两套样本量就等于把同一列画成两把尺，
-         *   且事后**从数据里看不出哪一行是哪把**。缺 tag 列的老表按 'n=20/aggr40/seat100' 记（那批就是这么跑的）。 */
-        const tg = iT >= 0 ? String(c[iT] || '').trim() : '';
-        TAGS[tg || 'n=20/aggr40/seat100（老表，无 tag 列）'] = (TAGS[tg || 'n=20/aggr40/seat100（老表，无 tag 列）'] || 0) + 1; } }
+  for (const l of L.slice(1)) {
+    const c = l.split('\t'); const id = c[iId]; if (!id) continue;
+    if (c[iOk] === '0' || c[iOk] === '1') {
+      OKM[id] = { ok: c[iOk] === '1', fails: String(c[iF] || '').slice(0, 160), g2: Number(c[iG]) };
+      const tg = String(c[iT] || '').trim() || 'n=20/aggr100/seat100';
+      TAGS[tg] = (TAGS[tg] || 0) + 1;
+    }
   }
   const tk = Object.keys(TAGS);
-  if (tk.length > 1) { console.error('⛔ 过线判定表里混了 ' + tk.length + ' 种样本量：' +
-    tk.map(x => x + ' × ' + TAGS[x]).join(' ‖ ') +
-    '\n       ⇒ 同一列 `fieldA` 被两把尺量过，而"20% 那条线判不判得动"直接由 n 决定（n=40 ±12.4pt ‖ n=100 ±7.8pt）。' +
-    '\n         要么全库重跑到同一个 n：node champion-map/feas.mjs --shard=k/N --out=feas-sK.tsv（改 n 请改 audit-lib 的 FEAS_N_DEFAULTS）'); process.exit(2); }
+  if (tk.length > 1) { console.error('⛔ data/feasibility.tsv 混了 ' + tk.length + ' 种样本量：' + tk.map(x => x + ' × ' + TAGS[x]).join(' ‖ ')); process.exit(2); }
   OKTAG = tk[0] || '';
-  POK = Object.keys(OKM).length; OKSRC = '现跑同一道闸（feasibilityOf · ' + (OKTAG || '表里没写样本量') + '）';
-} else if (existsSync(panelP)) {
-  const pl = readFileSync(panelP, 'utf8').trim().split('\n');
-  const ph = pl[0].split('\t');
-  const iOk = ph.indexOf('ok'), iId = ph.indexOf('#id') >= 0 ? ph.indexOf('#id') : ph.indexOf('id');
-  OKM = {};
-  for (const l of pl.slice(1)) { const c = l.split('\t'); const id = (c[iId] || '').replace(/^#/, '');
-    if (id) { OKM[id] = { ok: c[iOk] === '1', fails: '' }; POK++; } }
-  OKSRC = '包内历史 feasibility.ok（旧面板，覆盖不全且跨层）';
-}
+  POK = Object.keys(OKM).length;
+  OKSRC = 'data/feasibility.tsv（统一数据模型）';
+} else console.log('⚠ 没有 data/feasibility.tsv ⇒ 在册混合桌闸不可用');
 /* ===== §E677 两把纯桌闸的口径（用户 2026-10-21 裁「改成纯短程和纯长程两种，不要留混合桌环」）=====
  *   环的主语跟着**桌形**换：默认(3血短程) = `okShort` 列（全腿短程），长程(5血) = `okLong` 列（全腿长程）。
  *   两句话都**从腿表读**（`legsMode` 列），不抄第二份文案 —— 与上面 §E492 那条"样本量随行记录"同一条规矩：
@@ -392,25 +370,7 @@ if (existsSync(poolP)) {
       Object.entries(POOL_ALIAS).map(([a, m]) => a + '→' + m.join('/')).join(' ‖ ') : '') +
     (POOL_CLASH.length ? ' ‖ ⛔ 同枚给了不同档：' + POOL_CLASH.join(' ‖ ') : ''));
 } else console.log('提示：没有 pool-members.tsv ⇒ 池层不可用（跑 node tools/pool-add.mjs 生成）');
-/* §E310 决斗表（§E289 那台配对决斗的汇总，`duelscan.mjs` 生成）= 图上第 4 条腿："这枚打赢旧冠军 Ldemo 没有（历史参照，它已不下场）"。
- *   为什么非画不可：§E308 ① 我拿"考卷 H 高 5.2pt"当"更强的冠军"写进头条，被这台仪器当场推翻
- *   （v7t1-82 两批种子都输）⇒ 这个仓库里"更强"有专门的尺，图上却只有 F/H/S。
- *   口径：A−B = （我做异类时夺1率）−（现役做异类时夺1率），**两批种子同向才给颜色**，符号翻的画黄（判不动）。*/
-const duelP = join(HERE, 'duel.tsv');
-let DUEL = {};
-if (existsSync(duelP)) {
-  /* §E567 读法更正：这里原来是 `readFileSync(...).trim()` —— **整文件 trim 会把末行的行尾空单元格连着 tab 一起削掉**
-   *   （duel.tsv 现在第 7 列是 `note`，最后一行那格正是空的 ⇒ 那一行只剩 6 格）。
-   *   今天没有读者取 `note`，所以不是活 bug；但 §E314/§E375 立的规矩就是防"只错一行、无声无息"，
-   *   而同一天我在合并 exam=120 那张表时真的踩中过一次（`480d30e`）⇒ 只剥行尾换行，不 trim 整文件。 */
-  const dl = String(readFileSync(duelP, 'utf8')).replace(/\r?\n$/, '').split('\n'); const dh = dl[0].split('\t');
-  const iId = dh.indexOf('id'), iM = dh.indexOf('mean'), iS = dh.indexOf('sign'), i7 = dh.indexOf('s77000'), i8 = dh.indexOf('s88000');
-  for (const l of dl.slice(1)) { const c = l.split('\t'); if (!c[iId]) continue;
-    DUEL[c[iId]] = { m: +c[iM], s: c[iS], a: c[i7], b: c[i8] }; }
-  console.log('决斗实测 ' + Object.keys(DUEL).length + ' 枚（两批同向 ' +
-    Object.values(DUEL).filter(x => x.s === 'same').length + ' ‖ 符号翻 ' +
-    Object.values(DUEL).filter(x => x.s === 'flip').length + '）');
-} else console.log('提示：没有 duel.tsv ⇒ "对旧冠军决斗"着色口径不可用（跑 node champion-map/duelscan.mjs 生成）');
+/* §E310 决斗着色/字段已整体删除（用户 2026-11-11）。 */
 /* §E313 部署口径表 = 图上第 5 条腿："页面开着**默认档那条剂量**还值多少"（§E597 起 = lv:regular 的斜坡 0→0.05→0.1 ‖ k5 ‖ soft；
  *   旧写法 ε=0.2 常数在今天等于**简单档**，所以那句"页面口径"必须点名到档 id 才成立）。
  *   为什么这一格非补不可：图上那把头号尺 H = `eval-5p` 的**考卷口径（ε=0 贪心）**，而真页面每手有 20% 概率
@@ -605,8 +565,6 @@ const DATA = rows.map(r => ({
   /* §E590 池层：pt = 该枚在池里的档（hard/mid/low），不在池里 = ''；psk = 人席否决格数（-1 = 没量过）；pi = 用户点名越过门槛 */
   pt: r.id in POOLM ? POOLM[r.id].tier : '', psk: r.id in POOLM ? POOLM[r.id].sk : null,
   ppv: r.id in POOLM ? POOLM[r.id].pv : '', pi: r.id in POOLM ? POOLM[r.id].inv : false,
-  dm: r.id in DUEL ? DUEL[r.id].m : null, ds: r.id in DUEL ? DUEL[r.id].s : '',
-  da: r.id in DUEL ? DUEL[r.id].a : '', db: r.id in DUEL ? DUEL[r.id].b : '',
   /* §E313 部署口径：`hp` = 页面（默认档 lv:regular 的剂量）夺1率 ‖ `de` = Δε = 考卷 − 页面（正 = 开探索就掉）*/
   /* 11-07 H5 撤场：hp/he/de（部署口径）与 hl2/hpl2/fl（长程 H5）不再进页面 —— 四格卷 X 系是唯一读数 */
   /* §E615 长程桌那一档（`eps-full --mode=long` 同 seed 同档重测，由 `attach-hlong.mjs` 挂进表）：
@@ -3782,14 +3740,13 @@ function paintSide() {
     row('四格夺1率（当前桌）', function (d) { return H4STR(d); });
     row('S 广度', function (d) { return d.S.toFixed(2); });
     row('当选键', function (d) { return d.sc === null || d.sc === undefined ? '未测' : d.sc.toFixed(1); });   /* §E600-A：原来是「当选键差」（对某一枚参照包取差），参照物退场后改画绝对值 */
-    row('决斗差', function (d) { return d.dm === null || d.dm === undefined ? '未测' : (d.dm >= 0 ? '+' : '') + d.dm.toFixed(1); });
     row('进池体检', function (d) { return d.pv === 1 ? '过' : (d.pv === 0 ? '栽' : '未测'); });
     row('过线', function (d) { return RYESNO(RSUBJ(d)); });   /* 原来这行叫「最优」，可它印的是过/不过，不是名次 */
     row('珠/局', function (d) { return (d.chg === null || isNaN(d.chg)) ? '—' : d.chg.toFixed(2); });
     row('浪费ep', function (d) { return (d.waste === null || isNaN(d.waste)) ? '—' : d.waste.toFixed(2); });
     el.appendChild(tb);
     var note = document.createElement('div'); note.style.color = 'var(--dim)'; note.style.marginTop = '5px';
-    note.textContent = '⚠ 同屏最多留 7 列（第 8 枚挤掉最早的）。"决斗差"是 1 打 4 的配对手柄，与页面 1 打 3 不是一把尺。';
+    note.textContent = '⚠ 同屏最多留 7 列（第 8 枚挤掉最早的）。';
     el.appendChild(note);
   }
 }

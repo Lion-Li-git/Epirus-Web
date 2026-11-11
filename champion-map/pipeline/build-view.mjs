@@ -120,7 +120,7 @@ export function buildView(opts) {
 export function buildCoordsView(opts) {
   opts = opts || {};
   const data = resolve(opts.data || 'champion-map/data');
-  const templatePath = resolve(opts.template || 'champion-map/coords-projcols.tsv');
+  const templatePath = resolve(opts.template || join(data, 'display.tsv'));
   const tpl = readTable(templatePath);
   const displayPath = resolve(opts.display || join(data, 'display.tsv'));
   const disp = existsSync(displayPath) ? readTable(displayPath) : null;

@@ -108,7 +108,7 @@ Epirus-Web/
 │   ├─ attach-exam-stamp.mjs        给 coords 盖 exam 批次戳（A/B/C 六列 + EXAM-BATCHES.tsv）
 │   ├─ shot.mjs                    无头复验（截图 / --dump 打逐条自检结果）
 │   ├─ coords.tsv                  基础面板（825 枚，一行 = 一份权重；训练与普查的公共底表）
-│   ├─ coords-gen3-1105.tsv        ★ 现行全库面板 926 枚（含 2.0 代 3 与池成员；142 列，含 6 列 exam 批次戳）‖ coords-projcols.tsv = 146 列展示模板/派生表；页面实际吃 data/build/coords-view.tsv
+│   ├─ coords-gen3-1105.tsv        ★ 历史全库源 926 枚（142 列，含 6 列 exam 批次戳）‖ 页面实际吃 data/build/coords-view.tsv；旧 coords-projcols 已归档
 │   ├─ EXAM-BATCHES.tsv            A/B/C 考卷批次戳（fixture/champ + run id；attach-exam-stamp 生成）
 │   ├─ lineage.tsv                   谱系图底表（由 lineage.mjs 现算）
 │   ├─ pool-members.tsv / -2p.tsv    ★ 冠军池真源（页面 bundle 由它烘）

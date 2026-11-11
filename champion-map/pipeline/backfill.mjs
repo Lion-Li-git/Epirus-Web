@@ -18,7 +18,8 @@ const FORCE = process.argv.includes('--force');
 const DRY = process.argv.includes('--dry');
 const NO_SHA = process.argv.includes('--no-sha');
 const CO = resolve(arg('coords', 'champion-map/coords-gen3-1105.tsv'));
-const PROJ = resolve(arg('proj', 'champion-map/coords-projcols.tsv'));
+const PROJ = resolve(arg('proj', 'champion-map/archive/2026-11-11-legacy-data/coords-projcols.tsv'));
+const HERE = resolve('champion-map');
 const DATA = resolve(arg('out', 'champion-map/data'));
 const CELLS = [2, 3, 5, 8];
 const HOR = [['short', ''], ['long', 'L']];
@@ -75,6 +76,32 @@ for (const r of co.rows) {
     if (bv !== '' && bv !== undefined) rd.push([id, 'b-f2-page-1111', String(cell), h[0], bv, clean(bn), 'b-f2-1111', '']);
   }
 }
+/* 过线：旧 feas-s*.tsv 的混合桌 ok 一次性迁进 data/feasibility.tsv；之后 viewer 不再读 feas/panel。 */
+const OKM = new Map();
+for (const f of ['feas-s1.tsv', 'feas-s2.tsv', 'feas-s3.tsv', 'feas-s4.tsv', 'feas.tsv', 'feas-mixed-g3-1105.tsv']) {
+  const fp = [join(HERE, f), join(HERE, 'archive/2026-11-11-legacy-data', f)].find((x) => existsSync(x));
+  if (!fp) continue;
+  /* 旧 feas.tsv 有 17 列的行（fails 里混了 tab），不能用严格 readTable；只取前几列。 */
+  const lines = readFileSync(fp, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+  const hd = lines[0].split('\t');
+  const iId = hd.indexOf('id'), iOk = hd.indexOf('ok'), iF = hd.indexOf('fails'), iG = hd.indexOf('G2'), iT = hd.indexOf('tag');
+  if (iId < 0 || iOk < 0) continue;
+  for (const line of lines.slice(1)) {
+    const c = line.split('\t'); const id = c[iId]; if (!id) continue;
+    if (c[iOk] === '0' || c[iOk] === '1') {
+      OKM.set(id, { ok: c[iOk], fails: c[iF] || '', g2: iG >= 0 ? (c[iG] || '') : '', tag: iT >= 0 ? (c[iT] || '') : '' });
+    }
+  }
+}
+const feas = [['pack_id', 'ok', 'fails', 'g2', 'tag', 'okLong', 'failsLong', 'okShort', 'failsShort', 'source']];
+for (const r of co.rows) {
+  const id = r[co.ix.id]; if (!id) continue;
+  const pr = pjById.get(id) || {};
+  const o = OKM.get(id);
+  feas.push([id, o ? o.ok : '', o ? o.fails : '', o ? o.g2 : '', o ? o.tag : '',
+    clean(pr[pj.ix.okLong]), clean(pr[pj.ix.failsLong]), clean(pr[pj.ix.okShort]), clean(pr[pj.ix.failsShort]), o ? 'feas-legacy' : '']);
+}
+
 const rulers = [
   ['ruler_id', 'axis', 'label', 'status', 'unit', 'fixture', 'batch_id', 'formula', 'note'],
   ['a-v2-page-1109', 'A', 'v2 脚本桌（page dose）', 'current', 'excess', 'v2-scripts(28 seats)', 'a-1109', '', 'A 轴现行'],
@@ -104,28 +131,30 @@ wt('features.tsv', feats);
 wt('projections.tsv', projs);
 wt('readings/h5-frozen.tsv', h5);
 wt('readings/current.tsv', rd);
-wt('display.tsv', [pj.header]);  // 只放模板头；新点的 display 行由 add-point 追加
+wt('feasibility.tsv', feas);
+wt('display.tsv', [pj.header].concat(pj.rows));  // 旧 926 行的展示列也进 data/，页面不再依赖 coords-projcols
 wt('rulers.tsv', rulers);
 wt('batches.tsv', batches);
-const README = `# data/ · champion-map 数据模型 A（2026-11-11）
+const README = `# data/ · champion-map 统一数据模型（2026-11-11）
 
-> 只读约定：本目录由 pipeline/backfill.mjs / pipeline/build-view.mjs 生成或维护；不要手改 readings。
-> 换尺：在 rulers.tsv 加一行 + 追加 readings；把同轴旧尺标 reference；projections.tsv 不动。
+> 源头：registry/rulers/batches/readings/features/projections/display/feasibility。
+> 页面：build-view 编译 build/coords-view.tsv；viewer 不再读旧 coords-projcols/feas/panel/duel。
+> 换尺：在 rulers.tsv 加一行 + 追加 readings；同轴旧尺标 reference；projections.tsv 不动。
 
-| 文件 | 粒度 | 说明 |
-|---|---|---|
-| registry.tsv | 一行 = 一份权重 | id/path/ver/fam/fam_label/lineage/ts/sha256/status |
-| rulers.tsv | 一行 = 一把尺 | axis/status(current/reference/frozen)/fixture/batch/formula |
-| batches.tsv | 一行 = 一次考试批次 | batch_id/ruler/axis/fixture/champ/run/source/rows |
-| readings/current.tsv | 长表 | pack_id,ruler_id,cell,horizon,value,n,batch_id |
-| readings/h5-frozen.tsv | 宽表 | 旧 H5 参考；frozen，不更新 |
-| display.tsv | 一行 = 新点/覆盖的 display 行 | viewer 还需要的展示列（rank/F/x2/Sc/kin/ok 等）；只放新点，旧点仍用 coords-projcols 模板 |
-| features.tsv | 一行 = 一份权重 | 行为列（rounds/dmg/.../S/Geff） |
-| projections.tsv | 一行 = 一份权重 | xt/yt/xt3/yt3/zt3/xt18/yt18/xt20/yt20；换尺不动 |
-| build/exam-view.tsv | 视图 | 由 readings + rulers 编译；与 coords-gen3 逐值对照 |
-| build/report.json | 报告 | 行数/覆盖/对照 max diff/文件 sha |
+| 文件 | 说明 |
+|---|---|
+| registry.tsv | id/path/ver/fam/... |
+| rulers.tsv | 尺；current/reference/frozen |
+| batches.tsv | 考试批次 |
+| readings/current.tsv | 长表 A/B 读数 |
+| readings/h5-frozen.tsv | 旧 H5 参考，冻结 |
+| feasibility.tsv | ok/okLong/okShort |
+| display.tsv | 146 列展示表（旧 926 + 新点） |
+| features.tsv / projections.tsv | 行为 / 投影 |
+| fit.tsv | 页面 fit 说明 |
+| build/coords-view.tsv | 页面视图（gitignore） |
 
-换尺接口：node champion-map/pipeline/rulers.mjs --set-current=<ruler_id>
+新点：node champion-map/pipeline/measure-point.mjs --pack=... --id=... --ver=2.0 [--bake]
 `;
 writeFileSync(join(DATA, 'README.md'), README, 'utf8');
 const r = buildView({ data: DATA, compare: CO });

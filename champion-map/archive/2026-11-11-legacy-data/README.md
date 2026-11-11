@@ -1,0 +1,15 @@
+# 2026-11-11 legacy data 归档
+
+页面数据统一迁到 champion-map/data/ 后，以下旧文件只作历史/审计，不再被 viewer 读取。
+
+| 旧文件 | 新位置/状态 |
+|---|---|
+| coords-projcols.tsv | 拆成 data/display.tsv（展示列）+ data/projections.tsv；本副本冻结 |
+| feas-s1..s4.tsv | 合并进 data/feasibility.tsv（ok/okLong/okShort） |
+| panel.tsv | 合并进 data/feasibility.tsv 的旧 ok（覆盖不全） |
+| fit.tsv | 复制到 data/fit.tsv |
+| e370-epsfull.tsv | 一次性产物，仅审计 |
+| eps04-check.mjs / reproj-check.mjs | 一次性探针，仅审计 |
+| duel.tsv / duelscan.mjs | 已删除（用户 2026-11-11：对旧冠军 Ldemo 的决斗着色无用） |
+
+不要把这些文件再写回 champion-map 根；需要旧读数时从这里读。

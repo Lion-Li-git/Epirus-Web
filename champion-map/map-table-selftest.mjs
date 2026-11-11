@@ -29,9 +29,9 @@ const lt = readTable(legacy);
 ok(basename(legacy) === 'coords.tsv' && lt.rowsN === 825, '显式 --table=coords.tsv 读到 825 行（实际 ' + lt.rowsN + '）');
 
 /* 3. --fit 别名 */
-const fit = resolveTable(['--fit=coords-projcols.tsv'], { baseDir: HERE });
+const fit = resolveTable(['--fit=data/display.tsv'], { baseDir: HERE });
 const ft = readTable(fit);
-ok(basename(fit) === 'coords-projcols.tsv' && ft.header.length === 146, '--fit 别名读到 projcols 146 列（实际 ' + ft.header.length + '）');
+ok(basename(fit) === 'display.tsv' && ft.header.length === 146, '--fit 别名读到 data/display 146 列（实际 ' + ft.header.length + '）');
 
 /* 4. 缺表：报错并列出试过的路径，不许退回旧表 */
 throws(function () { resolveTable(['--table=__nope__.tsv'], { baseDir: HERE }); }, /找不到输入表/, '缺表必须抛错（不静默退回）');

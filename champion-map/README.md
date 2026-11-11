@@ -15,7 +15,7 @@
 | **攒 ep 的时机**（环/ジ 在什么局面用） | `archive/usage-buckets-2026-10-20.tsv`（归档；`behavior-profile --buckets=1` 再生） | 四格 = 能不能开环 × 这一回合挨没挨打；long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`（`FINDING-2026-10-20-ring-payoff-ds.md` §十） |
 | **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 时代的 per-experiment 尺表+考卷表，信息已并入 `coords.tsv`；`e328-*`/`e370-*`/`e287-ruler` 因仍是链上缺省参数留在顶层 |
 | **对打结果** | `duel*.tsv` | `duel-run.mjs` 产出 |
-| **谱系图上的坐标与各列** | `coords.tsv`（1.8 面板）‖ `coords-gen3-1105.tsv`（2.0 系 926，现役真源）‖ `coords-projcols.tsv`（烘焙 fit 表） | 宽表（H 系列读数**已改名 H5 参照系**：`H5/Hp5/De5/Hlong5/Hplong5/Flong5` = 旧 5P 单卷读数，新四格卷上线后整列退出）；**由链生成，别手改** |
+| **谱系图上的坐标与各列** | `coords.tsv`（1.8 遗留）‖ `coords-gen3-1105.tsv`（2.0 系 926，历史源）‖ `data/display.tsv`（统一展示表） | 页面由 `data/build/coords-view.tsv` 编译；旧 `coords-projcols.tsv` 已归档到 `archive/2026-11-11-legacy-data/` |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |
 | **这一行的 A/B/C 读数来自哪批** | `EXAM-BATCHES.tsv` + coords 的 `examA/examAL/examBs/examBl/examFix/examC` 六列 | 由 `attach-exam-stamp.mjs` 生成；`--check` 会拦 unknown / 旧夹具 / C 不符 |
@@ -63,7 +63,7 @@ node champion-map/attach-hlong.mjs --check    # 检查长程列在不在
 node champion-map/rebuild-map.mjs             # 页面唯一入口：戳 → build-view(data) → viewer → shot 98/0
 node champion-map/pipeline/measure-point.mjs --pack=<权重> --id=<id> --ver=2.0  # 新点四腿+feas+投影
 node champion-map/pipeline/validate.mjs --strict   # 数据模型门；--bake 会跑页检
-node champion-map/viewer.mjs                  # 仅当 coords-projcols.tsv 已是最新时才直接烘
+node champion-map/viewer.mjs                  # 仅当 data/build/coords-view.tsv 已是最新时才直接烘
 node tools/promote-champion.mjs <pack> --dry  # 单枚上槽体检（≈2.5 分钟）
 node tools/probe-pool.mjs --subject=<pack>    # 池尺对打（默认 support=2）
 node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 + 攒 ep 时机分桶
@@ -86,7 +86,7 @@ node tools/behavior-profile.mjs --champion=<pack> --buckets=1   # 行为画像 +
 
 - **归档**：`archive/`（103 份：已并入联合表的历史批次 e608~e825 对、一次性探针、退役分页图、旧考卷快照；`archive/README.md` 有逐组"信息现居地"对照表）。
 - **建造源归拢**：`build-1105/`（9 份 = `coords-gen3-1105.tsv` 的 night6-join 冻结输入；join 路径已同步，重放前先核头注）。
-- **留下的判据**：活脚本 + 活表全在顶层；`pool-seat-ml2-*`（ship 门读）、`holo.tsv`（promscan 读）、`panel.tsv`（viewer 读）、`oldpacks.tsv`（dedupe 门读）等真活件逐一核过引用才留。
+- **留下的判据**：活脚本 + 活表全在顶层；`pool-seat-ml2-*`（ship 门读）、`holo.tsv`（promscan 读）、`oldpacks.tsv`（dedupe 门读）等真活件逐一核过引用才留；`panel/feas-s*/duel/fit/coords-projcols` 已迁入 `data/` 或归档。
 - **H 系列改名（用户令）**：旧 5P 单卷读数整族改参照名 —— `H→H5 ‖ Hp→Hp5 ‖ De→De5 ‖ Hlong→Hlong5 ‖ Hplong→Hplong5 ‖ Flong→Flong5`，
   五张 coords 表 + viewer（字段/图例/tooltip/页检）+ attach-hp/hlong/sc + switch-gear/fold/dups/rebuild/repair + night6-join/r64-attach 全链同步；
   仪器 `eps-full` 的 `page/d` 输出 schema 不变（历史考卷表保持可比）。**H5 已退出页面主排序，只留参考**：旧 926 行冻结在 `data/readings/h5-frozen.tsv`，新点不再写 H5/F/rank。

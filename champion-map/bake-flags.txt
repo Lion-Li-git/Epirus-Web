@@ -1,1 +1,1 @@
---fit=coords-projcols.tsv --preset=all --projcols=1 --verpages=0
+--fit=data/build/coords-view.tsv --preset=all --projcols=1 --verpages=0

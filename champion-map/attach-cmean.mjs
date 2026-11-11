@@ -38,4 +38,4 @@ for (let r = 1; r < co.length; r++) {
 if (APPEND) co[0] = co[0].concat(NEWC);
 writeFileSync(IN, co.map((r) => r.join('\t')).join('\n') + '\n');
 console.log((APPEND ? '已追加 ' : '已原位覆盖 ') + NEWC.join('/') + ' ⇒ ' + IN + ' ‖ 填格 ' + filled + ' ‖ 单侧缺(留空) ' + oneSided);
-console.log('下一步：node champion-map/attach-projcols.mjs（重建投影列）⇒ 按 bake-flags 重烘 index.html');
+console.log('下一步：node champion-map/pipeline/build-view.mjs ⇒ node champion-map/rebuild-map.mjs（页面吃 data/build/coords-view.tsv）');

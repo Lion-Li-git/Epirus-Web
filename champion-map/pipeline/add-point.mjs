@@ -88,6 +88,15 @@ if (dispRow) {
   const frow = [ID].concat(['rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg', 'S', 'Geff'].map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
   wt('features.tsv', ft, ft.rows.concat([frow]));
 }
+/* 过线：新点从 display 的 okLong/okShort 建一行 feasibility（混合桌 ok 暂空；绿环读纯桌 ok）。 */
+if (dispRow) {
+  const ft = readTable(join(DATA, 'feasibility.tsv'));
+  const row = [ID, '', '', '', '', display.ix.okLong !== undefined ? dispRow[display.ix.okLong] : '',
+    display.ix.failsLong !== undefined ? dispRow[display.ix.failsLong] : '',
+    display.ix.okShort !== undefined ? dispRow[display.ix.okShort] : '',
+    display.ix.failsShort !== undefined ? dispRow[display.ix.failsShort] : '', 'add-point'];
+  wt('feasibility.tsv', ft, ft.rows.concat([row]));
+}
 if (PJ) {
   const pt = readTable(join(DATA, 'projections.tsv')), pj = readTable(PJ);
   if (pj.header.join('\t') !== pt.header.join('\t')) { console.error('⛔ projections 表头不一致'); process.exit(2); }

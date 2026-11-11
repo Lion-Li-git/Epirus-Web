@@ -1,6 +1,6 @@
-# pipeline/ · champion-map 数据模型 A
+# pipeline/ · champion-map 统一数据模型
 
-> 2026-11-11 起：**源头是 data/ 的长表**；build/ 是编译产物；页面暂时仍吃 coords-projcols.tsv，下一步才切到 build。
+> 2026-11-11 起：**源头是 data/ 的长表 + display**；build/ 是编译产物；页面已改吃 data/build/coords-view.tsv，旧 coords-projcols/feas/panel/duel 已退役。
 
 ## 数据文件
 
@@ -13,7 +13,9 @@
 | data/readings/h5-frozen.tsv | 旧 H5 参考 | 只读；流水线不写 |
 | data/features.tsv | 一份权重的行为 | rounds/dmg/.../S/Geff |
 | data/projections.tsv | 一份权重的投影 | xt/yt/xt3/yt3/zt3/xt18/...；换尺不动 |
-| data/display.tsv | 新点/覆盖的展示行 | 表头 = coords-projcols 146 列；--bake 时新点必给 |
+| data/display.tsv | 一份权重的展示行 | 146 列；旧 926 + 新点都在这里；--bake 时新点必给 |
+| data/feasibility.tsv | 一份权重的过线 | ok/okLong/okShort/fails；绿环读纯桌列 |
+| data/fit.tsv | 页面 fit 说明 | 从旧 fit 迁入 |
 
 ## 换尺接口
 

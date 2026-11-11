@@ -85,4 +85,4 @@ console.log('readings 按尺 ' + Object.entries(perRuler).map(([k, v]) => k + '=
 if (cmp) console.log('对照 coords-gen3：matched ' + cmp.matched + ' max ' + cmp.max_abs_diff + ' mismatch ' + cmp.mismatches);
 if (warns.length) console.log('⚠ ' + warns.join(' ‖ '));
 if (errs.length) { console.error('⛔ ' + errs.length + ' 条：\n  ' + errs.slice(0, 20).join('\n  ')); process.exit(2); }
-console.log('✅ data 模型 A 校验通过' + (STRICT ? '（strict）' : ''));
+console.log('✅ data 模型校验通过' + (STRICT ? '（strict）' : ''));
