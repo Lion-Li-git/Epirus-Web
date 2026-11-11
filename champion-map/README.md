@@ -26,6 +26,8 @@
 - `viewer.mjs` —— 页面源码（内含自检；`node champion-map/lint-viewer.mjs` 先绿再烘）。
 - `map-table.mjs` —— 输入表单一入口（阶段 1）：`resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp`；`map-table-selftest.mjs` 15 条。
 - `attach-exam-stamp.mjs` —— 给 coords 盖 `examA/examAL/examBs/examBl/examFix/examC` 六列；`--check` 只读，拦 unknown/旧夹具/C 不符。
+- `data/` + `pipeline/` —— 数据模型 A：长表 readings + rulers 换尺接口 + `build-view` 对照；详见 `pipeline/README.md`。
+- `rebuild-map.mjs` —— 页面唯一入口（戳 → projcols → viewer → shot 98/0）；`viewer` 默认已改吃 `coords-projcols.tsv`。
 - `rebuild-coords.mjs` —— **九步链**：把所有 `attach-*.mjs` 串起来重建 `coords.tsv`（漏一步就丢列，v1.7.97 那次的 `Hlong` 就是这么丢的）。
 
 ## 三、`attach-*.mjs`：每列一个脚本

@@ -156,3 +156,5 @@ champion-map/_*.json
 #   原先它写的是 `epsagg.tsv` —— 那张是**查看器在吃的活跃表**、由 `eps2seed.mjs`（120 局 · 剂量 tier:lv:regular）产出，
 #   跑一次旧尺就把活跃表连列带数覆掉（10-13 02:0x 实测覆了 122 行，靠 `git checkout` 复原）⇒ 落点各归各，产物不入库。
 champion-map/eps313-agg.tsv
+# 2026-11-11 数据模型 A：build/ 是编译产物（exam-view/report），源头是 data/*.tsv。
+champion-map/data/build/

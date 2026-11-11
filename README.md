@@ -102,6 +102,8 @@ Epirus-Web/
 │   ├─ index.html                  ★ 产物（自包含、双击即开；由 viewer.mjs 烘，不许手改）
 │   ├─ viewer.mjs                  ★ 烘页面那台：四个视图 + 页内自检
 │   ├─ rebuild-map.mjs              ★ 页面唯一入口：批次戳 → attach-projcols → viewer → shot 98/0
+│   ├─ data/                        ★ 数据模型 A：registry/rulers/batches/readings/features/projections
+│   ├─ pipeline/                    ★ backfill / build-view / validate / rulers（换尺接口）
 │   ├─ map-table.mjs               ★ 输入表单一入口（resolve/read/write/守卫；selftest 15 条）
 │   ├─ attach-exam-stamp.mjs        给 coords 盖 exam 批次戳（A/B/C 六列 + EXAM-BATCHES.tsv）
 │   ├─ shot.mjs                    无头复验（截图 / --dump 打逐条自检结果）
