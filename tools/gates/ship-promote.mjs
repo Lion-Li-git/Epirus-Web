@@ -8,7 +8,7 @@ import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 import { P2_FNAME, P2_NAMES } from '../p2-baselines.mjs';
 /* v1.8.11（D107 换行为腿）：G4 装配的单一来源，门自己真跑它（与 `probe-instruments.mjs` 里 D178 的接法同一先例）。 */
 import { duelAssembly } from '../v2v4-lib.mjs';
-import { OPP_DEFAULT } from '../../server/opp-pool.mjs';
+import { OPP_DEFAULT } from '../../training/server/opp-pool.mjs';
 /* 前导里的全部具名绑定原样接回（自由变量照原样解析 ⇒ 门体零改动）。 */
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
@@ -121,7 +121,7 @@ t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规�
 });
 
 t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）', function () {
-  const srv = readFileSync('server/train-server.mjs', 'utf8');
+  const srv = readFileSync('training/server/train-server.mjs', 'utf8');
   const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
   const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(srv.indexOf('audit.feasibilityOf(') >= 0, '训练落盘处必须调用 audit.feasibilityOf');
@@ -310,8 +310,8 @@ t('D78 第 6 道判据（输出密度 / 经济出口）：**没有"已知好"一
   ok(bots.indexOf('pickGunSpam,') >= 0, 'pickGunSpam 必须导出');
   ok(bots.indexOf('mpPickOne(state, fattest)') >= 0,
     '打最肥必须在最高血那一档里**随机**取（按 pid 取 = 座位身份通道，D50/D58 家族）');
-  ok(readFileSync('server/opp-pool.mjs', 'utf8').indexOf("name: 'gunspam'") >= 0, 'gunspam 必须在对手注册表里');
-  const T2 = readFileSync('server/opp-pool.mjs', 'utf8');
+  ok(readFileSync('training/server/opp-pool.mjs', 'utf8').indexOf("name: 'gunspam'") >= 0, 'gunspam 必须在对手注册表里');
+  const T2 = readFileSync('training/server/opp-pool.mjs', 'utf8');
   /* v2.0.6（11-10 · ZCode）：文本钉被 469dfdb1 静默打穿（specialist 插在 OPP_SPECS index 2/3、字符串没变、
    *   门一路绿而它要防的事恰好发生）。改成**名字集断言**（行为式）：默认 9 席必须逐字等于冻结名单 ——
    *   swordspam/piercemix 这类后加 specialist 只许追加尾部。 */
@@ -448,7 +448,7 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
   /* 病（DS 09-22 实测 · `docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §2）：切片原来拿多人池 `OPPS` 当 2P 对手，
    * 而现役包对池子脚本在 2P 里**0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是常数 ⇒ 加常数不改变排序
    * ⇒ 第一臂 `v7xn1-31.bak` 与热启动**逐字节相同**（空枪，白跑）。 */
-  const t3 = readFileSync('tools/train-3p.mjs', 'utf8');
+  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
   ok(t3.indexOf('T.scoreMemberN(params, XN2_OPPS') >= 0,
     '2P 切片必须用参照列表 XN2_OPPS（改成 OPPS 就退回"常数切片"= 空枪）');
   ok(t3.indexOf("EPIRUS_XN2REF || 'js/bundled-champion.js'") >= 0, '默认参照 = 现役 2P 冠军（不设环境变量也得有梯度）');
@@ -460,17 +460,17 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
   /* v1.5.150 追加：`exam` 关键词 = 直接用 2P 考卷那 20 个基准当切片对手（与产品判据同表）。
    * 为什么钉：臂 3 的教训是"混入弱对手 ⇒ 信号被平均稀释 ⇒ 退回常数切片"；而考卷基准**全部可打**
    * （现役 2P 冠军对它们 99%）⇒ "对着验收标准训"是唯一能让目标与验收一致的路径，这条接线不许悄悄断。 */
-  ok(t3.indexOf("from './p2-baselines.mjs'") >= 0 && t3.indexOf("rp === 'exam'") >= 0,
+  ok(t3.indexOf("from '../tools/p2-baselines.mjs'") >= 0 && t3.indexOf("rp === 'exam'") >= 0,
     'exam 模式必须接**单一来源** p2-baselines（自己抄一份基准表 = 本仓栽过三次的老坑）');
   ok(t3.indexOf('exam:') >= 0 && t3.indexOf('p2-baselines 与 bots.js 漂移') >= 0,
     'exam 模式的基准函数缺失必须响（不许静默少几个对手 ⇒ 验收口径偷偷变窄）');
   /* 行为一：坏参照 ⇒ 训练前就 exit 2（无副作用、不写任何产物）。 */
-  const bad = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+  const bad = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
     { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2REF: 'no/such/pack.bak' }), encoding: 'utf8', timeout: 120000 });
   ok(bad.status === 2, '坏参照必须 exit 2（实测 exit=' + bad.status + '）');
   /* 行为二：迷你臂（1 代 · N=3 · pop 2 · 2P 局 2）写进**临时目录** ⇒ 断言候选落盘 + meta 自证口径。 */
   const dir = mkdtempSync(join(tmpdir(), 'xn2band-'));
-  const run = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+  const run = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
     /* §E654：这条迷你臂原先只给 `EPIRUS_BAND_DIR`、没给落点 ⇒ 写的是 D123 的基线文件；
      *   而 10-19 它连基线都写不成了——§E589 守卫发现同一粒权重已在 `docs/artifacts/train-3p-out-band1.bak`（手跑残留）⇒ exit 9 ⇒ 本腿"必须跑通"必红。
      *   补上落点两件事一起解决：不再碰共享基线，也不再撞那条残留真身。 */
@@ -484,7 +484,7 @@ t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（�
    * 把带内候选全丢了，而门一直是绿的 —— 这是"用例把前提喂饱"的典型盲区（METHODOLOGY 63 同族）。 */
   const bandRoot = mkdtempSync(join(tmpdir(), 'xn2band2-'));
   const dir2 = join(bandRoot, 'deep', 'nested');
-  const run2 = spawnSync(process.execPath, ['tools/train-3p.mjs', '1', '3', '2', '2'],
+  const run2 = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
     { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-nodir', EPIRUS_T3P_OUT: join(bandRoot, 'out.js') }), encoding: 'utf8', timeout: 300000 });
   eq(run2.status, 0, 'BAND_DIR 不存在时迷你臂仍须跑通（exit=' + run2.status + ' ' + String(run2.stderr || '').slice(0, 80) + '）');
   const bands2 = existsSync(dir2) ? readdirSync(dir2).filter(function (f) { return /-band\d+\.bak$/.test(f); }) : [];

@@ -31,11 +31,11 @@
  * 只读 `js/**`，不改引擎、不加门、不动冠军槽。
  */
 import { writeFileSync } from 'node:fs';
-import { encode as obs2Encode, MANIFEST as OBS2_MANIFEST, dims as obs2Dims } from './proto2/obs2.mjs';
-import { encode as obs3Encode } from './proto2/obs3.mjs';
+import { encode as obs2Encode, MANIFEST as OBS2_MANIFEST, dims as obs2Dims } from '../training/proto2/obs2.mjs';
+import { encode as obs3Encode } from '../training/proto2/obs3.mjs';
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 
 const argv = process.argv.slice(2);

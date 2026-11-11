@@ -21,7 +21,7 @@
  */
 import { sandbox, mulberry32, loadChamp, rejectUnknownFlags } from './audit-lib.mjs';
 import { poolFromSpecs } from './regime-panel.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 import { loadCardTable, breadth, defShare } from './log-reading.mjs';
 

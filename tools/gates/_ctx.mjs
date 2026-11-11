@@ -12,7 +12,7 @@ import { spawnSync as _spawnSync } from 'node:child_process';
  *   第一版就是那么写的，结果**泄漏给同一次跑里的 `train-best` / `train-fast` 腿** ⇒ 那些入口的黑键闸当场 `exit 6`
  *   ⇒ D124/D125 红（认证 40 实测：np 270/272）。**那个红是对的** —— "传了没人读"正是这些闸要拦的事，
  *   所以钉值必须只落在真读它的入口上，而不是整棵环境里。 */
-const T3P_ENTRY = 'tools/train-3p.mjs';
+const T3P_ENTRY = 'training/train-3p.mjs';
 /* v1.7.123（千问 §E674 / DS 交班 §五 那条）：`[WRITE-DEFAULT]` 行**透传到 stdout**。
  *   门的 stdout 默认被 `np-test` 吞掉 ⇒ 开了 `EPIRUS_LOG_DEFAULT_OUT` 也捞不到 —— 点名器等于白装。
  *   只在**开了那个 env** 时才加班（默认零开销、零输出）。 */
@@ -69,9 +69,9 @@ import { spawnBatch, batchCap } from '../np-parallel.mjs';   // v1.7.117：`batc
 /* v1.5.288（D193）：多包路由收益的**算式单一来源** —— 门直接喂合成表覆盖六个分支与两类拒绝，
  * 不靠探针的输出措辞、也不依赖本机产物（同 D149/D161/D164 的路子）；环境名从 opp-pool 现取，不写死。 */
 import * as RGAIN from '../routing-gain-lib.mjs';
-import { OPP_SPECS } from '../../server/opp-pool.mjs';
+import { OPP_SPECS } from '../../training/server/opp-pool.mjs';
 /* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
-import { ECON_REWARD_KEYS, readEconEnv } from '../../server/econ-env.mjs';
+import { ECON_REWARD_KEYS, readEconEnv } from '../../training/server/econ-env.mjs';
 /* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
 import { conc, fieldProfile, tallyPick, WIN } from '../behavior-profile.mjs';
 /* D209 用（§E168）：人类形状对手池的单一来源（两台仪器共用它 ⇒ 门来钉"不许再抄第二份"）。 */
@@ -79,22 +79,22 @@ import { loadPool, selfTest } from '../human-pool.mjs';
 import vm from 'node:vm';
 /* v1.5.2：冠军对手（`champ:<路径>`）机制的单一来源 —— 本用例直接调它做**功能**验证，
  * 而不是只 grep 源码（用仓库里在库的 js/bundled-champion-3p.js，不依赖本机 .bak）。 */
-import { isChampOpp, loadChampParams, makeChampOppResolver } from '../../server/opp-champs.mjs';   /* §E566 加 makeChampOppResolver：D12 要行为式验"解析出来的 chooser 就是页面那条推理路径" */
-import { makeShapeScorer } from '../../server/shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
+import { isChampOpp, loadChampParams, makeChampOppResolver } from '../../training/server/opp-champs.mjs';   /* §E566 加 makeChampOppResolver：D12 要行为式验"解析出来的 chooser 就是页面那条推理路径" */
+import { makeShapeScorer } from '../../training/server/shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
 /* v1.5.7：规则指纹守门（D16）—— 把"产物 ↔ 规则版本"绑成机械检查 */
 import { rulesFingerprint, fingerprintOfBundle } from '../rules-fingerprint.mjs';
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
 import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE,
   SEL_BASE0, SEL_STRIDE, SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns, selNote, selGapNote } from '../pick-best.mjs';
-import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../../server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
+import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../../training/server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from '../v2v4-lib.mjs';
 /* v1.5.194：击杀奖励规则的单一来源实现（D140 直接喂合成局面验语义）*/
 import * as KR_LIB from '../kill-reward-lib.mjs';
 /* v1.5.200：黑键闸与墙上时钟上限的**单一来源** —— D143/D144 直接喂合成 env / 合成 cap 验口径，
  * 而不是只 grep 源码（本仓「钉文本」的门已经太多，见 D122 的教训）。 */
-import { detectDarkKnobs, readKeysOf } from '../../server/knob-guard.mjs';
-import { wallCapExceeded, wallCapOf } from '../../server/wall-cap.mjs';
+import { detectDarkKnobs, readKeysOf } from '../../training/server/knob-guard.mjs';
+import { wallCapExceeded, wallCapOf } from '../../training/server/wall-cap.mjs';
 
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date };
 sb.window = sb; sb.globalThis = sb;

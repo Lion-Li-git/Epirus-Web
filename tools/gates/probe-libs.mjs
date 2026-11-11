@@ -36,7 +36,7 @@ export const ords = [4454, 7473, 10069, 10201];
 export function register(t) {
 t('D64 狙击场探针：归因纯函数 + 混合场的靶向判据（复核 §4-2）', function () {
   ok(typeof Bots.pickSnipeSpam === 'function', 'Bots.pickSnipeSpam 必须存在（狙击场探针的威胁源）');
-  const poolSrc = readFileSync('server/opp-pool.mjs', 'utf8');
+  const poolSrc = readFileSync('training/server/opp-pool.mjs', 'utf8');
   ok(/\{\s*name:\s*'snipespam'/.test(poolSrc) && poolSrc.indexOf("fn: 'pickSnipeSpam'") >= 0,
     'snipespam 必须登记进 OPP_SPECS（单一来源，实验臂按需加入；默认池不受影响）');
   const lib = readFileSync('tools/audit-lib.mjs', 'utf8');

@@ -1,0 +1,5 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+G5C-100	0	2	场A 还手 14.4% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕；场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	5.7	6.17	22	0.144	0	ok	7	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+G5I-50	0	1	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	6.05	5.66	20.4	0.254	0	ok	10.3	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+G5G-50	1	0		4.5	4.75	3.05	0.22	1.76	ok	15.9	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)
+G5J-50	0	2	场A 还手 16.7% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕；场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	4.53	4.72	22.05	0.167	0	ok	6.8	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

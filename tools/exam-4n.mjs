@@ -13,8 +13,12 @@
  *   · 冠军座位 = 局序号 % N（轮转），对手槽位相对座位再旋转（eval-5p 656 行的"座位率 × 脚本强度"解耦教训）。
  * 桌形 = 引擎默认 multi（3 血短程）；四格卷考的是**人数轴**，桌形固定才可跨包比较。
  *
- * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2]
- * --expool=v2（缺省）= 现在的 28 席；`v1` = 11-09 `469dfdb1` 换席前那张卷 ⇒ **历史 X̄₄ 可复算**。
+ * 用法: node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyn=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2|v3] [--plan=v3]
+ *   ⚠ 旗标名**只认小写**（`rejectUnknownFlags` 的名单是全小写，而 :40 的解析把大写原名存进 `FLAG`）⇒ 写 `--onlyN` 会被当场拒（不是静默忽略，但文档原来的写法确实骗过一次）。
+ * --expool=v2（缺省）= 现行 28 席；`v1` = 11-09 `469dfdb1` 换席前那张卷 ⇒ **历史 X̄₄ 可复算**；
+ *   `v3` = v2 的 28 席 + 第 29 席 `cautious`（ econ 轴），配 `--plan=v3` 才是"每局按 attack/pierce/defense/econ 各抽一席"的分层桌形
+ *   ⇒ 单给 `--expool=v3` 而 `--plan` 仍是缺省时，多出的那席只是按老规则被抽到，**不是**那张分层卷（两件事要一起给）。
+ *   读数行上的 `pool=<版本>#<sha8>` 戳只钉"坐的是哪 28/29 个脚本"，抽席规则另由 `plan` 说明 ⇒ 三者任换其一都换尺。
  *   为什么必须有：换席动的是默认表、没有旗标也没有戳，而 `POOL-CONTRACT §1` 明写"EXAM_POOL 一个不动"
  *   ⇒ 那之后同一条命令算出来的 X̄₄ 与图上 900+ 枚历史读数不是同一把尺，收据上却一模一样。
  * --dose=exam（缺省）：主体席 ε=0 贪心 —— 与旧卷的 exam 臂、与 `exam4-all-*.tsv` 那两批同口径（H 侧）。
@@ -25,9 +29,9 @@
  */
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { OPP_SPECS, examPool } from '../server/opp-pool.mjs';
+import { OPP_SPECS, examPool } from '../training/server/opp-pool.mjs';
 import { createHash } from 'node:crypto';
-import { planN } from './exam-pool.mjs';
+import { planN, planN3 } from './exam-pool.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
@@ -37,7 +41,7 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool', 'plan'], 'exam-4n');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -66,7 +70,17 @@ if (!CHAMP_IDS.length && /^(B|BOTH)$/i.test(String(FLAG.exam || ''))) CHAMP_IDS.
 /* 11-09 用户裁（方案 1，混合夹具）：B 轴 = **2.0 主力两枚 + 1 枚反墙锚**。
  *   为什么必须留 Q-s47：实测 2.0 池里没有任何包压得住反射墙（G5C 在 2.0 冠军桌上 2P 0.935 / 3P 0.502），
  *   只有 v7 的 Q-s47 能把 G5C 压到 3P 17%。⇒ Q-s47 是**临时锚**，等 2.0 造出反墙强包就替换（在册理由见 RESULTS §十三.18）。 */
-const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js' };
+/* 11-11 夜（用户令"找代表重测 B 轴"）：夹具登记表补 2.0 现役强包——旧夹具三锚是 11-09 的天花板，
+ *   obs5 时代的新冠军不在里面 ⇒ 图上 PB 靠"打旧天王"刷分。新夹具用 --champ= 显式点名（在册 id 才能用）。 */
+const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'docs/artifacts/e528-out/T8-s114.js', 'KDG-B-Q-s13': 'docs/artifacts/night-adapt/KDG-B-Q-s13.js', 'FOCUS-Q-s13': 'docs/artifacts/night-adapt/FOCUS-Q-s13.js', 'WSEL9-200': 'docs/artifacts/night-adapt/WSEL9-200.js',
+  'MSB2-R1S1494663071': 'docs/artifacts/night-adapt/MSB2-R1S1494663071.js', 'MSB2-R2S103437527': 'docs/artifacts/night-adapt/MSB2-R2S103437527.js',
+  'OBS5-F-s13': 'docs/artifacts/night-adapt/OBS5-F-s13.js', 'OBS5-F-s41': 'docs/artifacts/night-adapt/OBS5-F-s41.js',
+  /* 11-11 深夜：C 尺换代链的新冠军入册（MSB6-R2S501866988 C 0.1049 / MSB8-charge C 0.1383 / 前任 S916R2B 0.0668） */
+  'S916R2B-R1S685223462': 'docs/artifacts/night-adapt/S916R2B-R1S685223462.js',
+  'MSB6-R2S501866988': 'docs/artifacts/night-adapt/MSB6-R2S501866988.js', 'MSB8-charge-R1S1861674281': 'docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js',
+  'MSB10-R1S1149480262': 'docs/artifacts/night-adapt/MSB10-R1S1149480262.js', 'MSB8-bagua-R1S88974978': 'docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js',
+  'MSB11-R2S306293884': 'docs/artifacts/night-adapt/MSB11-R2S306293884.js', 'MSB9-R2S1112532101': 'docs/artifacts/night-adapt/MSB9-R2S1112532101.js',
+  'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 
@@ -123,7 +137,7 @@ const SUBJ = subjectSel();
 function evalAxis(champN) {
 const out = {};
 for (const n of NS) {
-  const plan = planN(n, R, SEED, POOL);
+  const plan = (FLAG.plan === 'v3') ? planN3(n, R, SEED, POOL) : planN(n, R, SEED, POOL);
   let first = 0;
   const seatFirst = new Array(n).fill(0), seatGames = new Array(n).fill(0);
   for (let j = 0; j < plan.length; j++) {
@@ -160,7 +174,10 @@ function emit(prefix, o) {
   const fmt = (k) => NS.map((n) => k + n + '=' + o[n][k === 'h' ? 'h' : 'x']).join(' ');
   const fmtN = () => NS.map((n) => 'n' + n + '=' + o[n].G).join(' ');
   console.log(prefix + ' ' + fmt('h') + ' ' + fmt('x') + ' ' + fmtN() + ' sec=' + ((Date.now() - t0) / 1000).toFixed(1) + (MODE ? ' mode=' + MODE : '') + ' dose=' + DOSE + (DOSE === 'page' ? ':' + EPS_TIER_ID : '') +
-    ' pool=' + POOL_STAMP + ' K=' + POOL.length);   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
+    ' pool=' + POOL_STAMP + ' K=' + POOL.length +
+    /* 11-10（千问）：同一张池可以配两种抽席规则、也可以配带不带冠军席 ⇒ **只钉池的那枚戳不足以判"是不是同一把尺"**
+     *   （v3 分层卷与 v2 老规则同池 ⇒ 戳逐字相同）。把会换尺的另两维一并印出来，批量器与表都能按它筛。 */
+    ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }
 if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));

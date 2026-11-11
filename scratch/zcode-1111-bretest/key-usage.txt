@@ -1,0 +1,309 @@
+### EPIRUS_AGGR_GAMES
+### EPIRUS_ALIAS_TSV
+### EPIRUS_ALLOW_DARK
+  tools/train-3p.mjs:99: *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
+  tools/train-3p.mjs:126: * ⚑ 为什么这个键**不能**登记进本数组，只能显式 `EPIRUS_ALLOW_DARK=1` 放行（机制已查清，不是猜）：
+  tools/train-3p.mjs:137: *   ⇒ 用 `EPIRUS_ALLOW_DARK=1` 的臂必须自己补回证据：看到通用 econ 下达那行的**逐键回执一致 ✓** 与剂量行 `挡=` 列，才算这根杠杆进了这臂。
+  tools/train-3p.mjs:256: * `EPIRUS_ALLOW_DARK=1` 仍放行；`REMOVED_TRAIN_KEYS`（已删除的键）仍响亮拒绝。 */
+  tools/train-best.mjs:28: * 现在传了本仓**别的入口真读**、而本入口读不到的键 ⇒ 响亮 exit 6，`EPIRUS_ALLOW_DARK=1` 放行。 */
+### EPIRUS_ALLOW_HEALTH_FAIL
+  server/train-server.mjs:694: const HEALTH_BYPASS = process.env.EPIRUS_ALLOW_HEALTH_FAIL === '1';
+  server/train-server.mjs:756: console.log('[health] !! EPIRUS_ALLOW_HEALTH_FAIL=1（实验臂）：本次体检未过仍落盘（出厂门槛不受影响）：'
+### EPIRUS_BUNDLE_IN
+  tools/train-best.mjs:89: * ⚠️ **原话此处写"3P 侧早就是热启动（`EPIRUS_BUNDLE_IN` = 最新冠军，HANDOFF §2.2）"—— 那句已被证伪**
+  tools/train-best.mjs:90: * （`qoder-research-0920` §5，2026-09-20；DS 复核）：`tools/ring2-run.mjs:95` **无条件覆写** `EPIRUS_BUNDLE_IN`，
+  server/train-server.mjs:391: /* v1.5.48：隔离模式下从 EPIRUS_BUNDLE_IN 读热启动（训练不再碰线上包）。 */
+  server/train-server.mjs:392: const src = readFileSync(resolve(root, process.env.EPIRUS_BUNDLE_IN || BUNDLE_MP), 'utf8');
+### EPIRUS_BUNDLE_OUT
+  server/train-server.mjs:112: if (process.env.EPIRUS_BUNDLE_OUT) return;
+  server/train-server.mjs:400: /* v1.5.48：**训练产物绝不写线上包** —— 写 EPIRUS_BUNDLE_OUT（线上包只由 tools/promote-champion.mjs 写）。
+  server/train-server.mjs:402: const OUTP = process.env.EPIRUS_BUNDLE_OUT ? resolve(root, process.env.EPIRUS_BUNDLE_OUT) : join(root, BUNDLE_MP);
+  server/train-server.mjs:403: console.log('[bundle] wrote ' + OUTP + (process.env.EPIRUS_BUNDLE_OUT ? '  (隔离模式：未触碰线上包)' : '  (线上路径)'));
+### EPIRUS_CHARGE_GAMES
+### EPIRUS_CHARGE_MIN_EP
+  server/train-worker.mjs:237: /* v1.5.143（千问 0921 晚）：**蓄能门槛**（`EPIRUS_CHARGE_MIN_EP`，缺省 = 2 = v1.5.82 原裁定）。
+  server/paralleltrain.mjs:146: chargeMinEp: process.env.EPIRUS_CHARGE_MIN_EP || null,
+### EPIRUS_COURSE_PACK
+  tools/train-3p.mjs:2185: /* ===== 11-10（DS）：课程席换成**一枚真实冠军包**（EPIRUS_COURSE_PACK=<path>）=====
+  tools/train-3p.mjs:2190: if (process.env.EPIRUS_COURSE_PACK != null && process.env.EPIRUS_COURSE_PACK !== '') {
+  tools/train-3p.mjs:2191: const pp2 = String(process.env.EPIRUS_COURSE_PACK).trim();
+  tools/train-3p.mjs:2192: if (typeof T.setCoursePack !== 'function') { console.error('⛔ EPIRUS_COURSE_PACK 下达了，但引擎没有 setCoursePack ⇒ 黑键，拒跑'); process.exit(6); }
+  tools/train-3p.mjs:2203: } catch (e) { console.error('⛔ EPIRUS_COURSE_PACK 读不出：' + pp2 + ' ⇒ ' + e.message); process.exit(8); }
+  tools/train-3p.mjs:2204: if (!paramsC) { console.error('⛔ EPIRUS_COURSE_PACK 包不兼容（unpack 返回 null）：' + pp2); process.exit(8); }
+  tools/train-3p.mjs:2206: if (typeof T.coursePackOn === 'function' && !T.coursePackOn()) { console.error('⛔ EPIRUS_COURSE_PACK 没生效 ⇒ 拒静默空转'); process.exit(7); }
+  tools/train-3p.mjs:2207: console.log('[部署档] EPIRUS_COURSE_PACK ⇒ ' + pp2 + ' 作为课程席（覆盖 COURSE_BOT），参数量 ' + paramsC.length);
+  tools/train-3p.mjs:2208: DEPLOY_REC.EPIRUS_COURSE_PACK = { path: pp2, n: paramsC.length };
+### EPIRUS_CURSE_PUSH
+  tools/train-3p.mjs:864: ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn'],
+### EPIRUS_DENSITY_GAMES
+### EPIRUS_FEASIBILITY
+  server/train-server.mjs:715: if (finalParams && process.env.EPIRUS_FEASIBILITY !== '0') {
+  server/train-server.mjs:768: /* ===== v1.5.86：落盘处也允许**阻断**（默认关；EPIRUS_FEASIBILITY_BLOCK=1 打开）=====
+  server/train-server.mjs:773: if (process.env.EPIRUS_FEASIBILITY_BLOCK === '1' && feasibleInfo && feasibleInfo.ok === false) {
+### EPIRUS_FEASIBILITY_BLOCK
+  server/train-server.mjs:768: /* ===== v1.5.86：落盘处也允许**阻断**（默认关；EPIRUS_FEASIBILITY_BLOCK=1 打开）=====
+  server/train-server.mjs:773: if (process.env.EPIRUS_FEASIBILITY_BLOCK === '1' && feasibleInfo && feasibleInfo.ok === false) {
+### EPIRUS_FEAS_GAMES
+### EPIRUS_FEAT_MASK
+  server/train-worker.mjs:57: if (process.env.EPIRUS_FEAT_MASK && sb.EpirusPolicy && sb.EpirusPolicy.setFeatMask) {
+  server/train-worker.mjs:58: console.log('[featmask] ' + JSON.stringify(sb.EpirusPolicy.setFeatMask(process.env.EPIRUS_FEAT_MASK)) +
+  server/train-worker.mjs:59: '  env=' + process.env.EPIRUS_FEAT_MASK);
+### EPIRUS_FIT_CHAMP
+  tools/train-3p.mjs:2211: /* ===== 11-10（DS）：**fitness 掺冠军桌**（EPIRUS_FIT_CHAMP=<包> [EPIRUS_FIT_CHAMP_EVERY=<k>]）=====
+  tools/train-3p.mjs:2215: if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '') {
+  tools/train-3p.mjs:2216: const pf = String(process.env.EPIRUS_FIT_CHAMP).trim();
+  tools/train-3p.mjs:2217: const every = Math.max(1, Math.floor(Number(process.env.EPIRUS_FIT_CHAMP_EVERY || 4) || 4));
+  tools/train-3p.mjs:2218: if (typeof T.setFitChamp !== 'function') { console.error('⛔ EPIRUS_FIT_CHAMP 下达了，但引擎没有 setFitChamp ⇒ 黑键，拒跑'); process.exit(6); }
+  tools/train-3p.mjs:2231: } catch (e) { console.error('⛔ EPIRUS_FIT_CHAMP 读不出：' + pf + ' ⇒ ' + e.message); process.exit(8); }
+  tools/train-3p.mjs:2232: if (!paramsF) { console.error('⛔ EPIRUS_FIT_CHAMP 包不兼容（同架构才行）：' + pf); process.exit(8); }
+  tools/train-3p.mjs:2234: if (!st || !st.on) { console.error('⛔ EPIRUS_FIT_CHAMP 没生效 ⇒ 拒静默空转'); process.exit(7); }
+  tools/train-3p.mjs:2235: console.log('[部署档] EPIRUS_FIT_CHAMP ⇒ ' + pf + '（每 ' + st.every + ' 局一席；参数量 ' + paramsF.length + '）');
+  tools/train-3p.mjs:2236: DEPLOY_REC.EPIRUS_FIT_CHAMP = { path: pf, every: st.every, n: paramsF.length };
+  tools/train-3p.mjs:3638: if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '') {
+  tools/train-3p.mjs:3640: console.log('[fitChamp] 开火计数：冠军席上桌 ' + fst.fired + ' 局 · 按人数 ' + JSON.stringify(fst.byN || {}) + '（fitChampEvery=' + (process.env.EPIRUS_FIT_CHAMP_EVE
+  tools/train-3p.mjs:3642: console.error('[train-3p] ⛔ 下达了 EPIRUS_FIT_CHAMP 却**一局未上桌** ⇒ 本臂作废');
+### EPIRUS_FIT_CHAMP_EVERY
+  tools/train-3p.mjs:2211: /* ===== 11-10（DS）：**fitness 掺冠军桌**（EPIRUS_FIT_CHAMP=<包> [EPIRUS_FIT_CHAMP_EVERY=<k>]）=====
+  tools/train-3p.mjs:2217: const every = Math.max(1, Math.floor(Number(process.env.EPIRUS_FIT_CHAMP_EVERY || 4) || 4));
+  tools/train-3p.mjs:3640: console.log('[fitChamp] 开火计数：冠军席上桌 ' + fst.fired + ' 局 · 按人数 ' + JSON.stringify(fst.byN || {}) + '（fitChampEvery=' + (process.env.EPIRUS_FIT_CHAMP_EVE
+### EPIRUS_IMIT_FRAC
+  tools/train-3p.mjs:1306: /* ===== v1.5.179b（DS）：示范族的**退火窗口** `EPIRUS_IMIT_FRAC` =====
+  tools/train-3p.mjs:1312: const rawFrac = process.env.EPIRUS_IMIT_FRAC;
+  tools/train-3p.mjs:1317: console.error('[train-3p] ⛔ EPIRUS_IMIT_FRAC=' + rawFrac + ' 非法（要 > 0）'); process.exit(7);
+  tools/train-3p.mjs:1320: console.error('[train-3p] ⛔ 传了 EPIRUS_IMIT_FRAC 但引擎没有 setImitUntil/imitBetaForGen ⇒ 拒绝静默空转');
+  tools/train-3p.mjs:1329: console.log('[train-3p] 示范窗口已下达：EPIRUS_IMIT_FRAC=' + frac + ' ⇒ imitUntil=' + imitGens +
+  tools/train-3p.mjs:1340: '\n       补上退火窗口再跑：EPIRUS_IMIT_FRAC=0.5（前 50% 代注入示范，之后退火到纯自策略）');
+  server/train-server.mjs:186: const imitGens = Math.floor((gens || 0) * Number(process.env.EPIRUS_IMIT_FRAC || '0'));
+  server/train-server.mjs:230: console.log('[imit] 主线程生效值 gens=' + imitGens + ' frac=' + String(process.env.EPIRUS_IMIT_FRAC || 0) +
+### EPIRUS_IMIT_GENS
+  server/train-server.mjs:187: process.env.EPIRUS_IMIT_GENS = String(imitGens);   // 给 worker 的**消息**读（paralleltrain 在消息里读它）
+  server/train-worker.mjs:73: if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
+  server/train-worker.mjs:82: ' accepted=' + String(acc) + ' gens(env)=' + String(process.env.EPIRUS_IMIT_GENS || 0) +
+  server/train-worker.mjs:191: * 病：`EPIRUS_IMIT_GENS` 走 env —— 而 worker 的 `process.env` 是**创建时的拷贝**，
+  server/paralleltrain.mjs:127: * `worker_threads` 的 `process.env` 是**创建时的拷贝**，而 `EPIRUS_IMIT_GENS` 是服务端在
+  server/paralleltrain.mjs:132: imitGens: Number(process.env.EPIRUS_IMIT_GENS || 0),
+### EPIRUS_IMIT_ONLY
+  tools/train-3p.mjs:1200: ['EPIRUS_IMIT_ONLY', 'setImitOnly', 0],
+  tools/train-3p.mjs:1279: if (process.env.EPIRUS_IMIT_ONLY || process.env.EPIRUS_IMIT_OVERRIDE === '1') {
+  server/train-server.mjs:227: if (T.setImitOnly) onlyK = T.setImitOnly(process.env.EPIRUS_IMIT_ONLY || null);
+  server/paralleltrain.mjs:136: imitOnly: process.env.EPIRUS_IMIT_ONLY || null,
+### EPIRUS_IMIT_OVERRIDE
+  tools/train-3p.mjs:1199: ['EPIRUS_IMIT_OVERRIDE', 'setImitOverride', 1],
+  tools/train-3p.mjs:1279: if (process.env.EPIRUS_IMIT_ONLY || process.env.EPIRUS_IMIT_OVERRIDE === '1') {
+  tools/train-3p.mjs:1335: *   实测踩过：`EPIRUS_IMIT_OVERRIDE=1 + IMIT_ONLY=snipe + TEACHER=pickSnipeSpam` 三行横幅都"读回 true"，
+  server/train-server.mjs:203: const ovr = T.setImitOverride ? T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1') : null;
+  server/train-worker.mjs:75: * 并支持**真示范**覆盖（`EPIRUS_IMIT_OVERRIDE=1`）。回执照 `[econ]` 的先例 —— worker 自己打出生效值，
+  server/train-worker.mjs:80: if (T.setImitOverride) ovr = T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
+  server/train-worker.mjs:205: ' override=' + String(process.env.EPIRUS_IMIT_OVERRIDE === '1'));
+### EPIRUS_IMIT_PLAN
+  server/train-server.mjs:221: if (T.setImitPlanByName && process.env.EPIRUS_IMIT_PLAN) {
+  server/train-server.mjs:222: planN = T.setImitPlanByName(process.env.EPIRUS_IMIT_PLAN, imitGens) || 0;
+  server/train-server.mjs:232: ' override=' + String(ovr) + ' plan=' + (process.env.EPIRUS_IMIT_PLAN || '(无)') + ' 段数=' + planN +
+  server/paralleltrain.mjs:135: imitPlan: process.env.EPIRUS_IMIT_PLAN || null,
+### EPIRUS_IMIT_SUBONLY
+  tools/train-3p.mjs:1202: ['EPIRUS_IMIT_SUBONLY', 'setImitSubOnly', 1]
+### EPIRUS_IMIT_SUB_ONLY
+  server/train-server.mjs:229: const subOnly = T.setImitSubOnly ? T.setImitSubOnly(process.env.EPIRUS_IMIT_SUB_ONLY === '1') : null;
+  server/paralleltrain.mjs:137: imitSubOnly: process.env.EPIRUS_IMIT_SUB_ONLY || null,
+### EPIRUS_IMIT_TEACHER
+  tools/train-3p.mjs:1201: ['EPIRUS_IMIT_TEACHER', 'setImitTeacherByName', 0],
+  server/train-server.mjs:189: if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) {
+  server/train-server.mjs:190: acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+  server/train-server.mjs:196: throw new Error('[imit] 教师名字解析失败：EPIRUS_IMIT_TEACHER=' + process.env.EPIRUS_IMIT_TEACHER +
+  server/train-server.mjs:200: } else if (process.env.EPIRUS_IMIT_TEACHER === 'antiring' && T.setAntiRingTeacher) {
+  server/train-server.mjs:231: ' teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') + ' accepted=' + String(acc) +
+  server/train-worker.mjs:79: if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+  server/train-worker.mjs:81: console.log('[imit] worker 启动值 teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') +
+### EPIRUS_INIT_ACT_K
+### EPIRUS_LASER_W
+  tools/train-3p.mjs:958: if (process.env.EPIRUS_LASER_W && typeof T.setLaserReward === 'function') {
+  tools/train-3p.mjs:959: const got = T.setLaserReward(Number(process.env.EPIRUS_LASER_W));
+  tools/train-3p.mjs:960: if (!(got >= 0) || Math.abs(got - Number(process.env.EPIRUS_LASER_W)) > 1e-9) {
+  tools/train-3p.mjs:961: console.error('[train-3p] ⛔ EPIRUS_LASER_W 下达后回执不一致：' + got); process.exit(7);
+  server/train-server.mjs:247: if (process.env.EPIRUS_LASER_W && T.setLaserReward) {
+  server/train-server.mjs:248: console.log('[laser] 激光眼命中奖励权重 = ' + T.setLaserReward(Number(process.env.EPIRUS_LASER_W)) + '（v1.8.23 爆珠臂）');
+  server/train-worker.mjs:90: if (T.setLaserReward && process.env.EPIRUS_LASER_W) {
+  server/train-worker.mjs:91: console.log('[laser] 激光眼命中奖励权重 = ' + T.setLaserReward(Number(process.env.EPIRUS_LASER_W)));
+### EPIRUS_LOG_DEFAULT_OUT
+  tools/train-3p.mjs:63: /* v1.7.114（10-19，DS）：**点名谁在写默认落点**（`EPIRUS_LOG_DEFAULT_OUT=1`）。
+  tools/train-3p.mjs:3975: * ⚑ §E654 加的第二条通道：`EPIRUS_LOG_DEFAULT_OUT=<文件路径>` 时**另外追加一行到那个文件**。
+  tools/train-3p.mjs:3979: if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_PUBLISH !== '1') {
+  tools/train-3p.mjs:3984: const LED = String(process.env.EPIRUS_LOG_DEFAULT_OUT);
+### EPIRUS_NORM
+  tools/train-3p.mjs:783: if (process.env.EPIRUS_NORM) {
+  tools/train-3p.mjs:785: try { cfg.norm = JSON.parse(readFileSync(String(process.env.EPIRUS_NORM), 'utf8')); }
+  tools/train-3p.mjs:786: catch (e) { console.error('[train-3p] ⛔ EPIRUS_NORM 读不出：' + String(e && e.message || e)); process.exit(7); }
+  tools/train-3p.mjs:787: if (!cfg.norm || !Array.isArray(cfg.norm.mean) || !Array.isArray(cfg.norm.std)) { console.error('[train-3p] ⛔ EPIRUS_NORM 要 {mean:[], std:[]}'); proce
+  tools/train-3p.mjs:788: console.log('[train-3p] 输入标准化：' + String(process.env.EPIRUS_NORM) + '（' + cfg.norm.mean.length + ' 维）');
+### EPIRUS_OPP_N
+  server/train-server.mjs:370: /* v1.3.59：默认池保持 9 个；用 EPIRUS_OPP_N 可覆盖，专门给"加对手"的配对 A/B 用
+  server/train-server.mjs:372: const OPP_NAMES = (process.env.EPIRUS_OPP_N
+  server/train-server.mjs:373: ? String(process.env.EPIRUS_OPP_N).split(',').map(function (x) { return x.trim(); }).filter(Boolean)
+### EPIRUS_PACK_OPP
+  tools/train-3p.mjs:1532: /* =====（ZCode · 11-02 夜）`EPIRUS_PACK_OPP=<包路径>`：把一枚**包**放上训练桌当对手席（默认关）=====
+  tools/train-3p.mjs:1537: const PACK_OPP = process.env.EPIRUS_PACK_OPP || '';
+  tools/train-3p.mjs:1540: console.error('[train-3p] ⛔ EPIRUS_PACK_OPP 只在 EPIRUS_ARCH2 2.0 臂可用（gen-3 包席；v7 模式不收）'); process.exit(4);
+  tools/train-3p.mjs:1558: console.error('[train-3p] ⛔ EPIRUS_PACK_OPP 读不出：' + (e && e.message || e) + ' ⇒ 拒静默少放对手'); process.exit(4);
+### EPIRUS_REGEN_GENS
+  server/train-server.mjs:239: if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
+  server/train-server.mjs:438: if (T.setRegenTotal) T.setRegenTotal(Number(process.env.EPIRUS_REGEN_GENS || gens || 0));
+### EPIRUS_REGEN_SLICE
+  tools/train-3p.mjs:1023: /* ===== v1.5.177（DS）：**补贴率下达** `EPIRUS_REGEN_SLICE` =====
+  tools/train-3p.mjs:1028: if (process.env.EPIRUS_REGEN_SLICE != null && String(process.env.EPIRUS_REGEN_SLICE).trim() !== '') {
+  tools/train-3p.mjs:1030: console.error('[train-3p] ⛔ 传了 EPIRUS_REGEN_SLICE 但引擎没有 setRegenSlice ⇒ 拒绝静默空转');
+  tools/train-3p.mjs:1033: const gotSlice = T.setRegenSlice(process.env.EPIRUS_REGEN_SLICE);
+  tools/train-3p.mjs:1035: * （我第一版就这么写的，`EPIRUS_REGEN_SLICE=abc` 实测 exit 0 静默跑完 ⇒ 正是本项目最恨的那一族）。 */
+  tools/train-3p.mjs:1036: const reqSlice = Number(process.env.EPIRUS_REGEN_SLICE);
+  tools/train-3p.mjs:1038: console.error('[train-3p] ⛔ EPIRUS_REGEN_SLICE=' + process.env.EPIRUS_REGEN_SLICE +
+### EPIRUS_RING_FORCE_EPS
+  server/train-server.mjs:252: const _e = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
+  server/train-server.mjs:255: console.log('[ringforce] 主线程 eps=' + _e + '  env=' + JSON.stringify(process.env.EPIRUS_RING_FORCE_EPS || null) +
+  server/train-server.mjs:256: (Number(process.env.EPIRUS_RING_FORCE_EPS || 0) > 0 && _e === 0 ? '  ⚠️ env 有值但主线程没设上（sandbox 版本问题？）' : ''));
+  server/train-worker.mjs:95: const _eps = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
+  server/train-worker.mjs:97: console.log('[ringforce] worker eps=' + _eps + (process.env.EPIRUS_RING_FORCE_EPS ? ' (env=' + process.env.EPIRUS_RING_FORCE_EPS + ')' : ' (未设置 ⇒ 关)')
+### EPIRUS_RING_FORCE_UNTIL
+  server/train-server.mjs:250: if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
+  server/train-worker.mjs:93: if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
+### EPIRUS_S4_GAMES
+  server/train-server.mjs:72: sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
+  server/train-worker.mjs:53: sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
+### EPIRUS_SEAT_GAMES
+### EPIRUS_SEED0
+  server/train-server.mjs:504: process.env.EPIRUS_SEED0 = String((SEED0 || 1) * 7919 + 13);   // 新建池时 worker 在下一行创建要读它；借用池时靠 evalN 消息里的 seed0
+  server/train-server.mjs:512: // （EPIRUS_SEED0 必须在 makeParallelEvalN **之前**设好——worker 是那时创建的）
+  server/train-worker.mjs:27: __seedSandbox(sb, Number(process.env.EPIRUS_SEED0 || 0));   // worker 与主线程同种子
+  server/train-worker.mjs:295: *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
+  server/train-worker.mjs:299: const S0 = Number(process.env.EPIRUS_SEED0 || 0);
+### EPIRUS_SEL_G45
+  tools/train-3p.mjs:3660: /* ===== 10-23（用户裁定）：G4/G5 最坏格否决（EPIRUS_SEL_G45=1，默认关） =====
+  tools/train-3p.mjs:3665: * 默认关：不设 EPIRUS_SEL_G45=1 时一行都不跑，历史臂逐字可复现。最多试前 3 粒（成本约束）。 */
+  tools/train-3p.mjs:3667: if (process.env.EPIRUS_SEL_G45 === '1') {
+### EPIRUS_SEL_G4LONG
+  tools/train-3p.mjs:13: import { duelAssembly } from './v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
+  tools/train-3p.mjs:3707: /* ===== 10-24（用户点名 (b)，DS §5-2 的便宜形状）：G4 long 逐格否决（EPIRUS_SEL_G4LONG=1，默认关） =====
+  tools/train-3p.mjs:3713: * G45 allFail 时本块才有机会走深。默认关：不设 EPIRUS_SEL_G4LONG=1 时一行不跑，历史臂逐字可复现。 */
+  tools/train-3p.mjs:3715: if (process.env.EPIRUS_SEL_G4LONG === '1') {
+  tools/train-3p.mjs:3719: if (!guns4.length) { console.error('[train-3p] ⛔ EPIRUS_SEL_G4LONG=1 但两只只枪原型都不在 EpirusBots 里 ⇒ 拒绝空转'); process.exit(6); }
+### EPIRUS_SEL_TWO_STAGE
+  tools/train-3p.mjs:2877: *   默认**关**（`EPIRUS_SEL_TWO_STAGE=1` 才开）⇒ 不设时与旧行为逐字相同。 */
+  tools/train-3p.mjs:2878: /* v1.7.105（用户 10-18：「两段式默认开」）：**默认开**，`EPIRUS_SEL_TWO_STAGE=0` 才关。 */
+  tools/train-3p.mjs:2879: if (process.env.EPIRUS_SEL_TWO_STAGE !== '0' && hallEntries.length >= 2) {
+### EPIRUS_SIGMA_DECAY
+  tools/train-3p.mjs:2292: * 旋钮：`EPIRUS_SIGMA_FLOOR`（默认 0.06）‖ `EPIRUS_SIGMA_DECAY`（默认 0.995）‖
+  tools/train-3p.mjs:2296: const SIG_DECAY = Number(process.env.EPIRUS_SIGMA_DECAY || 0.995);
+  tools/train-3p.mjs:2321: if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
+### EPIRUS_SIGMA_FLOOR
+  tools/train-3p.mjs:2292: * 旋钮：`EPIRUS_SIGMA_FLOOR`（默认 0.06）‖ `EPIRUS_SIGMA_DECAY`（默认 0.995）‖
+  tools/train-3p.mjs:2295: const SIG_FLOOR = Number(process.env.EPIRUS_SIGMA_FLOOR || 0.06);
+  tools/train-3p.mjs:2321: if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
+### EPIRUS_SIGMA_STALL
+  tools/train-3p.mjs:2293: *       `EPIRUS_SIGMA_STALL=<K>`（默认 0=关）⇒ 连续 K 代 bestFit 没进步就把 σ 往回抬一档（×1.25，上限 0.18）
+  tools/train-3p.mjs:2297: const SIG_STALL = Number(process.env.EPIRUS_SIGMA_STALL || 0);
+  tools/train-3p.mjs:2301: *   在册的 EPIRUS_SIGMA_STALL 已经在数"连续几代 bestFit 没进步"，但它的动作是**抬 σ 继续跑**（恢复）。
+  tools/train-3p.mjs:2321: if (process.env.EPIRUS_SIGMA_FLOOR || process.env.EPIRUS_SIGMA_DECAY || process.env.EPIRUS_SIGMA_STALL) {
+### EPIRUS_STYLE_FRAC
+  tools/train-3p.mjs:1635: const FRAC = Math.max(0, Math.min(1, Number(process.env.EPIRUS_STYLE_FRAC || 1)));
+  tools/train-3p.mjs:1641: /* `EPIRUS_STYLE_FRAC=0.3`：按比例把风格席混进对手池（座位按 (gen*3+g+k)%L 轮转 ⇒ 比例≈池内占比）。 */
+### EPIRUS_STYLE_GAMES
+  server/train-server.mjs:466: const styleGamesN = Number(cfg.styleGames || process.env.EPIRUS_STYLE_GAMES || 2);
+### EPIRUS_STYLE_TABLE
+  tools/train-3p.mjs:1620: /* ===== `EPIRUS_STYLE_TABLE=gun|sword|…`（DS · 11-02 晚，用户「明显风格能不能学会」）：
+  tools/train-3p.mjs:1624: const STYLE_TABLE = String(process.env.EPIRUS_STYLE_TABLE || '').trim();
+### EPIRUS_STYLE_W
+  server/train-server.mjs:465: const styleW = Number(cfg.styleW || process.env.EPIRUS_STYLE_W || 0.5);
+### EPIRUS_SUBSIDY_EP
+  server/train-server.mjs:638: const SUBSIDY_START_EP = Number(process.env.EPIRUS_SUBSIDY_EP || 4);
+### EPIRUS_SUBSIDY_H
+  server/train-server.mjs:637: const SUBSIDY_H = Number(process.env.EPIRUS_SUBSIDY_H || 3);
+### EPIRUS_SUBSIDY_MIN
+  server/train-server.mjs:636: *   5 人局（千问实测 大雷−坦克 = +26.7pt）才有货架，届时用 EPIRUS_SUBSIDY_MIN 重新标定。 */
+  server/train-server.mjs:639: const SUBSIDY_MIN = Number(process.env.EPIRUS_SUBSIDY_MIN || 0);
+### EPIRUS_SUPPORT_PRIOR
+  tools/train-3p.mjs:864: ['EPIRUS_CURSE_PUSH', 'setCursePush', 'cursePushOn'], ['EPIRUS_SUPPORT_PRIOR', 'setSupportPrior', 'supportPriorOn'],
+  tools/train-3p.mjs:875: /* ⚠ `EPIRUS_SUPPORT_PRIOR` 在本入口有**第二个读者**（下面那族按 v1.7.128 的裁定取 CLI 默认 2）⇒ 横幅不许报引擎出厂值 0，
+  tools/train-3p.mjs:878: unset.push(envName + '=' + eff() + (envName === 'EPIRUS_SUPPORT_PRIOR' ? '（稍后按 CLI 默认取 2，不是 0）' : ''));
+  tools/train-3p.mjs:1052: /* v1.7.127（用户 10-20：「测一下开关的差别」）：**训练侧也开送盾先验**（`EPIRUS_SUPPORT_PRIOR=0|1|2`）。
+  tools/train-3p.mjs:1058: *   要关掉就显式设 `EPIRUS_SUPPORT_PRIOR=0`（门里那些比对产物的腿应显式设 0，见 CHANGELOG）。 */
+  tools/train-3p.mjs:1061: const spRaw = process.env.EPIRUS_SUPPORT_PRIOR;
+  tools/train-3p.mjs:1064: console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 被设成了空串 ⇒ 按非法值处理（要默认就**别设这个 env**）');
+  tools/train-3p.mjs:1070: console.error('[train-3p] ⛔ EPIRUS_SUPPORT_PRIOR 只能是 0/1/2（收到 ' + spReq + '）');
+  tools/train-3p.mjs:1084: *   `deployKnobs.EPIRUS_SUPPORT_PRIOR.effective` 记的是引擎出厂值 0，而训练实际吃的是 CLI 默认 2
+  tools/train-3p.mjs:1089: if (DEPLOY_REC && DEPLOY_REC.EPIRUS_SUPPORT_PRIOR) {
+  tools/train-3p.mjs:1090: DEPLOY_REC.EPIRUS_SUPPORT_PRIOR = {
+### EPIRUS_T3P_BASELINE
+  tools/train-3p.mjs:2365: *   ② `EPIRUS_T3P_BASELINE=1`（只有基线持有者该用，写明"这一次就是要写默认落点"，落盘时打 `[WRITE-BASELINE]`）；③ `EPIRUS_PUBLISH=1`（发布态写 `js/**`，另一条路）。
+  tools/train-3p.mjs:2368: if (!process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_T3P_BASELINE !== '1' && process.env.EPIRUS_PUBLISH !== '1') {
+  tools/train-3p.mjs:2372: + '\n             ② `EPIRUS_T3P_BASELINE=1`（基线持有者专用，等于说"我就是要写这一份"）'
+  tools/train-3p.mjs:3980: const TAGX = process.env.EPIRUS_T3P_BASELINE === '1' ? '[WRITE-BASELINE] ' : '[WRITE-DEFAULT] ';
+  tools/train-3p.mjs:3989: + '\t' + (process.env.EPIRUS_T3P_BASELINE === '1' ? 'BASELINE（声明过）' : 'DEFAULT（没声明）') + '\n', 'utf8');
+### EPIRUS_T3P_OUT
+  tools/train-3p.mjs:57: /* v1.5.244（E34）：`EPIRUS_T3P_OUT=<路径>` 可把产物改道 —— 与 `train-best` 的 `EPIRUS_TB_OUT` 同形。
+  tools/train-3p.mjs:61: : (process.env.EPIRUS_T3P_OUT || ('docs/artifacts/' + 'train-3p' + '-out.js'));
+  tools/train-3p.mjs:2363: *   老办法是"每条腿自己记得带 `EPIRUS_T3P_OUT`"——纪律长在人身上就会漏（DS 的 CHANGELOG 教训 #2 写的正是这条：跟着红点清，从没红过的腿就一直漏）。
+  tools/train-3p.mjs:2364: *   现在改成**声明制**，三选一：① `EPIRUS_T3P_OUT=<路径>`（并发臂的常规做法；改道到仓库外要一并给 `EPIRUS_BAND_DIR`，否则 band 备份仍撒进 `docs/artifacts` ⇒ D191 红）；
+  tools/train-3p.mjs:2368: if (!process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_T3P_BASELINE !== '1' && process.env.EPIRUS_PUBLISH !== '1') {
+  tools/train-3p.mjs:2371: + '\n   三选一：① `EPIRUS_T3P_OUT=<路径>`（改道；仓库外的话记得同时给 `EPIRUS_BAND_DIR=<目录>`）'
+  tools/train-3p.mjs:3759: /* ⚠ 只提醒、不改行为（本班实测踩到的形状）：产物被 `EPIRUS_T3P_OUT` 改道到**仓库外**（并发臂的常规做法），
+  tools/train-3p.mjs:3973: *   ③ 没设 `EPIRUS_T3P_OUT` 且非发布态 ⇒ 才是要点名的"没改道就写共享基线"。
+  tools/train-3p.mjs:3979: if (process.env.EPIRUS_LOG_DEFAULT_OUT && !process.env.EPIRUS_T3P_OUT && process.env.EPIRUS_PUBLISH !== '1') {
+### EPIRUS_TB3P
+  tools/train-best.mjs:69: * 修法：`EPIRUS_TB3P=1` 时给每粒**训练候选**跑一遍 3P 五道（与 promote 同一批 `audit-lib` 量具、同一 `feasibilityOf` 阈值，
+  tools/train-best.mjs:71: * 默认 0 ⇒ 一行都不跑 ⇒ **行为逐字不变** ✓。`EPIRUS_TB3P_GAMES` 显式给的才换（默认与体检同尺）。
+  tools/train-best.mjs:74: const TB3P = Number(process.env.EPIRUS_TB3P || 0);
+  tools/train-best.mjs:75: /* v1.5.162（§N17）：默认**跟随 `audit-lib.feasPlan`**（= 体检同一套 n），要换必须显式给 `EPIRUS_TB3P_GAMES`。
+  tools/train-best.mjs:78: const TB3P_GAMES = process.env.EPIRUS_TB3P_GAMES != null && process.env.EPIRUS_TB3P_GAMES !== '' ? Number(process.env.EPIRUS_TB3P_GAMES) : null;
+### EPIRUS_TB3P_GAMES
+  tools/train-best.mjs:71: * 默认 0 ⇒ 一行都不跑 ⇒ **行为逐字不变** ✓。`EPIRUS_TB3P_GAMES` 显式给的才换（默认与体检同尺）。
+  tools/train-best.mjs:75: /* v1.5.162（§N17）：默认**跟随 `audit-lib.feasPlan`**（= 体检同一套 n），要换必须显式给 `EPIRUS_TB3P_GAMES`。
+  tools/train-best.mjs:78: const TB3P_GAMES = process.env.EPIRUS_TB3P_GAMES != null && process.env.EPIRUS_TB3P_GAMES !== '' ? Number(process.env.EPIRUS_TB3P_GAMES) : null;
+### EPIRUS_TB_OUT
+  tools/train-3p.mjs:57: /* v1.5.244（E34）：`EPIRUS_T3P_OUT=<路径>` 可把产物改道 —— 与 `train-best` 的 `EPIRUS_TB_OUT` 同形。
+  tools/train-best.mjs:72: * `EPIRUS_TB_OUT=<路径>`：产物写去别处（**门与探针因此不必碰 2P 槽**；§N14 那次 `train-best` 顺手把
+  tools/train-best.mjs:79: const TB_OUT = process.env.EPIRUS_TB_OUT || null;
+  tools/train-best.mjs:225: /* v1.5.161：**改道要改彻底** —— 设了 `EPIRUS_TB_OUT` 时带内候选也写到那个目录旁边，
+  tools/train-best.mjs:257: * ⚠ 只在**改道跑**（`EPIRUS_TB_OUT`）时写：不设改道时目标目录是 `docs/artifacts` 平铺目录，
+  tools/train-best.mjs:263: if (!dir2) console.log('[harvest] 未改道（无 EPIRUS_TB_OUT）⇒ 不写收集档（平铺目录会脏 D82/D124）');
+  tools/train-best.mjs:293: /* v1.5.161：产物可改道（`EPIRUS_TB_OUT`）⇒ 门/探针跑真训练臂时**不必碰 2P 槽**，也不会顺手改 index.html 的缓存戳
+### EPIRUS_TGT_W
+  server/train-server.mjs:244: if (process.env.EPIRUS_TGT_W && T.setTargetReward) {
+  server/train-server.mjs:245: console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)) + '（复核 §15-1）');
+  server/train-worker.mjs:87: if (T.setTargetReward && process.env.EPIRUS_TGT_W) {
+  server/train-worker.mjs:88: console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)));
+### EPIRUS_TRAIN_EPS
+  tools/train-3p.mjs:1223: /* ===== v1.5.237（E28）：训练侧**执行口径**旋钮 `EPIRUS_TRAIN_EPS` 的下达与自证 =====
+  tools/train-3p.mjs:1240: * 想跑"产品口径训练臂"做研究**仍然可以**（显式 `EPIRUS_TRAIN_EPS=0.2 EPIRUS_TRAIN_EPS_K=5
+  tools/train-3p.mjs:1241: *   EPIRUS_TRAIN_EPS_MODE=soft EPIRUS_TRAIN_TEMP=0.15`）—— 那是**显式的实验**，不是默认。
+  tools/train-3p.mjs:1245: const rawEps = process.env.EPIRUS_TRAIN_EPS;
+  tools/train-3p.mjs:1248: console.error('[train-3p] ⛔ 传了 EPIRUS_TRAIN_EPS 但引擎没有 setTrainEps ⇒ 拒绝静默空转');
+  tools/train-3p.mjs:1253: epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
+  tools/train-3p.mjs:1256: console.error('[train-3p] ⛔ EPIRUS_TRAIN_EPS=' + rawEps + ' 被 setter 拒绝：' + (e && e.message));
+  tools/train-3p.mjs:1747: * ⚠️ 空枪守卫**不许盖掉已经存在的非零退出码**（与 `EPIRUS_TRAIN_EPS` 那条不同——它正是这样把 D176 的 exit 7 盖成 8 的）。 */
+### EPIRUS_TRAIN_EPS_K
+  tools/train-3p.mjs:1240: * 想跑"产品口径训练臂"做研究**仍然可以**（显式 `EPIRUS_TRAIN_EPS=0.2 EPIRUS_TRAIN_EPS_K=5
+  tools/train-3p.mjs:1253: epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
+### EPIRUS_TRAIN_EPS_MODE
+  tools/train-3p.mjs:1241: *   EPIRUS_TRAIN_EPS_MODE=soft EPIRUS_TRAIN_TEMP=0.15`）—— 那是**显式的实验**，不是默认。
+  tools/train-3p.mjs:1253: epsBack = T.setTrainEps(Number(rawEps), process.env.EPIRUS_TRAIN_EPS_K || null, process.env.EPIRUS_TRAIN_EPS_MODE || null,
+### EPIRUS_TRAIN_SEAT_GAMES
+  server/train-server.mjs:208: if (T.setSeatGames && Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) > 0) {
+  server/train-server.mjs:209: seatG = T.setSeatGames(Number(process.env.EPIRUS_TRAIN_SEAT_GAMES));
+  server/paralleltrain.mjs:151: seatGames: Number(process.env.EPIRUS_TRAIN_SEAT_GAMES || 0) || null,
+### EPIRUS_TRAIN_TEMP
+  tools/train-3p.mjs:1241: *   EPIRUS_TRAIN_EPS_MODE=soft EPIRUS_TRAIN_TEMP=0.15`）—— 那是**显式的实验**，不是默认。
+  tools/train-3p.mjs:1254: process.env.EPIRUS_TRAIN_TEMP || null);
+### EPIRUS_TRIPLET
+  tools/train-3p.mjs:3998: *   EPIRUS_TRIPLET=1 时 spawn tools/exam4-triplet.mjs（双剂量双桌 R=100 ≈70s），JSON 带前缀 [triplet] 打到 stdout，
+  tools/train-3p.mjs:3999: *   并追加进 EPIRUS_TRIPLET_LOG（设了路径才写；批量调用方拼表用）。读数失败只响亮警告、不判臂死
+  tools/train-3p.mjs:4001: if (process.env.EPIRUS_TRIPLET === '1' && GUARD.wrote) {
+  tools/train-3p.mjs:4006: const TL = String(process.env.EPIRUS_TRIPLET_LOG || '');
+### EPIRUS_TRIPLET_LOG
+  tools/train-3p.mjs:3999: *   并追加进 EPIRUS_TRIPLET_LOG（设了路径才写；批量调用方拼表用）。读数失败只响亮警告、不判臂死
+  tools/train-3p.mjs:4006: const TL = String(process.env.EPIRUS_TRIPLET_LOG || '');
+### EPIRUS_WALL_MS
+  server/train-server.mjs:265: * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
+  server/train-server.mjs:501: * 一整份产物都不产出，破坏"同参数可复现"）。改成可关/可调：EPIRUS_WALL_MS=0 关闭（纯按代数收敛），
+### EPIRUS_WORKERS
+  server/paralleltrain.mjs:18: const num = Math.max(1, Math.min(opts.workers || Number(process.env.EPIRUS_WORKERS || 0) || (cpus().length - 1), 16));
+  server/paralleltrain.mjs:85: const num = Math.max(1, Math.min(opts.workers || Number(process.env.EPIRUS_WORKERS || 0) || (cpus().length - 1), 16));
+### EPIRUS_WR_TOL
+  server/train-server.mjs:425: if (T.setWrTol) T.setWrTol(Number(process.env.EPIRUS_WR_TOL || 0.03));

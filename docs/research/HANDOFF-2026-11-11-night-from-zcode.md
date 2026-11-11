@@ -1,0 +1,142 @@
+# 交接 · 2026-11-11 夜班 → 早班（ZCode，00:0x–09:00，分支 feat/obs4）
+
+> 用户令（00:0x，五条）：①训练场 tab 不能独立开训练 ⇒ **把实际用于训练的东西搬进 training/，浏览器留调用接线**
+> ②开训练尽量**提高性能利用** ③**中途节点保存**等提效率 ④重构完**改主 README 目录** ⑤好包出来**尽早重测 B 轴 + 评分再调整**（图上刷分夸张没法看）。做到早上九点。
+> 前置：夜计划 v2（`PLAN-2026-11-10-night2-zcode.md`）已获批；本班 = v2 地基批 + 上述五条的执行。
+
+## 一、完成清单（按提交序）
+
+| 提交 | 内容 | 验证 |
+|---|---|---|
+| `8f55eb03` | SELF_ENV_KEYS **+68 条补登记**（在用未登记 68→0；37 条有单一来源表管辖不计）‖ 生成器判据修正（单一来源表=有家）‖ exam-4n 夹具登记表补 2.0 现役四包 ‖ **B 轴代表重测 24 跑入库** | train-3p 语法 ✓；重测确定性对账逐位过 |
+| `5e4fae23` | **训练侧独立子仓落地**：server/ 全部 11 件 → `training/server/`（产品零 import）‖ tools/{train-3p,best,fast,selftest,start-train-server.cmd} → `training/` ‖ tools/proto2 → `training/proto2/` ‖ knob-registry → `training/knobs.mjs` + TRAINING-KNOBS.md 迁址 ‖ 路径修补 107 文件组 + round2 ‖ CI 加 `training/knobs.mjs --check` ‖ **AGENTS.md 铁律 v1** | train-3p 1 代真跑通（band-save/终评/E589 全工作）；exam-4n 链路通；旋钮册 245/223/未登记 0 与搬家前逐位同 |
+| （门钉批） | 门体四条源码钉跟上：D116/D124（import 串）/D125（readdirSync server）/D228⑧（spawn 计数正则） | ship-feas 14/14 · ship-promote 20/20 |
+| （D158 批） | probe-instruments 的 readKeysOf entry 钉跟上 | 33/33 |
+| （UI 批） | index.html ×3 + ui.js ×2 启动器指向 → training/ | ui-contract 8/8 |
+| （README 批） | 主 README 目录结构 server/→training/ 块 + 训练命令路径 + 主尺段补 11-11 重测注 ‖ **training/README.md v1**（结构/边界表/流程速查）‖ recipes/ 占位 ‖ pages.yml 注释 | — |
+| （registry 批） | **旋钮册第五入口（promote-champion）**：NO_*/GAMES 体检族 12 根从"暗键误判"转正在用（注解入 SELF_ENV_KEYS）‖ 在用 223→235 ‖ 暗键 21→9 | knobs --check ✓ |
+| （stale 批） | scratch/{gen1-tree(1417),hc3(244),preDispatch(228),mutgrid(10)} = tools 旧副本 **1899 文件 git rm**（v2 计划已授权面；零活代码引用，仅史册三处提及） | grep 核查在案 |
+| （仪器批） | exam-4n-full **行补 pool 戳（真 bug：19 格对 20 列表头，历史批表 sec 全串进 pool 列）**+ 新增 champ 夹具列 ‖ exam4-attach 加夹具校卫 | node --check + smoke |
+
+门禁状态：11 个 part 里 9 个已本机复绿（meta-repo 13/13、probe-libs 4/4、ship-promote 20/20、ship-feas 14/14、meta-lint 3/3、probe-instruments 33/33、ship-pool 1/1、ship-artifact 1/1、ui-contract 8/8）；engine-rules/engine-fuzz 未跑（只读 js/core 与 tests，未动）。
+
+## 二、B 轴重测（用户令⑤的主交付）
+
+全文见 **`FINDING-2026-11-11-baxis-rebretest-zcode.md`**（数据 `scratch/zcode-1111-bretest/b-retest.tsv`）。三条结论：
+
+1. **obs5 冠军链在冠军桌真实负**（MSB2-R1 最好情形 −0.089 含自打；G5J-50 同桌 +0.54）——A 轴选拔 ≠ 冠军桌强度，玻璃炮判定坐实。
+2. **夹具双向扭曲**：旧夹具 2P 高估农夫型；现役夹具（含玻璃炮）3P+ 反而抬所有老包。**换夹具本身也会刷分** ⇒ 滚动夹具 + champ 戳入表 + 换夹具换列族要三件一起做。
+3. 图顶 C（G5J/G5C 0.7-0.8）= 旧夹具 + 可farm A 轴叠加的历史格局；obs5 链根本不在图上。
+
+已落地：champ 列 + attach 校卫（上表仪器批）。**未落地（下一班）**：夹具滚动制、B 轴 --dose=exam 对照、msbatch2 measure() 跟随当期夹具。
+
+## 三、在飞：MSB6（01:04 发射）
+
+```
+node scratch/night-adapt2/msbatch2.mjs --base=401 --start=docs/artifacts/night-adapt/S916R2B-R1S685223462.js \
+  --rounds=2 --branches=8 --gens=200 --arm=MSB6 --margin=0.03
+```
+
+- **起点 = S916R2B-R1S685223462（C 0.0668）**——千问 11-10 傍晚 8 臂轮换的终局冠军，**当前 C 尺最强**（MSB4 0.029 < 它；MSB2-R1 的 +0.2925 是 A 尺读数，C≈0）。选它不选 MSB2-R1 是按 D-33 主尺口径。
+- 配方 = S916 同款纯轮换（RECIPE_ENV 未动）+ **`EPIRUS_HOLDOUT_SEG=50`（新开的中途节点）**；判据：换代 margin 0.03（C 尺），验收线沿用 **C ≥0.079 且用卡 ≥4、防御 ≥5%**。
+- 日志 `scratch/night-adapt2/msbatch2.log`；**断点**：`--resume` 读 `msbatch2-state.json`（每轮收尾写；臂内更细恢复用 `<ARM>-seg<k>.bak` 快照热启动）。
+- 预计 02:2x 收 2 轮；若第 1 轮就出 C≥0.079 的臂，按 margin 换代后第 2 轮继续。
+- **起点验收基线（01:2x 实测，card-usage 40 局 long）**：现冠军 S916R2B-R1S685223462 **用卡 7（≥4 ✓）、防御 10%（≥5 ✓）**、谱 ji53/gun25/snipe10/reflect6/bagua4/guard1/sword1——千问 ADAPT-DEF 种子已治好玻璃炮；验收线只差 C 0.0668→0.079。
+
+### 在飞追加：MSB7（01:12 发射，B 线课程轮）
+
+```
+MSB_COURSE_PACK=scratch/ds-1109/G5J-50.js  MSB_FIT_CHAMP=scratch/ds-1109/G5C-100.js  MSB_FIT_EVERY=2 \nnode scratch/night-adapt2/msbatch2.mjs --base=451 --start=docs/artifacts/night-adapt/S916R2B-R1S685223462.js --rounds=2 --branches=4 --gens=200 --arm=MSB7 --margin=0.03
+```
+
+- 问题 = FINDING §五：把冠军桌最强（G5J-50 C 尺 +0.54）放上课程席、G5C-100 上 fitness 席——「对着验收标准训」能否比纯轮换更快抬 C。两枚 G5 都是 v92（obs3b），policyChooserN 直接收。
+- 对照组就是 MSB6（同起点、同预算、纯轮换）——两轮同飞天然成对。
+- msbatch2 的 state/summary 已按 ARM 分家（msbatch2-<ARM>-state.json），两个驱动器并行互不踩；启动配方已打进日志。
+- 判读：同 margin 换代；若 MSB7 的 C 明显高于 MSB8 同位臂 ⇒ 课程方向有效，写进 recipes。
+
+- 教训入册：msbatch2 一次 bash 里 `&&` 串两个驱动器会复制出双份（state/log/产物路径三重踩）——并行驱动器必须逐个独立发射（本次 kill 重发，MSB9-seq 干净重来）。
+
+### 终局种群（05:0x 定稿）——「obs5 入池」的直接答案
+
+互战矩阵（同桌 = [MSB10 冠军, MSB8-charge, Q-s47]，X̄₄B）+ 合同口径卡谱：
+
+| 包 | C（在册尺） | 同桌 H2H | 用卡/防御 | 谱 | 判 |
+|---|---:|---:|---|---|---|
+| **MSB10-R1S1149480262** | 0.2002 | 0（自含） | 6 / 31% | ji42/reflect29/gun20/snipe6/proto2 | **bagua 线冠军，种群头名** |
+| **MSB10-R1S1085426378** | 0.1327 | **+0.011** | 6 / 37% | ji40/reflect37/gun12 | 唯一对头桌为正的他者 |
+| MSB8-charge | 0.1383 | −0.057 | 5 / 30% | ji39/reflect29/gun28 | 上限样本（0.1383 单旋钮不可复制） |
+| **MSB8-bagua** | 0.0800 | +0.054（较易桌） | **9** / 42% | ji39/reflect37/mine7/proto2/ring1 | **唯一用卡 ≥9**；防御超 35 线注意 |
+| MSB6-R2S501866988 | 0.1049 | −0.142 | 6 / 14% | 三件全开 | 均衡席 |
+| MSB6-R2S297540638 | 0.1032 | — | 6 / 24% | reflect13/bagua7/guard4 | 防御均衡席 |
+| MSB9-R2S443656264 | 0.1315 | −0.144 | 4 / 14% | ji46/gun37 | 进攻席（charge 线健康代表） |
+| ~~MSB9-R2S1112532101~~ | ~~0.3151~~ | — | 4 / **86%** | reflect 86% | **墙，剔除**（C 尺选拔病实证） |
+
+线谱：S916R2B(0.0668) → MSB6(0.1049) → [MSB8 定向] → charge 线(MSB9) / bagua 线(MSB10, 0.2002)。
+
+**在飞（06:3x 收）**：MSB11-antiwall（reflectWall 席上训练桌，4 臂 × 2 轮，从 MSB10 冠军续）——读墙化能否在源头治住。
+**给白班**：① 种群 8 枚在册（上表），入池走 POOL-CONTRACT 流程，**排序以同桌 H2H 为主、C 为辅**（FINDING）；
+② 12 线先量现役池做基线（线档没人知道）；③ 反墙能力入池必量的提案要用户裁；
+④ B 夹具滚动制方案要用户裁；⑤ MSB11 收臂后看墙化是否被 reflectWall 席压住。
+
+## 四、性能与效率（用户令②③的交付）
+
+- **臂并行本来就有**（Promise.all；千问的 S916R2B 已跑过 12 臂并发）——18 核的吞吐瓶颈在**轮末重测**：4 包×2 尺串行 ≈8min/轮 ⇒ 本次改并发 ≈2min。
+- **中途节点**：`EPIRUS_HOLDOUT_SEG=50` 进 RECIPE_ENV（每 50 代快照当代最优粒，当场落盘——11-03 已修过"只攒内存"的蒸发坑）。
+- **断点续跑**：`--resume`（state 形状逐字校验，换参拒绝——种子流会错位）。
+- 指南：18 核 branches ≤8（留核给重测的并发 exam-4n）。臂内 GA 单线程化是下一个大杠杆（worker 化 fitness），工程量大，未动，见 §五.3。
+
+## 五、下一班事项（按序）
+
+1. **MSB6 收尾判读**：轮链/换代记录在 msbatch2.log + state.json；过 0.079 线的臂跑 `tools/card-usage.mjs` + 防御探针核验收线；达标包走 triplet 台账 + C 三列同看再谈进池。
+2. **B 夹具滚动制落地**（FINDING §四.2-4）：定「当期 C 前三 + 反墙锚」名单机制 + 列族策略；这是**在册尺变更，动手前把方案给用户点头**。
+3. **evo.js 产品面/训练面物理拆分**（已研究未执行）：
+   - 事实：4279 行单闭包 IIFE；产品真调的全局只有 ~8 个（pickChampion/correctedWinRate/mulberry32/setSupportPrior*/setBeliefSearch*/wrapBigTPush），Node 训练沙箱按文本装载同一文件；产品依赖训练侧的模拟核（oneGame），训练侧的奖励计数器又被 oneGameN 调用——**拆分必须经全局对象回呼重接 ~200 个调用点**。
+   - **钉面实测（01:2x）**：门体对 js/train/evo.js 的源码钉共 18 处 / 8 个部分文件（_ctx 沙箱清单 + meta-repo×4 + engine-rules×2 + engine-fuzz×1 + ship-promote×2 + ship-feas×3 + probe-libs×2 + ui-contract×2 + np-test 分类），其中相当一部分钉的是训练机器内部函数（trainChooser / mirrorHealth / epsMode soft 档）——正是要搬走的段落 ⇒ 拆分总成本 = ~200 调用点重接 + 18 处门钉逐条跟上，估 3-5 小时高风险。
+   - 建议：先做「读集收缩」版——evo.js 保持单文件，但把 GA 机器（makeTrainer/step/finishStep/evalN/奖励 setter 族）标记为训练区段并从浏览器侧的死代码里确认无人调用（ui.js 已确认 0 处 makeTrainer/step）；物理拆分等有整段白班再做，拆完必须过 smoke+battle+ui-contract 三道。
+4. **旋钮 Tier2**：暗键剩 9 根（BATCH_MAX/CHROME/DEBUG_CDP/INSTR/REPO = 浏览器仪器家；SELF_TEACHER/TEACHER_GATE* = supfit-gd 一次性研究脚本家）——处置=物理删 supfit-gd 族或把 supfit-gd 转正为入口，先给方案再动。Tier1（单入口下放）与 recipes 机制照 v2 计划。
+5. **门禁分家**（v2 §三）：产品 CI 不跑训练门禁——paths 过滤 + workflow_dispatch 手动档；np 并集守卫同步。
+6. stale 副本已删 1899 文件；scratch 其余为现役实验区，不清理。
+
+## 六、注意事项（给下一班的钉子）
+
+- **历史批表（exam4-*-1110.tsv 等）sec 列在 pool 列名下**——exam-4n-full 的老 bug，本次修的是新表；引用旧表 pool 列时记得它其实是 sec。
+- exam4-attach 的 champ 校卫对**旧表**（无 champ 列）只点名不拦——旧表混夹具风险要人肉看。
+- `training/knobs.mjs --check` 已进 CI；**改 env 读取或注解必须重生成册随改动提交**，否则 CI 红（这是故意的）。
+- promote-champion 现在是旋钮册第五入口：给它加旋钮同样要走 SELF_ENV_KEYS 注解（AGENTS.md 铁律 1）。
+- MSB6 若中途被杀：`--resume` 原样重启（base/start/形状不能变）；臂级 seg 快照在 `docs/artifacts/<ARM>-seg<k>.bak`（BAND_DIR 缺省=docs/artifacts 根，不在 night-adapt/；01:2x 实测 MSB6/MSB7 各臂 seg1-2 已在落）。
+- B 重测的 N 夹具读数**不是**新在册尺——图上 P2B 还是旧夹具；对比新旧夹具读数时引用 FINDING 的表，别直接改图。
+- 时间线：本班实际开工 00:07；用户 00:0x 下令；全文书提交在 00:3x 前，搬家批 00:4x，性能批 01:0x，MSB6 01:04 发射。
+
+## 七、MSB12 规划轮收尾（06:5x）——用户纠偏后的答案与规划链的根本结论
+
+七臂全收（harness 内监控自动注入 ✓）：beadplan **0.2448 换代**（用卡 7/防御 50%——reflect 48% 偏墙向，引用注意）、
+seqboom 0.2096（5 卡/防御 29% 健康）；seqelec 复制对 0.039/0.168（**种子方差巨大**，单臂读数不可信）；
+ring 1.0× 无抬升；minechain（大雷传导，战术）0.064 散布 0.6；combo **−0.16 塌**（双奖励旋钮互相拉扯）。
+
+**seq-opportunity 三型分解的根本结论**：beadplan/seqboom/起点包 armed≈0（~2000 决策）、beadSpent=0——
+三型全是 **(i) 根本不蓄能**；对照均匀策略 armed=46（探针自证 ✓）。
+⇒ **规划链不是没 steering，是稀疏奖励不可达**：SEQ_W 只付完成的链，GA 探索凑不出完整蓄→放，梯度无来源。
+beadplan/seqboom 的 C 来自同臂其他 fitness 项。且 beadplan 防御 50% —— **C 尺对防御漂移的偏置贯穿全夜**
+（MSB9 终局墙 0.3151 / beadplan 50% / bagua 线 31-42%），根因同源：A 可 farm + B 夹具陈旧。
+
+**白天班提案池（按优先级）**：
+1. **chargePush 同形件**（部署档软注入第一步蓄能 + 开火计数自证，drainPush/bigTPush 模式）+ IMIT 教师——让规划链"可达"，这是长程规划的正路（用户 05:4x 指向的方向）；
+2. **地雷归因工程**（伤害无来源 ⇒ 目标函数从不付账；先修归因再谈注入）；
+3. **反墙席进 rotation-obs5 基线配方**（MSB11 实证免费课程压力）+ 反墙能力入池必量；
+4. **F2 滚动夹具转正**（G5J 0.79→0.50 拉回演示；列族 PB2；旧 PB 冻结）；
+5. 12 线先量现役池做基线；recipes 吃 MSB 系配方名。
+
+## 八、终局补遗（08:0x）——全图换新 + obs5 进图 + MSB13 0.4104
+
+- **全图综合分换新**：F2 夹具 B 扫全图 836 包（exam4-F2-page-1111.tsv，champ 列在册）→ P2R 族挂列 → C2R=(P2+P2R)/2 合成（attach-cmean-r.mjs，825 行填值）。**地图显示列仍是旧 C2**（long 批未跑，C2RL 缺 ⇒ 显示切换留白天班）；C2R 是数据层新列，viewer 白名单未加。
+- **obs5 进图（用户令"直接放进去重新做投影"）**：11 枚新行进 coords-gen3-1105（intake-obs5.mjs：ruler 行为 12 特征 + ledger P 族 + F2 P2R + 旧尺 C2 补量两批）→ **proj-tsne 全 panel 重投影**（918 行，kNN@10=0.462=42×基线）→ attach-projcols → **重烘 index.html（1607KB）**。页内自检 95 PASS/3 FAIL——FAIL 全是 907 行时代的不变式撞上 918 行（强度窗口/壳计数），白天班把断言改到 918 行现实（~30 分钟）。
+- **MSB13（反墙线续跑）= 0.4104**（MSB13-R1S791820660，批内最低 +0.218 全正）：**对旧 guard 打平**（vs [G5J,KDG-B,Q-s47] X̄₄B +0.001，3P/5P/8P 全正）**、对纯墙桌 2P +0.655**。用卡 7/防御 55%（reflect 51%——墙界临界，引用注意）。链谱：0.0668→0.1049→0.1383→0.2828→**0.4104**（反墙课程复利四连跳，进 G5 线领地）。
+- MSB14：railgun（混合风格档）**0.2480**（MSB8 全量桌档 exit-9 的正解）；drain 读数在台账。
+- exam-4n 夹具登记表现 16 枚（含 G5J/G5C——互战/重评即用）。
+- **白天班增补**：⑥ 页内自检 3 条断言改 918 行；⑦ 地图显示列切 C2R 前，先补 F2 long 批（exam4-F2-page-long）+ viewer 白名单加 P2R/C2R。
+
+## 九、终修（08:1x）——自检 97/98 + 合并 main
+
+- **页内自检 95→97/98**：根因 = intake 漏填 **n 族**（各格局数）——X4T 按 `d['n'+n]` 判格有效性，空 n ⇒ X̄₄=null ⇒ Fv=NaN ⇒ 11 新点全被默认强度窗口切掉（色轴/窗口两 FAIL 同根）。补 n2..n8+n..L=2600/1400/700/400 后两 FAIL 消失、11 点全可见。
+- **剩 1 FAIL（壳：c=0.2 漏画 1）**：带宽预设 0.20 的"漏画归零"标定是 907 点云时代的；11 个新投影位置改变了点云形状 ⇒ 标定偏了。属标定项不硬修——白天班重扫带宽-漏画曲线重选预设，或接受这一档漏 1。
+- **合并 main**（用户令）+ long 规矩入册：**以后作图/批量扫描 multi+long 必须一起跑**（本轮 F2 只跑了 multi ⇒ C2R 无 long 半边，显示列切不过去——就是这条规矩的现成反例）。

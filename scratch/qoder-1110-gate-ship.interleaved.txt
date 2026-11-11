@@ -1,0 +1,20 @@
+▶ 起跑 np/ship …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+⛔ np/ship 红（exit=1）· 完整输出：（⚠ 落盘失败：ENOENT: no such file or directory, open 'D:\code\Epirus-Web\docs\artifacts\gate-fail-np\ship.txt' ⇒ 只有下面的尾部）
+   失败的门（共 1 条）：
+   ✘ D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"  → ④ 未登记的重复必须为 0（实测 2 ‖ 点名：docs/artifacts/QWIN1110AFT-band1.bak docs/artifacts/QW
+  ✔ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话
+
+⚠ `--group=ship`：**只跑了 52 / 172 条**（跳过 120 条；累计含 ship+meta）⇒ 这不是全量门禁，**不许当整轮全绿引用**。
+
+N人测试：通过 51 / 52
+
+⚠ unit-broken 的 JSON **损坏**：broken 缺起始引号 ⇒ 本工具已按「只补引号」修复后继续。（调用者不是线上槽文件 ⇒ 这是测试夹具或中间产物，不是生产缺陷；两个真线上槽由门 D168 的 ③ 腿直接读并核过。）
+
+门禁：np/ship 51/52（282.2s） · spec 63/63（0.8s） · smoke OK（11.5s） · battle OK（37.7s） · map OK（10.0s）
+⛔ 结论：**不是全绿** —— np/ship 红
+exit=7

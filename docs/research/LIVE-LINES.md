@@ -1095,3 +1095,25 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 
 - **main 认证（推上去的那一笔 `521aa6ba`）**：gates run `42637166535` **逐作业 + 逐步骤全 success**（14 个作业：plan ‖ 11 个 part ‖ gates ‖ browser；非绿步骤为空；复看命令 `gh run view 42637166535 --json jobs --jq '.jobs[] | .name + "  " + (.steps | map(.conclusion) | unique | join(","))'`）。
   **⚑ 这一片绿不覆盖本次改的两件**：`grep -rn exam .github/workflows/*.yml` = **0 命中** ⇒ CI 从不跑 `exam-4n`/`exam-pool`/`EXAM_POOL`，所以它认证的是产品面与既有门（`server/opp-pool.mjs` 的新导出被 ship-pool/probe-libs 那档带着过），**不是**版本戳与配对 A/B 这两件本身。后者的依据只有本节列的四道验牙 + 本地定向 `probe 88/88` + `engine-fuzz 13/13`（工具原话是分组，**不许当整轮认证引用**）。⇒ 上面那条"考卷零门覆盖"的缺口**仍未修**，等 D-33 一起裁。
+
+## 追记 68（11-10 深夜 · Qoder）——训练侧旋钮普查 + "短的整理"：`WIN` 接线改成 2.0 臂一律接（修的是会算错，不是难用）
+
+- **用户两句令**：「现在训练侧膨胀得太厉害，经常找不到该调什么旋钮、什么该开什么该关」→「那你先做一下**短的**整理吧」。
+  今天的训练侧代码主体在 **`feat/obs4`**（main 停在 03:55 `b2a2c9ff`，根本没有 `CARD_ABORT` 那批）⇒ 本班改动落在这条分支且**没推**（该分支本地还压着别班 4 笔未推提交，推它 = 替别人发布）。
+- **膨胀的数（读集/全集一律用仓库自己的 `server/knob-guard.mjs`，opt 逐条抄自四个入口各自的 `enforceKnobs`；脚本 `scratch/qoder-1110-knob-census.mjs` ‖ 表 `-knob-census.tsv` 245 行）**：
+  全集 **245** ‖ 读集 train-3p **158** / train-server **79** / train-best **23** / train-fast **13** ‖ **只有 1 个入口读到的 = 195/245（80%）** ‖ 人读的 `SELF_ENV_KEYS` 只登记 **118** ⇒ **39 根读了没登记**（含今天的 `FIT_CHAMP`/`COURSE_PACK`、11-09 的 `TRIPLET`/`SIGMA_*`/`IMIT_*`）
+  ‖ SEL_* 族 **41 键 / 15 根主键**全默认关、**没有一处写它们能不能同开** ‖ 新增速率 30 天 **+106** / 7 天 **+36** / 3 天 **+17**（仓龄 9 周）‖ 在册 train-3p 启动器 **121 份**各自手抄 env。
+- **⛑ 本班唯一的行为改动**：`tools/train-3p.mjs:815` 那条"哪几根旗标用到 `WIN` 就接线"的手写六项 OR **会长**——今天 20:09 的 `EPIRUS_CARD_ABORT`（:2486 `cardUsageProfile(WIN,…)`，一咬就 exit 13 不落产物）与 `SEL_KEEP`/`SEL_LAND`/`BREADTH_FLOOR`/`EFFSKILL_MIN` 那一段（:2891→:2980 `fieldProfile(…)`，内部就用 `WIN`）**都不在六项里** ⇒ 2.0 臂只开这两族时拿"v7 前向代 2.0 权重"排序/杀臂，**不崩不报错**（:809 那段 11-02 在册原文就是同一种病）。
+  改成 **2.0 分支里一律接线** + `verifyArch2Wired` 自证，接不上 `exit 7`；名单降级成"只点名、不决定接线"。
+  **对照**（seed=12345 · obs5 · 只开 `CARD_ABORT` · 六项全关 · 1 代/种群 2/每代 2 局；改前那遍用 `git show HEAD:` 的副本跑 ‖ 回执 `scratch/qoder-1110-win-before.txt` / `-after.txt`）：
+  改前**没有** `量具同代已接线` 这行（真没接）‖ 改后有（面=`obs5` · paramCount=12393 · forwardCands 自证通过）；诊断尺 `[cardAbort] gen 0 topCards` **12 → 11**；两臂 `bestFit` 逐字同（**0.342**）⇒ **只动那把尺的读数，不动训练轨迹**。⚠ 一对样本（公随机数），只写方向不写效应大小；`CARD_ABORT=999/CARD_MIN=30` 是刻意让它不可能真杀臂。
+- **三处文档/用法过期改了**：`exam-4n.mjs` 用法行补 `v3` 并写清 `--expool=v3` 与 `--plan=v3` 是两件事 ‖ 读数行补 `plan=` / `champ=`（**同池不同桌形、带不带冠军席，池戳逐字相同**）‖ `docs/POOL-CONTRACT.md:248`/`:281` 同步并钉 **v3 = 诊断卷不是主尺**（数字从 DS 原件核回：`exam-v3-final.md:7-13` 0.500→0.388 ‖ 0.460→0.351 ‖ 极差 0.139→0.034；`v3-validation.md:9-12` 0.077→0.232 ‖ −0.177→−0.186）
+  ‖ 另修一条"文档写的拼法工具不认"：用法行原写 `--onlyN` 而名单是全小写 ⇒ 照文档敲直接 `exit 64`（本班实测撞到）。**解析器没动**（要两处一起改，属下一批）。
+- **两次门红都是我的错，都按在册规矩处理**：
+  ① `meta 15/16` ‖ `ship 51/52` 红在 **D191**，红得对——我两枚冒烟臂把 band 快照写进了 `docs/artifacts/QWIN1110{BEF,AFT}-band{1,2}.bak`（同权重 ⇒ 未登记重复）⇒ 移进 `scratch/qoder-1110-win-smoke-residue/`，`--only="D191 "` 复跑 1/1 ✔（改前复现红 ‖ 改后新绿 ‖ 没放宽名单）。
+  **在册的新规矩**：冒烟臂必须 `EPIRUS_T3P_OUT` 与 `EPIRUS_BAND_DIR` **两个都钉到 scratch**——`tools/gates/probe-instruments.mjs:710` 那腿本来就是两个都钉的，照它抄。
+  ② 我看见 `-gate-probe.txt` 停在 44 字节 + `tasklist` 报 0 就判它死了、另起一串 ⇒ **旧实例还在** ⇒ 同机两份 `np/probe` 且两遍 stdout 写进同一文件（回执里 5 行 `▶ 起跑` ⇒ 交错、读数作废）。停新链 → 按 PID 收孤儿 `node.exe`（31600，`TaskStop` 只杀包装器）→ 交错三份改名 `*.interleaved.txt` 留证 → 真串行重跑。
+  ⚑ 教训：**回执停在半行 + 进程计数为 0 都不等于那个实例死了**。
+- **门（定向，不是整轮；工具原话都带"不许当认证引用"）**：`np/probe` **89/89**（417.5s）‖ `np/meta` **16/16**（17.8s）‖ 各配 spec 63/63 · smoke · battle · map ⇒ 两组各自 5 道全绿；`np/ship` 还在跑（本班不等它就收尾，因为改动面没碰 promote/pool 产物）。
+- **留给下一批（等点头）**：A `docs/KNOBS.tsv` 台账 + **一条**门腿（读集每根键必须登记且有非空说明 + 合法状态 ⇒ "加了旋钮没人知道"当场红；118 条现成注释可机械搬）‖ B `--knobs` 自述 + `EPIRUS_RECIPE` 命名配方（STR-B 手抄块 `msbatch2.mjs:36-49` **不含**今天的 `CARD_ABORT`；`FIT_CHAMP_EVERY` 代码缺省 4 vs 驱动传 1（:49）；横幅 :3630 印 `env||'4'` 而不是引擎回读值 ⇒ 与"下达后必须读回"不一致）‖ D 化石处置清单（`measureFromLedger()` 空壳、**646 个在册的旧 `tools/` 树副本**：`gen1-tree` 208 ‖ `hc3` 225 ‖ `preDispatch` 210 ‖ `mutgrid` 3——它让我一次 grep 直接命中过期文件、把 `EPIRUS_NO_DEFQ` 误判成"只有副本在读"，实际 `tools/promote-champion.mjs:375` 在读）。
+- 账：`docs/research/FINDING-2026-11-10-knob-bloat-qoder.md`。

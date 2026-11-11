@@ -114,7 +114,7 @@ function launch(a) {
   if (!existsSync(join(ROOT, env.EPIRUS_BAND_DIR))) mkdirSync(join(ROOT, env.EPIRUS_BAND_DIR), { recursive: true });
 
   const t = Date.now();
-  const p = spawn(process.execPath, ['tools/train-3p.mjs', String(GENS), String(PN), String(PG), String(PP)], { cwd: ROOT, env });
+  const p = spawn(process.execPath, ['training/train-3p.mjs', String(GENS), String(PN), String(PG), String(PP)], { cwd: ROOT, env });
   let last = '';
   p.stdout.on('data', (d) => { const s = String(d); last = s.split('\n').filter(Boolean).slice(-1)[0] || last; });
   p.stderr.on('data', (d) => { last = String(d).split('\n').filter(Boolean).slice(-1)[0] || last; });

@@ -172,3 +172,81 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-09T05:24:31.700Z	330226d3e823d715	docs/artifacts/night-adapt/WSEL9-200.js	scratch/ds-1109/WSEL10-200.js	train-3p	未复制：同一粒权重已有真身
 2026-11-09T10:41:22.723Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
 2026-11-09T10:41:22.731Z	661b55607f168288	docs/artifacts/G5F-100-band6.bak	docs/artifacts/G5G-50-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-09T20:55:04.358Z	418b9e4dcd84382a	docs/artifacts/night-adapt/OBS5-Q-s13.js	docs/artifacts/OBS5-D-s13-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-09T20:55:04.364Z	018b98d97a5a6f30	docs/artifacts/OBS5-Q-s13-band2.bak	docs/artifacts/OBS5-D-s13-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-09T20:55:04.374Z	303495cd9d25ebe5	docs/artifacts/OBS5-Q-s13-band3.bak	docs/artifacts/OBS5-D-s13-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-09T20:55:04.379Z	c166a34112ce081e	docs/artifacts/OBS5-Q-s13-band4.bak	docs/artifacts/OBS5-D-s13-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-09T20:55:04.384Z	3b971e258a542e55	docs/artifacts/OBS5-Q-s13-band5.bak	docs/artifacts/OBS5-D-s13-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-09T20:55:04.390Z	418b9e4dcd84382a	docs/artifacts/night-adapt/OBS5-Q-s13.js	docs/artifacts/night-adapt/OBS5-D-s13.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T05:17:13.665Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/SMOKE-FITCHAMP-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T05:17:13.687Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	scratch/ds-1109/SMOKE-FITCHAMP.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T05:57:17.515Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/SMOKE-XB-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T05:57:17.520Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-XB-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T05:57:17.525Z	fadcd98fca6bea05	docs/artifacts/MSB2-R1S1494663071-band4.bak	scratch/ds-1109/SMOKE-XB.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T18:36:00.000Z	6581894d9055951f	docs/artifacts/MSB3-R1S1428643599-band2.bak	docs/artifacts/MSB3-R1S1428643599-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席与第 2 席同权重（11-10 复核补登记）
+2026-11-10T18:36:00.001Z	9229cb74f703cee8	docs/artifacts/night-adapt/MSB3-R1S1428643599.js	docs/artifacts/MSB3-R1S1428643599-band6.bak	train-3p:band	已登记的复制：同一次跑的第 6 席（产物 = 该臂终点）
+2026-11-10T18:36:00.002Z	adf0110e9f595b0a	docs/artifacts/night-adapt/MSB3-R1S2091617905.js	docs/artifacts/MSB3-R1S2091617905-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席（产物 = 该臂终点）
+2026-11-10T18:36:00.003Z	1c6462d0b133d85b	docs/artifacts/night-adapt/MSB3-R1S60338354.js	docs/artifacts/MSB3-R1S60338354-band6.bak	train-3p:band	已登记的复制：同一次跑的第 6 席（产物 = 该臂终点）
+2026-11-10T18:36:00.004Z	561d38226fa8357e	docs/artifacts/night-adapt/MSB4-R1S1335338872.js	docs/artifacts/MSB4-R1S1335338872-band1.bak	train-3p:band	已登记的复制：同一次跑的第 1 席（产物 = 该臂终点）
+2026-11-10T18:36:00.005Z	ca7c04ccab25f5b6	docs/artifacts/night-adapt/MSB4-R1S1928336850.js	docs/artifacts/MSB4-R1S1928336850-band1.bak	train-3p:band	已登记的复制：同一次跑的第 1 席（产物 = 该臂终点）
+2026-11-10T18:36:00.006Z	ca992811b58d7aef	docs/artifacts/night-adapt/MSB4-R1S922202334.js	docs/artifacts/MSB4-R1S922202334-band3.bak	train-3p:band	已登记的复制：同一次跑的第 3 席（产物 = 该臂终点）
+2026-11-10T18:36:00.007Z	82416eb69be80512	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-FITCHAMP-band4.bak	train-3p:band	已登记的复制：同一次 SMOKE-FITCHAMP 跑的第 4 席
+2026-11-10T19:25:00.000Z	0277b4fc112c1037	docs/artifacts/MSB5-R1S808369991-band6.bak	docs/artifacts/night-adapt/MSB5-R1S808369991.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 6 席（11-10 MSB5 收尾补登记）
+2026-11-10T19:25:00.001Z	154df468fe284a51	docs/artifacts/MSB5-R1S928337601-band3.bak	docs/artifacts/night-adapt/MSB5-R1S928337601.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 3 席（11-10 MSB5 收尾补登记）
+2026-11-10T19:25:00.002Z	9d01d51f5d678846	docs/artifacts/MSB5-R1S942253744-band5.bak	docs/artifacts/night-adapt/MSB5-R1S942253744.js	train-3p:band	已登记的复制：MSB5 臂终点 = 同次跑的第 5 席（11-10 MSB5 收尾补登记）
+2026-11-10T20:50:00.000Z	a4b86904af55ce55	docs/artifacts/ADAPT-DEF-O5-s915-band3.bak	docs/artifacts/ADAPT-DEF-O5-s915-band5.bak	train-3p:band	已登记的复制：同次 ADAPT-DEF-O5-s915 跑的第 5 席与第 3 席同权重
+2026-11-10T20:50:00.001Z	d3444092a9ac703f	docs/artifacts/ADAPT-DEF-O5-s915-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF-O5-s915.js	train-3p:band	已登记的复制：产物 = 同次跑的第 4 席（SEL_DEFQ 改判后当选）
+2026-11-10T20:50:00.002Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	train-3p:band	已登记的复制：产物 = 同次跑的第 4 席（SEL_DEFQ 改判后当选）
+2026-11-10T12:59:32.781Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T12:59:32.789Z	90caef56fc1ea7dd	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/night-adapt/ADAPT-DEF2-O5-s917.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T21:00:00.000Z	297b116efe29890a	docs/artifacts/ADAPT-DEF2-O5-s917-band2.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band3.bak	train-3p:band	已登记的复制：同次 ADAPT-DEF2-O5-s917 跑的第 3 席与第 2 席同权重
+2026-11-10T21:42:00.000Z	cf1d3f0b3bb079db	docs/artifacts/S916-R1S1060412595-band6.bak	docs/artifacts/night-adapt/S916-R1S1060412595.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 6 席
+2026-11-10T21:42:00.001Z	829d9efa67c49d23	docs/artifacts/S916-R1S1704335642-band4.bak	docs/artifacts/night-adapt/S916-R1S1704335642.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 4 席（本轮冠军）
+2026-11-10T21:42:00.002Z	99e90e0394d88940	docs/artifacts/S916-R1S573569134-band3.bak	docs/artifacts/night-adapt/S916-R1S573569134.js	train-3p:band	已登记的复制：S916 批次臂终点 = 同次跑的第 3 席
+2026-11-10T22:40:00.000Z	ab81ea46f97544c9	docs/artifacts/S916R2B-R1S1062426886-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S1062426886.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:01.000Z	1c1c6a10daa0e561	docs/artifacts/S916R2B-R1S1098066977-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S1098066977.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:02.000Z	75287066827c3ccb	docs/artifacts/S916R2B-R1S1249867118-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S1249867118.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:03.000Z	bec1689a0bb02896	docs/artifacts/S916R2B-R1S1408282248-band1.bak	docs/artifacts/S916R2B-R1S1408282248-band4.bak	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:04.000Z	bec1689a0bb02896	docs/artifacts/S916R2B-R1S1408282248-band1.bak	docs/artifacts/night-adapt/S916R2B-R1S1408282248.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:05.000Z	ee4362e815f26cc0	docs/artifacts/S916R2B-R1S1725743042-band4.bak	docs/artifacts/night-adapt/S916R2B-R1S1725743042.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:06.000Z	22f260e072c7add4	docs/artifacts/S916R2B-R1S2000717743-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S2000717743.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:07.000Z	2e9b09f1a7084b3f	docs/artifacts/S916R2B-R1S371963301-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S371963301.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:08.000Z	8ae650b32e5e1009	docs/artifacts/S916R2B-R1S685223462-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:09.000Z	8e3377412c1cb686	docs/artifacts/S916R2B-R1S745300182-band6.bak	docs/artifacts/night-adapt/S916R2B-R1S745300182.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:10.000Z	a75704b530262da8	docs/artifacts/S916R2B-R1S768291681-band3.bak	docs/artifacts/night-adapt/S916R2B-R1S768291681.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:11.000Z	6c7c3f55ea22472c	docs/artifacts/S916R2B-R1S769889016-band2.bak	docs/artifacts/night-adapt/S916R2B-R1S769889016.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:12.000Z	7aede7e7223ca03b	docs/artifacts/S916R2B-R1S997133553-band3.bak	docs/artifacts/night-adapt/S916R2B-R1S997133553.js	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T22:40:13.000Z	c12641786de8dfc4	docs/artifacts/S916R2B-R1S745300182-band2.bak	docs/artifacts/S916R2B-R1S745300182-band3.bak	train-3p:band	已登记的复制：S916R2B 批次臂终点/band 夹具
+2026-11-10T16:38:26.570Z	900cb457bd922ba8	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/smoke-out-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T16:38:26.576Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/smoke-out-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T16:38:26.579Z	f8c6b067f2bf2773	docs/artifacts/SMOKE2-band2.bak	scratch/zcode-1111-bretest/smoke-out.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T17:27:06.823Z	cecfd10badfdc57e	docs/artifacts/MSB6-R1S1628871127-seg1.bak	docs/artifacts/MSB6-R1S1628871127-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T17:39:08.194Z	5fbcc91cf25fde32	docs/artifacts/MSB6-R1S949175392-seg4.bak	docs/artifacts/MSB6-R1S949175392-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T17:51:08.086Z	d7dcb6a89b3a2df4	docs/artifacts/MSB6-R1S105176564-seg2.bak	docs/artifacts/MSB6-R1S105176564-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T17:51:08.111Z	d7dcb6a89b3a2df4	docs/artifacts/MSB6-R1S105176564-seg2.bak	docs/artifacts/night-adapt/MSB6-R1S105176564.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T18:05:52.074Z	d8bb86b1bd2008f1	docs/artifacts/MSB7-R1S1020649171-seg1.bak	docs/artifacts/MSB7-R1S1020649171-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T18:28:54.959Z	805c036abef262ac	docs/artifacts/MSB6-R2S1902103616-seg4.bak	docs/artifacts/MSB6-R2S1902103616-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T18:44:47.036Z	e0f92c41d5ad2a8f	docs/artifacts/MSB6-R2S297540638-seg1.bak	docs/artifacts/MSB6-R2S297540638-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T18:44:47.095Z	30dfbac8a58b36d4	docs/artifacts/MSB6-R2S297540638-seg4.bak	docs/artifacts/MSB6-R2S297540638-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T18:48:58.766Z	981e3af92e6b47bf	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	docs/artifacts/MSB8-railgun-R1S1393099249-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T18:48:58.777Z	981e3af92e6b47bf	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	docs/artifacts/MSB8-railgun-R1S1393099249-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T18:48:58.787Z	981e3af92e6b47bf	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	docs/artifacts/night-adapt/MSB8-railgun-R1S1393099249.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T19:14:02.890Z	d50a88f11baa9982	docs/artifacts/MSB7-R2S1318607149-seg2.bak	docs/artifacts/MSB7-R2S1318607149-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-10T19:14:02.903Z	2b2f75c3c0a89682	docs/artifacts/MSB7-R2S1318607149-seg4.bak	docs/artifacts/MSB7-R2S1318607149-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T19:39:18.082Z	d845bd1c1e98f313	docs/artifacts/MSB9-R1S1582243476-seg1.bak	docs/artifacts/MSB9-R1S1582243476-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T19:39:18.143Z	d845bd1c1e98f313	docs/artifacts/MSB9-R1S1582243476-seg1.bak	docs/artifacts/night-adapt/MSB9-R1S1582243476.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T19:42:51.192Z	622598d4ede470f9	docs/artifacts/MSB9-R1S2056215739-seg3.bak	docs/artifacts/MSB9-R1S2056215739-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T19:47:12.067Z	b5188adb9f226d88	docs/artifacts/MSB9-seq-R1S1712079342-seg4.bak	docs/artifacts/MSB9-seq-R1S1712079342-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T20:05:04.514Z	400f65882b80fe23	docs/artifacts/MSB10-R1S1149480262-seg2.bak	docs/artifacts/MSB10-R1S1149480262-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T20:08:52.449Z	608c15fb9fb31595	docs/artifacts/MSB10-R1S939077071-seg4.bak	docs/artifacts/MSB10-R1S939077071-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-10T20:17:28.994Z	c2bee92c2fba6f9b	docs/artifacts/MSB9-R2S1663058548-seg4.bak	docs/artifacts/MSB9-R2S1663058548-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T20:41:29.288Z	00c1fbe62465da9f	docs/artifacts/MSB10-R2S1668802756-seg4.bak	docs/artifacts/MSB10-R2S1668802756-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-10T20:43:47.746Z	5b3cfff377840b12	docs/artifacts/MSB10-R2S1698738428-seg1.bak	docs/artifacts/MSB10-R2S1698738428-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T20:43:47.774Z	5b3cfff377840b12	docs/artifacts/MSB10-R2S1698738428-seg1.bak	docs/artifacts/night-adapt/MSB10-R2S1698738428.js	train-3p	未复制：同一粒权重已有真身
+2026-11-10T21:07:48.962Z	c0cf6652d1e138d4	docs/artifacts/MSB11-R1S2127472120-seg4.bak	docs/artifacts/MSB11-R1S2127472120-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T21:07:48.973Z	d0099a5045f24240	docs/artifacts/MSB11-R1S2127472120-seg1.bak	docs/artifacts/MSB11-R1S2127472120-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T21:35:07.586Z	5738a2f38647e938	docs/artifacts/MSB11-R2S306293884-seg3.bak	docs/artifacts/MSB11-R2S306293884-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-10T21:41:54.005Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/MSB11-R2S1663363345-band1.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 1 席）
+2026-11-10T21:41:54.017Z	ecd209ccd4a5c394	docs/artifacts/MSB11-R2S1663363345-seg3.bak	docs/artifacts/MSB11-R2S1663363345-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-10T21:41:54.037Z	970c77da80818f40	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/night-adapt/MSB11-R2S1663363345.js	train-3p	本臂零改包：产物 = 起点那一粒
+2026-11-10T23:44:23.345Z	90feb44206d9379c	docs/artifacts/MSB14-drain-R1S1309859507-seg4.bak	docs/artifacts/MSB14-drain-R1S1309859507-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）

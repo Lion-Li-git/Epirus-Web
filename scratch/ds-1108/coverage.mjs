@@ -1,0 +1,24 @@
+
+import { readFileSync } from 'node:fs';
+import { sandbox } from '../../tools/audit-lib.mjs';
+const W = sandbox();
+const R = W.EpirusRules;
+const all = R.skills.map(s => s.key);
+console.log('规则卡总数 ' + all.length + '（含隐藏技 ' + (R.hiddenSkills || []).length + '）');
+const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
+const u = rd('scratch/ds-1108/card-usage.tsv');
+const H = u[0], cards = H.slice(5);
+const pool = new Set(rd('champion-map/pool-members.tsv').slice(1).map(r => r[0]));
+const rows = u.slice(1).filter(r => pool.has(r[0]));
+console.log('池内 ' + rows.length + ' 枚有出手谱');
+const cov = {};
+for (const k of all) cov[k] = 0;
+for (const r of rows) for (const k of cards) if ((+r[H.indexOf(k)] || 0) >= 0.5) cov[k]++;
+const used = all.filter(k => cov[k] > 0);
+console.log('池覆盖的卡：' + used.length + '/' + all.length + ' = ' + (100 * used.length / all.length).toFixed(0) + '%');
+const lines = all.map(k => [k, cov[k]]).sort((a, b) => b[1] - a[1]);
+for (const [k, n] of lines) if (n > 0) console.log('  ' + k.padEnd(10) + n + '/' + rows.length);
+const zero = all.filter(k => cov[k] === 0);
+console.log('一块都没人用的 ' + zero.length + ' 张：' + zero.join(' '));
+const dist = rows.map(r => +r[H.indexOf('distinct')]).sort((a, b) => a - b);
+console.log('用卡数：min ' + dist[0] + ' 中位 ' + dist[Math.floor(dist.length / 2)] + ' max ' + dist[dist.length - 1]);

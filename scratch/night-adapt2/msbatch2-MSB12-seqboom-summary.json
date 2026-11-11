@@ -1,0 +1,39 @@
+{
+ "base": 652,
+ "start": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+   "champMean": 0.20021500000000003,
+   "pool": [
+    {
+     "label": "S1308870894",
+     "pack": "docs/artifacts/night-adapt/MSB12-seqboom-R1S1308870894.js",
+     "mean": 0.20958,
+     "min": 0.1186
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB12-seqboom-R1S1308870894.js"
+   ]
+  }
+ ]
+}

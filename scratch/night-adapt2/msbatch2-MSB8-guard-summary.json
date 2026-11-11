@@ -1,0 +1,39 @@
+{
+ "base": 501,
+ "start": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+   "champMean": 0.06675,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/S916R2B-R1S685223462.js",
+     "mean": 0.06675,
+     "min": 0.0068
+    },
+    {
+     "label": "S1857937758",
+     "pack": "docs/artifacts/night-adapt/MSB8-guard-R1S1857937758.js",
+     "mean": 0.0468875,
+     "min": -0.0312
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/S916R2B-R1S685223462.js"
+   ]
+  }
+ ]
+}

@@ -24,7 +24,7 @@
  * ==========================================================================*/
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { sandbox, rejectUnknownFlags, mulberry32 } from './audit-lib.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { poolFromSpecs, heldFromNames, HELDOUT } from './regime-panel.mjs';
 import { bestInByEnv, routingReadings, matrixComplaint, metricOrThrow, bestSingleOf, medianOf, shareOf, decideSwitch, nearestDistinct, switchedEnv } from './routing-gain-lib.mjs';
 

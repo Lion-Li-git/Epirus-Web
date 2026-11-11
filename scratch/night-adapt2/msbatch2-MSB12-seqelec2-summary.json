@@ -1,0 +1,39 @@
+{
+ "base": 657,
+ "start": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+   "champMean": 0.20021500000000003,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "S2018094672",
+     "pack": "docs/artifacts/night-adapt/MSB12-seqelec2-R1S2018094672.js",
+     "mean": 0.16764,
+     "min": 0.0973
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB10-R1S1149480262.js"
+   ]
+  }
+ ]
+}

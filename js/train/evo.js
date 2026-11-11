@@ -69,6 +69,33 @@
   function setCourseEvery(v) { const k = Math.floor(Number(v) || 0); COURSE_EVERY = k >= 1 ? k : 0; return COURSE_EVERY; }
   function courseEvery() { return COURSE_EVERY; }
   function setCourseBot(v) { COURSE_BOT_NAME = String(v == null ? '' : v).trim(); return COURSE_BOT_NAME; }
+  /* 11-10（DS 复核发现「训练 objective = A 轴脚本桌，而主尺已换 C」）⇒ 课程席可以换成**一枚真实的冠军包**：
+   *   反射墙能被冠军桌惩罚、而脚本桌惩罚不了 ⇒ 不给它见冠军，GA 永远学不会打冠军。
+   *   设了 pack 就**覆盖** COURSE_BOT（同一席只坐一个人）；默认 null ⇒ 行为逐字不变。 */
+  let COURSE_PACK_FN = null;
+  function setCoursePack(fn) { COURSE_PACK_FN = (typeof fn === 'function') ? fn : null; return !!COURSE_PACK_FN; }
+  function coursePackOn() { return !!COURSE_PACK_FN; }
+  /* 11-10（DS）：**fitness 里掺冠军桌**。课程席只能坐 1 席/代（5P），梯度主体仍是脚本局 ⇒
+   *   反射墙在 fitness 里永远不吃亏。这里每 k 局把一席对手换成**真实冠军包**（同架构），
+   *   让「打不过会还手的人」直接扣分。默认关（0/null）⇒ 行为逐字不变。 */
+  let FIT_CHAMP_FN = null, FIT_CHAMP_EVERY = 0;
+  function setFitChamp(fn, every) {
+    FIT_CHAMP_FN = (typeof fn === 'function') ? fn : null;
+    const k = Math.floor(Number(every) || 0);
+    FIT_CHAMP_EVERY = (FIT_CHAMP_FN && k >= 1) ? k : 0;
+    return { on: !!FIT_CHAMP_FN, every: FIT_CHAMP_EVERY };
+  }
+  function fitChampOn() { return !!(FIT_CHAMP_FN && FIT_CHAMP_EVERY > 0); }
+  function fitChampPid(g, gen, seat, nG) {
+    /* 11-10（用户：2P 也应吃统一冠军）：nG=2 时唯一对手席 = 1-seat。
+     * 旧的 `nG < 3` 会让混进 fitness 的 2P 局**永远见不到冠军**，2P 适应性只剩脚本梯度；
+     * 而旧公式在 nG=2 时 `(seat+2)%2 === seat` 会把冠军塞进受评席自己 ⇒ 2P 必须单独一支。 */
+    if (!fitChampOn() || nG < 2) return -1;
+    if ((g % FIT_CHAMP_EVERY) !== 0) return -1;
+    if (nG === 2) return 1 - seat;
+    return (seat + 2 + ((gen * 3 + g) % (nG - 1))) % nG;
+  }
+  const FIT_STAT = { fired: 0, byN: {} };   // byN：按本局人数记账（2P 统一冠军的收据要能单独看见）
   function courseBotName() { return COURSE_BOT_NAME; }
 
   /* =====（ZCode · 11-02 深夜）`HP_SEED`：残血开局课程——摄魂双线对照的 (b) 线（用户裁「两个都可以试试」）=====
@@ -221,6 +248,7 @@
     return (seat + 1 + ((gen * 5 + g) % (n - 1))) % n;
   }
   function courseSeatBot() {
+    if (COURSE_PACK_FN) return COURSE_PACK_FN;
     const nm = COURSE_BOT_NAME || 'pickToolKit';
     const fn = Bots ? Bots[nm] : null;
     return (typeof fn === 'function') ? fn : null;
@@ -2399,6 +2427,7 @@ let WALL_GAMES = 3;
       const killSeatPid = killSeatFor(g, gen, seat, nG, hGene);   // v1.5.160：本局注收割席在第几席（-1=不注）
       /*（ZCode · 11-06 夜）课程席：每 K 代让一席脚本对手上桌（D-08 机制解；判据单一来源 courseSeatFor） */
       const coursePid = courseSeatFor(g, gen, seat, nG, hGene);
+      const fitPid = fitChampPid(g, gen, seat, nG);   /* 冠军桌席（默认 -1） */
       /* v1.5.99：本局是否"补贴局"（补贴 = 白来的 ep）—— 给"只教目标卡"的示范当门槛（见 makeEconChooser）。 */
       const regenThisGame = commitGame ? 2 : regenForGame(g, games, gen);
       const subThisGame = regenThisGame > 0;
@@ -2444,6 +2473,11 @@ let WALL_GAMES = 3;
           COURSE_STAT.gens[gen] = (COURSE_STAT.gens[gen] || 0) + 1;
           const cbName = botRegisteredName(cb);
           COURSE_STAT.names[cbName] = (COURSE_STAT.names[cbName] || 0) + 1;
+        } else if (fitPid >= 0 && pid === fitPid && pid !== killSeatPid && pid !== coursePid) {
+          /* 冠军席：直接塞**包 chooser**（已带 eps/temp），不走 wrapBotN（那是脚本包装） */
+          choosers.push(FIT_CHAMP_FN);
+          FIT_STAT.fired++;
+          FIT_STAT.byN[nG] = (FIT_STAT.byN[nG] || 0) + 1;
         } else if (famSet && famSet.has(pid)) {
           /* §E798 家族副本席：同一个 `params` 走适应度用的那个 chooser（不吃补贴/强迫/模仿 ⇒ 它是"副本"不是"另一个被喂的个体"）。
            *   ⚠ 不消耗 `ok` 索引 ⇒ 脚本对手的轮换序列与不开本旋钮时逐字相同（否则等于偷偷改了对手份额，读数就说不清是谁施压）。 */
@@ -4225,7 +4259,8 @@ function countVariety(events, seat) {
     setBigTPush, bigTPushOn, bigTPushPick, bigTPushTarget, bigTPushSalt, wrapBigTPush,   // v1.5.332 §E270：大雷"每四五局一张"的上线档（默认值只由上面那个常数表达，门 D224 钉）· v1.6.3 §E282：外面那层给脚本席用
     setMix8Every, mix8Every,   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌（默认 0=关 ⇒ 逐字不变；8P 局照常进 fit）
     setMix2Every, mix2Every,   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌（同代混桌，DS 待办 2；默认 0=关）
-    setCourseEvery, courseEvery, setCourseBot, courseBotName, courseSeatFor, courseSeatBot, countCourseSeats,   //（ZCode · 11-06 夜）课程席（D-08 机制解；默认 0=关）
+    setCourseEvery, courseEvery, setCourseBot, courseBotName, setCoursePack, coursePackOn, courseSeatFor, courseSeatBot, countCourseSeats,
+    setFitChamp, fitChampOn, fitChampPid, fitStat: function () { return { fired: FIT_STAT.fired, byN: Object.assign({}, FIT_STAT.byN) }; },   //（ZCode · 11-06 夜）课程席（D-08 机制解；默认 0=关）
     setMixHpEvery, mixHpEvery, mixHpMode, countMixHpFlips,   //（ZCode · 11-06 深夜）桌形混合（默认 0=关；收据 countMixHpFlips）
     setHpSeed, hpSeedOn,   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
     setSupportPrior, supportPriorOn, supportPriorTarget, setSupportPriorKnobs, supportPriorKnobs,   // §E646（路线 B）：送盾的部署层先验，**默认 0=关**；自证在 `tools/probe-support-prior.mjs`

@@ -18,7 +18,7 @@
  *   node tools/exam-pool.mjs --check --rounds=10 --json
  *   代码里：`planN(n, rounds, seed)` → [{seats:[名字,…]}, …]；`seatsFor(n)` → 该人数的合法席。
  */
-import { EXAM_POOL } from '../server/opp-pool.mjs';
+import { EXAM_POOL } from '../training/server/opp-pool.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 /* 池里该人数可用的席（minN 过滤；2 人局拿掉镜面/双枪这类要 ≥3 人的线）。
@@ -55,6 +55,54 @@ export function planN(n, rounds, seed, pool) {
   for (let g = 0; g < games; g++) {
     const draw = [];
     for (let j = 0; j < per; j++) { draw.push(order[p % K]); p++; }
+    out.push({ n: n, seats: draw });
+  }
+  return out;
+}
+
+/* ===== 考卷 v3：分层抽席（用户 11-10「重新安排一下考卷，提高平衡性和实际能力」）=====
+ * 动机（实测 G5C 画像，20 局/格）：反射墙对 gunspam 2P **100%**、对 antidef 5P **10%**、对 farmer 5P **5%**
+ *   ⇒ 它的「强」来自池里**进攻席占绝对多数**（11 枪 / 4 穿透 / 0 纯经济），每回合都有东西可弹。
+ *   v3 的排程保证：**每一局都按「角色」各取一席**（attack / pierce / defense / econ），
+ *   5P 恰好一局四席各一 ⇒ 反射墙再也遇不到「全进攻桌」。
+ * 角色按**实测出招画像**归类（不是按 axis 标签）：
+ *   attack = 枪% ≥25 且无明显防御；pierce = 穿透% ≥15；defense = 防御% ≥40；econ = 低攻低防（攒钱/经济）。
+ * 默认**不改变** planN 的行为；只有显式 `--plan=v3` 才走这里。 */
+export const ROLE_OF = {
+  gunspam: 'attack', gunfocus: 'attack', earlypressure: 'attack', killsecure: 'attack', dualspam: 'attack', deadlineburst: 'attack', heavyfire: 'attack',
+  swordspam: 'pierce', piercemix: 'pierce', antidef: 'pierce', snipespam: 'pierce', bigtfocus: 'pierce',
+  guardspam: 'defense', wall: 'defense', protowall: 'defense', baguaspam: 'defense', reflectspam: 'defense', reflecttank: 'defense',
+  combocounter: 'defense', guardgun: 'defense', reflectmix: 'defense', targeter: 'defense', random: 'defense', deepsaver: 'defense',
+  ringspam: 'econ', beadburst: 'econ', mirrorspam: 'econ', mix: 'econ', cautious: 'econ',
+};
+export const ROLES = ['attack', 'pierce', 'defense', 'econ'];
+export function planN3(n, rounds, seed, pool) {
+  if (!(Number.isInteger(n) && n >= 2 && n <= 8)) throw new Error('planN3: n 必须是 2..8（收到 ' + n + '）');
+  const R = Number(rounds);
+  if (!(Number.isInteger(R) && R >= 1)) throw new Error('planN3: rounds 必须是正整数（收到 ' + rounds + '）');
+  const P = pool || EXAM_POOL;
+  const usable = P.filter(function (e) { return e.minN <= n; });
+  const rosters = {};
+  for (const role of ROLES) rosters[role] = [];
+  for (const e of usable) { const r = ROLE_OF[e.name] || 'defense'; rosters[r].push(e.name); }
+  for (const role of ROLES) if (!rosters[role].length) throw new Error('planN3: 角色 ' + role + ' 在 N=' + n + ' 没有可用的席');
+  const rnd = mulberry32((seed >>> 0) ^ Math.imul(n, 7919) ^ 0x5bd1e995);
+  const order = {}; const cursor = {};
+  for (const role of ROLES) { order[role] = shuffled(rosters[role], rnd); cursor[role] = 0; }
+  const per = n - 1;
+  const K = usable.length;
+  const games = Math.ceil(R * K / per);
+  const out = [];
+  for (let g = 0; g < games; g++) {
+    const draw = [];
+    /* 角色起点每局轮转 ⇒ 2P/3P 也能覆盖到四种角色 */
+    const start = g % ROLES.length;
+    for (let j = 0; j < per; j++) {
+      const role = ROLES[(start + j) % ROLES.length];
+      const lst = order[role];
+      draw.push(lst[cursor[role] % lst.length]);
+      cursor[role]++;
+    }
     out.push({ n: n, seats: draw });
   }
   return out;

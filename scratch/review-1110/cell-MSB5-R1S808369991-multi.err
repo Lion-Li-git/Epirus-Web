@@ -1,0 +1,21 @@
+[exam-v2] 冠军席 = KDG-B-Q-s13,FOCUS-Q-s13,Q-s47
+  N=2: 1568/2600 夺1 ‖ 各座 807/1300 761/1300
+  N=3: 611/1400 夺1 ‖ 各座 215/467 191/467 205/466
+  N=5: 276/700 夺1 ‖ 各座 54/140 56/140 54/140 54/140 58/140
+  N=8: 117/400 夺1 ‖ 各座 10/50 13/50 10/50 23/50 15/50 7/50 20/50 19/50
+  N=2: 824/2600 夺1 ‖ 各座 413/1300 411/1300
+  N=3: 185/1400 夺1 ‖ 各座 19/467 89/467 77/466
+  N=5: 48/700 夺1 ‖ 各座 7/140 12/140 11/140 8/140 10/140
+  N=8: 8/400 夺1 ‖ 各座 0/50 1/50 3/50 1/50 2/50 0/50 0/50 1/50
+file:///D:/code/Epirus-Web/tools/exam-4n.mjs:164
+  for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
+                                                                                                                          ^
+
+TypeError: Cannot read properties of undefined (reading 'map')
+    at emit (file:///D:/code/Epirus-Web/tools/exam-4n.mjs:164:123)
+    at file:///D:/code/Epirus-Web/tools/exam-4n.mjs:172:3
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.20.0

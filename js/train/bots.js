@@ -305,6 +305,28 @@
     return affOrJi(legal);
   }
 
+  /* 谨慎农民（DS · 11-10 · 考卷 v3 的「耐心型」席）：
+   *   平时像 farmer 一样攒钱（charge/ring/ji），但只要**上一回合有人把目标指向我**就改出 guard。
+   *   为什么需要它：反射墙（G5C）对纯 farmer 在 5P 只有 5% 胜率 ⇒ farmer 是墙的天敌；
+   *   但纯 farmer 对任何攻击包都是 100% 白送 ⇒ 这条把「白送」改成「会挡」，既磨墙又不至于无脑送分。 */
+  function pickCautiousFarmer(state, pid, legal) {
+    const byKey = {}; legal.forEach(function (l) { byKey[l.key] = l; });
+    const aff = function (k) { return byKey[k] && byKey[k].affordable; };
+    let hit = false;
+    const ev = state.events || [];
+    const lastRound = state.round - 1;
+    for (let i = ev.length - 1; i >= 0; i--) {
+      const e = ev[i];
+      if (e.round != null && e.round < lastRound) break;
+      if (e.type === 'action' && e.target === pid && e.pid !== pid) { hit = true; break; }
+    }
+    if (hit && aff(SK.GUARD)) return SK.GUARD;
+    if (aff(SK.CHARGE) && rnd(state) < 0.35) return SK.CHARGE;
+    if (aff(SK.RING) && state.p[pid].ringStreak > 0) return SK.RING;
+    if (aff(SK.JI)) return SK.JI;
+    return affOrJi(legal);
+  }
+
   function pickMix(state, pid, legal) {
     const table = [pickBalanced, pickAggro, pickAntiDef, pickBreakDef, pickDefend, pickRandom];
     return table[Math.floor(rnd(state) * table.length)](state, pid, legal);
@@ -1506,6 +1528,8 @@
    *   ⚠ 代价要说明白：并掉 ε 之后**最简单档变硬了** —— 统一剂量下 soft 带实测人类席夺冠 19.0%(multi) ‖ 20.6%(long)，
    *   而原来那一档（ε=1/uniform）是 61.9% ‖ 71.5%。想要"真简单"的杠杆只剩两个：给 soft 带添更弱的成员，
    *   或单独给简单档留一点 ε（`eps2` 之外再加一个 `epsEasy` 之类，那是下一次裁定）。 */
+  /* ⚠ 带内枚数现读 `champion-map/pool-members.tsv`（2026-11-09 现数 = 22 枚：hard 9 ‖ soft 13）；
+   *   下面各档 note 里的 11/16、12/13 等是历史读数，不再当现状。 */
   const DIFF_TIERS = [
     { id: 'lv:sparring', name: '简单 · 陪练', kind: 'champ', eps: 0.2, epsK: 5, epsMode: 'soft', ramp: false, pool: 'soft',
       /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面，能用更多低性价比的技能…
@@ -1681,7 +1705,7 @@
   global.EpirusBots = {
     pickRandom, pickAggro, pickDefend, pickBalanced, pickAntiDef, pickBreakDef, pickAdaptive, pickWall, pickReflectSpam, pickGuardSpam, pickBaguaSpam, pickComboCounter, pickFarmer, pickMix,
     pickTankLine, pickHeavyFire, pickGuardGun, pickProtoWall, pickWhiff,
-    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, pickSwordSpam, pickPierceMix, pickPierceFocus, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
+    pickReflectMix, pickReflectTank, pickDefReflectGun, pickToolKit, pickSwordSpam, pickPierceMix, pickPierceFocus, pickCautiousFarmer, STYLES, DIFF_TIERS, DIFF_DEFAULT, tierEps, tierEpsAt, resetBotMem,
     snapshotBotMem, restoreBotMem,
     setPlanOff, planOffOn, countPlanOff, resetPlanOffStat,   // 计划线消融旋钮（默认空集 ⇒ 出厂不变）＋**按住计数**（§E692 的下一步）
     pickMultiEasy, pickMultiMed, pickMultiStrong, pickProtoMine, pickProtoTransfer, pickFocusFire, pickDeepSaver,

@@ -23,7 +23,19 @@
   const SEAT_IN_B = 81 + 5 + 1;            // obs3b 逐席：81 公开（14 状态+30 键身份+1 none+3 目标+30 键 bag+3 目标 bag）
   const SELF_DIM = 5 + 2 + 48 + 1;         // obs3 局面侧：G(5) ‖ 私有(2) ‖ 序列(48) ‖ 全场合计(1，代 2 删了 pool.count)
   const SELF_DIM_B = 5 + 2 + 78 + 1;       // obs3b 局面侧：序列 78 = 32 Q.seq + 30 Q.bag（自身键 bag）+ 16 Q.out
-  const DOF = { obs3: 208, obs3b: 415 };   // 观测面总维（与训练侧 obs3.dims(R, ver) 同账，由 browser-parity 当场红）
+  const DOF = { obs3: 208, obs3b: 415, obs4: 292, obs5: 292 };   // 观测面总维（obs5 与 obs4 同一张特征 manifest——差别只在聚合段）
+  /* ⚑ obs4（11-10 深夜 · ZCode · 用户原则「正交维度信息全覆盖 + 不再因可变人数平均化」）：
+   *   固定 8 槽（slot = 座位 pid，每局随机指派 ⇒ 槽位身份不是脚本指纹）+ alive 位，**无 mean/max 池化**——
+   *   每个席位每一维都被直接读到，平均化从结构上不可能发生。对手侧**不给精确键**（断指纹通道），
+   *   改给风格不变量 + 威胁计数；候选侧保留精确键（「我要出什么」必须知道）。 */
+  /* ⚑ obs5（11-10 · ZCode · 用户问"attention+PMA 会不会更好"的正面回答）：特征与 obs4 完全同一张（292），
+   *   聚合段换成 **set-transformer**：共享 seatEnc → 1 层自注意力（QKV，alive 掩码 softmax，残差直连保底
+   *   信息全覆盖）→ PMA（4 seed，keys/values 读注意力后语境向量）。置换不变与跨人数泛用从**结构**成立：
+   *   K 只经 softmax 归一进入（softmax 权重和恒 1，mean 的"除以 N"不存在）；softmax 权重内容寻址——
+   *   "谁威胁最大"是一跳学出来的比较，不再靠线性读 8 个槽。init 时注意力 logits≈0 ⇒ 从软均值起步特化。 */
+  const SEAT_IN_4 = 35;                    // obs4/obs5 逐席：29 公开（14 状态+1 alive+5 风格+2 穿透+3 目标+4 计数）‖ 5 关系 ‖ 1 isSelf
+  const SELF_DIM_4 = 5 + 2 + 48 + 1 + 4;   // obs4/obs5 局面侧：G5 ‖ 私有2 ‖ 序列48（类+果，无自身键 bag）‖ 合计1 ‖ 局面比较4
+  const PMA_SEEDS_5 = 4;                   // obs5：PMA seed 数（= ctx 拼接块数；每 seed 学会盯一类席位）
   const CAND_BASE = 30;                    // obs3 候选侧基础段（代 2 删了恒零的 `tgt.none`）
   const POOL_BLOCKS = 3;                   // h_self ‖ mean ‖ max
   const SKILL_CLASS = ['energy', 'attack', 'defense', 'special'];
@@ -64,13 +76,41 @@
     }
     return head.concat(lsKey, [p.lastSkill ? 0 : 1], tail, bag, tbag);
   }
+  /* obs4 逐席公开段（29 维）：状态14 + alive1 + 风格5 + 穿透2 + 目标3 + 计数4 —— **无精确键**（断脚本指纹）。
+   *   已淘汰席位全零（alive 位 0）⇒ 槽位有牙只对活人。 */
+  function seatVec4(p, mePid, modeHp, R, recent) {
+    const N4 = 29;
+    if (!(p.hp > 0)) return new Array(N4).fill(0);
+    const st = p.stickers || [];
+    const head = [
+      Math.max(0, p.hp) / modeHp, Math.min(p.ep, 12) / 12,
+      Math.min(p.ringStreak || 0, 3) / 3, Math.min(p.cannonCount || 0, 9) / 9,
+      Math.min(p.rodGuard || 0, 3) / 3, Math.min(p.mineTurns || 0, 3) / 3,
+      p.baguaExtra ? 1 : 0, p.fireWeakNow ? 1 : 0,
+      p.tauntActive ? 1 : 0, p.nightmare ? 1 : 0, p.vampire ? 1 : 0, p.infiniteEnergy ? 1 : 0,
+      Math.min(st.length, 4) / 4, Math.min(st.reduce((a, s) => Math.max(a, (s && s.age) || 0), 0), 4) / 4,
+    ];
+    const def = p.lastSkill && R.byKey[p.lastSkill] ? R.byKey[p.lastSkill] : null;
+    const cat = def ? def.cat : null;
+    const ci = SKILL_CLASS.indexOf(cat);
+    const rec = recent && recent.get(p.id);
+    let streakDef = 0;
+    if (rec && rec.keys) for (const k of rec.keys) { const d = R.byKey[k]; if (d && d.cat === 'defense') streakDef++; else break; }
+    const hasBead = ((p.elec || 0) > 0 || (p.boom || 0) > 0) ? 1 : 0;
+    return head.concat([1],
+      [ci === 0 ? 1 : 0, ci === 1 ? 1 : 0, ci === 2 ? 1 : 0, ci === 3 ? 1 : 0, p.lastSkill ? 0 : 1],
+      [def && def.pierce && def.pierce.defense ? 1 : 0, def && def.pierce && def.pierce.reflect ? 1 : 0],
+      [p.lastTarget === p.id ? 1 : 0, (mePid >= 0 && p.lastTarget === mePid) ? 1 : 0,
+        (p.lastTarget != null && p.lastTarget !== p.id && p.lastTarget !== mePid) ? 1 : 0],
+      [rec ? rec.tgt[1] : 0, rec ? Math.min(rec.cnt || 0, 4) / 4 : 0, Math.min(streakDef, 4) / 4, hasBead]);
+  }
   /* 最近 K 回合的键/目标 bag（与 obs3.recentAll 同源：一次反扫、2^-age 衰减、/1.875；依赖 action 事件带 target） */
   function recentAll(state, R, ids, mePid, K) {
     const BAG_NORM = 1.875;
     const ev = state.events || [];
     const need = new Map(); for (const id of ids) need.set(id, K);
-    const bag = new Map(), tgt = new Map(), age = new Map();
-    for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); }
+    const bag = new Map(), tgt = new Map(), age = new Map(), keysSeq = new Map();
+    for (const id of ids) { bag.set(id, {}); tgt.set(id, [0, 0, 0]); age.set(id, 0); keysSeq.set(id, []); }
     for (let i = ev.length - 1; i >= 0; i--) {
       let left = 0; for (const id of ids) left += need.get(id) || 0;
       if (!left) break;
@@ -84,9 +124,10 @@
       else if (e.target != null && e.target !== e.pid) tg[2] += w;
       need.set(e.pid, need.get(e.pid) - 1);
       age.set(e.pid, a + 1);
+      const ks = keysSeq.get(e.pid); ks.push(e.key); if (ks.length > K) ks.length = K;   // 反向扫描 ⇒ keys[0] = 最近一手
     }
     const out = new Map();
-    for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id) });
+    for (const id of ids) out.set(id, { bag: bag.get(id), tgt: tgt.get(id), keys: keysSeq.get(id) || [], cnt: 4 - (need.get(id) || 0) });
     return out;
   }
 
@@ -94,6 +135,7 @@
   function scene(W, state, pid, ver) {
     const R = W.EpirusRules;
     const b = ver === 'obs3b';
+    const v4 = ver === 'obs4' || ver === 'obs5';   /* obs5：特征面与 obs4 同一函数（聚合层才分家） */
     const me = state.p[pid];
     const modeHp = (state.mode && state.mode.hp) || 3;
     const maxR = (state.mode && state.mode.maxRounds) || R.MAX_ROUNDS || 60;
@@ -103,12 +145,24 @@
     const g = [state.n / 10, alive.length / 10, modeHp / 5, Math.min(1, state.round / maxR),
       sd > 0 ? Math.min(1, state.round / sd) : 0];
     const priv = [Math.min(me.elec || 0, 2) / 2, Math.min(me.boom || 0, 2) / 2];
-    const recentMap = b ? recentAll(state, R, alive.map((q) => q.id), pid, 4) : null;
+    /* obs4：全席位进 recent（含已淘汰 ⇒ 槽位恒零），威胁计数才有来源 */
+    const recentMap = (b || v4) ? recentAll(state, R, (v4 ? state.p.map((q) => q.id) : alive.map((q) => q.id)), pid, 4) : null;
+    /* obs4 局面比较 4 维：我的排名/8 ‖ 与领先者血差（clamp±1）‖ 存活总血比 ‖ 淘汰数/8 —— 场B「该收尾了」的输入依据 */
+    let sit = null;
+    if (v4) {
+      const al = alive.map((q) => q.hp);
+      const lead = al.length ? Math.max.apply(null, al) : 0;
+      sit = [(al.filter((h2) => h2 > me.hp).length + 1) / 8,
+        Math.max(-1, Math.min(1, (me.hp - lead) / modeHp)),
+        al.reduce((a, c) => a + c, 0) / Math.max(1, al.length * modeHp),
+        (state.n - alive.length) / 8];
+    }
     const seats = [];
     let sumSt = 0;
-    for (const q of alive) {
+    const seatList = v4 ? state.p : alive;
+    for (const q of seatList) {
       const rel = [0, 0, 0, 0, 0];
-      if (q.id !== pid) {
+      if (q.id !== pid && q.hp > 0) {
         if ((me.tauntBy || []).indexOf(q.id) >= 0) rel[0] = 1;
         if ((q.tauntBy || []).indexOf(pid) >= 0) rel[1] = 1;
         if ((me.chains || []).indexOf(q.id) >= 0) rel[2] = 1;
@@ -116,10 +170,10 @@
         if (q.lastTarget === pid) rel[4] = 1;
         sumSt += (q.stickers || []).length;
       }
-      seats.push({ id: q.id, public: seatVec(q, pid, modeHp, R, b, recentMap), rel, isSelf: q.id === pid ? 1 : 0 });
+      seats.push({ id: q.id, public: v4 ? seatVec4(q, pid, modeHp, R, recentMap) : seatVec(q, pid, modeHp, R, b, recentMap), rel, isSelf: q.id === pid ? 1 : 0 });
     }
     const sums = [Math.min(sumSt, 12) / 12];
-    return { R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, seq: selfSeq(state, pid, R, ver) };
+    return { R, state, pid, me, modeHp, maxR, sd, alive, g, priv, seats, sums, sit, seq: selfSeq(state, pid, R, ver) };
   }
 
   /* 自己最近 K=4 次出手：类别 ‖ 语义家族 ‖（obs3b：键身份 30，块连续）‖ 结果类 */
@@ -216,18 +270,27 @@
   function layoutOfPack(o, skills) {
     const d = o.dims;
     const isB = d.input === 'obs3b';
+    const is4 = d.input === 'obs4';
+    const is5 = d.input === 'obs5';
     /* 代 3：`keySplit` ⇒ 键层按决策键分组（charge 的 elec/boom 上提到键层）。DK 住在 forwardCands 里（那里有 R），
      *   与 arch2 同式；两边不一致会被 selftest3 腿 E（镜像 parity）+ browser-parity 当场红，不靠人记。 */
     const keySplit = (o.dims.keySplit || 0) > 0 ? 1 : 0;
     const L = { keySplit,
       input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, tinterK: d.tinter || 0, skills,
-      seatIn: isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: isB ? SELF_DIM_B : SELF_DIM, poolN: POOL_BLOCKS,
-      pubN: isB ? 81 : 22,
+      seatIn: (is4 || is5) ? SEAT_IN_4 : isB ? SEAT_IN_B : SEAT_IN, actIn: CAND_BASE + skills, selfDim: (is4 || is5) ? SELF_DIM_4 : isB ? SELF_DIM_B : SELF_DIM,
+      poolN: is4 ? 8 : is5 ? PMA_SEEDS_5 : POOL_BLOCKS,                    /* obs4：池化块 = **8 个槽位**（无 mean/max）‖ obs5：4 个 PMA seed */
+      pubN: (is4 || is5) ? 29 : isB ? 81 : 22,
     };
     L.ctxDim = L.selfDim + L.poolN * L.seatH;
     L.candIn = L.hid + L.actH + L.seatH * 2;               // h_t1 ⊕ h_t2
+    /* 段表：obs5 在 seatEnc 之后插 attn（QKV）与 pma（seed 查询）两段——注意力吃席位嵌入、PMA 吃注意力后语境，
+     *   actEnc/ctx/cand/head 的相对次序保持不变。attn 内序 = Wq‖bq‖Wk‖bk‖Wv‖bv；pma 内序 = Wq2‖bq2‖seeds。 */
     const seg = [
       { name: 'seatEnc', len: L.seatH * L.seatIn + L.seatH },
+      ...(is5 ? [
+        { name: 'attn', len: 3 * (L.seatH * L.seatH + L.seatH) },
+        { name: 'pma', len: (L.seatH * L.seatH + L.seatH) + PMA_SEEDS_5 * L.seatH },
+      ] : []),
       { name: 'actEnc', len: L.actH * L.actIn + L.actH },
       { name: 'ctx', len: L.hid * L.ctxDim + L.hid },
       { name: 'cand', len: L.hid2 * L.candIn + L.hid2 },
@@ -257,7 +320,7 @@
     if (o.v !== V_GEN3) return { ok: false, reason: 'version', got: o.v, want: V_GEN3 };
     if (!o.dims) return { ok: false, reason: 'no-dims' };
     if (o.dims.gen !== GEN) return { ok: false, reason: 'gen', got: o.dims.gen, want: GEN };
-    if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b' };
+    if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b' && o.dims.input !== 'obs4' && o.dims.input !== 'obs5') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b|obs4|obs5' };
     const skills = R.skills.length;
     const L = layoutOfPack(o, skills);
     const wantDof = DOF[o.dims.input] || 208;
@@ -314,22 +377,30 @@
     const CHARGE_KEY = (R.SK && R.SK.CHARGE) || 'charge';
     const DK = (c) => (c && L.keySplit && c.key === CHARGE_KEY && c.bead) ? (c.key + '#' + c.bead) : (c ? c.key : null);
     const sc = scene(W, state, pid, L.input);
-    const seatBias = L.seg[0].off + L.seatH * L.seatIn;
-    const actBias = L.seg[1].off + L.actH * L.actIn;
-    const ctxBias = L.seg[2].off + L.hid * L.ctxDim;
-    const candBias = L.seg[3].off + L.hid2 * L.candIn;
-    const headOff = L.seg[4].off;
-    const WS = L.seg[0].off, WA = L.seg[1].off, WC = L.seg[2].off, WK = L.seg[3].off;
+    /* 11-10：一律按段名查——obs5 在 seatEnc 后插了 attn/pma 两段，seg[1..4] 的下标假设已不成立
+     *   （obs3 族名字与下标恰好同值，逐位不变）。 */
+    const segOff = (nm) => L.seg.find((sg) => sg.name === nm).off;
+    const seatBias = segOff('seatEnc') + L.seatH * L.seatIn;
+    const actBias = segOff('actEnc') + L.actH * L.actIn;
+    const ctxBias = segOff('ctx') + L.hid * L.ctxDim;
+    const candBias = segOff('cand') + L.hid2 * L.candIn;
+    const headOff = segOff('policyHead');
+    const WS = segOff('seatEnc'), WA = segOff('actEnc'), WC = segOff('ctx'), WK = segOff('cand');
 
     const svBuf = new Float64Array(L.seatIn);
     const enc = new Map();
+    const v4 = L.input === 'obs4';
+    const v5 = L.input === 'obs5';   /* obs5：聚合走 attention+PMA（特征与 obs4 同一 scene） */
     const mean = new Float64Array(L.seatH), mx = new Float64Array(L.seatH);
     const zeroSeat = new Float64Array(L.seatH);
     let hSelf = zeroSeat, poolN = 0;
-    const PUBN = L.pubN;                      /* obs3=22 ‖ obs3b=81（席位公开段宽，随面走） */
+    const PUBN = L.pubN;                      /* obs3=22 ‖ obs3b=81 ‖ obs4=29（席位公开段宽，随面走） */
     /* 梯度旁路（ZCode · 10-31）：wantTape=1 捎反传输入，与 arch2 forwardObs3 同位同序（selftest3 parity 腿钉） */
     const TP = (opts2 && opts2.wantTape) ? { svs: [], afs: [], t1: [], t2: [], keys: [], xin: null } : null;
     for (const s of sc.seats) {
+      /* obs5：死亡席**不进集合**（不编码、不占 softmax、不进 tape）——注意力集合 = 活席；
+       *   观测面"已淘汰"信息由 sit 的淘汰数维承载，不给死席发 bias 泄漏的假嵌入。 */
+      if (v5 && !(s.isSelf === 1 || s.public[14] === 1)) continue;
       let k = 0;
       for (let j = 0; j < PUBN; j++) svBuf[k++] = s.public[j];
       for (let j = 0; j < 5; j++) svBuf[k++] = s.rel[j];
@@ -339,12 +410,58 @@
       encode(params, svBuf, L.seatIn, L.seatH, WS, seatBias, e);
       enc.set(s.id, e);
       if (TP) TP.svs.push({ id: s.id, sv: Float64Array.from(svBuf) });
-      if (s.isSelf) { hSelf = e; continue; }
-      poolN++;
-      for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
+      /* obs4：槽位即席位（scene 里按 pid 序），无池化累积 */
+      if (!v4 && !v5) {
+        if (s.isSelf) { hSelf = e; continue; }
+        poolN++;
+        for (let j = 0; j < L.seatH; j++) { mean[j] += e[j]; if (e[j] > mx[j]) mx[j] = e[j]; }
+      }
     }
-    const kk = Math.max(1, poolN);
-    for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
+    if (!v4 && !v5) {
+      const kk = Math.max(1, poolN);
+      for (let j = 0; j < L.seatH; j++) mean[j] /= kk;
+    }
+
+    /* ---- obs5 注意力聚合（11-10 ZCode）——与 arch2 forwardObs3 / pg-lib tapeForward 逐字同源，改一处必改三处 ----
+     *   活席集合上的自注意力（QKV 线性投影 /√H 掩码 softmax，残差直连）→ PMA（4 seed 查询，keys/values
+     *   重读注意力后语境向量 ē）。置换不变与跨人数泛用由结构成立：softmax 作用在"在场集合"上，K 不进权重。 */
+    const pooled5 = new Float64Array(L.poolN * L.seatH);
+    if (v5) {
+      const H5 = L.seatH, SQ5 = Math.sqrt(H5);
+      const atS = L.seg.find((s) => s.name === 'attn'), pmS = L.seg.find((s) => s.name === 'pma');
+      const WQ = atS.off, BQ = WQ + H5 * H5;
+      const WKg = BQ + H5, BKg = WKg + H5 * H5;
+      const WVg = BKg + H5, BVg = WVg + H5 * H5;
+      const WQ2 = pmS.off, BQ2 = WQ2 + H5 * H5, SD0 = BQ2 + H5;
+      const lin5 = (src, wOff, bOff) => { const out = new Float64Array(H5); for (let j = 0; j < H5; j++) { let s5 = params[bOff + j]; const base = wOff + j * H5; for (let i = 0; i < H5; i++) s5 += params[base + i] * src[i]; out[j] = s5; } return out; };
+      const sm5 = (row) => { let m5 = -Infinity; for (let j = 0; j < row.length; j++) if (row[j] > m5) m5 = row[j]; let s5 = 0; const w = new Float64Array(row.length); for (let j = 0; j < row.length; j++) { w[j] = Math.exp(row[j] - m5); s5 += w[j]; } for (let j = 0; j < row.length; j++) w[j] /= s5; return w; };
+      const es5 = [];
+      for (const s of sc.seats) if (enc.has(s.id)) es5.push(enc.get(s.id));   // sc.seats = pid 序 ⇒ 求和序确定
+      const K5 = es5.length;
+      const qs5 = [], ks5 = [], vs5 = [];
+      for (let i = 0; i < K5; i++) { qs5.push(lin5(es5[i], WQ, BQ)); ks5.push(lin5(es5[i], WKg, BKg)); vs5.push(lin5(es5[i], WVg, BVg)); }
+      const ebs5 = [];
+      for (let i = 0; i < K5; i++) {
+        const row = new Float64Array(K5);
+        for (let j = 0; j < K5; j++) { let lg = 0; for (let t = 0; t < H5; t++) lg += qs5[i][t] * ks5[j][t]; row[j] = lg / SQ5; }
+        const w = sm5(row);
+        const eb = new Float64Array(H5);
+        for (let j = 0; j < K5; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H5; t++) eb[t] += wj * vs5[j][t]; }
+        for (let t = 0; t < H5; t++) eb[t] += es5[i][t];   // 残差：席位原始嵌入直通，信息全覆盖不过瓶颈
+        ebs5.push(eb);
+      }
+      const kbs5 = [], vbs5 = [];
+      for (let j = 0; j < K5; j++) { kbs5.push(lin5(ebs5[j], WKg, BKg)); vbs5.push(lin5(ebs5[j], WVg, BVg)); }
+      for (let d = 0; d < L.poolN; d++) {
+        const seed = new Float64Array(H5);
+        for (let t = 0; t < H5; t++) seed[t] = params[SD0 + d * H5 + t];
+        const q2d = lin5(seed, WQ2, BQ2);
+        const row = new Float64Array(K5);
+        for (let j = 0; j < K5; j++) { let lg = 0; for (let t = 0; t < H5; t++) lg += q2d[t] * kbs5[j][t]; row[j] = lg / SQ5; }
+        const w = sm5(row);
+        for (let j = 0; j < K5; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H5; t++) pooled5[d * H5 + t] += wj * vbs5[j][t]; }
+      }
+    }
 
     const xin = new Float64Array(L.ctxDim);
     let q2 = 0;
@@ -352,9 +469,19 @@
     for (let i = 0; i < sc.priv.length; i++) xin[q2++] = sc.priv[i];
     for (let i = 0; i < sc.seq.length; i++) xin[q2++] = sc.seq[i];
     for (let i = 0; i < sc.sums.length; i++) xin[q2++] = sc.sums[i];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = hSelf[j];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = mean[j];
-    for (let j = 0; j < L.seatH; j++) xin[q2++] = mx[j];
+    if (v4) {
+      /* obs4：局面比较 4 维 + **8 个槽位嵌入**（slot = pid 0..7；空槽/已淘汰 = 零向量）——没有 mean/max */
+      for (let i = 0; i < (sc.sit || []).length; i++) xin[q2++] = sc.sit[i];
+      for (let s = 0; s < 8; s++) { const e = enc.has(s) ? enc.get(s) : zeroSeat; for (let j = 0; j < L.seatH; j++) xin[q2++] = e[j]; }
+    } else if (v5) {
+      /* obs5：局面比较 4 维（直接可读）+ PMA 池 4×seatH（内容寻址，K 自由）——没有 mean/max、没有槽位身份 */
+      for (let i = 0; i < (sc.sit || []).length; i++) xin[q2++] = sc.sit[i];
+      for (let i = 0; i < pooled5.length; i++) xin[q2++] = pooled5[i];
+    } else {
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = hSelf[j];
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = mean[j];
+      for (let j = 0; j < L.seatH; j++) xin[q2++] = mx[j];
+    }
     if (q2 !== L.ctxDim) throw new Error('布局不自洽：ctx 拼进 ' + q2 + ' 而声明 ' + L.ctxDim);
     if (TP) TP.xin = Float64Array.from(xin);
     const hctx = encode(params, xin, L.ctxDim, L.hid, WC, ctxBias, new Float64Array(L.hid));

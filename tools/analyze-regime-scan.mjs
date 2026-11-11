@@ -49,7 +49,7 @@ const regimes = Object.keys(rows[0].per);
 /* "在不在训练池里"优先信**量具当场算出来的 `inpool` 标记**（函数引用判定）；
  * 老分片没这个标记才回退到 OPP_SPECS 的名字集合，并且**必须声明回退的代价**：
  * 同一个脚本挂两个名字（`promis` vs 池里的 `protomine`，都是 pickProtoMine）会被名字判成池外。 */
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 const poolNames = new Set((OPP_SPECS || []).map(o => o.name));
 const flagged = rows.every(r => regimes.every(n => r.per[n] && typeof r.per[n].inpool === 'boolean'));
 const isPool = n => (flagged ? rows[0].per[n].inpool === true : poolNames.has(n));

@@ -1,0 +1,39 @@
+{
+ "base": 653,
+ "start": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+   "champMean": 0.20021500000000003,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB10-R1S1149480262.js",
+     "mean": 0.20021500000000003,
+     "min": 0.0943
+    },
+    {
+     "label": "S1198126643",
+     "pack": "docs/artifacts/night-adapt/MSB12-minechain-R1S1198126643.js",
+     "mean": 0.064005,
+     "min": -0.375
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB10-R1S1149480262.js"
+   ]
+  }
+ ]
+}

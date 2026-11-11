@@ -14,12 +14,12 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { rejectUnknownFlags } from './audit-lib.mjs';
-import { EXAM_POOL_VERSIONS } from '../server/opp-pool.mjs';   // 考卷池版本名单的单一来源（不在这儿抄第二份）
+import { EXAM_POOL_VERSIONS } from '../training/server/opp-pool.mjs';   // 考卷池版本名单的单一来源（不在这儿抄第二份）
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier', 'exam', 'champ', 'champn', 'expool'], 'exam-4n-full');
+rejectUnknownFlags(process.argv.slice(2), ['out', 'extra', 'only', 'jobs', 'rounds', 'seed', 'mode', 'dose', 'eps-tier', 'exam', 'champ', 'champn', 'expool', 'plan'], 'exam-4n-full');
 
 const OUT = join(ROOT, 'champion-map', arg('out', ''));
 if (!arg('out', '')) { console.error('⛔ 必须 --out=<表>（四格卷读数落盘处）'); process.exit(2); }
@@ -29,6 +29,7 @@ const SEED = Number(arg('seed', 77000));
 const JOBS = Math.max(1, Number(arg('jobs', 8)));
 const MODE = arg('mode', '');
 const DOSE = arg('dose', 'exam');
+const EXAM = (arg('exam', '') || 'A').toUpperCase();   // A/B/both（读数行是哪条就记哪条）
 if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
 /* 考卷池版本（11-09 晚补）：默认 v2 ⇒ 既有批跑逐字不变；`v1` 复算 `469dfdb1` 换席前那张卷。
  *   戳由子进程印在 `[冠军4N]` 行里，父进程原样记进表 ⇒ 两版的读数混不进同一张表。 */
@@ -63,7 +64,8 @@ if (ONLY_FILE) {
 }
 if (existsSync(OUT)) { console.error('⛔ ' + OUT + ' 已存在 ⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
 
-const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'pool', 'sec'];
+/* 11-11：行里原先漏写 pool ⇒ 19 格对 20 列表头，sec 串进 pool 列（所有历史批表都带着这个错位）；顺手补 champ 列（B 夹具戳——不同夹具的 B 读数不许混一张表，FINDING-2026-11-11 §三）。 */
+const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
 writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
 
 function one(id) {
@@ -82,16 +84,20 @@ if (CHAMP_L) a.push('--champ=' + CHAMP_L);
 const CHAMP_N_ARG = arg('champn', '');
 if (CHAMP_N_ARG) a.push('--champn=' + CHAMP_N_ARG);
   if (EPS_TIER) a.push('--eps-tier=' + EPS_TIER);
+const PLAN_V = arg('plan', '');   /* 11-10：v3 分层抽席（不传 = 旧 planN，逐位不变） */
+if (PLAN_V) a.push('--plan=' + PLAN_V);
   return new Promise((res) => {
     const t0 = Date.now();
     execFile(process.execPath, a, { cwd: ROOT, maxBuffer: 1 << 26, timeout: 600000 },
       (e, so) => {
         if (e) return res({ err: String(e.message || e).slice(0, 120) });
-        const m = String(so).match(/\[冠军4N\] (.*)/);
+        /* v2.0.6（11-10）：--exam=B 时子进程印的是 `[冠军4N-B] ` ⇒ 旧正则解析 0 行还 exit 0（全图 B 扫因此出过两张空表）。
+     *   收宽到 -B；--exam=both 时第一条命中的是 A 行（默认行为不变）。 */
+        const m = String(so).match(/\[冠军4N(?:-B)?\] (.*)/);
         if (!m) return res({ err: '输出没有 [冠军4N] 行: ' + String(so).slice(0, 80) });
         const kv = {};
         for (const tok of m[1].split(/\s+/)) { const p = tok.split('='); if (p.length === 2) kv[p[0]] = p[1]; }
-        res({ kv, sec: ((Date.now() - t0) / 1000).toFixed(1) });
+        res({ kv, axis: m.axis, sec: ((Date.now() - t0) / 1000).toFixed(1) });
       });
   });
 }
@@ -103,7 +109,7 @@ async function worker() {
     done++;
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
-      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.kv.pool || '(没印戳)', r.sec];
+      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.kv.pool, r.kv.champ, r.sec];
     appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 25 === 0) console.error('  … ' + done + '/' + ids.length + '（失败 ' + fail + '）');
   }
@@ -113,6 +119,8 @@ async function worker() {
   console.error('四格考卷批量：名单 ' + ids.length + ' 枚 ‖ rounds=' + ROUNDS + ' seed=' + SEED + (MODE ? ' mode=' + MODE : ' mode=multi(默认)') + ' jobs=' + JOBS);
   await Promise.all(Array.from({ length: JOBS }, worker));
   console.error('完成 ' + done + ' / 失败 ' + fail + ' ‖ 用时 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟（jobs=' + JOBS + '）⇒ ' + OUT);
+  /* 全败必红（11-10 补）：907 枚全败 = 解析器/旗标错，不是'没数据'——不许 exit 0 让 && 链把下一批也跑了 */
+  if (done > 0 && fail === done) { console.error('⛔ 全败（' + fail + '/' + done + '）⇒ 解析器或旗标错，响亮失败'); process.exit(1); }
   /* 行序规范化：增量追加的行序 = worker 完成序（跑两遍会不同）⇒ 收尾按 id 排序重写，让产物表自身逐位可复现 */
   if (!fail || true) {
     const NL = String.fromCharCode(10);

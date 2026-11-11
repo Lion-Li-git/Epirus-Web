@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+REPL-KDG2-400	0	2	G 2.77 < 3（短程有效技能数只有 2.77，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕；场A 还手 11.7% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕	2.77	3.49	7.6	0.117	3.27	ok	10.5	0			0	n=20/aggr100/seat100	as-shipped(G主判+座位+场A/B=multi ‖ G2/墙/密度/蓄能=long)

@@ -1,0 +1,318 @@
+/* Epirus 训练 worker：在独立线程里加载引擎，并行计算个体的 fitness。
+ * 每个 worker 会加载 js/ 下的引擎/策略/进化模块（经 vm 沙箱），收到 {type:'eval'} 请求后
+ * 对给定的一批个体跑 scoreMember（纯函数），把结果发回主线程。
+ */
+import { parentPort } from 'node:worker_threads';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+import { OPP_SPECS } from './opp-pool.mjs';   // v1.4.9：池子单一来源（原先 server/worker 各写一遍会静默漂移）
+/* v1.5.2：`champ:<路径>` 冠军对手。函数无法跨线程传 ⇒ 各 worker 自己构造，但解析规则是同一份。 */
+import { makeOppSelResolver } from './opp-champs.mjs';
+/* v1.5.18：反摆烂奖励 env 的**单一来源**（审计 §5-3：原先两端各写一遍 ⇒ 只设 FIRST 时静默半开）。 */
+import { readFightEnv, hasFightOverride } from './fight-env.mjs';
+/* v1.5.89：经济/熵奖励 env 的**单一来源**（第八轮复核 §2：原先只在服务进程内联读，
+ * `EPIRUS_DIV_W/DIV_K/DIV_FORCE_GENS/WALL_FILTER` 到不了 worker ⇒ 臂 K/臂甲的 A/B 实际是 A/A）。 */
+import { readEconEnv, hasEconOverride, econEcho } from './econ-env.mjs';
+import { readTrainEnv, hasTrainOverride } from './train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同一条 setter 路）
+import { makeShapeScorer } from './shape-scorer.mjs';   // P2 形状适应度（qoder-research 0920）
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const root = join(__dirname, '..', '..');   // 11-11 搬家：server/ → training/server/ ⇒ 根多跳一层
+
+const sb = { console, Math, JSON, Object, Array, Number, String, Error,
+  localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } };
+sb.globalThis = sb;
+__seedSandbox(sb, Number(process.env.EPIRUS_SEED0 || 0));   // worker 与主线程同种子
+
+/* 工具链修复：把沙箱内的 Math.random 整体替换为可播种 RNG。
+ * 原先 evo.js(4 处)/bots.js(1 处)/policy.js 的 randn 都在用 Math.random，
+ * 只播种 policy 的 randn 不够 —— 同 seed 两次运行结果仍然不同（已实测）。
+ * 覆盖整个沙箱的 Math 可一次盖住所有随机源；不设 seed 时保持原样。 */
+function __seedSandbox(sbox, seed) {
+  if (!seed) return;
+  const M = Object.create(Math);
+  let s = (seed >>> 0) || 1;
+  M.random = function () {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  sbox.Math = M;
+}
+
+for (const f of ['js/core/rules.js','js/core/state.js','js/core/resolve.js','js/core/play.js','js/train/bots.js','js/train/policy.js','js/train/policy2.js','js/train/evo.js']) {
+  vm.runInNewContext(readFileSync(join(root, f), 'utf8'), sb, { filename: f });
+}
+const T = sb.EpirusTrainer;
+/* P2（qoder-research 0920 · RESEARCH-LOG §12）：形状评分器宿主注入（单一来源 = tools/v2v4-lib 的 duelAssembly）。
+ * 常驻注入、由 evo 侧的 S4_W 决定调不调（S4_W=0 ⇒ 一次都不跑 ⇒ 出厂行为逐字不变；
+ * S4_W>0 而这里没注入 ⇒ evo 会**抛错**而不是静默降级——A/A 事故的教训写死在门里）。 */
+sb.__shapeScorer = makeShapeScorer(sb, Number(process.env.EPIRUS_S4_GAMES || 8));
+/* v1.5.48（复核 §3 的偏置二分）：实验掩码 env 通道。
+ * `setFeatMask('bead,target,effects,rel')` **只改特征取值、不改形状**（PACK_VERSION/paramCount 不变）
+ * ⇒ 逐块掩掉各训 2 个 seed，看哪块掩掉后座位偏置（G3 极差）塌回 ⇒ 定位泄漏通道。 */
+if (process.env.EPIRUS_FEAT_MASK && sb.EpirusPolicy && sb.EpirusPolicy.setFeatMask) {
+  console.log('[featmask] ' + JSON.stringify(sb.EpirusPolicy.setFeatMask(process.env.EPIRUS_FEAT_MASK)) +
+    '  env=' + process.env.EPIRUS_FEAT_MASK);
+}
+const B = sb.EpirusBots;
+/* 多人训练的对手池：**从 server/opp-pool.mjs 派生**（名字→函数，worker 内自己解析，
+ * 因为函数无法跨线程传）。v1.4.9 之前这里与 server 的 BOT_FN_N 是两份独立清单，
+ * 漏加一个名字会让 worker 的 filter 静默取子集（v1.4.8 就这么把"13 对手"跑成了 12 个）。 */
+const OPP_POOL = OPP_SPECS.map(function (o) {
+  if (typeof B[o.fn] !== 'function') throw new Error('opp-pool: ' + o.name + ' → Bots.' + o.fn + ' 不存在');
+  return { name: o.name, sel: B[o.fn] };
+});
+/* v1.5.7：经济奖励（ep 门槛 / 熵权重）的覆盖也必须进 **worker 沙箱**（同 mode、同风格切片的道理）。
+ * 用 env 传而不是随消息下发：它**一次设好就够**、不需要每代同步，而 worker 由父进程继承 env
+ * ⇒ 两端天然一致、不会半开。（"引擎内不读 env"那条规矩不破：读 env 的是 Node 侧的 worker。） */
+/* v1.5.31（课程/示范）：worker 是独立进程 ⇒ 示范代数与"反环教师"必须在这里读 env。 */
+if (T.setImitUntil) T.setImitUntil(Number(process.env.EPIRUS_IMIT_GENS || 0));
+/* v1.5.96：教师改**按名字**选（`antiring` 仍兼容；`ringspam`/`gunspam` 等从 bot 注册表取），
+ * 并支持**真示范**覆盖（`EPIRUS_IMIT_OVERRIDE=1`）。回执照 `[econ]` 的先例 —— worker 自己打出生效值，
+ * 免得再出现"开关看着接上了、其实作用在没跑的路径上"（v1.5.86 附录 E1 那一族）。 */
+{
+  let acc = null, ovr = null;
+  if (T.setImitTeacherByName && process.env.EPIRUS_IMIT_TEACHER) acc = T.setImitTeacherByName(process.env.EPIRUS_IMIT_TEACHER);
+  if (T.setImitOverride) ovr = T.setImitOverride(process.env.EPIRUS_IMIT_OVERRIDE === '1');
+  console.log('[imit] worker 启动值 teacher=' + (process.env.EPIRUS_IMIT_TEACHER || '(默认 heavyfire)') +
+    ' accepted=' + String(acc) + ' gens(env)=' + String(process.env.EPIRUS_IMIT_GENS || 0) +
+    ' override=' + String(ovr) + '  ⚠️ env 是**创建时拷贝** ⇒ 示范代数以**消息**为准');
+}
+/* v1.5.79（第七轮复核 §15-1）：把"**优先打威胁**"当能力奖。
+ * 与环课题的区别（决定它有戏）：环出手率 0（bootstrap 不到），而"打威胁者"已在发生（22.5% ≈ 随机）⇒ 窄奖励能定向加压。 */
+if (T.setTargetReward && process.env.EPIRUS_TGT_W) {
+  console.log('[tgt] 威胁靶向奖励权重 = ' + T.setTargetReward(Number(process.env.EPIRUS_TGT_W)));
+}
+if (T.setLaserReward && process.env.EPIRUS_LASER_W) {
+  console.log('[laser] 激光眼命中奖励权重 = ' + T.setLaserReward(Number(process.env.EPIRUS_LASER_W)));
+}
+if (T.setRingForceUntil) T.setRingForceUntil(Number(process.env.EPIRUS_RING_FORCE_UNTIL || 0));
+if (T.setRingForceEps) {
+  const _eps = T.setRingForceEps(Number(process.env.EPIRUS_RING_FORCE_EPS || 0));
+  /* v1.5.39：一行审计轨迹 —— 让"强迫到底有没有生效"可以被**直接看到**（而不是靠权重差异猜）。 */
+  console.log('[ringforce] worker eps=' + _eps + (process.env.EPIRUS_RING_FORCE_EPS ? ' (env=' + process.env.EPIRUS_RING_FORCE_EPS + ')' : ' (未设置 ⇒ 关)'));
+}
+
+/* v1.5.89（第八轮复核 §2 的修）：这里原先**只读 ECO 三个名字**，于是
+ * `EPIRUS_DIV_W / EPIRUS_DIV_K / EPIRUS_DIV_FORCE_GENS / EPIRUS_WALL_FILTER` 在 16 个 worker 里
+ * 全是空操作，而日志看不出任何异常（臂 K / 臂甲 的 A/B 实际是 A/A）。
+ * 现在解析改由 `server/econ-env.mjs` 统一提供 ⇒ 与 `train-server.mjs` 是**同一份**实现。 */
+/* v1.5.159 建的这条训练分布旋钮路（宿主读 env ⇒ setter 打进沙箱），第一个键 `EPIRUS_PASSIVE_FIELD`
+ * 已于 **v1.5.163 整族删除**（死作用点：注入自 v1.5.65 起一局未开火；见 CHANGELOG / 夜日志 §N11）。
+ * 现在这条路上只剩 `EPIRUS_KILL_FIELD`（v1.5.160 · 收割席注入）。
+ * ⚠️ worker 是**长驻进程** ⇒ `countKillSeats()` 在此跨任务累计，只作观测；
+ *    "本臂开火了几局"的作废闸（exit 8）在 `tools/train-3p.mjs`（一进程一臂 ⇒ 计数才等于本臂）。 */
+const trainEnv = readTrainEnv(process.env);
+if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
+  if (typeof T.setKillField !== 'function') {
+    throw new Error('传了 EPIRUS_KILL_FIELD 但引擎没有 setKillField ⇒ 拒绝静默空转');
+  }
+  console.log('[train] worker 训练分布生效值: killField=' + T.setKillField(trainEnv.kill) +
+    '  (env: EPIRUS_KILL_FIELD=' + trainEnv.kill + ')');
+}
+/* v1.5.160（qoder §N13）：收割席注入 —— 与 CLI 同一条 setter 路（避免"CLI 能下达、server 不能"的不对称）。
+ * 注意：worker 是**长驻进程** ⇒ `countKillSeats()` 在这里是跨任务累计的，只作观测；
+ * "本臂开火了几局"的**作废闸（exit 8）**在 `tools/train-3p.mjs`（一进程一臂 ⇒ 计数才等于本臂）。 */
+if (trainEnv.kill != null && Number(trainEnv.kill) > 0) {
+  if (typeof T.setKillField !== 'function') {
+    throw new Error('传了 EPIRUS_KILL_FIELD 但引擎没有 setKillField ⇒ 拒绝静默空转');
+  }
+  console.log('[train] worker 训练分布生效值: killField=' + T.setKillField(trainEnv.kill) +
+    '  (env: EPIRUS_KILL_FIELD=' + trainEnv.kill + ')');
+}
+const econEnv = readEconEnv(process.env);
+if (T.setEconomyReward && hasEconOverride(econEnv)) {
+  T.setEconomyReward(econEnv);
+  /* 回执：让"开关到底有没有到 worker"可以被**直接看到**（与 `[ringforce] worker eps=` 同族）。
+   * 每个 worker 打一行 ⇒ 16 行；这一行就是复核 §2-2 要求的那个判据。 */
+  console.log('[econ] worker 生效值: ' + JSON.stringify(T.economyReward ? T.economyReward() : econEcho(econEnv)) +
+    '  (env 键: ' + JSON.stringify(econEcho(econEnv)) + ')');
+}
+/* v1.5.8：反摆烂覆盖（哨声惩罚 / 出手权重 / 先手激励）—— 同 env 机制，两端一致。
+ * v1.5.18：改走 `server/fight-env.mjs`（与 `train-server.mjs` **同一份**判定）⇒
+ * "哪一侧漏判了一个 env"这个 bug 类别在结构上不可能再出现。 */
+const fightEnv = readFightEnv(process.env);
+if (T.setFightReward && hasFightOverride(fightEnv)) {
+  T.setFightReward(fightEnv);
+}
+/* v1.5.2：对手名走**与 server 同一个解析器**（脚本名 + `champ:<路径>` 冠军对手）。
+ * 函数无法跨线程传 ⇒ worker 必须自己构造，但**规则只有一份**（opp-champs.mjs）——
+ * "两处各写一遍"正是这个项目栽过三次的地方。 */
+const FN_MAP = (function () { const m = {}; for (const o of OPP_SPECS) m[o.name] = o.fn; return m; })();
+const resolveOpp = makeOppSelResolver(sb, root, FN_MAP, B);
+
+let imitEchoed = false;   // v1.5.96：消息生效值的回执只打一次（避免每代刷屏）
+let imitPlanEchoed = false;   // v1.5.97：分段计划的回执同样只打一次
+let imitOnlyEchoed = false;   // v1.5.98：`only` 的回执
+let imitSubEchoed = false;    // v1.5.99：`subOnly` 的回执
+let subBeadEchoed = false;    // v1.5.141（DS）：`subBead` 的回执
+let beadSeedEchoed = false;
+let chargeMinEchoed = false;   // v1.5.143（千问）：`chargeMinEp` 的回执   // v1.5.143（千问）：`beadSeed`（状态分布塑形）的回执
+let seatGamesEchoed = false;  // v1.5.102：训练侧座位探针局数的回执
+let clearWEchoed = false;     // v1.5.103：清场计数奖励的回执
+parentPort.on('message', (msg) => {
+  if (msg && msg.type === 'eval') {
+    const opps = T.buildOpps(msg.champion, 0.05);
+    const results = msg.members.map(({ idx, params }) => {
+      const r = T.scoreMember(params, opps, msg.gamesPerOpp, msg.gen, idx);
+      return { idx: idx, score: r.score, attackGames: r.attackGames, attackChoices: r.attackChoices,
+        totalChoices: r.totalChoices, attackRate: r.attackRate, attackShare: r.attackShare };
+    });
+    parentPort.postMessage({ type: 'evalResult', id: msg.id, results: results });
+  }
+  if (msg && msg.type === 'evalN') {
+    /* v1.5.2：按 msg.oppNames 的**原顺序**构造（轮换 `oi = (gen*3+g) % opps.length` 依赖顺序 ——
+     * 顺序变了就是另一场实验），并支持 `champ:<路径>` 冠军对手。 */
+    const wantNames = (msg.oppNames && msg.oppNames.length) ? msg.oppNames : OPP_POOL.map(function (o) { return o.name; });
+    const opps = [];
+    const missing = [];
+    for (const nm of wantNames) {
+      try {
+        const sel = resolveOpp(nm);
+        if (sel) opps.push({ name: nm, sel: sel }); else missing.push(nm);
+      } catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '对手解析失败 ' + nm + ' — ' + e.message });
+        return;
+      }
+    }
+    /* v1.3.59：这里是**静默 filter 子集** —— 漏加一个名字会让"12 对手"的臂实际只跑 9 个，
+     * A/B 退化成同一个实验（本类静默失败已坑过一次）。改成响亮告警。 */
+    if (missing.length) {
+      console.error('[worker] 对手池缺名字: ' + missing.join(',') + ' —— 本臂实际只有 ' + opps.length + '/' + wantNames.length + ' 个对手');
+    }
+    /* v1.5.0：worker 是**独立沙箱** ⇒ 服务端的 setTrainMode 不会传过来，必须按消息里的 mode 设。
+     * 漏这一行的症状极隐蔽：进化照旧 3 血、只有服务端终局评估是 5 血，best 曲线看起来完全正常。 */
+    if (T.setTrainMode) T.setTrainMode(msg.mode || 'multi');
+    /* ===== v1.5.96：示范代数（课程/示范）也必须**按消息**设，并自检生效 =====
+     * 病：`EPIRUS_IMIT_GENS` 走 env —— 而 worker 的 `process.env` 是**创建时的拷贝**，
+     * 该变量是服务端在 `runTrain` 里事后派生的 ⇒ worker 永远读到 0 ⇒ `imitB ≡ 0`
+     * ⇒ **既没有一致性奖励、也没有真示范**，整臂与对照**逐位相同**（本轮 v7ringT 实测）。
+     * 与 v1.5.0（mode）、v1.5.2（styleOpps）同族 —— 那两处注释当时就写着"逐位相同"这个症状。 */
+    if (msg.imitGens != null && T.setImitUntil) {
+      T.setImitUntil(Number(msg.imitGens) || 0);
+      const beta0 = (T.imitBetaForGen ? T.imitBetaForGen(0) : 0);
+      if (Number(msg.imitGens) > 0 && !(beta0 > 0)) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '示范代数没在 worker 生效（imitGens=' + msg.imitGens + '）' });
+        return;
+      }
+      if (!imitEchoed && Number(msg.imitGens) > 0) {
+        imitEchoed = true;
+        console.log('[imit] worker **消息**生效值 imitGens=' + Number(msg.imitGens) + ' β(gen0)=' + beta0 +
+          ' override=' + String(process.env.EPIRUS_IMIT_OVERRIDE === '1'));
+      }
+    }
+    /* v1.5.98：**只示范目标卡** —— 与计划同一条道理：值必须随消息来，解析失败要响亮。 */
+    if (T.setImitOnly && msg.imitOnly != null) {
+      try { T.setImitOnly(msg.imitOnly); }
+      catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: String((e && e.message) || e) });
+        return;
+      }
+      if (!imitOnlyEchoed) {
+        imitOnlyEchoed = true;
+        console.log('[imit] worker **消息**only 生效 = ' + String(msg.imitOnly || '(不过滤)'));
+      }
+    }
+    /* v1.5.99：**只在补贴局里示范目标卡**（值仍随消息来）。 */
+    if (T.setImitSubOnly) {
+      const gotSub = T.setImitSubOnly(String(msg.imitSubOnly || '') === '1');
+      if (!imitSubEchoed) { imitSubEchoed = true; console.log('[imit] worker **消息**subOnly 生效 = ' + String(gotSub)); }
+    }
+    /* v1.5.141（DS 研究）：**补贴局里连"珠"一起补**（`EPIRUS_SUB_BEAD=1`）—— 与上一条同一族：
+     * 不补珠 ⇒ 电磁炮在补贴局里也不可负担 ⇒ 示范永远落不到"放炮"上（见 evo.js `setSubBead` 的长注释）。 */
+    if (T.setSubBead) {
+      const gotBead = T.setSubBead(String(msg.subBead || '') === '1');
+      if (!subBeadEchoed) { subBeadEchoed = true; console.log('[imit] worker **消息**subBead 生效 = ' + String(gotBead)); }
+    }
+    /* v1.5.143（千问 0921 午班）：**状态分布塑形**（`EPIRUS_BEAD_SEED=0.5` ⇒ 一半非补贴局开局带珠 + 2 ジ）。
+     * 与 `subBead` 分家：这条把"蓄能→放炮"的两回合序列**当场降成一回合**，检验珠线的瓶颈是信用分配还是价格。 */
+    if (T.setBeadSeed) {
+      const gotSeed = T.setBeadSeed(msg.beadSeed || 0);
+      if (!beadSeedEchoed) { beadSeedEchoed = true; console.log('[beadseed] worker **消息** beadSeed 生效 = ' + String(gotSeed)); }
+    }
+    /* v1.5.143（千问 0921 晚）：**蓄能门槛**（`EPIRUS_CHARGE_MIN_EP`，缺省 = 2 = v1.5.82 原裁定）。
+     * 抬到 3 ⇒ 蓄完仍 ≥2 ジ，"有珠"与"买得起电磁炮"才可能同时出现（0921 取证：226 次持珠里 225 次只有 1 ジ）。 */
+    if (T.setChargeMinEp && msg.chargeMinEp) {
+      const gotMin = T.setChargeMinEp(msg.chargeMinEp);
+      if (!chargeMinEchoed) { chargeMinEchoed = true; console.log('[charge] worker **消息** chargeMinEp 生效 = ' + String(gotMin)); }
+    }
+    /* ===== v1.5.102：训练侧**座位探针局数**（按消息设 + 回执；env 是拷贝，主路径是消息）=====
+     * 病（v1.5.100 §17）：座位惩罚的样本是 `SEAT_GAMES = 6`（写死），而门禁要 ≥50 局 ⇒
+     * **同一个量、两个样本量**，选择过程看不见"某座 93%"这种塌方；`setSeatGames` 导出却从没被调用。 */
+    if (msg.seatGames != null && T.setSeatGames) {
+      const gotSeat = T.setSeatGames(Number(msg.seatGames) || 0);
+      if (!seatGamesEchoed) {
+        seatGamesEchoed = true;
+        console.log('[seat] worker **消息**生效值 SEAT_GAMES=' + gotSeat + '（门禁/落盘口径默认 60 局 ⇒ 两者现在能对齐）');
+      }
+    }
+    /* v1.5.103（v1.5.100 §20）：**清场计数**奖励（默认关；消息优先于 env）。 */
+    if (msg.clearW != null && T.setClearReward) {
+      const gotClear = T.setClearReward(Number(msg.clearW) || 0);
+      if (!clearWEchoed) {
+        clearWEchoed = true;
+        console.log('[clear] worker **消息**生效值 CLEAR_W=' + gotClear + '（0 = 关；口径 = 收缩开始前由我打死的对手数）');
+      }
+    }
+    /* v1.5.97：分段教师计划（**同一份解析函数**，只传字符串过来）—— 解析失败必须响亮报错。 */
+    if (msg.imitPlan && T.setImitPlanByName) {
+      try { T.setImitPlanByName(msg.imitPlan, Number(msg.imitGens) || 0); }
+      catch (e) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: String((e && e.message) || e) });
+        return;
+      }
+      if (!imitPlanEchoed) {
+        imitPlanEchoed = true;
+        const mid = Math.floor((Number(msg.imitGens) || 0) * 0.75);
+        console.log('[imit] worker **消息**计划生效 spec=' + msg.imitPlan + ' gens=' + Number(msg.imitGens) +
+          ' β(gen0)=' + (T.imitBetaForGen ? T.imitBetaForGen(0) : '?') +
+          ' β(0.75 处)=' + (T.imitBetaForGen ? T.imitBetaForGen(mid) : '?') +
+          '（第二段必须 > 0 ⇒ 证明每段各自退火）');
+      }
+    }
+    /* v1.5.2：风格切片也必须在**本 worker 的沙箱里**设一遍（同 mode 的道理：服务端那份改不到这里）。
+     * 并把回执带回去，让服务端能自检"切片真的生效了"而不是静默半开。 */
+    let sliceOk = null;
+    if (T.setStyleSlice) {
+      const sNames = (msg.styleOppNames && msg.styleOppNames.length) ? msg.styleOppNames : [];
+      const sOpps = [];
+      for (const nm of sNames) {
+        try { const sel = resolveOpp(nm); if (sel) sOpps.push({ name: nm, sel: sel }); }
+        catch (e) { parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '风格切片对手解析失败 ' + nm + ' — ' + e.message }); return; }
+      }
+      sliceOk = T.setStyleSlice(sOpps.length ? sOpps : null, msg.styleW, msg.styleGames);
+      if (sNames.length && (!sliceOk || sliceOk.games <= 0)) {
+        parentPort.postMessage({ type: 'evalNResult', id: msg.id, error: '风格切片没在 worker 生效（w=' + msg.styleW + ' games=' + msg.styleGames + ' n=' + sOpps.length + '）' });
+        return;
+      }
+    }
+    const results = msg.members.map(function (m) {
+      /* 千问指出的两个跨机问题一次修掉：
+       *  a) 所有 worker 共用同一个 EPIRUS_SEED0，个体的随机流偏移随 worker 数变化（8 核 != 18 核）；
+       *  b) 同种子导致各 worker 是相关样本，会系统性低估个体间差异、放大假信号。
+       * 修法：按 (seed0, gen, 个体下标) 播种 —— 与哪个 worker 跑它无关、与 worker 数无关，
+       * 且每个个体拿到独立随机流（比按 workerIndex 播种更彻底）。 */
+      const S0 = Number(process.env.EPIRUS_SEED0 || 0);
+      if (S0) __seedSandbox(sb, S0 * 100003 + (msg.gen + 1) * 1009 + (m.idx + 1));
+      const r = T.scoreMemberN(m.params, opps, msg.games, msg.n, msg.gen, m.idx, m.h);
+      return {
+        idx: m.idx, score: r.fit, firstRate: r.firstRate, top2Rate: r.top2Rate, avgDealt: r.avgDealt,
+        // (c) 承诺局记账：分巢精英与终局门槛都要靠它，丢了这一项 h 基因就白加了
+        hGene: m.h || 0, commitGames: r.commitGames, commitFirstRate: r.commitFirstRate,
+        modeUsed: (T.trainMode ? T.trainMode() : null),   // 自检回执：服务端据此确认模式真的生效
+        /* v1.5.11 自检回执。⚠️ v1.5.18：原注释写"哨声惩罚现在是**按模式自动**开的（长程 0.5）"——
+         * 那是 v1.5.11 的旧口径，v1.5.12 已回滚（见 `evo.js` 的 `whistlePenNow()`）⇒ 现在回执的是
+         * env 覆盖后的实际值。同时从"只回 whistlePen"扩成**整份**（含 dealW / firstW）：
+         * 服务端只设 `EPIRUS_FIGHT_FIRST` 时曾漏判触发条件 ⇒ 两端不一致也查不出来（第三方复核 §5-3）。 */
+        fight: (T.fightReward ? T.fightReward() : null),
+        styleGames: r.styleGames || 0, styleRate: r.styleRate || 0,   // v1.5.2：风格切片回执（服务端据此自检）
+        commitTop2Rate: r.commitTop2Rate, commitMaxEp: r.commitMaxEp
+      };
+    });
+    parentPort.postMessage({ type: 'evalNResult', id: msg.id, results: results });
+  }
+});

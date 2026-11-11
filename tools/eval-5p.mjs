@@ -16,7 +16,7 @@
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
 /* v1.5.71：对手名字→函数的单一来源（见下面 ALL 的构造） */
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 /* §E142：脚本 chooser 的包装规则搬进单一来源（见下面 `asChooser`） */
 import { makeAsChooser, pushTarget } from './bot-chooser-lib.mjs';
 

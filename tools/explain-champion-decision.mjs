@@ -271,7 +271,7 @@ if (ab.ok) {
  *   `champ`  全桌同一只包（旧 `--opp=champ`）
  *   ⇒ 形状会**改变归因读数**（效果块亮不亮、指向块翻不翻），所以每张表都必须把形状印在标题上。 */
 import { poolFromSpecs } from './regime-panel.mjs';
-import { OPP_SPECS } from '../server/opp-pool.mjs';
+import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { loadPool, makeMimic } from './human-pool.mjs';
 const SHAPE0 = arg('shape', '');
 const OPP = arg('opp', '');

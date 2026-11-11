@@ -1200,7 +1200,7 @@ t('D50 对手槽位并列不得按 pid 升序（座位身份泄漏 ⇒ 0 号座�
  * 三条更正各自的反证都做成用例：不能只在"病在的时候"绿，必须在**机制死掉时变红**。 */
 t('D63 会瞄人的对手（targeter）：指威胁 + 目标不被引擎剥掉（复核 §4-1）', function () {
   ok(typeof Bots.pickTargeter === 'function', 'Bots.pickTargeter 必须存在');
-  const poolSrc = readFileSync('server/opp-pool.mjs', 'utf8');
+  const poolSrc = readFileSync('training/server/opp-pool.mjs', 'utf8');
   ok(/\{\s*name:\s*'targeter'/.test(poolSrc), 'targeter 必须登记进 server/opp-pool.mjs 的 OPP_SPECS（单一来源；漏登记 = 服务端拿到 undefined）');
   ok(poolSrc.indexOf("fn: 'pickTargeter'") >= 0, 'OPP_SPECS 里的 fn 必须是 pickTargeter');
   const st = S.createState('multi', { next: mulberry32(63) }, 5);

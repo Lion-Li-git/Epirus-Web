@@ -1,0 +1,39 @@
+{
+ "base": 671,
+ "start": "docs/artifacts/night-adapt/MSB11-R2S306293884.js",
+ "rounds": 1,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "final": "docs/artifacts/night-adapt/MSB11-R2S306293884.js",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB11-R2S306293884.js",
+   "champMean": 0.2828275,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB11-R2S306293884.js",
+     "mean": 0.2828275,
+     "min": 0.1485
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB11-R2S306293884.js",
+     "mean": 0.2828275,
+     "min": 0.1485
+    },
+    {
+     "label": "S175656469",
+     "pack": "docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js",
+     "mean": 0.24797000000000002,
+     "min": 0.1243
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB11-R2S306293884.js"
+   ]
+  }
+ ]
+}

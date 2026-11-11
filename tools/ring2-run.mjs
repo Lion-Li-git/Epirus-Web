@@ -359,7 +359,7 @@ async function main() {
     if (STAGE !== 'eval') {
       const port = await freePort(Number(process.env.RING2_PORT || 8906));
       say('启动训练服务 :' + port + '（日志 ' + SERVERLOG + '）');
-      child = spawn(process.execPath, ['server/train-server.mjs', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
+      child = spawn(process.execPath, ['training/server/train-server.mjs', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
       child.stdout.on('data', function (d) { try { appendFileSync(SERVERLOG, d); } catch (e) { /* */ } });
       child.stderr.on('data', function (d) { try { appendFileSync(SERVERLOG, d); } catch (e) { /* */ } });
       if (!await waitServer(port, 30000)) throw new Error('训练服务 30s 内没起来（见 ' + SERVERLOG + '）');

@@ -1,0 +1,6 @@
+train-3p 读集=158（扫 18 个文件）
+train-best 读集=23（扫 10 个文件）
+train-fast 读集=13（扫 7 个文件）
+train-server 读集=79（扫 16 个文件）
+全集（tools/+server/ 里真出现过的 EPIRUS_*，去注释）=245
+已登记"被删除"的键=1
