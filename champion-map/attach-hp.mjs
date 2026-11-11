@@ -14,13 +14,15 @@
  * 判据（跑前写死，来自 eps-full.mjs）：覆盖 ≥700 才许换尺；复现守卫 |本次考卷 − 旧 H| 必须 p50≈0。
  *   实测：718/718 ‖ 718 枚逐字相同（max 差 0.00）⇒ 两条都过。
  *
- * 用法：node champion-map/attach-hp.mjs [--check] [--table=epsfull.tsv] [--more=<表>,<表>]
+ * 用法：node champion-map/attach-hp.mjs [--check] [--table=epsfull.tsv] [--from=epsfull.tsv] [--target=coords-gen3-1105.tsv] [--more=<表>,<表>] [--allow-partial]
+ *   11-11 起目标表缺省 gen3；旧命令 --table=src 仍读 src，只是默认写 gen3。缺源默认保留原值（merge-only）。
  *   ⚠ `--table=` 决定"Hp 是哪把尺量的"⇒ 换剂量时必须指对（§E597：默认档的 ε 从常数 0.2 变成斜坡 0→0.05→0.1 之后，
  *     旧表里那一列已经不是"玩家拿到的那个数"了）。表里的 `pageDose` 列写着这批是哪条剂量出的。
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { resolveTable, readTable, writeTable, tableStamp } from './map-table.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 /* ⚠ 读表不许 `.trim()` 整个文件：本仓工作树里 coords.tsv 的**末行常常正好是最后加进来的那批**（§E375 的 16 枚旧槽位冠军），
  *   而它们的当选键/kin 等后列是空的 ⇒ trim 会把行尾那几个空单元格连着制表符一起削掉（实测 31 列变 26 列）。
@@ -28,12 +30,20 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  *   ⇒ 只许剥掉行尾的**换行**，不许剥掉空白。 */
 const rd = (f) => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map((l) => l.split('\t'));
 
-const CO = rd('coords.tsv'), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
+/* 11-11 单一入口：--table 仍是“读数源表”（向后兼容），目标表走 --target（缺省 gen3）；
+ *   --from 是 --table 的新名字。旧命令 attach-hp --table=epsfull.tsv 仍可跑，只是默认写 gen3。 */
+const SRC = String(arg('from', arg('table', 'epsfull.tsv')));
+const TARGET = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv', aliases: ['target'] });
+const ALLOW_PARTIAL = process.argv.includes('--allow-partial');
+let _T;
+try { _T = readTable(TARGET); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+console.log('[map-table] target ' + tableStamp(_T));
+const CO = [_T.header].concat(_T.rows), ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 /* `--table=` = 主表（默认还是 `epsfull.tsv`，老用法一字不变）。§E597 用它把头号尺指到新剂量那张表
  *   （`epsfull-tier-2026-10-12.tsv`，页面臂的剂量由 `DIFF_TIERS` 的默认档给）。
  *   为什么要这根旗标而不是"先把新表 cp 成 epsfull.tsv"：那样盘上就只剩一张表，**上一次是哪把尺量的就没人记得了**。 */
-const EP = rd(String(arg('table', 'epsfull.tsv'))), eh = Object.fromEntries(EP[0].map((h, i) => [h, i]));
+const EP = rd(SRC), eh = Object.fromEntries(EP[0].map((h, i) => [h, i]));
 const HP = {}, DE = {}, EX = {};
 for (const r of EP.slice(1)) { if (!r[eh.id]) continue; HP[r[eh.id]] = +r[eh.page]; EX[r[eh.id]] = +r[eh.exam]; DE[r[eh.id]] = +r[eh.d]; }
 /* §E328：`--more=` 再并几张同格式的表（子代那 183 枚量在 `e328-epsfull.tsv` 里，不并进来的话它们就没有头号尺 `Hp`）。
@@ -69,16 +79,23 @@ const H0 = CO[0], iHp = H0.indexOf('Hp5'), iDe = H0.indexOf('De5');   // 11-07 �
 const app = iHp < 0 && iDe < 0;
 if ((iHp < 0) !== (iDe < 0)) { console.error('⛔ 表头里只有 Hp 或只有 De（' + H0.join('\t') + '）⇒ 这份表被别的步骤改坏了，别接着写'); process.exit(2); }
 const H = app ? H0.concat(['Hp5', 'De5']) : H0.slice();
-const out = [H.join('\t')];
+const rowsOut = [];
+let kept = 0, cleared = 0;
 for (const r of CO.slice(1)) { const id = r[ch.id];
-  const hp = id in HP ? HP[id].toFixed(2) : '', de = id in HP ? DE[id].toFixed(2) : '';
-  if (app) out.push(r.concat([hp, de]).join('\t'));
-  else { const row = r.slice(); while (row.length < H.length) row.push(''); row[iHp] = hp; row[iDe] = de; out.push(row.join('\t')); } }
-{ const badW = out.slice(1).filter(l => l.split('\t').length !== H.length).length;
-  if (badW) { console.error('⛔ ' + badW + ' 行的宽度 ≠ 表头 ' + H.length + ' 列 ⇒ 不写文件（列错位是静默病，修好上游再来）'); process.exit(2); } }
-if (process.argv.includes('--check')) { console.log('--check：未写文件'); process.exit(0); }
-writeFileSync(join(HERE, 'coords.tsv'), out.join('\n') + '\n');
-console.log('已写 coords.tsv（新增两列：Hp5 = 页面夺1率·参照（旧5P卷） ‖ De5 = Δε5 = 考卷 − 页面；原列名一字未动）');
+  const has = id in HP;
+  let hp = has ? HP[id].toFixed(2) : '', de = has ? DE[id].toFixed(2) : '';
+  const row = r.slice(); while (row.length < H.length) row.push('');
+  if (!has && !app) {
+    if (ALLOW_PARTIAL) { hp = ''; de = ''; cleared++; }
+    else { hp = row[iHp] || ''; de = row[iDe] || ''; kept++; }
+  }
+  if (app) row.push(hp, de); else { row[iHp] = hp; row[iDe] = de; }
+  if (row.length !== H.length) { console.error('⛔ 行 ' + id + ' 宽 ' + row.length + ' ≠ 表头 ' + H.length); process.exit(2); }
+  rowsOut.push(row);
+}
+if (process.argv.includes('--check')) { console.log('--check：未写文件（缺源保留 ' + kept + ' 行；--allow-partial 会清空）'); process.exit(0); }
+const w = writeTable(TARGET, { header: H, rows: rowsOut }, { backupTool: 'attach-hp' });
+console.log('已写 ' + _T.name + '（' + rowsOut.length + ' 行；缺源保留 ' + kept + ' 行' + (cleared ? '，清空 ' + cleared : '') + '；备份 ' + (w.backup ? '有' : '无') + '）');
 const ds = Object.values(DE).sort((a, b) => a - b);
 console.log('Δε 分位 p50 ' + ds[ds.length >> 1].toFixed(2) + ' ‖ p90 ' + ds[Math.floor(ds.length * .9)].toFixed(2) +
   ' ‖ 吃探索(Δε<0) ' + ds.filter(v => v < 0).length + '/' + ds.length);

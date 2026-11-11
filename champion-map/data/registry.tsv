@@ -1,0 +1,927 @@
+pack_id	path	ver	fam	fam_label	lineage	ts	sha256	status
+B-s63	docs/artifacts/e513-out/B-s63.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:13:40	a1749168feccdb06aa2f63b501312b32e0d47bf8c73d63f212c9829c1a1a1df2	active
+B-s64	docs/artifacts/e513-out/B-s64.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:13:53	d9beae50409b1ae56f0dda166d986227c3cb3604e166b2aaa2a3abb982e9a994	active
+B0-111	docs/artifacts/e66-out/B0-111.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:03:35	26b8e5b714b160061a115b7203c5efa68bb526eee5ce36645e35de1ebfaf9595	active
+B0-31	docs/artifacts/e66-out/B0-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:03:38	29b8d555f0c089c0ad553b604d02dd8d31e86e0dd2e7eb98e952f0e817c997a6	active
+B0L-31	docs/artifacts/e66-out/B0L-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:06:21	3215dd8c24adde528af088c1282efb850587e06ade3f44ca419eacd8f1758791	active
+B0L-71	docs/artifacts/e66-out/B0L-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:06:52	bb8a33b26f9b1cedad2180f6ff0fea9c92fa3ad366942c0201b615575f6e1c15	active
+B1	docs/artifacts/e234-out/B1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:55:57	5dc065802024278b2dd276cd9396661a4696502b7255d1888c150b1c47c4bc34	active
+B2	docs/artifacts/e234-out/B2.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:56:38	bd712a3d65d50f31a453b3f55943f2c03c83178e541b13315d3ea905aa17e170	active
+B5-05-31	docs/artifacts/kept/e100-out__B5-05-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:23:50	9393ccb7976a91538c212deb4a7718b90067e3b68710467640b8aba57dfc8330	active
+B5-05-71	docs/artifacts/e100-out/B5-05-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:26:17	113d009bc6c1171b7ce26ce1e15cf23f8cc3fac951ae0eaf2b1861787d2cbcb2	active
+B5-10-31	docs/artifacts/e100-out/B5-10-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:25:59	5c8b2d9223b46e3d3b24209c4cdabd0084b29f7c6a1a63c5f7925877d6d00e98	active
+B5-10-71	docs/artifacts/kept/e100-out__B5-10-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:25:27	8363d7568c1471497866866e429fe326f1d35054664b23035e0513ad803748f7	active
+BIG0	docs/artifacts/e234-out/BIG0.js	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-10-02T17:26:20	40da71fea39e02ba7aa55cbf196845fd18c74837303329a36646bcb2089ab28a	active
+blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:13:57	4ebae7fcddb0f5002a72891218da6dd50aadd5ddb301dd3d572ce2648c9ad9cc	active
+blk0t40-s71	docs/artifacts/kept/e124-out__blk0t40-s71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:13:39	802a4ad4fc814c9eda66c722273d7488f16fa78bec6172d074a03da1b3adec8a	active
+blk1t00-s31	docs/artifacts/kept/e124-out__blk1t00-s31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:14:36	3712eff980ed82eb6d4455630bf7fbbd3242f4409f45024f3d95b0d9eb14c24a	active
+blk1t00-s71	docs/artifacts/kept/e124-out__blk1t00-s71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:14:34	161d5e293839b6e8ecaaf94c32c328cbd7a645278a13feefb90e418f43a33369	active
+blk1t40-s31	docs/artifacts/kept/e124-out__blk1t40-s31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:15:56	dd777694443b608c473bd6fa625abe74409612677ed5fa3df718c41d2b2bdb0a	active
+blk1t40-s71	docs/artifacts/kept/e124-out__blk1t40-s71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:13:55	cbc2eb420f5a0ec9adb1d8ed545959582d21b15f3c4370c316cfc443c4fef8ef	active
+cal-ctl	docs/artifacts/e59-out/cal-ctl.js	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-27T06:19:34	eca8118dd036ba4c1982349e8a4e6660e41486983f9a01dce4efaa9273efadb2	active
+D005-31	docs/artifacts/e70-out/D005-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:09	5a033065c0e8e2e275d55b3948c2df7c06653a8efa36af11eafe27703a1289cf	active
+D005-71	docs/artifacts/e70-out/D005-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:15	ce32b60b31e5f7b0ab9fc3da2de877ad5c772d7351f4a7ef621b7abc57e36148	active
+D02-71	docs/artifacts/e70-out/D02-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:52:37	a7d5430bf6553a1cb9ff0e78b1b8e5ace57e25f04a6f88f5d064a116cf3684e7	active
+D05-31	docs/artifacts/e70-out/D05-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:58:42	b514cffb1acc02c9e11ac5a05526bd9fb7c487c5ac2e69bcc38078aa7fa8d38e	active
+D1a	docs/artifacts/e68-out/V1-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:34:59	b7302721c819cb8cfe0e16de921d050b05a8b7c1cf2af45888e01e9bc66141fb	active
+D2a	docs/artifacts/e234-out/D2a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:38:00	68afb27b83caf583c436bd09f84d6f15225a14cea5a146d2a7c6334d4792cbcf	active
+D3a	docs/artifacts/e234-out/D3a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:37:21	31e9f592af6b741d2ab62f8a71d47df91c3704889c43d10251c538664653497b	active
+D4a	docs/artifacts/e234-out/D4a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:39:29	9e71fc7e3063b496f21b39cff22dc57af191e597999baed2500a8f32b063b56a	active
+D6a	docs/artifacts/e234-out/D6a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:42:56	7e1bd296f3f513430ac29deeedea35dfba5ffa52fae02b18fcb72f90f47cef6d	active
+D7a	docs/artifacts/e234-out/D7a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:42:59	6653239ebb8bc7a2e7a9d8b6e54d157781a208dacb8c2c4eb463fba5b02edf6f	active
+D8a	docs/artifacts/e234-out/D8a.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:42:23	27adc775c657a339f3cfc33434a333649c51925d5399c4f51b99fadec28690e3	active
+def-31	docs/artifacts/def-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:05:19	0de0dc70d7a3b5741032c67f82680f29512185074f7bc716f68a2640b6ae9965	active
+def-32	docs/artifacts/def-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:06:53	7c394817280c5718df49cfd8635bd5703206052a385b449ed2102c59e83742a3	active
+def-33	docs/artifacts/def-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:08:01	4feff6e2b3ff0191b07fe5e43dc0071ea6f3ac19b113fca5be004e52a5633fd1	active
+def-34	docs/artifacts/def-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:09:12	1abb61caf7ae88f0071ea6daa79642a7a146a802e2d4aa2f1025e536aadd712a	active
+def-35	docs/artifacts/def-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:10:26	082c4a769a49c7312a787fc96972e96541cbb8ebf6b8fffcc80ba3d973737183	active
+def-36	docs/artifacts/def-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:11:30	4f1c098021e051a82ebb807bb48f59bc2d78e80da5fa75dbe9224f062e2b2c9f	active
+E00-31	docs/artifacts/e85-out/E00-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T21:13:15	5070d399a2bf0ff4bdcdb648393cb786a6ce11b641587c21e40ca1ee8ae2fdb5	active
+E00-71	docs/artifacts/e85-out/E00-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T21:14:24	7daea8a1f772298244b71b798fd21f1e367cbd2108a77279cb7be536bd24db92	active
+E1	docs/artifacts/e234-out/E1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:55:43	ee5b34108799e93ef41ce50a61a58f0298951bfc54fd069af09a587ac8833db0	active
+E10-31	docs/artifacts/kept/e85-out__E10-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T21:16:33	440459d055c84b9a39cc074687e07843c92a9e6e59a45f8347684b78d25dcfae	active
+E2	docs/artifacts/e234-out/E2.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:57:17	137ca8376396230876ea50f881d33cc2be18ed3dec5f93edbee066b46da0ac23	active
+E20-31	docs/artifacts/e85-out/E20-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T21:16:27	8c186568d565bac83714074c02b10dbea8e974fbd486288999203839740acf8a	active
+E20-71	docs/artifacts/e85-out/E20-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T21:17:01	454d191d492e464a15121f0e1d45e384d6db641ecaa13c0935eac73e2076696d	active
+E3	docs/artifacts/e234-out/E3.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:55:27	1012932b62b54e2af55b5d601f8fd9ddea25011f57a18489a05c7d40c64f9465	active
+e35prod807	docs/artifacts/E35-prod-807.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-26T06:37:08	9fe842555f26113ab4496c3a81676066b59d856e3ce5c877776c68acb732b584	active
+e35prod814	docs/artifacts/E35-prod-814.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-26T06:49:27	304e51ce6d48de14eac5a7dc64157f2fbac8926c3081a6204e3e2f2463464fca	active
+e39ctl911	docs/artifacts/E39-ctl-911.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-26T08:08:20	46ebe66bba8fe9db2ad5714997c3cc1c8e8b6bbdd931e4cc9d9e123f33fbcab3	active
+E51-t8-713	docs/artifacts/kept/artifacts__E51-t8-713.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-26T17:10:37	3025ba5b09071d3ef2c3c884be4b071caed3bb8511fa5baf5760109ebe977001	active
+E59-ctl-901	docs/artifacts/e59-out/E59-ctl-901.bak	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-09-27T06:23:12	381ad48738ed540b689d640e4b1e43cac505d7e1f81bc4570c9414710c576cd7	active
+E59-land-902	docs/artifacts/E59-land-902.bak	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-09-27T06:23:09	f21c9c75f7e3a92287c3b86c476984221666f66701834e89220ff045e815f836	active
+E59-land-903	docs/artifacts/e59-out/E59-land-903.bak	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-09-27T06:23:19	31fc97bad942253ca9583f2a40000a179aa18275bb4898d3fbcfb1281946141a	active
+E59-seq-902	docs/artifacts/e59-out/E59-seq-902.bak	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-09-27T06:23:09	4a640aedc86b8c5ac458f6af4718bff28b6459d39f8a825bbeb4eda483ae22bc	active
+eco-31	docs/artifacts/eco-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T02:58:51	4aedf2375e704a65aa00bd864f9a415e07b3f461f4f1d024fd50726eb059b1e5	active
+eco-32	docs/artifacts/eco-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T02:59:25	5891d6b95c96a07cead4030365dec488bc45b130af5a6829566e5e5fab4bd1ab	active
+eco-33	docs/artifacts/eco-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:00:15	1686c4de5c7f503eb3209108ec7708893a3b114f2738a6a9162c833e122a1c4f	active
+eco-34	docs/artifacts/eco-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13	历代上槽	2026-09-13T03:01:08	3f445fdae6615e95f1264db9045c71eb8c85caf84ac955f070d7fc72967cdf80	active
+eco-34-v7	docs/artifacts/eco-34-v7.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13	历代上槽	2026-09-13T03:01:08	70f19bd9f6792a6c9f8598bf9dc9de7babf4e9e3694d1491d8ba40af7ffe77c2	active
+eco-35	docs/artifacts/eco-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:01:53	57cbbce7311682fdfef01268b2fbfeefe17f415825e4e536a853b4911f4fa803	active
+eco-36	docs/artifacts/eco-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:02:37	71aedefb46fe7da7740d9f7a9e2afd0747ff9b2e50f3e613ad492a21cc3265f0	active
+eco2-31	docs/artifacts/eco2-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:31:51	2e3f41735fed7ff5a04501c34be76ca56d97179ce86ce00978ca74439850b519	active
+eco2-32	docs/artifacts/eco2-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:32:57	3308ac344f4282897823a5cd83d6139b9adbd987ffe61d92b55e3bc452efaa15	active
+eco2-33	docs/artifacts/eco2-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:33:42	7bc5918f5d13ce369c01e0a9f696ff55d5aecf69d7e17eac1caab7e656e69689	active
+eco2-34	docs/artifacts/eco2-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:34:29	92450af1963fbfcc2fc582fde996be8890e5c281b6912ca82b8db50b41266205	active
+eco2-35	docs/artifacts/eco2-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:35:14	1f3de7dbdff491a59cb9768bc8f812902ad91b32e3e9709e42c955134de9992d	active
+eco2-36	docs/artifacts/eco2-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:36:24	0fbb67b83f042ce15311a53244cf4998d7039f37559223b7a1dfe6c43b04a813	active
+EL0	docs/artifacts/eval-out/win-EL0.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T15:09:11	a992390df42189d0fa98226dac7d798eb026fb1794ffa0f69cfe852cb3363651	active
+fgtA-31	docs/artifacts/fgtA-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:48:43	19a4db58ed233e391b26059e6e3738d738f32a88c72c816bcc9185fcbba66894	active
+fgtA-32	docs/artifacts/fgtA-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:49:51	dc8daa6b9d7aa0c702249bb375094057ada83b565500e0181e997600dc2897b2	active
+fgtA-33	docs/artifacts/fgtA-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:50:44	85b390c0831e193d77c41793ce9414f9e2c4b4d29ffbd61b094df1a29c4d4649	active
+fgtA-34	docs/artifacts/fgtA-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:51:48	7e052ca7546edf24777f2dccf2544f78cae488b5058f275283add8930443b793	active
+fgtA-35	docs/artifacts/fgtA-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:52:32	4283126003ac4eae7723d5754743e887a41c97e41ae59c3f74949a9edd9e33e6	active
+fgtA-36	docs/artifacts/fgtA-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:53:22	4e541d7901ac7dc99a6f5ea8e48bbff677ba42f4205f27ac57cafad107570915	active
+fgtB-31	docs/artifacts/fgtB-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:56:49	26ac7cfca3a599f6e05d5c712f9464b35c63c0c728f306becd9591a3eafe3d8f	active
+fgtB-32	docs/artifacts/fgtB-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:58:34	e9fe947e2ebab20889fa715f0dcee0b4510b9d0869509687ce505a2798f87296	active
+fgtB-33	docs/artifacts/fgtB-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:59:57	e6d8a54a1f999e96cb8f75375a69ed42b81247ca26cb7dda964bce708376f0f2	active
+fgtB-34	docs/artifacts/fgtB-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T04:01:38	6444470cdd6a70a1f7c115b0644d993e83611cfebce6f4886c5ccf30eb2acecf	active
+fgtB-35	docs/artifacts/fgtB-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T04:03:24	2e2f33e424e5e4a6b8838f98d17b3cd6583d0b482f0784f0af0fd09bd4684b9c	active
+fgtB-36	docs/artifacts/fgtB-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T04:04:50	8c929a5adbbc584fda3efd344798adad98209449a1fd62984e411d7bdb3d8ef4	active
+fstA-31	docs/artifacts/fstA-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:09:19	ee599c43057a32d60508a2a8639f08e0c4909875dbbda6225490ae317d5dafef	active
+fstA-32	docs/artifacts/fstA-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:10:04	ea62990e3d0477618a48ca726e4c03824c17d16bf843167cd2e3451ad071a123	active
+fstA-33	docs/artifacts/fstA-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:11:08	735985ed2c022f005a18ebd1d0ae18c2bb7c711fc56e987c707b26eaf9fe69e6	active
+fstA-34	docs/artifacts/fstA-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:11:49	220b709c71901e4d31162ed46566f5286c30ae10430fdc6de104bcf3b66eba48	active
+fstA-35	docs/artifacts/fstA-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:12:34	0987a4f177cba6c6d9b735b52eec871531629bff24d02cfc558880ce1bf0d780	active
+fstA-36	docs/artifacts/fstA-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T06:13:14	849ca76d3215b93c1835a9e7286d300dad4c1c052492ff3422592d20381f4d5f	active
+G-s72	docs/artifacts/e514-out/G-s72.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:18:11	b93d3bf04cca2a63025b515f782b4ce8a35fd25d3d8302554f7768c225a4dc54	active
+G-s75	docs/artifacts/e514-out/G-s75.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:19:05	8df530ce5cd4ee87a62e633948ab0420966f0466f662a256cee5769506e66db0	active
+G-s76	docs/artifacts/e514-out/G-s76.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:17:36	06825d00bf9e2d5dc9e0efb58d20f16556ed47f2bbdfee1f1e5cfde58476ab31	active
+G-s78	docs/artifacts/e514-out/G-s78.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:18:18	6b2d4b780e7c3df46ecae73cf14ffd9c9cf1efa71593849d36c36d7c8d301297	active
+G-s82	docs/artifacts/e514-out/G-s82.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:18:02	ca40cba50ec4e05b2c59b19fb06e37ee9ac76e1b433e6d71e146ba32a3071123	active
+G03-31	docs/artifacts/e78-out/G03-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T20:14:58	785f4f570d160c4a4be85f85f5339a8017ddb86f0b472580b32e3dadd7fec255	active
+G03-71	docs/artifacts/e78-out/G03-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T20:14:33	56364f5ff9afa0aec2426329540ac82d663165ea68d7bafe28cd1c0505c5a08e	active
+G08-31	docs/artifacts/kept/e78-out__G08-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T20:13:46	bac6878ff53134e138aef2f6c72270c9679e517709c578842683a98290789746	active
+G08-71	docs/artifacts/kept/e78-out__G08-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T20:14:09	dd9d373515821e815c672e50527376c11e3ded27f4e72f4e6545d73f737591c9	active
+H-s103	docs/artifacts/e518-out/H-s103.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:39:42	4ce310aa8755ddb5c3e383a55e56b3c7609261445d7fc0860db2a541a5f9e197	active
+H-s84	docs/artifacts/e518-out/H-s84.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:36:37	a98878acea1128841a6d3ead686bdc99fe2481b8a3c460e40b86f96025c15f32	active
+H-s85	docs/artifacts/e518-out/H-s85.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:37:24	bf3f48668ed16806f1e9e54e1ada89d2adef2eb9c613e94d4446c8c4f5ec57ba	active
+H-s95	docs/artifacts/e518-out/H-s95.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:38:42	31c33ec169fa62724faf8140dd4d6ff91ac3924e1d3cccdf1fa6da24941e71a2	active
+HF-191	docs/artifacts/e116-out/HF-191.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T00:12:51	5072f0a8596004d497ad10a7654ba5e60c952c411dc329af55d7cf193744ab5b	active
+K-s63	docs/artifacts/e513-out/K-s63.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:13:52	1f974f75f91defa580e57e5654d595d90ac6cb23ebb481a3aa1aa07e590e1ea5	active
+K1	docs/artifacts/e234-out/K1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:56:57	206ef77e1a13b4e40113df959c5984c825c1b2208593d4bfa95ecb06f4af39f2	active
+K2	docs/artifacts/kept/e70-out__D02-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:55	d7c5cceabcafb3bcc64ca94247f915282929bdd2c6a83b5ed2ae9fc05585040e	active
+K4	docs/artifacts/e234-out/K4.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:56:32	8ca8d510a551a7104f1349ead21ea2f7af9fe92b048b38b1d41efc0de0cc6824	active
+K5	docs/artifacts/e68-out/V1-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:34:01	affc74705e065361c6f83233df6fbaea51b33af9f08777d06c62bef49ad42927	active
+K6	docs/artifacts/e70-out/D05-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:52:22	2c5cb1cd9e51c92080111317d25cf7e20ad0e7febed6b38010462684fd7675f4	active
+L02-31	docs/artifacts/e71-out/L02-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:08:27	9cfaca4a094c932c89d2c36e075d67454a349170c43f2b84eb86a9baef176943	active
+L02-71	docs/artifacts/e71-out/L02-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:06:20	33a8b25c36698b77570a7bc1581239bfdc9fe246ca26bd5c0fb7c3fd38d956a7	active
+L05-71	docs/artifacts/e71-out/L05-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:05:49	880d1e78c2dd0707802890921e32999f8a6d4d63c7ce5de0642000030da80188	active
+L111	docs/artifacts/eval-out/win-L111.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T09:07:21	b2fe50c4a5e8232378da0cc16653b670eaebccebd7e6272fb7ac85ee9dd078a1	active
+L151	docs/artifacts/eval-out/win-L151.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T09:07:10	66da1b1e9635b5d888a23fc129db58dc408e2f66df7c3971cd915798b9ab91f2	active
+L191	docs/artifacts/eval-out/win-L191.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T09:07:29	e057ace011985e0bf4a88bd20a235254f0b756e82ed8175b3bf55655e14b18d9	active
+L71	docs/artifacts/eval-out/win-L71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T09:06:58	ad4b559de1ca10d3233fd3174f80cebcb2e06748ed4d7dc9fcedb88db301a742	active
+Lctl	docs/artifacts/eval-out/win-Lctl.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T08:56:50	25e2b0319f471f52e3a56cd968e04522434975f279448d587e7a85fb00be5db9	active
+Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17	历代上槽	2026-09-27T08:55:34	b6ffb0398f02ded8220de9e1bea9a0e69c1bb7ab20b4bc146ae8bd8db3182762	active
+long-33	docs/artifacts/long-33.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16	历代上槽	2026-09-12T13:26:53	fd979278150b7584726bddf65844b29f55ca6b94b33dfc6c2fa8c3c7d206d82f	active
+Lspend	docs/artifacts/eval-out/win-Lspend.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T08:56:07	012987aeba701a374194555e461058ff8af9eb94f31ae3ca7c906a4c9d32327c	active
+M05-111	docs/artifacts/e73-out/M05-111.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:21:43	ae85677237b8dc9c9aed3a2386c39c4a2ab9d5f453ee1c42bf18dc5f7b4a8d81	active
+M05-151	docs/artifacts/e73-out/M05-151.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:30	fd34801ee29656aae0ca32778a31fd708dcd5feae6a28078700f7ebeabd22ae9	active
+M05-191	docs/artifacts/e73-out/M05-191.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:21	ac14f99a7802999efbef22f1162cdd698df145f5412539805d1076b19bfaf39e	active
+M05-231	docs/artifacts/e73-out/M05-231.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:53	74c83a2358c4640e6b88e33b1ea7d93191b922ad0a979478bee26034317e87d9	active
+M05C02-111	docs/artifacts/e73-out/M05C02-111.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:14	6758ebd33622e7bd851cf067c511e88e11082f20700f6254faa124754d9e1428	active
+M05C02-151	docs/artifacts/e73-out/M05C02-151.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:41	387cfa64205c6c9559b09d681ef6f45912c41bc1b39d72474b7e2370ab48f96e	active
+M05C02-31	docs/artifacts/e73-out/M05C02-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:20:42	744f711b3160529637da5d87e1d2cb0eef8a9a089fe60015a8a9992fef265eee	active
+M05C02-71	docs/artifacts/e73-out/M05C02-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T18:21:02	b1347bc2a3900608c2cbe9593defc18918e2befaf59be6d7248e7c2ed91489ba	active
+mix-31	docs/artifacts/mix-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:23:55	51476e4329bb5749e12ed8c971d65a0f85a0b3e905f5056a2ac64842369d78c7	active
+mix-32	docs/artifacts/mix-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:26:05	d594ab2ce8aa3573f21d3feec1939076a77fe5588ce464e479c32bd3bbd67958	active
+mix-33	docs/artifacts/mix-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:28:02	b0ef3af3906b91f30e75b05b45e747c6a686f62c8a061a55f497e5a0d94ee00d	active
+mix-34	docs/artifacts/mix-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:29:29	74b9e0b89c09f995f034c9fa8a923eac05828de5d06bb77e05dcac83fdaf6587	active
+mix-35	docs/artifacts/mix-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:31:13	336656f5afaf732f98774f862905deb4636422337868ed91cb6f95e9f82cf012	active
+mix-36	docs/artifacts/mix-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:32:51	e45d7026cc71581ada9c2e146568b5cab0ab2cbc577b0b58ddf996ba962d2b35	active
+N5-0	docs/artifacts/e95-out/N5-0.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:08:34	2aa532cab1c07092c7cabe0df93e40799c4541980f9193df71abd9bc5fb1364a	active
+N5L-05	docs/artifacts/kept/e120-out__N5L-05.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:37:05	10622af71a33c11adc9d8d48984dd3fc25f46bd6dcf63b5cb4ae86832218282a	active
+N5L-15	docs/artifacts/e106-out/N5L-15.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:37:53	862db37cdcbde36b41f5215712a64210b555972814b1eed519cc4c826d2f21d7	active
+N5L-30	docs/artifacts/e106-out/N5L-30.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:42:39	c72f3dea34c49db55797aba983fa5e2c2e5f798a1bbb8223a5f32371ec29a287	active
+NC-191	docs/artifacts/e75-out/NC-191.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:49	c62e96a1f011b60197854a3c4bbe0e0bf202ca414b51eca52d86db93edd31d43	active
+NC-231	docs/artifacts/e75-out/NC-231.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:38	ceea1fa60ea236720439d139dc91aa65a2f53788c02881e56878b8607fa1fd37	active
+NC-301	docs/artifacts/e75-out/NC-301.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:02	f8e7e548a6fc5277d381518b5ed52b3a297abbb0565eba7eedc066e71bc92f93	active
+NC-341	docs/artifacts/e75-out/NC-341.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:05:15	8c326257a0bda561c20b064505c433d9bceae9c86e414bece753920d1f51e4f4	active
+NCV-71	docs/artifacts/e75-out/NCV-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:44	d9b9ceba4b2d64cd6c6cba84070cbc03fd1f517889e26aeacec2600705848f20	active
+NOL24-71	docs/artifacts/kept/e68-out__V2-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:29:38	72e070c96a3ee3b05f57deb58ab34191062a649f888f99b63eb856c47135f8c0	active
+P-s22	docs/artifacts/e504-out/P-s22.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:59	da9fe88fde926fe0b906a18d9c5600457da2a9d184e072bfafdcf0dc0f60fa7f	active
+P-s25	docs/artifacts/e504-out/P-s25.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:16	f2116e8c456ffc442fcb6bedce245a67e662eb7d1db0c0399568f2162334de9a	active
+P-s28	docs/artifacts/e504-out/P-s28.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:36	b0d884a9e448342e83e26d14bc024f2dfc76900190084307c4cc4aca2afe2d46	active
+P-s30	docs/artifacts/e504-out/P-s30.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:33	e2927ae02023e5688fa21b08e98d1e2f02e377b235459c9822bc6808bdc6a8c0	active
+P111	docs/artifacts/e234-out/P111.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:14:54	d06d4ffcee753823fe1b0c63076db851caf9391ae08140c5e9bd56fa8c2bbbe6	active
+P151	docs/artifacts/e234-out/P151.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:16:02	fe4ac68bbfea50dc408fd94f3407b5b1852811bf1ce2f74090110985a7d60202	active
+P191	docs/artifacts/e234-out/P191.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:14:52	4f74cd351eaeaa405f13298724101137d6a3f3a0a76a124d3ba55b895ac7880c	active
+P231	docs/artifacts/e234-out/P231.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:21:35	3baf6362d5fc7ce9ae894b935f6a416d8ee23ba3fa1802b9e2e9b8ba6e25d6e3	active
+PL71	docs/artifacts/e77-out/PL71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:49:20	cedd1db53ccda773877d4002adb1de128c985d20e9e55a41fa45e5887abbede4	active
+plainAnchor-s12	docs/artifacts/e502-out/plainAnchor-s12.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:45:08	86d2fe672d2aed9ca33807a4cb1ca5da2c435c1088cd535c5c0668f99919b6fb	active
+plainAnchor-s13	docs/artifacts/e502-out/plainAnchor-s13.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:45:55	d15ebc9c7d9a84ba553b36d2dde8719c0b7d68f007c920f48a1f47b6f4e4163d	active
+Q-s33	docs/artifacts/e507-out/Q-s33.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:45:18	8c32c7aacb414a659a78b84864ae54a89c5bd234440eb6dbb853d3e891df934b	active
+Q-s38	docs/artifacts/e507-out/Q-s38.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:44:07	157cfb346c8d165c0a9d2e354e21fcbc92deae875b736ae94f4847f930f77d4b	active
+Q-s47	docs/artifacts/e507-out/Q-s47.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:45:15	ec5317fadceffc8f9fcf166146b99caece84fc052e2125adb8fbef88adf428f9	active
+Q-s51	docs/artifacts/e507-out/Q-s51.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:44:53	76f7c9d587d8d422d903df7cff2fa63db58784ddabd53759e4f0b43e1cd37497	active
+Q151	docs/artifacts/e234-out/Q151.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:14:24	6db0581a983aea3ba2f92fa4f80e4f024ecf73e13137ee021bdf7e7d0884e83a	active
+Q191	docs/artifacts/e234-out/Q191.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:14:05	674549d8d15991e38575c2c9ce3d5988789c05c2151f250c7ea851d5cf087611	active
+Q231	docs/artifacts/e234-out/Q231.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:22:39	513eddb23e2018ed17d76e57b9b80052d14d17b981af049a15dd6483ad222c55	active
+R-s107	docs/artifacts/e521-out/R-s107.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:46:13	963cd26969e30c187ccb6739545e376d1b54351e429f95fac0cf5da3d220b949	active
+R-s120	docs/artifacts/e521-out/R-s120.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:58:10	c2260f1d3d19b3d45e79be2a9b10f3cb91a6757490c31dfdf95a65c35a069168	active
+R-s123	docs/artifacts/e521-out/R-s123.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T18:02:34	30d911b625c352265d0babf411e0d4853ae760ab2c83b9af1cd2e0f7776cd1e1	active
+R-s129	docs/artifacts/e521-out/R-s129.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T18:02:42	4f93a7cd6a18317675925ec08f53f35f35e35e6593e1c97189ee3b871e044bcc	active
+R1	docs/artifacts/e234-out/R1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T15:59:43	2588c7ec8be962fb1eecb9e25b545757a1b941f8de37a8b86f047d4c62a209fc	active
+R231	docs/artifacts/eval-out/win-R231.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:01:38	55439b981b5c7604e0af2b08b7767b4d40b77ef21dbb44f98310d095a3a1023f	active
+R271	docs/artifacts/eval-out/win-R271.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:01:35	1fc3bcc362564d83d5e69ae9edb94cc14f7829f7d638651602b3c13b7abf87a1	active
+R311	docs/artifacts/eval-out/win-R311.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:01:32	687002845a91c2c6d104738a739388b8054056959db9c479b087639a6334e2d6	active
+R351	docs/artifacts/eval-out/win-R351.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:01:22	0efe430e0e1980f06178dd46743585b2e1cf3ed8bf07276ae12cad9ad8ffadae	active
+R391	docs/artifacts/eval-out/win-R391.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:02:51	789867700c43fb9b04995e81f92dd8575d32878df08e336996043005b391a58b	active
+R431	docs/artifacts/eval-out/win-R431.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T12:01:27	a391fc1f66724607902bb5a6c95bb3b85a945b7fcd059a259010de7d230ec6e8	active
+r61fix-31	docs/artifacts/r61fix-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T13:58:27	f4193cb6f1dea5da4765801ef67ea6ce4d4e0fac84b9065ebb888152a096e60c	active
+r61fix-81	docs/artifacts/r61fix-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:00:12	b4b85935cbffd2e2c4ebc8e9d876fea7feff000b246e2dd8858b20bea6cc21ff	active
+r61fix-82	docs/artifacts/r61fix-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:02:33	4ab0f89e37088c424a190d21ad4176848d548fd983427d00706cc16b6156ba50	active
+r61fix-91	docs/artifacts/r61fix-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:04:13	e71816c83cc0828efa6447953f51c52846e9ad33c120a5a3e034438d044eb834	active
+r61fix-92	docs/artifacts/r61fix-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:06:01	e1f5426760b8beb83ccbf44ca9fff7864d55f19bd3a76d16e1388300715891c8	active
+r61fix-93	docs/artifacts/r61fix-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:08:03	2aa4fbdc58b5c56b30ad387dbaaf02eee1794c159b7dbc80cd7a2c9a9bb692de	active
+RG1-31	docs/artifacts/e127-out/RG1-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T15:44:35	bf697e31bec15a0eb3189978fa8733f9846759d6750aa4ef606739b3f2a6cc1c	active
+RG1-71	docs/artifacts/e127-out/RG1-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T15:44:56	8ce945e030ca9fc6020d6a59597a425e7a8a86989cf948630f5c440d9b7a6975	active
+rwd0-31	docs/artifacts/rwd0-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:13:35	8848515986d699e3accc983216d6277b1cedce95d8e6be8b7bc5676c6347805b	active
+rwd0-32	docs/artifacts/rwd0-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:14:18	12e174cf4bdd3c3f7f053beaab646f8824683c8af082965e4e2090a17d864683	active
+rwd0-33	docs/artifacts/rwd0-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:15:15	270f1e5d27843bd10f9ca319ec10df8c0ea6603341afc1a1aac4b0637dd2a04b	active
+rwd0-34	docs/artifacts/rwd0-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:15:51	355a9ae6f797c615d62dfb033cf398e92860d71085ba842b8341de06dea1b790	active
+rwd0-35	docs/artifacts/rwd0-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:16:33	9bbdeb784fc506f5b88b1150d5588a9bd9a9077f602191d95dd6339502f32379	active
+rwd0-36	docs/artifacts/rwd0-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-13T03:17:10	83aeb93ab0e9aed4a7e4e2cdc4e06562bfc599b9d8c144a70f05969840c26b87	active
+S-s110	docs/artifacts/e521-out/S-s110.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T18:01:27	ee501eb90a05e5093865920dc9fa2ee400defc94ecf65a8775db5044b5571f09	active
+S-s113	docs/artifacts/e521-out/S-s113.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T18:00:31	47a189e09bcf9a00866b5cd491e5e2c0c91e558b23fe03e606319a23fc1b9312	active
+S-s114	docs/artifacts/e521-out/S-s114.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T17:56:52	60bb80fa35f84d7efbbcc5babd7cea68a70e34d1119751a129684ea2dfe2c489	active
+S-s120	docs/artifacts/e521-out/S-s120.js	1.8	12	臂线·COUNTER_OPPS=guardSpam ‖ 13 枚 ‖ 10-08→10-08		2026-10-08T18:00:56	a4405ec3fdaa5ae76963527a8d53f6dec595619b896f05cf5e4cbfaa2b7e84ca	active
+S71	docs/artifacts/e234-out/S71.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T17:54:08	07efe9ecfe34f68808c5145f5a6d28dc4cbac06df703f2f03aadac2daf578fce	active
+seed80	docs/artifacts/eval-out/sel80.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-25T14:18:31	8fb8776bb7fcf0ddc43fb59cab3ee904e81701e40026d96430c9a5b5096891f8	active
+seed81	docs/artifacts/eval-out/sel81.bak	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-25T14:18:59	a9f7a2cb9d2abd7df312aad117dc70942f45c1a71dfcb7186e3a7b2f6a7dc2b8	active
+seedtest2-41	docs/artifacts/seedtest2-41.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T15:42:53	e4bc42623789a280a0d9bd0d5d0848e59503b5dfecb0970b5fca21a96c7d9b5a	active
+SLOT-033c7601	docs/artifacts/e370-out/033c7601-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-10T05:49:19	bfe418846628e3dfefb0404260bf90b2ea9ed96c438bea6b8f6dcbef364ff42c	active
+SLOT-03749abc	docs/artifacts/e370-out/03749abc-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-10T10:31:52	eb43952861fc22221aa6df47128926d0ad5ad7f6c9be085fa62f15c9b01a8d75	active
+SLOT-037b2f71	docs/artifacts/e370-out/037b2f71-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T11:29:48	8209be071a6fd4f706c9a3fb9d62bb40b88ac878c37a0635c20aaf400c64a471	active
+SLOT-18eafc3f	docs/artifacts/e370-out/18eafc3f-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T13:13:54	95259d75e46aa7288fac098451ce111ce3a1e047b1a7d3f8e3e54761fa1134f9	active
+SLOT-255f008a	docs/artifacts/e370-out/255f008a-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T12:41:41	a4fd01d22cd6405de668e13111365e26916bb536fdd6c6d386246c8afa73daf5	active
+SLOT-4afeed5f	docs/artifacts/e370-out/4afeed5f-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-10T05:25:47	6b8b6e989922795949adfd346ea57ff64f672111f715201de4398d129a8b0af2	active
+SLOT-5d6fd40e	docs/artifacts/e370-out/5d6fd40e-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T12:47:58	dc030ae91152f446c34c190f824b63cb872382e7a43bf813514e33cb5a007bd2	active
+SLOT-6ed47e18	docs/artifacts/e370-out/6ed47e18-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-09T05:43:46	e46d0fe5ebd1223a4bc8ff78d501c730406269a0f78fdbcac55cd01cf181c492	active
+SLOT-9ada5161	docs/artifacts/e370-out/9ada5161-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T10:26:35	f4dcb92f4784b82bcffa5ddecbc21b46f464ec549458d9c349e2105cb248a264	active
+SLOT-9e83020d	docs/artifacts/e370-out/9e83020d-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T14:26:55	14a2cad3d278f6e573a0e4c6cb665ab6c95d1872ae3baa32b196cb3bb1611ffe	active
+SLOT-bb5c0e8e	docs/artifacts/e370-out/bb5c0e8e-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-10T04:43:47	fd463f386040a2b98b34bb1c4c8484222e4cc8da39a84ae760568595332334ae	active
+SLOT-cc573172	docs/artifacts/e370-out/cc573172-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-10T10:46:23	f53afb4f9e5bf2e7826f834595af2297e8909a18abd0e054d4363fb4a2e3f29a	active
+SLOT-cd32f240	docs/artifacts/e370-out/cd32f240-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T13:07:46	2d9f59b165d0b501b7376c2d15db28e07e0fb19ee8795e2aec3e9e526ca622b1	active
+SLOT-e379c62c	docs/artifacts/e370-out/e379c62c-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-12T06:15:19	0e80557042320b977bf24ceb818f697da545fe66d18fb011e35cdafa19d897be	active
+SLOT-f5735e56	docs/artifacts/e370-out/f5735e56-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T13:10:51	f491f508f0889ae66379ee4b153352a1af66c3ea082d25b6fae3da1cb72462fa	active
+SLOT-f970452c	docs/artifacts/e370-out/f970452c-v7.js	1.8	0	旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）	旧槽位冠军	2026-09-11T11:07:28	684f861101041541d8ec98279b9d9ac1551b253155d2a8efaecbe8b1692e987a	active
+snipeNoPool-s11	docs/artifacts/e502-out/snipeNoPool-s11.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:45:23	31f43602327d1ba6d33c303235d3aebfcc47945824b3075a17bf491fc4982fc6	active
+snipeNoPool-s13	docs/artifacts/e502-out/snipeNoPool-s13.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:44:59	307b4d671290a9da8fe68a1dcebc90a4ba4ae11249761ea5058754833e9e27e0	active
+snipePool-s11	docs/artifacts/e502-out/snipePool-s11.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:44:19	9d7cf1c88e651b4abdd442309444bc5884c0e127ddca4bce9cc73347f337e6dd	active
+snipePool-s12	docs/artifacts/e502-out/snipePool-s12.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T15:44:37	911a8e31f8ef1d536be5f89ceb875f300c0a7f2fda2ceb594a912f95f447bc06	active
+SOUP-KE-l60	docs/artifacts/SOUP-KE-l60.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T05:41:01	190d1a5c7d19fb2114018f4be918351ab717b56cb2ec754c11906cecf5c9d409	active
+SOUP-s9-82XD4a	docs/artifacts/SOUP-s9-82XD4a.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T11:03:48	35ab1f58a0b10747b901c53679b187c06b848789379c848590b9f25fbfbe4baa	active
+SOUP-stock1XK2-l35	docs/artifacts/SOUP-stock1XK2-l35.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T11:03:50	8db1c74d2729624c4fda07ed73aa210a36b87504164bdfb078eb511ead46a004	active
+SOUP-sub1-92XD4a	docs/artifacts/SOUP-sub1-92XD4a.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T11:03:48	85464a811daa41f4d5d249e15f4a8830e321c60cb39927bfdba3d1fb307d263b	active
+SOUP-Y-KE6k2	docs/artifacts/SOUP-Y-KE6k2.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T06:24:05	7a72cb8f691c223f87e79b93b185b44bb4a1759f4d811df236c457056de9191e	active
+SOUP-Y-l65	docs/artifacts/SOUP-Y-l65.bak	1.8	10	融合与续训 ‖ 6 枚 ‖ 10-08→10-08		2026-10-08T06:24:06	cfc16ec56ce2b044f3b963df9a4ba78e82b8c622f5822243c1587f896f080633	active
+SP-s25	docs/artifacts/e504-out/SP-s25.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:16	54bf13fde76ccdf21627ff727dfbf0d56d6313f225a11a153184d415461376cf	active
+SP-s29	docs/artifacts/e504-out/SP-s29.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:14:58	c0afc3275ac9ddd6a6b08adcaefa4cdad2f7c99d5755cae97242ee7aec9c9360	active
+SP-s30	docs/artifacts/e504-out/SP-s30.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:14	3da7af986f2b40a4524efd820cb9f067aab9b154f2327c05cfc07fd7e1462ef7	active
+SP-s32	docs/artifacts/e504-out/SP-s32.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:14:29	21bb798b2c34d8f43ce280ddb55e96ce0ebe40868505cefbdfa1c3b83824b4aa	active
+SQ2-15-71	docs/artifacts/kept/e120-out__SQ2-15-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T03:03:42	312cbc5fe79a168c73b68b30aa8fe04c4be94bd6266363100d887bb57e99cf62	active
+sty-31	docs/artifacts/sty-31.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:49:44	06e53c707fa5abab82116839056a2a0b4ab7e393b4e5050c1e78285f3b5b5b3b	active
+sty-32	docs/artifacts/sty-32.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:50:39	70668efebb19745ee7fbc630169d08e63b1c939713ef0b8511b4a6098957a590	active
+sty-33	docs/artifacts/sty-33.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:51:45	34d249f2f14801ea38ef517a7d530ce44087a8f67eefbce2aa49b4965584808f	active
+sty-34	docs/artifacts/sty-34.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:52:56	f8e37ab34ce33c28d0e381a1266722a1e50e13e28238e93661732b61896bbef9	active
+sty-35	docs/artifacts/sty-35.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:53:51	a3d451f97cf5d06f51772ba90d5eb7b83535e77952413ac6fd1b8245af766681	active
+sty-36	docs/artifacts/sty-36.bak	1.8	2	历史配方步进 A（09-12～09-13：珠价/风格/对手池） ‖ 55 枚 ‖ 09-12→09-13		2026-09-12T14:54:40	9c3247eac8de7aa4d14fbeab64eec4eb6a0d79e558aa65107fd4789fc1bd291a	active
+T-s111	docs/artifacts/e521-out/T-s111.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:48:07	ce30e8738fe500428bc2187a642c3e898884a9142ad37e88e2bbd19a02ac1261	active
+T-s124	docs/artifacts/e521-out/T-s124.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T18:03:12	9d0b1bb0d10b3205f1731e22be90a2c755eac53e3dcef8c278dff64d5a35fb87	active
+T-s127	docs/artifacts/e521-out/T-s127.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T18:01:16	aa2a8f99cf79463e73175f21351915ede29ee6771fd311f05d92f7c62f67f853	active
+T-s136	docs/artifacts/e521-out/T-s136.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T18:04:05	97e2d1a34448957d3c13bc8ad4df1d591d8f4c22eb364e397e3c9e196ec1850e	active
+T111	docs/artifacts/e234-out/T111.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:21:11	b93e2f48fe98d5bb0df05cacc9e52d2867a5d5b3f6139fbaef0687e507f77ae2	active
+T8-s110	docs/artifacts/e521-out/T-s110.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:47:20	bdc80b19a14e1668368e5e55fbfe9d3f03d8d238cd69c0e07e401a1d559f222f	active
+T8-s113	docs/artifacts/e521-out/T-s113.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:55:37	a895a307d7833cf4c845e686e5630a62c064ad8076f01e82246c3c1ebf772182	active
+T8-s114	docs/artifacts/e528-out/T8-s114.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23	历代上槽	2026-10-08T18:19:11	8b06a5f220b5c7e086f5be2fd4826f8e5a7673caef7520e39f556ec327f32cff	active
+T8-s120	docs/artifacts/e521-out/T-s120.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T17:57:06	898428d79e71fe2723ada96dcdaf9c798c1ce3c86814af4b60447915d61a9fcd	active
+U-s202	docs/artifacts/e539-out/U-s202.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:49:39	ff5620041588b37995f4de8401a1db4e9d75ff5b0a5f991d22a8e0b84d58d54d	active
+U-s203	docs/artifacts/e539-out/U-s203.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:49:22	296c4d0092665baa73b5e2423c82f5c32b0b6f228aa0ce0f140484b6a0560b07	active
+U-s205	docs/artifacts/e539-out/U-s205.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:50:36	4da2c368aa4a062b999947837861c9e38ea8b8ff951de031e38e112e5e45151d	active
+U-s209	docs/artifacts/e539-out/U-s209.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:52:55	215172bf44e54257fc5d44ab86a297cf8f2651febc01dd6f985fafe997b32335	active
+U-s212	docs/artifacts/e539-out/U-s212.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:55:20	2613a7e51a8deeebe86595428f9970d6e7385796241e23f7c5d391385d427dd7	active
+U-s216	docs/artifacts/e539-out/U-s216.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T19:56:08	f526b2c43287c5f08ed9187a795c77e7216c7ddda8c8212210acb44160e57024	active
+U1	docs/artifacts/e234-out/U1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:29:32	308aa900ce0eb386c34eb61295fd1b753c1a7e342bbb8ea1bfb5a1d7b641318d	active
+U2	docs/artifacts/e234-out/U2.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:22:09	2e338be9a5e27b2abfcf45ba48ec6ae3d9a9c0578a489e4ec0040b6168dfe877	active
+V-s302	docs/artifacts/e551-out/V-s302.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T20:45:43	c73246d52ecefb526f188ac09a45da8d2f6158bda22e2b538d4b47dcebdf457d	active
+V-s306	docs/artifacts/e551-out/V-s306.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T20:48:08	af19497d7f480459034cdd8568c51e7981b9d6d9291d007650c9ce12834d6c7a	active
+V-s310	docs/artifacts/e551-out/V-s310.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T20:47:50	2ea4a27b5604a801218238394a67075c8db391e634ad773c5842d27345e42804	active
+V-s312	docs/artifacts/e551-out/V-s312.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T20:49:53	786406299a6c72f338e309b0ff6784e2e54438d67748b649b99c5846cea319a9	active
+V-s328	docs/artifacts/e551-out/V-s328.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T20:57:03	a5f522909c799f89ffc9fd6c7bd87a19ff6619f65579e168e31f542879fbdd06	active
+V-s347	docs/artifacts/e551-out/V-s347.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T21:06:24	57aabfef2b04376da141ec274acd196911b1c813e8b11b915e5a4fb80c651df0	active
+V-s350	docs/artifacts/e551-out/V-s350.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T21:06:37	f3f5213da728637cdc5e43875d3f8362b0f81a4c45ad4fb7375ba07fca5b8332	active
+v11-61	docs/artifacts/v11-61.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:17:37	b369ba7433487ad2c90de5c1800c83c714eb8652cc173849244633a4d6ea9c3d	active
+v11-62	docs/artifacts/v11-62.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:18:35	1ff3fc827a15736ed5bf0098d52216dcacdb6a806778c16e31f612333bc76e54	active
+v11-63	docs/artifacts/v11-63.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:19:19	b470464ea99b35d44e14fb2d17175c61fbbcb7ad923823f3dedc093163b473cb	active
+v11-64	docs/artifacts/v11-64.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:20:03	144512194724b5ad371e5135321160995877525325e13cbed3c1b694bb4f1aa1	active
+v11-65	docs/artifacts/v11-65.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:20:46	c28d85b5e561dbd6fdda114dfa791cea998395733930450e163679289f4bbcdf	active
+v11-66	docs/artifacts/v11-66.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:21:31	f226fcd452d99d14922c2f083d43c166a4780e5471289cb2644b3f84210248d5	active
+v11-71	docs/artifacts/v11-71.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:22:32	4ce040f76b91d89ddab30de86915eb0f51182eeea1d58812c7fde9c4890aa7bd	active
+v11-72	docs/artifacts/v11-72.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:23:16	17df967b229a74d75ec137c2ee3d5e61c259326b79763f5448ce2d09ca4cd175	active
+v11-73	docs/artifacts/v11-73.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:24:05	32fc05bcf23880c43992a2c3a13d917afb3699cce322cbd38b6fe1bce6f27fc5	active
+v11-74	docs/artifacts/v11-74.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:24:43	a570078bcc301a4983c70a1ce41e2b9e5caa0d947cde0d97cc7369266ecb57a8	active
+v11-75	docs/artifacts/v11-75.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:25:22	aa44fd025bab9543eecef11b67f0723c56cae7bd1e1ebe8d368c135ca95f9827	active
+v11-76	docs/artifacts/v11-76.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T11:26:09	16c310f3690a8f6087b7d7cb7679e9f41c8b46f4bc74d865a2f70fffa86d2279	active
+V111	docs/artifacts/e234-out/V111.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:32:52	8a303048cf6491b80f0473577d334a5a768438da93e8d564e86c89917af490e9	active
+v12-81	docs/artifacts/v12-81.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:31:25	caf85fa60eaaba7d9cd270be53a84e94b9173cf624a1983843ebd417e9fcccc8	active
+v12-82	docs/artifacts/v12-82.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:32:07	963503d66d29e04bf54bee3730caf55cde0b52dcbb8523349dd034f14791546e	active
+v12-83	docs/artifacts/v12-83.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:32:53	4899e89ab0ef18ee4ad0a73eb8431b3034a40108db3f1f2df44b86952750e857	active
+v12-84	docs/artifacts/v12-84.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:33:37	b4eb1a6598e05ec964c6067fbf3eb142bb6f374e173c3c9a581ebace41324b13	active
+v12-85	docs/artifacts/v12-85.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:34:19	0b46ed7cd0d3328c7886fbbc7dd64750d6543adbd95067b92392b010d167ad06	active
+v12-86	docs/artifacts/v12-86.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:34:56	cc40da8fa5a937bffa05e0e879391755a4f6593f863d5df7773bc23585cab9d1	active
+v12-91	docs/artifacts/v12-91.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:35:35	364dc6122a1ac9bd84255807cf8ebf551473b4e29e3ffad9f1778ae427128633	active
+v12-92	docs/artifacts/v12-92.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:36:17	8c6db56be8bdc85fcf4f3222d57e68ceaa548c4be8ae2ebbdf8e150ece8d81f9	active
+v12-93	docs/artifacts/v12-93.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:36:52	1acc2ffdab26d1197a35d0f151c2da4a4b104611c4b3d61a5470e98ddd7373e5	active
+v12-94	docs/artifacts/v12-94.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:37:38	0ae3c137f1e25262e399543ba39e5d06f49fe00f78eded479a0f6e2fd44e2635	active
+v12-95	docs/artifacts/v12-95.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:38:19	6da152b764c9f7b12b547aff69ae80559120df6b4a05612414ad563c025f2a0e	active
+v12-96	docs/artifacts/v12-96.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-15T11:39:04	4e3fd3b9e0eb1b7d300f72fe14a8e4418d2a97102ea9bbc1e0b6772a3d4f14ac	active
+v13-101	docs/artifacts/v13-101.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:39:44	436ebe65ac9f6db1d6452adaf23350e9c7dae17781051d0e40b672898474fd7f	active
+v13-102	docs/artifacts/v13-102.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:40:35	c3f8bbeeec8dc8221963461870b9e728f137ea939e1aa51c56159d0ad7118569	active
+v13-103	docs/artifacts/v13-103.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:41:30	bda1aa89bb72fe9a41817f1f9471b61a5db311a7d534a628d1ad9ea32c60ad1e	active
+v13-104	docs/artifacts/v13-104.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:42:13	e295e6316f5e3e986853aec2f3cc8719c5660aa025bb7b0af141fea7165864bc	active
+v13-105	docs/artifacts/v13-105.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:42:56	05c854d4055df6ca3891e28440048a2f8705960dbd6a430b13cb8e5f8d733c8d	active
+v13-106	docs/artifacts/v13-106.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:43:44	968a13466b5ebaa4c10a60aa4b1ff356bff040cfe779c83c4264b183c5180f79	active
+v13-31	docs/artifacts/v13-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:38:59	e977c2c570604bf68dfc62a49f0f75106290223bb82943fa1c2a02a31681f124	active
+v14-111	docs/artifacts/v14-111.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:53:42	0923f72ab89894f8126dcee49b502d5a3f3d14861e6a926e4859e2f7ecb4c4a4	active
+v14-112	docs/artifacts/v14-112.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:54:26	a6cd6a40c2c8ed7b9a3ab515b9c3383a32575604e094921a5b97a8681ad45e5b	active
+v14-113	docs/artifacts/v14-113.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:55:12	97686bd32cdd6f68f36d317e282e66b2729c17949f58f4c2b58a298115a79ca9	active
+v14-114	docs/artifacts/v14-114.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:56:18	1a224e3b754f50b09161415fe1462ed74017f6c70d721a48978c6fe6e9a4c7c2	active
+v14-115	docs/artifacts/v14-115.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:57:14	84e3b241330450090d69f6f87164974f8aa1c16a56302e237f6a160214eb0cfc	active
+v14-116	docs/artifacts/v14-116.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:58:08	2b0f6f377685d15ec79ff5c917bdc7bb47ec78023a6d72f1e4fc4e714e8c23c2	active
+v14-31	docs/artifacts/v14-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T12:52:38	35387661bdf235859b70d8f042fde34194146fa6beedea1bba944f181a8550e1	active
+v15-121	docs/artifacts/v15-121.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:43:51	37137e7be24753e08e20c88e5e07927eb4d2f385d53769ab8bd8fbb2795732f5	active
+v15-122	docs/artifacts/v15-122.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:45:07	332ea7274e0ed75e95c0b3f7075f8cbf7e34b9820f330f6f5d34ee702acfcf96	active
+v15-123	docs/artifacts/v15-123.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:46:09	c11df24049c5834992390c286b391b47c4d3fdb5fadf71f8f16f88ac7ad740ef	active
+v15-124	docs/artifacts/v15-124.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:47:06	a550221bda6361674d71e93489ca60b0f65f17464e7401878589cd1e98540eed	active
+v15-125	docs/artifacts/v15-125.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:48:05	2453e29c18fc1ca204ccbe06f9a96c0a76622e5d3eb86ff2036f69fcb34d819b	active
+v15-126	docs/artifacts/v15-126.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:48:49	0c407ed562d9bef2c77e2b1cbf89ffb1a9c400ab25aa136f75f359f1c60a6bac	active
+V151	docs/artifacts/e234-out/V151.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:33:04	cc6946cad7943c20d552681d2b72026b1226fbb3bb2a3dad5dce3fec2637e3fd	active
+v16-131	docs/artifacts/v16-131.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:54:42	58c13c41adb090d82cd7a571e4cfae7317ff38c182c69fae69df95628002d440	active
+v16-132	docs/artifacts/v16-132.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:55:53	c83dc1c7e9d4e4fc853e4694cd03ff96d9c77ea19f99b6d388b113e6b1c6443f	active
+v16-133	docs/artifacts/v16-133.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:56:32	cf0ec75d77b7bcd004671266fe7e75ca77721fe2e8e12fdea9e9cbc90b1992b8	active
+v16-134	docs/artifacts/v16-134.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:57:34	50ec0c0c7075ca680ad3cb478e8f07c0ae567800468e8c33c629eb5e3b413553	active
+v16-135	docs/artifacts/v16-135.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:58:24	51793f7bf40f3b1e54886b5b3b9e9dfce509985d8d00397414bc15209c9dbca6	active
+v16-136	docs/artifacts/v16-136.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T13:59:09	4f60f26e493331db0c9945edd9a80528d2829175275cc85e1006a59e110916c4	active
+v17-141	docs/artifacts/v17-141.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:04:19	7b118f727373002cb0612aedfadc8ff158fc6d791ad1a3ed61a98336d4901ff5	active
+v17-142	docs/artifacts/v17-142.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:05:40	3375a22eb51baef02ef2b41623b98d826a10a5be45ff29630877308932014fe8	active
+v17-143	docs/artifacts/v17-143.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:07:01	ee20b0d93a81717466130e6077ed312f2bab64c7e441b35555e72ad5479c3bcd	active
+v17-144	docs/artifacts/v17-144.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:08:24	434ee1ce52c370df5249d194322bf0a8e49e35283d99a1836388b40107463bec	active
+v17-145	docs/artifacts/v17-145.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:09:46	f683174465c8068572d3eb631df5d744b6a6a1590751aa03419cf141825cfe13	active
+v17-146	docs/artifacts/v17-146.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:11:08	b568c8209dcc998f96ed5ea8d6cf2515ace230710ce33d4200dac04fdca1fba4	active
+v17-31	docs/artifacts/v17-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-15T14:03:02	5740ee0ddd28e5b550c14d5d941ce2b123a0c439bf38fbc051aca569b28df184	active
+V191	docs/artifacts/e234-out/V191.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:34:18	837b0ea5146c34e43b1d90c357c0edd3a8549807402ccc6e903a8cd9f8f777a6	active
+V2-31	docs/artifacts/e68-out/V2-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:29:02	8df958c7343f525d1d8199e3ef7033be4128b720bdf78f17af445c9e927b5289	active
+V71	docs/artifacts/e234-out/V71.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:32:56	3272e2f09e07fa096856f02bcffb1e96941e8e2e5c0692bedc482490585c4296	active
+v7a-31	docs/artifacts/v7a-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:46:20	716015fe010952ce8eb64a0ab515cfe927df993f25aaad198b080e2c29449a20	active
+v7a-32	docs/artifacts/v7a-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:46:47	51e7a4727900517800acc394d2483592b3b7ba6088cc60fff9773b968a56adae	active
+v7a-33	docs/artifacts/v7a-33.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:47:24	20290fcc554f969732bd268a26271f46425ef7e29e1d2d132090783eddf97e37	active
+v7a-34	docs/artifacts/v7a-34.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:47:46	1b18b7fc241da478a3b23dda891a03ae4ad4ab5b31e9343db065074edbe65518	active
+v7a-35	docs/artifacts/v7a-35.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15	历代上槽	2026-09-13T11:48:08	b57f733380f096746f7a9f549db4e1815d0c59e752434d28cefc4271294d60af	active
+v7a-36	docs/artifacts/v7a-36.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:48:35	816a847cbb76b015384b56b047f41e6e83149f59f193dff1d2696182a4ec48a4	active
+v7aim1-31	docs/artifacts/v7aim1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:42:34	91dbd5963ca2fc0118e73659283a5ba96725e1912dd99763747070411c4f5127	active
+v7aim1-81	docs/artifacts/v7aim1-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:46:31	85ca8f66b1a598942dfe18b7052cb75454b6c663c39eb8b86415291dce021cbd	active
+v7aim1-82	docs/artifacts/v7aim1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:50:30	c549191a808aa6d3531833fde7760538248a7dd67b507ec61157cff006d31240	active
+v7aim1-91	docs/artifacts/v7aim1-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:53:42	a9ad0d4b488cbb5f3fae96949377b8b38c0c05267c3c9fa905d0c39dedae5b57	active
+v7aim1-92	docs/artifacts/v7aim1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:56:15	283408af88c74dd3a0aa3ce33b4a97684852091aebd76663e1362d1754680b69	active
+v7aim1-93	docs/artifacts/v7aim1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T15:59:21	61e559b20dad6cae25c0d5009d22375e789617d1e73aa50ca79cb4e07560444e	active
+v7aim1f-31	docs/artifacts/v7aim1f-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:06:57	3f32e62eee73ec35cbd914956552e7f20df28509c25203b2af561de024ab4d9d	active
+v7aim1f-82	docs/artifacts/v7aim1f-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:11:03	eb94d3ca2b192d0bad45bc32ee1ee204afa22fa9a99d0073325b2fb311d59a11	active
+v7aim1f-93	docs/artifacts/v7aim1f-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:13:31	4be7ea4bed06c8ff5f61580dc801050ad53ce4e2db7b6d77848e5f94dc1c16dd	active
+v7aim2-31	docs/artifacts/v7aim2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:10:09	43c7fa28c3366ca30bb054f3db436b61fc1785d0d4b3f8bd357c892d240f265e	active
+v7aim2-82	docs/artifacts/v7aim2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:16:10	a58efd02069c3f57cbed9ea649d88bc5ba0723bd037bb588fa14d8f9597693bd	active
+v7aim2-93	docs/artifacts/v7aim2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:19:46	aea3f4faa1b216d545d5998a385215d8192b4730242b5cb62cd6c8ecfc293687	active
+v7aim3-31	docs/artifacts/v7aim3-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:59:08	e62893c31bfd1779edc8783ee4a70b595e646677619ff9d9ad7dfa18ebb1649f	active
+v7aim3-82	docs/artifacts/v7aim3-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T17:03:36	bb4d66cb05a48cb85b26f1f8943761b68903864cfd3bcfb7448c2876880787ff	active
+v7aim3-93	docs/artifacts/v7aim3-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T17:06:30	d096e738e9073a5a2be35c56a89577928ff04a90243feb143c713592978bd6d8	active
+v7anneal-34	docs/artifacts/v7anneal-34.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-13T14:54:51	15584da3765f3e40c1264e207ee64ae9e2116f48a87cc06c6930c3447e2017a5	active
+v7attr-31	docs/artifacts/v7attr-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T10:30:17	b232bbeb1ff800e6696fab66ac530a2c15456c767ed1b7b51688a8652abe07a2	active
+v7attr-33	docs/artifacts/v7attr-33.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T10:31:52	1aca9993baa6739105f9d4db41b3c4007cca50078d982a85543e8d7e6330bba8	active
+v7b-37	docs/artifacts/v7b-37.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:55:44	37e09ff70d6ad98314f110c7f82556a0d8babe8e470f543ca17b2039d61d1e9d	active
+v7b-38	docs/artifacts/v7b-38.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:56:06	d0ec34724a396c54dd4349d7c73bf09283180367144d0a12ea8d4d986284b114	active
+v7b-39	docs/artifacts/v7b-39.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:56:30	05f1510c0c93702d5ef9715a3d6d0fcd75201bcb057f8b9a82bb79fb25519123	active
+v7b-40	docs/artifacts/v7b-40.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:56:53	8457e6d1ce2ea8cea7e4225f4c31a91fea1e35ea784b2beae1a5c199f1252a1b	active
+v7b-41	docs/artifacts/v7b-41.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:57:19	26261ab0a4e05f91e8643ada2778094a790d2b7c4b8f7765a0f815444b1b6b83	active
+v7b-42	docs/artifacts/v7b-42.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:57:43	12cb35f862bef1fec6735faf7b51bf2e4c6ae6625e01aafb1c7d5d64ffe5e707	active
+v7b-43	docs/artifacts/v7b-43.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:58:05	83d60eadc77916195084f25747b102cd37ba431d8cd3837c5cefc483c00e5e5e	active
+v7b-44	docs/artifacts/v7b-44.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:58:26	62e13c77083e79b86ec5fbb8d2e6123300f8b7d92f830e654f6f38cbf565e232	active
+v7b-45	docs/artifacts/v7b-45.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:58:51	c65b045926e840a2bdc01ab5c3cfd4fca70da7a9e13370581f02f9ff55867c69	active
+v7b-46	docs/artifacts/v7b-46.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:59:14	7cd6f79a3fa8e982331cc15820e1507a90a36cbb3ad0827b5cbbb668921d6ccb	active
+v7b-47	docs/artifacts/v7b-47.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T11:59:35	bf5b4dbd1a0d5b639be027244dabd79b2d420e6fb1f3be25898b88f90ebababf	active
+v7b-48	docs/artifacts/v7b-48.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T12:00:00	ca8b886d012f6dda57374219277241900b46162da88379cdcdf5063de52df2c2	active
+v7bead1-31	docs/artifacts/v7bead1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T04:21:04	a070ad26ca9f4745cccd5a88b426e8d6fe57894aae104d886b3e6123873ebc31	active
+v7bead1-93	docs/artifacts/v7bead1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T04:29:20	8462e5bcbbb5a467a16c2c25f8cb44e415f58f6d62b42ec560736b784854b7af	active
+v7bead100-31	docs/artifacts/v7bead100-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:40:15	23fa689bfe28b7dcc71dc28c20870f599835ecc4561033438773e602160edc78	active
+v7bead100-82	docs/artifacts/v7bead100-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:44:46	5c29181a60ec72c9e3062f51b235d25a428f0e72c7915dcb835b1db0803c5236	active
+v7bead100-93	docs/artifacts/v7bead100-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:48:58	042a037efa14e38e3d510843177c072e5ec093ffd8e798f6cc770296168ceafe	active
+v7bead15-31	docs/artifacts/v7bead15-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:08:09	8b6361bf55814e2004959e6c04116a31f2cb474b46481228d3fff5558b86775d	active
+v7bead15-82	docs/artifacts/v7bead15-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:12:35	620b2845862380c88b6eea0d168231457c9f684fb92d20bf89425911189939fe	active
+v7bead15-93	docs/artifacts/v7bead15-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:16:43	83eba79c8d3056c2fa141816b6455e5321904d8cdc615baddce18dfaaa26dbc9	active
+v7bead2-31	docs/artifacts/v7bead2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T04:41:11	e5f52c067423137401f5737ac286a1b496aeb193819d137147a3395354a6accd	active
+v7bead2-82	docs/artifacts/v7bead2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T04:46:47	89580aedbbda1d2e628d1f17dcc244e4906ff42ca2768a8988f029583b963df7	active
+v7bead2-93	docs/artifacts/v7bead2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T04:51:19	f304edeac9c37e24999f2b8206ae0c1f0a7a54c4609292a4b9281b06bb257609	active
+v7bead25-31	docs/artifacts/v7bead25-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:21:44	38faa08e484fbba5ea1171463c367b071728df01d0542bdb8371227ea36600c3	active
+v7bead25-82	docs/artifacts/v7bead25-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:26:15	8a4c45da2aa3439e53e8767d0c7c0e812f7fd316e625439957a5bbe877822037	active
+v7bead25-93	docs/artifacts/v7bead25-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T06:30:29	7f8702848151bcf5e2e6f2a815c2407351be812aa67ffacb9d5b5606b4520d76	active
+v7bead3-31	docs/artifacts/v7bead3-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T05:06:03	ae243b8371d531e6677bcc940b078e87db258e2a765b35153f10c192c042312b	active
+v7bead3-82	docs/artifacts/v7bead3-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T05:09:35	a9cad077bcb113aab202b2210afc6ec98683a944211071eaf5ff35fab05bf32a	active
+v7bead3-93	docs/artifacts/v7bead3-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T05:14:07	37d31c10c0caef3832188d2639261921a92b75930003740a64af96388a73d148	active
+v7beadseed-31	docs/artifacts/v7beadseed-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T08:22:16	0f7a3e27c0da18dfd2db30ce26db2f66cb86e19ab27a6a1ed98da8b24bf51689	active
+v7beadseed-82	docs/artifacts/v7beadseed-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T08:26:52	8fa0b8d070faf7020e8fa88349a3c4672c7632c6358b51778e2b191f3d4641ce	active
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T08:32:19	0ac256e660ddbd6b5eaf48fd6532f561aec2e9757bbaf196232d334e7c95c547	active
+v7big1-31	docs/artifacts/v7big1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:22:13	90c2e85d63485f149e0c98ca7d63e3258bd0767b581e363c35773dd73d6a1177	active
+v7big1-81	docs/artifacts/v7big1-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:24:36	de32419eb86167b271ebcc793a52c7148dc72b974880a047941c0fc83986dd60	active
+v7big1-82	docs/artifacts/v7big1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:26:30	3dc9e7e4530e118863091c3bfe1631ab1550bef47d69d567c2f7fe6007dbf098	active
+v7big1-91	docs/artifacts/v7big1-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:29:12	93e60fcdf336556dbb4dca09d8beb6477ba5c330c4c0dd15211119ac4d53633d	active
+v7big1-92	docs/artifacts/v7big1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:33:17	51f3aa4a391511ce021d80677a2fc05b0201bfb70978cd005f4c017042eae7a3	active
+v7big1-93	docs/artifacts/v7big1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T09:35:30	29b90873236d2ab19d99940a2506ea71a7cf4944f71f6a552656bd97297d9ecf	active
+v7blk1-31	docs/artifacts/v7blk1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:17:52	75572be2ae850bb254c8ce534487db9bfd3b70bd64abb6a26bcc13e9cd39f141	active
+v7blk1-81	docs/artifacts/v7blk1-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:20:19	4d1c39b5af1dd819b75abde19cc41d3a4f794232b157973de3111fbd6e00f612	active
+v7blk1-82	docs/artifacts/v7blk1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:22:12	de8c381d36b3215d2c13eb905bd8d8d0be3adf98d6c51c0b5b2ffaf9b4c77ab2	active
+v7blk1-91	docs/artifacts/v7blk1-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:25:29	0138c9c03199c00510c40a83008f77ae6ddcb6dfbf8ac4c74a352012b29e7ddd	active
+v7blk1-92	docs/artifacts/v7blk1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:28:11	3b775e67bee64c168ceccf9911914baa9bbf88346d02410a687df58bba1d05d3	active
+v7blk1-93	docs/artifacts/v7blk1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:31:06	76218e917fe0a3be0a4ac924b92710885531900f7a5d4cf0c1758062d7cc0ba8	active
+v7catE1-31	docs/artifacts/v7catE1-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:18:01	ff1cf957a131d92c609219da71658da6ad94917c565e6144584b9660183197bf	active
+v7catE1-81	docs/artifacts/v7catE1-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:19:00	31f68d042c5de60a4f02781d398e6fb892a10c8ec0a48ad3bcb6e778523deb27	active
+v7catE1-82	docs/artifacts/v7catE1-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:20:01	693f1892aeaa021138a95224b88bcc865c8f303c3c6fe26bf1cf4c0e2fc7deeb	active
+v7catE5-31	docs/artifacts/v7catE5-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:21:25	225f64bb44a53ab70a7f728460ad1f728ef703892e7302304c9b04612da619b5	active
+v7catE5-81	docs/artifacts/v7catE5-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:22:22	41e2eb72aca3e4c45ed0dedd2268991f47c8d73cfe0a9158f59046fcf26f199c	active
+v7catE5-82	docs/artifacts/v7catE5-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T15:23:28	09a60260293b71f2bdf69416ddaba2b3568fe21e455bc973d54b4614acfe3df5	active
+v7clear2-31	docs/artifacts/v7clear2-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:10:05	fda933dd8fb763305fa28b0032175187298cb12b0d84b769e57e78b19ddafc65	active
+v7clear2-81	docs/artifacts/v7clear2-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:12:30	5c9f2dad2243f9e563233bd9303a2abb6b73d69794fe2c7a1e4a9e3174658156	active
+v7clear2-82	docs/artifacts/v7clear2-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:14:56	aa73b0c1c42c7484eb47f40ede9431a683bf06283740a0706eea9108aa0056e3	active
+v7cmin3-31	docs/artifacts/v7cmin3-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T09:44:29	a5d10017f6e5cf52655b3c5a59544ef95fc8488ffc6e8fb7edc5d00a3dc60912	active
+v7cmin3-82	docs/artifacts/v7cmin3-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T09:49:18	dd114a289e8ebc21f058f81085fa5541b2eef6fef2e7a7cc66784e4fc5583d76	active
+v7cmin3-93	docs/artifacts/v7cmin3-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T09:54:29	040d28a0684c3c768e4247f707eda0868199393ff57564985fd354d5daf7b8b8	active
+v7cmin4-31	docs/artifacts/incumbent-forpromote.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21	历代上槽	2026-09-21T10:31:56	3a07ae79cb62cd4f22ff648e67d988c569096cc04724dd05023d9a0b9924c903	active
+v7cmin4-82	docs/artifacts/v7cmin4-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T10:36:47	26aa98d3ee136323d026ccb7c2d96087d3176114672fe883a8e3ed6359e18499	active
+v7cmin4-93	docs/artifacts/v7cmin4-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T10:41:22	b21f2208a869765b84fe6894cc02215b563f738848e07aa9abec15675754c912	active
+v7ctrlE-31	docs/artifacts/v7ctrlE-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:15:51	def1fcd5d558ffacdafd3485547ea45f15f83bbeffa30d6ea7dafdf03d1854a5	active
+v7ctrlE-81	docs/artifacts/v7ctrlE-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:16:46	7732dd751a002560c1ad3e00ab9a67a73e2e507e94fd3ec8bb55eafb13f45f42	active
+v7ctrlE-82	docs/artifacts/v7ctrlE-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:17:49	833222b3b125af1114eafee16a2d3e19b82063c7a4b01522d1c0ea138337e55c	active
+v7cur-31	docs/artifacts/v7cur-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T03:03:41	4694f2c98154387fcc385447fa6d66e611d12772dd979f9851fa4175e9a0c20e	active
+v7cur-82	docs/artifacts/v7cur-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T03:06:10	ccadf468b9c9ce81bcf9bec320815f3ea194809affa64d65e6a5188ddafaa84d	active
+v7cur-93	docs/artifacts/v7cur-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T03:09:50	48495fa027188ad627a854494fd8435c6e8165b5bf3e969b3a8a91d7a4d971b3	active
+v7cur2-31	docs/artifacts/v7cur2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:23:29	92ecebed865681927a4d170fe4dddba0853870b051748e68d168f7d25a03baab	active
+v7cur2-82	docs/artifacts/v7cur2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:25:36	2b11fce331b1fdc6bd9d8294b707ea4bb549ef00ae1701ab44e825ecb2f72dfa	active
+v7cur2-93	docs/artifacts/v7cur2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:27:31	ec9a41accad7ae5ebafe39beffe2f2fd6ad2d2e9676c762d543b34c4c297c2b4	active
+v7cur3-31	docs/artifacts/v7cur3-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:56:41	173a6b6b96376503821c740a2531d4d5e72cc548c0b93cad05ade68b6af9aed8	active
+v7cur3-82	docs/artifacts/v7cur3-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T06:59:06	cf23c2cdfc2311e48843c38f1c190ae19df309ac0d8b9f56c4c6482c268a4939	active
+v7cur3-93	docs/artifacts/v7cur3-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T07:02:07	0263679dbf62a5c71b1da3f9389a684a3419802a1e21f6e1b6be4eab75892c4e	active
+v7curri1-31	docs/artifacts/v7curri1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:47:45	a3817732f9de239951f5e5f26482fad15818efef6fc7436e393ff1b123d17fc7	active
+v7curri1-81	docs/artifacts/v7curri1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:48:46	6b8e35a18b85be6b53231a5db377cbd4acf08f8879686f8863a5e30616f6c457	active
+v7curri1-82	docs/artifacts/v7curri1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:49:38	599417adc80eb0fbfc9dec511b5065df5df5147712f8b132338b0e8c27b111bd	active
+v7curri1-91	docs/artifacts/v7curri1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:50:35	4fc531b4c65fe963357c4ddae9fc5ed9c2900e938a9f80851beef50157c3db5a	active
+v7curri1-92	docs/artifacts/v7curri1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:51:32	ef1d32c2b6624a1b3b4290e9333ac83675b9a8209f751a2b7d641fdfa5a5d022	active
+v7curri1-93	docs/artifacts/v7curri1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:52:29	0bbe2d641be5134353ed0f3884885c0c750ec5fbb847e4eaaed78a5b058754ba	active
+v7curri2-31	docs/artifacts/v7curri2-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:53:53	666935f96089e1ee2a180f968f397901ae926e80f09f9c360833d44681ed9c63	active
+v7curri2-81	docs/artifacts/v7curri2-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:54:46	1156f305e86e1d67623e6b353d4320a0f42a4a88377b78362a773f2c66c03ef0	active
+v7curri2-82	docs/artifacts/v7curri2-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:55:39	caa557e97593c3e85139edbb06d3fc940193fe5d2a0d9595e63461ca21cf802e	active
+v7curri2-91	docs/artifacts/v7curri2-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:56:31	0fe15a0b71a49b9d68720ad5d39d28198950582e80ac95d874071d0629afc87b	active
+v7curri2-92	docs/artifacts/v7curri2-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:57:46	c3f5316c7e817045979a76d61c4ea38077c7fd76f12c9d293d41f8377e7e3f33	active
+v7curri2-93	docs/artifacts/v7curri2-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T13:58:52	b2b671c6b9cbb6eab8e79e614d7a0d9e8e8f14095695e9f41bc760fb6767b788	active
+v7densE-31	docs/artifacts/v7densE-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:53:01	3009521a47f99ce917fcf185653b185ba1402412232313fac406ad48dbde1249	active
+v7densE-81	docs/artifacts/v7densE-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:53:48	b9385694f1a80f00955f4bc779faf6847cb92688e76a2a93feddedc29b6b940f	active
+v7densE-82	docs/artifacts/v7densE-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:54:45	876f3b591fcaa4102965eb25d2c348126541cb69bf1bfc7e75deb837fceccbd8	active
+v7divK-31	docs/artifacts/v7divK-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T12:24:01	61a250fdade0aee0d7a30a7dda993701efec5cb735ba692001e6f2d99b9a7065	active
+v7divK-81	docs/artifacts/v7divK-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T12:24:57	936ed23b175a719181d8780330e8eaef8912f1dbea9c4aa6f14bb4dae01678b9	active
+v7divK-82	docs/artifacts/v7divK-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T12:25:50	150d76a172328c8e0e1bbd9e062fa3dd5a4ffb9bfe7600d1625c34fc6f3ff17b	active
+v7divK2-81	docs/artifacts/v7divK2-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T13:55:23	9e96707b3d761d2948a91e43b6a78f4be1fd57e6c2a0b8f8bfa2c90a0afdd661	active
+v7divK2-82	docs/artifacts/v7divK2-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T13:56:41	be2122650ba453f8756d22826106796b15881e6b221ed79fa2f5d44523fe66f6	active
+v7divK2b-82	docs/artifacts/v7divK2b-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:12:51	b85110c9a4a85439895f8a9522bfd8b15cdd82989e2e020c4a4d3dde108c24c1	active
+v7expo-32	docs/artifacts/v7expo-32.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T05:03:06	086b6d9567b48a60c5ef6fd33c216fe72a1d198cd62cb7f9b879ba55b193dca7	active
+v7expo-33	docs/artifacts/v7expo-33.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T05:04:13	dc56d065ab496bd45a1680e83bbd3ac95a2277ce62598b45c7a2a4df31239119	active
+v7expo-34	docs/artifacts/v7expo-34.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T05:05:07	d66f4c1e755e757aa96260436b6efac68cf8c15f611fa76a8d6299e00df61bc5	active
+v7f2-31	docs/artifacts/v7f2-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:34:46	5bec9bcb47a26f5a19ccb88736810249ee03f9349d95b8792ab4b9ead5ab39d6	active
+v7f2b-31	docs/artifacts/v7f2b-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:43:14	dff0ead3803425a03a57fda9638179d6128911d9494fb6a12a118184849809b6	active
+v7f2b-81	docs/artifacts/v7f2b-81.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:45:05	67ec820afc4358e4a548e08273e3f09ae601b8af47b1ac9418a5bcda46ed775f	active
+v7f2b-82	docs/artifacts/v7f2b-82.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:46:40	a8bdd745fb48aad87e6a356f423e6bb3c4cf61c5780dd54b72840e05911162d6	active
+v7f2t-31	docs/artifacts/v7f2t-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:23:46	e4061993ff389c095f4f8e5441db1f6a1ec098eb8b0ae2715485df03a069aeff	active
+v7f2t-81	docs/artifacts/v7f2t-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:25:14	6fac9246222687d4214bf942714cc6d6fce0f4744473cbdbb125b7ba6aa46b24	active
+v7f2t-82	docs/artifacts/v7f2t-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:26:46	07ccaa83b4224f8c6c396b741dd5bf51e467eb0842b5d14cd9fef6252cf95eb5	active
+v7f2t-91	docs/artifacts/v7f2t-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:28:21	0f48e979305046caac7c82e91c3a3d1264a0dbafc035bc69a561cab4d70d4143	active
+v7f2t-92	docs/artifacts/v7f2t-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:29:41	8b53f3912c115d801f27beeed2ccdadd2aad82fc1b472cfd1b18d650e6006c50	active
+v7f2t-93	docs/artifacts/v7f2t-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:31:05	96f170824f5ec60fe52aababa679a6e8a10ecb669b3882571ac075f66014781e	active
+v7f3-91	docs/artifacts/v7f3-91.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:56:08	85e3984cf87053eecaf0b6ed926fabbaaea7a8fa9762b65e56cde5bbe71cd781	active
+v7f3-93	docs/artifacts/v7f3-93.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T05:59:13	868d125bf6c10ab4761fd88add017579d5f292d14c46a4a2decd5eab06bc00ab	active
+v7f3-94	docs/artifacts/v7f3-94.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T06:00:51	79a5aafc85b327c897be3af918257f27a9f44a001aea919be029682a88459117	active
+v7f35b-94	docs/artifacts/v7f35b-94.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:05:31	7abb9b027c8e3cfc0aa52b0113128fa8f73c0d119fdfc308d6989b0cfa6ba33e	active
+v7f35b-95	docs/artifacts/v7f35b-95.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:06:59	3a876037b8c077e7d0ac32547d4a437f65c2c4fc4a34db4f1ab3dd3f5f531934	active
+v7f35b-96	docs/artifacts/v7f35b-96.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:08:22	a487532e6e32e3be68d77998654cd5608d68bbc3ecc960d0280637180892e6ae	active
+v7f35b-97	docs/artifacts/v7f35b-97.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:09:41	566fed48dcd85901eeea378d8c2cdede8c671b3ce0e22913713c68429452acde	active
+v7f35b-98	docs/artifacts/v7f35b-98.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:11:00	6df208b7db62d2d5a90df3f4cddaa5c6a9465b462eae5aab17c2dfcbf6382da1	active
+v7f35b-99	docs/artifacts/v7f35b-99.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:12:33	6d17aa4ad30329fd6780ad469df97a7853beaad8e976d53353da26b9588290c7	active
+v7f35t-82	docs/artifacts/v7f35t-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:35:48	afa8a296ebb9ac52684495b0c50b9329e5daec8f269812c891a33a4a1572950b	active
+v7f5b-94	docs/artifacts/v7f5b-94.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T15:53:50	17f685c9cb1add1139347bdbe907e0677f5c22b3c46f1301bfa400a136b7a421	active
+v7f5b-95	docs/artifacts/v7f5b-95.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T15:55:16	16b26facd14336a9c82823a66a8907e1b22a48847d6b2dddce577cf2e1a365d7	active
+v7f5b-96	docs/artifacts/v7f5b-96.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T15:56:34	b2c934d0bbbb5f37d8a2956ba304a616268ea7b5c665368dca43c492006cc7b4	active
+v7f5b-97	docs/artifacts/v7f5b-97.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T15:57:58	358d3eb1289e97cca6eda9dd0b0aba56810bb3c8db33cce4d85a34b7e280988b	active
+v7f5b-98	docs/artifacts/v7f5b-98.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T15:59:11	6fd3bee11725a9dd8d1484157176ce0b6ba79deff7d8898017b2dc7ae5c697e0	active
+v7f5b-99	docs/artifacts/v7f5b-99.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:00:35	2de28708b1be55ee647341fd9f37190500d2e9bcec5c921bb0cf411a501bf50c	active
+v7f5div3-31	docs/artifacts/v7f5div3-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:35:06	0db7120d2d0e9f4106784770c5324d4701158ec09dd3ab39bc340a8487469caf	active
+v7f5div3-81	docs/artifacts/v7f5div3-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:36:07	adc540da8444430e383bac181ea2e1161650b43339d0a4871cf354be81548074	active
+v7f5div3-82	docs/artifacts/v7f5div3-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:37:40	749e15ffa034511c408acf9528fe0b4e35b584a2bc658aaad61be971c119079d	active
+v7f5div3-91	docs/artifacts/v7f5div3-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:39:41	0188f4d7c9d44de339bf8bf469448112871f694cc4f88e3b4da20700fcf11f59	active
+v7f5div3-92	docs/artifacts/v7f5div3-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:41:07	d26a0f9694666d9d137de219e5c4b7443f9ab9ef399b4b5e2190aff9d171f16d	active
+v7f5div3-93	docs/artifacts/v7f5div3-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:42:44	1c45ac7a2f844929ea2d94bd617643fff082827d5326175d45788beb3edf3b4f	active
+v7f5t-31	docs/artifacts/v7f5t-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:41:31	16da3d397827dcb3abbab1fac747bbc1275afd209404f6ba52cb892d72817bea	active
+v7f5t-81	docs/artifacts/v7f5t-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:43:03	6febc4136001442ecf0e400896952ae4ae410008413e7f4f461648b80989bc57	active
+v7f5t-82	docs/artifacts/v7f5t-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:44:34	de9e68ce240d342594c6b43437c85ed185ec865b3b13a160c027ba5603e55e0f	active
+v7f5t-91	docs/artifacts/v7f5t-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:46:05	94a263103f87d6748143827f09217f050f7cc225d69e8720bfa5526a40a2e0d5	active
+v7f5t-92	docs/artifacts/v7f5t-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:47:15	6213c25d1a7aa937461af02a6f43f9e51230ec4e7e12331608f3c03fb3bb43d7	active
+v7f5t-93	docs/artifacts/v7f5t-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:48:15	327b0462fed83add6d6248e58fb194a224a3692064fcf5bb48134e7733087dce	active
+v7f80-35	docs/artifacts/v7f80-35.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T11:42:25	22256cf45d08a9f7d43d7893fe085f053d823c9f4e9e9407c0b73826fde17c89	active
+v7fix1-31	docs/artifacts/v7fix1-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:01:08	049b5397e60db60a64855a5d4cb31157535669dac270adc3b283925cca403b8a	active
+v7fix1-81	docs/artifacts/v7fix1-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:04:19	451aeffd985ed0b890611b4a2c89250cb41c889527dbcc2e247f5220f56cde9b	active
+v7fix1-82	docs/artifacts/v7fix1-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:06:23	5dd8c4be4fa3b2170015a8dec6a0236fb737ead48546069b726dfb75a7f1b368	active
+v7fix1-91	docs/artifacts/v7fix1-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:08:44	f16734e3ce3589f604d39da13dc97672f84215728c9e739d12762f0d3d275a40	active
+v7fix1-92	docs/artifacts/v7fix1-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:11:42	0c1ddf69d9dd769c8433122a84bb18cf26f3f5080da02f2daf974fdf5de7c939	active
+v7fix1-93	docs/artifacts/v7fix1-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:14:38	980cb51d31fe3236eb4bf2ff1f4c98e37fe7b937686af9efc0e7ecb650950f9f	active
+v7force-32	docs/artifacts/v7force-32.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T11:02:48	b8a40a6121c9d3f441e515403c7139839dd555a295fe7fd8e0d7b453f4b683a4	active
+v7force-34	docs/artifacts/v7force-34.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T11:05:19	b83dfc477323be34d8359d90dd79adfe3471aa66a63f987408f86d2ac9e393d5	active
+v7g-35	docs/artifacts/v7g-35.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-13T13:02:07	8fec6a072d10180d49d7a522f719756721f1e4b63da84b7363497aa0d8f408c7	active
+v7gf1-31	docs/artifacts/v7gf1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:35:34	adacb65eef98a8b7df011b1c317af97a9cb02d900a06d631c937b95d181756c5	active
+v7gf1-82	docs/artifacts/v7gf1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:40:37	81f356ee7364065a1489fe0a0304a49d442e50d914aa5aea0f61b5f09d27c2c8	active
+v7gf1-91	docs/artifacts/v7gf1-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:42:56	1dbf8bd6d5ebfb745a2f458654bdfdb7dee1fbdcecd5fa94256d8bceb47e8e13	active
+v7gf1-92	docs/artifacts/v7gf1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:45:11	f734c11fa3964bcc091b2f0d4ebc437a70d03df18177b2c3becc31a687e69eb6	active
+v7gf1-93	docs/artifacts/v7gf1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T14:47:18	319cb447b191b4cfc3e1a46484716d3182a2e6aa6c1cd833cf930c4051230714	active
+v7iso1-31	docs/artifacts/v7iso1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:14:32	5a35065dc56dcf3414274bccd99f94ce1b38ee523ccbddd0d9576323b5eaf6dc	active
+v7iso1-81	docs/artifacts/v7iso1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:16:02	f5d890e09e094c252c8727e25a73b64876f2f4805954c605ebf5d3da65991252	active
+v7iso1-82	docs/artifacts/v7iso1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:17:24	0cb2582b450ebdcf44118f7f81ab2169dc84eadcd7d097a08adb42316e2199c8	active
+v7iso1-91	docs/artifacts/v7iso1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:18:40	3e74d24a1be5cf2a2e2ad5e5b71e7fe2857431cccd56413024d82b7086629a9b	active
+v7iso1-92	docs/artifacts/v7iso1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:20:16	b4724d142d96b6541fe51aa1fd955c764816226beef3c0137e778e55e2ae4c25	active
+v7iso1-93	docs/artifacts/v7iso1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:21:27	6e664bef92fcad67382afc5368f39f20dd96035a90b19e25078fb8247df8f113	active
+v7l2a-81	docs/artifacts/v7l2a-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:39:12	caba150e094cc6369de2825713c8a670d32e269b3ac3ea2e4f982ec969ea2800	active
+v7l2c-101	docs/artifacts/v7l2c-101.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:40:03	77284e25958e0c5e65f1a1f8de5988a657b526aea478272b6e072b01f119ffaa	active
+v7l2c-102	docs/artifacts/v7l2c-102.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:42:28	42e0759488663cb35d98565aca5900fc33bd3ecfe0f7264f42aadefb0572f81c	active
+v7l2c-103	docs/artifacts/v7l2c-103.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:44:34	07655f2a64d67e9b925e85b06bbbfffaab7330222c8b6e6e5a4d55468ff73b30	active
+v7l2c-111	docs/artifacts/v7l2c-111.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T18:15:07	f920ae2fa28318630bf014d3ecd263fd6ecdaa73030a3826030c0955cd994bd9	active
+v7l2c-114	docs/artifacts/v7l2c-114.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T18:21:46	42adac36971390e09cbdf2e6a6734d9e0231d8aeeae1326f918dfdc2cab7a102	active
+v7l2c-124	docs/artifacts/v7l2c-124.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:01:22	ceca2c79d25beb59cb5b95eaf5dcfcac5427957171ba6d82a6c4bb9fdd3be12d	active
+v7l2c-141	docs/artifacts/v7l2c-141.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:26:44	7eeb626119fc7afbc2aa1ba032622f568e1bea4618fcebdd3bfce5299d40b012	active
+v7l2c-142	docs/artifacts/v7l2c-142.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:28:55	0b554a09fea8398b7acfb024cb5c511e83b8102eb976ad4a96328847d039217f	active
+v7l2c-143	docs/artifacts/v7l2c-143.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:30:59	05a2c0191f3a0342d23960a57e420034297af60f7d6b42b49dafb1ec3b580d25	active
+v7l2c-144	docs/artifacts/v7l2c-144.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:33:11	2f755d10d9a3ba1f37d149381dab5b42d9532a75fbb7ff4c919bd2b4c5c98cf3	active
+v7l2c-145	docs/artifacts/v7l2c-145.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:35:14	44fdfc25f5592fd460f1ac2ed43a994e9e1568f269ad26f631ea0d732dbeb628	active
+v7l2c-146	docs/artifacts/v7l2c-146.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:37:28	49c8b235049d742e72089e5791bce4c47ea8209cd44a226e8243b7fb6c1fd9c7	active
+v7l2c-147	docs/artifacts/v7l2c-147.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:39:34	556640f348cddfaa7af28f3f1e92e0c22e5d90f777b2ea6c3a516f8d11e8827e	active
+v7l2c-148	docs/artifacts/v7l2c-148.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:41:39	067f5d07c49eb07dea06d7fa91b15fb098a83e403bd81da6997934f6044fb2a1	active
+v7l2c-149	docs/artifacts/v7l2c-149.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:44:16	0c475af0f1e06cfcae0c9a57b34b815dc184c87b5dac6437e5bde36f93626317	active
+v7l2c-150	docs/artifacts/v7l2c-150.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:46:35	32851f0ba2ddf669cda4fb0c2ace90dd4ec23bfa212ec161ac743b108ee53a59	active
+v7l2c-151	docs/artifacts/v7l2c-151.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:48:54	a86474337995ae78a09069224faa3c02e7f9f892866206cb9b3603d7924fb791	active
+v7l2c-152	docs/artifacts/v7l2c-152.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:50:59	289ce91634b73948246ca955135d6c654f92a4cb506942c7b4b4193ac8e582e5	active
+v7l2c-31	docs/artifacts/v7l2c-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:24:37	74f5252341bc8a7e2098c2beca53cc1082f8f93227269064ce9f18cc619cb14f	active
+v7l2c-82	docs/artifacts/v7l2c-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T15:59:41	0d3933f60ef3fb8fd81190810c902e461fb3ffa8123833b4ee8a6591ec7f5bb2	active
+v7l2c-91	docs/artifacts/v7l2c-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:01:40	393a83f30ced796b3cd33b324329e807592f34fb72bebc210156c500968dfa18	active
+v7l2c-93	docs/artifacts/v7l2c-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:05:53	556f5a5926a2fdb101e25f4a61685298e3367165c0807ddecdc150a3e9019729	active
+v7l2f-101	docs/artifacts/v7l2f-101.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:10:18	06558fc73ed9915e8dddca0211d2aea00a706b6832dfe7860c9c0da01c1b82f9	active
+v7l2f-102	docs/artifacts/v7l2f-102.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:12:35	001dd6ed38655087a8d71247405dcaa40f0c3202375bcf3ea51539c84cb6827c	active
+v7l2f-106	docs/artifacts/v7l2f-106.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:20:33	848c16f24db95e248b941f71fc68b76eaa5734604178b96c289cdbd4f8bb1d4e	active
+v7l2f-141	docs/artifacts/v7l2f-141.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:54:44	69969f7a69bed17829164301b0de4a0ee4d7372b7b634de89be453113edd0f07	active
+v7l2f-142	docs/artifacts/v7l2f-142.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:56:34	bd86edcd3d9328a5aeb18eb2f386f0388c105f372c7646d7e5d9c39b7ca5ba89	active
+v7l2f-143	docs/artifacts/v7l2f-143.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:58:31	363f869a2820e7132000f3c1a39fa5bb543d3c7f5d0f8ee66caeaff44c0599c5	active
+v7l2f-144	docs/artifacts/v7l2f-144.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:00:33	3b63b25abb855505ed34dbda28c12f1c0fb7810d18811aee3fcaf85133268e47	active
+v7l2f-145	docs/artifacts/v7l2f-145.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:03:26	9c69152fc607d70678703241367da970a11e47345bf03341b35a1e37b6c395be	active
+v7l2f-146	docs/artifacts/v7l2f-146.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:05:19	d396e211dfecc188813dbe1e303ae890144f41626e2123afc86c1102956f330d	active
+v7l2f-147	docs/artifacts/v7l2f-147.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:06:55	d042687d264ddca0595ef9adf54cf4e8c2c1cb0720c2b08cf01a0db4b26434ce	active
+v7l2f-148	docs/artifacts/v7l2f-148.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:08:46	333672be7a3fd53e8a11bc9578092d47d6981d03b6b19972308cbbacaac09145	active
+v7l2f-149	docs/artifacts/v7l2f-149.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:10:46	4517848830595c13c43ae979e11022264dfb20a8a36ca2d0920bb013d3deeb2d	active
+v7l2f-150	docs/artifacts/v7l2f-150.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:13:31	6b1a1e7c2e23f0153fcf28645a5acd3454f90d032c1378fb6bb28a0919414ca6	active
+v7l2f-151	docs/artifacts/v7l2f-151.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:15:23	95dec5e836e6aa0840032dd72cbde247c94543e70ce56798f72c3a42d0364643	active
+v7l2f-152	docs/artifacts/v7l2f-152.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T20:17:34	8c29aa82c829dacf3b4e10cf3414ab5b22f528a10ab2c5dd6a7d17380325d595	active
+v7l2f-31	docs/artifacts/v7l2f-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T19:52:44	11cf9ec2311671909fa4c876079b12bd149dc8a570c4acb57951a327c2147b37	active
+v7l2f-81	docs/artifacts/v7l2f-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:24:46	b21d506f6f85121a133aee001320a5f24279694d6a2369d85c7c1513b0b963c9	active
+v7l2f-82	docs/artifacts/v7l2f-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:26:43	8199ee7370736e924c5a19344748a48db7826c0305366cd77860cadc75a2c6d3	active
+v7l2h-106	docs/artifacts/v7l2h-106.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:06:42	e8494dd2bd3800c5ac6c7ffb5dd35082534c75dc32ccd961e0896061e9b1dd06	active
+v7l2h-81	docs/artifacts/v7l2h-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:10:34	e9309df5c1142fa2f213efdd5f2a446a5a80479078114c7396157a5fee44227f	active
+v7l2h-93	docs/artifacts/v7l2h-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T16:21:08	c6289f0b91173156bb7dd6b1a548dc09dde543e0c6a9097c8358e4fda6996155	active
+v7l2o-91	docs/artifacts/v7l2o-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:56:55	7c01309626618c56b1b92803d98bc6eb15ed8452684e1e2e46f95a6d49eb0b6b	active
+v7l2o-92	docs/artifacts/v7l2o-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:59:17	325f1a34ccb01207d2c9588bf96fadaef24e2247743fc6c113cf31d221c061e0	active
+v7l2o-93	docs/artifacts/v7l2o-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T18:01:22	0c180ae6442e6897ae2946579445355e1eac2aa8d7f79126921a54ec7bf94c0e	active
+v7l2s-111	docs/artifacts/v7l2s-111.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T18:40:23	b8f022f185f9a55fa5c691ca0ffdc35f7037154c9b2f0dc37fb294bc817a3d66	active
+v7l2s-115	docs/artifacts/v7l2s-115.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T18:49:34	02a8e4780edba736474df9ef9a641cf8011a73dea20d802100afa51abe357804	active
+v7l2s-82	docs/artifacts/v7l2s-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:28:08	5237857a2fa45fa657b39feae9b9cfa488ade094d7aec85f963c2522692dde08	active
+v7l2s-91	docs/artifacts/v7l2s-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:30:27	3e96b3fa3e9733a3876872014fb6dae3a898ab36408a0d1cfa5eb1244915c293	active
+v7l2s-93	docs/artifacts/v7l2s-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T17:35:21	0bd529ecd3d42bfe63fadb941f3d4fd0130fcebccfdfcaea4934424951ac8f64	active
+v7l7-31	docs/artifacts/v7l7-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T15:18:44	5256b5d5b747698673b423d67d5893eb807331aa038c354135511a24b066fc66	active
+v7m_noBead-31	docs/artifacts/v7m_noBead-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:55:08	9fda20c72aca80dff68c5ef33c20c02f0c007983543e311a7ecc795cac20e889	active
+v7m_noBead-32	docs/artifacts/v7m_noBead-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:55:42	4aa7fc089bb9604889fd749b0ae93319e019130ccab8e4799a781ccac7c17dd0	active
+v7m2_noEffects-31	docs/artifacts/v7m2_noEffects-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T14:00:51	9cacf606a2ad91771dbe93d8bc0c97b0136fa84082b71396e439300b252ba949	active
+v7m2_noEffects-33	docs/artifacts/v7m2_noEffects-33.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T14:04:28	263e16f01db34a2225c90ba9793d1fc29fc5df721519d627d8767dbcca55c19d	active
+v7m2_noTarget-35	docs/artifacts/v7m2_noTarget-35.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T14:00:09	2df08b3fe126a2f682de4482134ca3db20674da07889848d403e6160cf661ed2	active
+v7n1-31	docs/artifacts/v7n1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21	历代上槽	2026-09-20T11:41:27	45a98724d9e5442ed92810b8eaae488485ffa8b4196ebc9a05c1a70394ce1751	active
+v7n1-82	docs/artifacts/v7n1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T11:45:44	afb71d547fdeae57c10e41f0f83de41f6d3a95800b6c0a47ae4d0bd0db6c6163	active
+v7n1-93	docs/artifacts/v7n1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21	历代上槽	2026-09-20T11:50:49	2bd3e6676ae36082cb3a0ff420048b04ad12109e8003b6d633105da60149e1f9	active
+v7new1-31	docs/artifacts/v7new1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:05:46	e623629463ed2a252d5d43ef3329d8371d8683b7f840ff41d50b19d32d1eb8f8	active
+v7new1-81	docs/artifacts/v7new1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:07:50	a7d10d4cba819445637fbcc42bbbbf27181e44f7c62fe9a6fb875f756ee5652d	active
+v7new1-82	docs/artifacts/v7new1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:09:53	b695eade87c80b5f848a88721f251265a7c42275e48714162167fbf553fd0b0b	active
+v7new1-91	docs/artifacts/v7new1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:11:54	db4929edaa800ac584ba6608eedc565e665c71bbe9e65780d69af43e11f5ad50	active
+v7new1-92	docs/artifacts/v7new1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:13:36	13b958d3c41b4f7a60bf47617b8003533bdb85c9d377911be8d4d17fdfd8a967	active
+v7new1-93	docs/artifacts/v7new1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T11:15:36	cbae198ad72145916a68c51ad64ea9b3c3042a4e0e8bb60daa82f9b8630a7037	active
+v7new2-31	docs/artifacts/v7new2-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:20:08	4879ede7fc9fa7661cc3f12c90d0079b77c123562117c4346aec6a5397c757d5	active
+v7new2-81	docs/artifacts/v7new2-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:22:08	c14463c540265463782c315453a4f3330fe4706af1dfa701c36b0c97d0eeb675	active
+v7new2-82	docs/artifacts/v7new2-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:23:53	e19e6a7b8184ddb55a1400eef950fde634124d5fcf4eaf6b12c49611c012b779	active
+v7new2-91	docs/artifacts/v7new2-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:25:34	0403df52ebd18b18d5f7f7b1e93595f79ccf95882bbaeae6b22c22a2394adfe6	active
+v7new2-92	docs/artifacts/v7new2-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:27:14	0b68352ef6445d83078d95ab1572eecc04df5052297b042a483755b78229818f	active
+v7new2-93	docs/artifacts/v7new2-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:29:16	477356f8d28a16287e75de93ed30c05d1df2a14756820f7f58ac6c1546c65c10	active
+v7new3-31	docs/artifacts/v7new3-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:34:44	b34a8340f4edf9bf43cfea8ca591098226750df905c6b95d4e00864478e8a3d6	active
+v7new4-31	docs/artifacts/v7new4-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:47:39	a9c0006495ac70bbf761b3fb8af2fccc4a435dde6764534340ce097a58555640	active
+v7new4-81	docs/artifacts/v7new4-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:49:34	57c7b5c8d1884762740d216cd586c1618e9cfdbb0b29f8960042664374411031	active
+v7new4-82	docs/artifacts/v7new4-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:51:24	5a1c5a39203174470b0e49a3d29a08f6204979b7fe5f6dec6176c35b6be98e17	active
+v7new4-91	docs/artifacts/v7new4-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:54:15	4c0963c31231cb0e8697c9f36f725527377a1702c95ff4e5c6c7f7d02204dc03	active
+v7new4-92	docs/artifacts/v7new4-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:56:15	92042e61bf0dea5c5cdb633aea000f4ac91c03295d4af5e00b7447778e761ad0	active
+v7new4-93	docs/artifacts/v7new4-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T11:58:21	d9b2021eb52df8230e31a02ddc7ef9d42507ef9bb7cd05c0d0076f7aec0624cb	active
+v7new5_005-31	docs/artifacts/v7new5_005-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19	历代上槽	2026-09-18T12:02:40	8299813852cb70f416edbd28c1e825cbbb45ccb3c38a1a973f804da65988276b	active
+v7new5_005-81	docs/artifacts/v7new5_005-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:04:47	1b37f0d9cc22d04d4ea230067109c5573d32be22584ea691ed9848ec356cb868	active
+v7new5_005-82	docs/artifacts/v7new5_005-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:06:57	bb1ae3cb6605d059eb9c430153ed55bfb00a3fe318e8de699289063f19ed0b54	active
+v7new5_005-91	docs/artifacts/v7new5_005-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:09:03	3327632dd89d3944a09dfacb401e4a78e498c97b2d4d0000d6af9ec2c32dfbcf	active
+v7new5_005-92	docs/artifacts/v7new5_005-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:11:45	0e584d70948d71f4719d92e8c6b67a690268f3a476324afd1230ffa0c5124cf3	active
+v7new5_005-93	docs/artifacts/v7new5_005-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:13:31	d5d7cea73a6411f2bbbe2e140fae58872141694b64ae1cec0334e1c8ca55ad83	active
+v7new5_01-31	docs/artifacts/v7new5_01-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:15:59	0907504c0d87025f0de1b7843325657e06eea3da473513d11af2080d227f111e	active
+v7new5_01-81	docs/artifacts/v7new5_01-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:17:33	ceb9d3dd482d60163df3f6ed42ac060bf7d66788f24b6826b33a879201c4ecea	active
+v7new5_01-82	docs/artifacts/v7new5_01-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:18:57	75869b38e06eae675a9e8c5769771188763adeec77555f8934696bd360a10783	active
+v7new5_01-91	docs/artifacts/v7new5_01-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:21:17	98337cc54c1b5de22ac3fc9cdfaec0fd5c1378dd475e7ba22c3f00e925dc8cc6	active
+v7new5_01-92	docs/artifacts/v7new5_01-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:23:11	673b3724bbd6ee3a4b76f2209eb7ea18f2d14dc2c561b547711d02c44d204924	active
+v7new5_01-93	docs/artifacts/v7new5_01-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:25:05	4b875eea2330382220cc2ddf2b7c7cf6c3fe1653f5718bce756a2f2c5d05e142	active
+v7new6-94	docs/artifacts/v7new6-94.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:33:26	9eda7a730d5fda2c3c556aea71866bc1728c11701c85a3e69686173fdb5eaaf8	active
+v7new6-95	docs/artifacts/v7new6-95.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:35:03	70106eff7e284660e6b2e4f8e35da9cdc60267670f6d4a6aefc7a0d66f08a89a	active
+v7new6-96	docs/artifacts/v7new6-96.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:37:29	ab7c2d3594df0a437513b5d415db1268c6b65185cba206085e58fadaf09263d7	active
+v7new6-97	docs/artifacts/v7new6-97.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:39:00	52e129c4adebb867893975ac038778bccad55a568cc72b96e7d32f94ea3b8732	active
+v7new6-98	docs/artifacts/v7new6-98.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:41:35	8dc263f3b8bc3f2f45402127bc657ee9f2668ad6487d9e4ee97cdb42724a59ee	active
+v7new6-99	docs/artifacts/v7new6-99.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T12:43:18	041db861c58a114707cb0bc5b31550271c56c1f2f69ed966a6b311067d0dd30c	active
+v7noteach1-31	docs/artifacts/v7noteach1-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:17:44	6a1d94402bed854cb2e401070d1fd068918853716a9963998242ed921221262d	active
+v7noteach1-81	docs/artifacts/v7noteach1-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:19:53	577737a83eab5ffd63ab56d528020a015f0ce22bf136715598e6aeca433f2d5b	active
+v7noteach1-82	docs/artifacts/v7noteach1-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:22:08	49ae0dab1ac753b9d56c787f999f02d14e2a5937ade7e5c2d54bdb51efcf99dc	active
+v7noteach1-91	docs/artifacts/v7noteach1-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:24:17	e0ad4492c2f32437281ec4751721feff8de9bad3bbe4ec7f5368b5c0f118aac3	active
+v7noteach1-92	docs/artifacts/v7noteach1-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:26:16	8d1811d73726d3220492cbadcd4075bdd1065a87d1f569b7903c9989ee001647	active
+v7noteach1-93	docs/artifacts/v7noteach1-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-19T03:28:48	d7997ac4ddac6b614227a748858d6fa00ebf39b1ff8505c41e6979894296d8e7	active
+v7phase-31	docs/artifacts/v7phase-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T15:10:19	7bbbeb4bacfce065951cd732e943354281fc6e202ba40b7e0fe6431ef8cc7bab	active
+v7press-36	docs/artifacts/v7press-36.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16	历代上槽	2026-09-13T15:01:52	546b8c6681f611732b02220470a8e561f5d7b7d4aef9657c755bb594c43ded28	active
+v7press1-31	docs/artifacts/v7press1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:26:26	8f83b219bf332703e3d1c7de4a05ab4cd0ccc8c62eeb0257987205da8662cc9d	active
+v7press1-81	docs/artifacts/v7press1-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:28:43	da900db51b77ab12508413ed9f4c251702a58d3ca25abaf49e1f9e5dc914ff03	active
+v7press1-82	docs/artifacts/v7press1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:30:39	b46c69dbb6282270c9b3fd60203a099987f6828487b659e15c0424f1d358868c	active
+v7press1-91	docs/artifacts/v7press1-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:32:29	e17ad330b3bc8a27380b6066d1d90658a02dc9b9829d86b89da1de9ca9337117	active
+v7press1-92	docs/artifacts/v7press1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:34:18	9444b07551b8a7b166d42254602b36f0653484e5978399d45e5a043631e4148d	active
+v7press1-93	docs/artifacts/v7press1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:36:31	87bfc1201085d35f39f39f300a445f336550563e52099c01485db5f67907071f	active
+v7press2-31	docs/artifacts/v7press2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:40:02	52a1e8118aaac519df8e1095acd7c7b1a7c836004ae7e125d91244aca4be739b	active
+v7press2-81	docs/artifacts/v7press2-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:43:14	db3c23c5719290b80d6c8c71f3b1f86e40d4fbc701fe12fd6ecfd9827c030f43	active
+v7press2-82	docs/artifacts/v7press2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:45:45	65dfd44d72a9c501c6226752bad9768e56ceadb6b03791e8d8b8e448ba302a97	active
+v7press2-91	docs/artifacts/v7press2-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:47:44	fcd50216cb56cc7f7f647dd2d58f283caf40ab9fbed4e9542a7a9918a5e3be8b	active
+v7press2-92	docs/artifacts/v7press2-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:49:43	02903e83b9df39adb47529014c5f88803929a466738485e7ea43bdb06b2c53a1	active
+v7press2-93	docs/artifacts/v7press2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:52:13	c3e1cd450d25e0e037a551f46eed2360a14cc598c0a9f468be7b204171ffaddc	active
+v7press3-81	docs/artifacts/v7press3-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:01:13	192d88d8989dd11c8415b24b2b81eb9ecd36673eab9c2da5d74adff2beaf9b4f	active
+v7press3-82	docs/artifacts/v7press3-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:02:53	5b81bde7d045a96b94f5654ffcf30b5c111529c41db1333d56c2392a552fbe40	active
+v7press3-91	docs/artifacts/v7press3-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21	历代上槽	2026-09-19T05:04:51	c048b2828bf9e1525ffcd5e9aff850f88ed4aa290ff28bc0c10665ca6776876c	active
+v7press3-92	docs/artifacts/v7press3-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:06:49	022a696e2f05fa61f0e0b949f6889677876ec2bb1a8017799cb077a468e06ada	active
+v7press3-93	docs/artifacts/v7press3-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T05:08:45	dbb0204e1b905a1d57aacf2e7d2a8e146700d59d92c1229f1680de25c4f6bd26	active
+v7protoE-31	docs/artifacts/v7protoE-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:19:46	ae1b21e28a9581441cac40cf2a63085e7ae3aa20387a306fc60b390e9dc7654b	active
+v7protoE-81	docs/artifacts/v7protoE-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:20:52	74d3030fda29407764df4c28b9e7116086b9d526f91a79c7fcc231ae61608202	active
+v7protoE-82	docs/artifacts/v7protoE-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T14:22:01	ebf60542689ab35bfd98a049269e37147b9ce468b45e721a9a0a8d43d0b58d2b	active
+v7r2-35	docs/artifacts/v7force2-35.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16	历代上槽	2026-09-14T11:25:34	d67c33f94cdbcd34bde5fecf45eab4f1a9b2e8b4f63c2fb0a8205b4cac6ffc91	active
+v7r3-45	docs/artifacts/v7r3-45.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T11:57:46	a75b23d9df7003303c768c839035c1568e85a0f52c4578727052ffd94dd340cc	active
+v7r3-46	docs/artifacts/v7r3-46.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T11:58:36	ebd80f6ca59d80c615a7e58a6b470586e803f8cedb38033821014a62a58c8632	active
+v7r3-52	docs/artifacts/v7r3-52.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-14T12:03:13	2e48a8446ad0f7d606073ec6cebecc7ab2c5327c51bb5baefde2778321509941	active
+v7rand-32	docs/artifacts/v7rand-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T14:21:31	8ada4e2c969b59a76a59cada3e5951e5990108ce8bd2a9eb2b51b1a0c3ceafed	active
+v7rand-33	docs/artifacts/v7rand-33.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T14:22:14	b25ad18d35917db574bcae6a622a2ba1e67683b3d878e638810b4517f3dcb6f6	active
+v7rb1-31	docs/artifacts/v7rb1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:26:52	2c6622298cf3b4c58000cbeb12bf671b662ddf49db1ac39d75356e6fa1d273d0	active
+v7rb1-82	docs/artifacts/v7rb1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:29:57	00f65c3e9c4c3d48fdf7593e05435aed1f893fb258d9b4de3dd3b3ca1ca20caa	active
+v7rb1-92	docs/artifacts/v7rb1-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:34:56	d5da1b9b438ff132f5c406e6e054a8870d5da2c81545be445f1fd825518fedc8	active
+v7rb2-31	docs/artifacts/v7rb2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:41:23	1e7fa16027a30dd49841bf059003b7b0cb068f8461afcd3afa976d3a1d611e97	active
+v7rb2-82	docs/artifacts/v7rb2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:45:15	0d8f8b718e09930cd51020dc0638adad0a9825ffe46994de8aec1f05849853e8	active
+v7rb2-92	docs/artifacts/v7rb2-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T16:48:12	21ac5fa367b01a99ad99cfa190e0466fcd964b1038c79284cc8a8ce04000a031	active
+v7ring-34	docs/artifacts/v7ring-34.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-13T14:47:42	91763d1224ef1d68057b878c7651b9e4261f9f01d3e3ec517037acee89d15dd1	active
+v7ringA1-31	docs/artifacts/v7ringA1-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:22:18	1366a9e794b5f1e9dd6effcde82666995037ac9982a7010076a4101f4cd8cef9	active
+v7ringA1-81	docs/artifacts/v7ringA1-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:23:51	cc0290e3e7b725d7698e8ac100dada3fe34ab1b7d9b92b6c5f004b12a3feba77	active
+v7ringA1-82	docs/artifacts/v7ringA1-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:25:47	59bbd37ca3dfd2708c96a44c3f42a9bdcd15f5f259f6e226c52a7f84db57f55d	active
+v7ringA1-91	docs/artifacts/v7ringA1-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:27:38	23776dbe66ca46b21601370fe6df6354cf3ce9e06c659e7119a630e0c192266f	active
+v7ringA1-92	docs/artifacts/v7ringA1-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:29:18	fc2b38e30e900b3f732e02a76ad84a2df9be13b10ade9104ca56bc988e748f44	active
+v7ringA1-93	docs/artifacts/v7ringA1-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-18T13:30:52	3178bec2951e2def408a6039fe4795b53af25dff4b63309264c9af6914962e87	active
+v7ringB1-31	docs/artifacts/v7ringB1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:37:47	f518cff6f716a5a86585d970556c200d049f0499be2fea9ee815b9d5db60e03b	active
+v7ringB1-81	docs/artifacts/v7ringB1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:39:25	5728a7b1e79099f33d2d130d68b2b3fe624a4ba5824bc5a4d7cd907bec891622	active
+v7ringB1-82	docs/artifacts/v7ringB1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:41:23	ddc277083987e208c3f74c789409e88e5e41ed5450f8e6329a1c184481bc65ae	active
+v7ringB1-91	docs/artifacts/v7ringB1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:43:08	8aaf87d16c86f537cc46f8c45f9f9308f9ede8a603e0fba95a61bfccd3f05ac6	active
+v7ringB1-92	docs/artifacts/v7ringB1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:45:09	2729c84898dfd543491b16cedef0052a00a87ed792a9422c8490137714fff650	active
+v7ringB1-93	docs/artifacts/v7ringB1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T13:47:01	717d6a44d37566a9f851e81edf216ea3af95921fc64c8899e7ab965ad2e44203	active
+v7ringT3-31	docs/artifacts/v7ringT3-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T04:58:23	080178e5a8171979347e90753d225d7049b1c8d996ba09c815e6fdf87a43d7f7	active
+v7ringT3-81	docs/artifacts/v7ringT3-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T04:59:15	bfd1e1a68a9122fd3cc0e71688d3c6c6118e2076cda21b47327be3a2a199ab2d	active
+v7ringT3-82	docs/artifacts/v7ringT3-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:00:32	b720892a61028046f2c89cda1e321f205506e6ca8b0a5536bccab538b9375089	active
+v7ringT3-91	docs/artifacts/v7ringT3-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:01:57	af5a98580e2dcba65327170337fe9c49116a1f2d86e72e19dbdde644100f8739	active
+v7ringT3-92	docs/artifacts/v7ringT3-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:03:17	6b5f31c697e1795bf261af275404630f6b42cf1ea8bf1d83f8b63c9eff930973	active
+v7ringT3-93	docs/artifacts/v7ringT3-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:04:42	b1b398cb5207067b76a5cf03b9881c1f8ae764dbad0ae44b6e43ac1ed575f60b	active
+v7role1-31	docs/artifacts/v7role1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:52:57	764945fbb7586a5875801cff57bacf5258e021e4e9c85676eca0da2f55e21344	active
+v7role1-81	docs/artifacts/v7role1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:54:17	5080ac532842f9b683128a3ebb3b1fd78ec0430f2c549cc3693673a653f8cd14	active
+v7role1-82	docs/artifacts/v7role1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:55:27	7225ceac069026a2e4784b5c5e93b2ecf658b9012599a16a8fb9b8937b4bcb63	active
+v7role1-91	docs/artifacts/v7role1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:56:43	421c9bd83e8609bd8327bbb3250d999b6cafd312f0988be48b1a895ffa270d32	active
+v7role1-92	docs/artifacts/v7role1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:57:51	1712d195051c64389536593b08a47bacf35bf8776fa92ff92440359ce3e1479e	active
+v7role1-93	docs/artifacts/v7role1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:59:07	7c720d140e81f011a423b087d018b0646c5544307e2dca82756f18dde7856a6c	active
+v7role12-94	docs/artifacts/v7role12-94.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:20:58	ff49deef9e735d1d58f10a64062e141f09f64b2d9e3ee2a0e4981f9e09cacc47	active
+v7role12-95	docs/artifacts/v7role12-95.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:22:11	c98812286b8530e58e5bf83323d27c065429369b96486ce62b7bb9d1743731fb	active
+v7role12-96	docs/artifacts/v7role12-96.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:23:21	9f059d1fd17dfde3caf19c161cde83f88ce734de533c4cb8f919a43a4927c7d1	active
+v7role1w-31	docs/artifacts/v7role1w-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:04:02	c75d546dd9c00c4b6173996ffe5f806ba8c2293772024bbbecbf2bb81494bdd7	active
+v7role1w-81	docs/artifacts/v7role1w-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:05:21	2b17f9803888afb926ab7a7c344538652184ba3118bdf0c199013f1b684eec55	active
+v7role1w-82	docs/artifacts/v7role1w-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:06:59	a799f533e9d127f7479255f48d46cd648c22fe8d2db285dcae84c350816c02cf	active
+v7role1w-91	docs/artifacts/v7role1w-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:08:22	7eef5b7871e2407516bfe0e57c26be522ad35ca01323ff162f1458b75589dcaa	active
+v7role1w-92	docs/artifacts/v7role1w-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:09:47	637f1010a1f27439dbbc7437faf40ae55dcff586264e36ab855d745696968d05	active
+v7role1w-93	docs/artifacts/v7role1w-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:11:17	eda4a5d6caa33dd96cc2de3429bef4c3645906df6ea0dac881ed6a73b5d51a0d	active
+v7role5-31	docs/artifacts/v7role5-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:44:42	6d09af1b1ffc8f828ab08a303eebe8104e91f1b1cb82a6b5246b85dbfe3663c9	active
+v7role5-81	docs/artifacts/v7role5-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:45:45	eb64b07fe17914f37e1c2831a65130448df4edc4119702999d58b0a57b4d153f	active
+v7role5-82	docs/artifacts/v7role5-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:47:01	4604af52e25865d912a7dc1c5d07abd5708deef22d75245076ae2213a8ff5b9a	active
+v7role5-91	docs/artifacts/v7role5-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:48:21	ee5d2cc34122cf81c3a2056cabd62b491554bf7638141794cc2ac8a79a7f7d81	active
+v7role5-92	docs/artifacts/v7role5-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:49:42	5fc39a63e65c27d1edd7840d7c18ff8cc34c503d1e4555929b69eb48a3614169	active
+v7role5-93	docs/artifacts/v7role5-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:51:05	8933375dd5f94d85f8f53d54056ab77dd90358db3b4ede69e2a8a2e9aa1c237b	active
+v7roleC-91	docs/artifacts/v7roleC-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:40:18	ec9126f948e6f18b0f842ab415f83730680e0cc28865cb254b25c7e07b3089d6	active
+v7roleC-92	docs/artifacts/v7roleC-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:41:32	5f53cbd8dd24bf9481b765c137bbea0e79b101514e5317e95fb9f7d01d4b2703	active
+v7roleC-93	docs/artifacts/v7roleC-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T15:42:52	03ca3aabad8991e14c06218100be6da245d1f6fcf31d98cdb33497c74957b5a6	active
+v7roleC2-94	docs/artifacts/v7roleC2-94.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:14:55	6a115dd49e9cf6931fbed7aed9e9de57f1ffe418bc6cc68fccb878a7827626e8	active
+v7roleC2-95	docs/artifacts/v7roleC2-95.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:16:11	8b8f018d2a592e08f0933193cb25652ee270ea56154ded9af23dffd32a90bdc7	active
+v7roleC2-96	docs/artifacts/v7roleC2-96.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:17:46	1b22da06f64220355632caada60b09c5cc1e5d40681a4b16f4e1d683cc86e1ca	active
+v7s4-31	docs/artifacts/v7s4-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T07:50:18	00a53a66879a0ddbb5b4ba7cd3adbeb029eee1b495cbe87e84bd317faa49ceab	active
+v7s4-82	docs/artifacts/v7s4-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T07:54:01	ef935ff262deb6be172abe00b03ad21d45fc9d661cd094789730c40e67bcca9a	active
+v7s4-93	docs/artifacts/v7s4-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T08:01:26	21fc203450c9a5dc07668da406e41831c6fa312fd17bfe906536092bec883bbc	active
+v7s5-31	docs/artifacts/v7s5-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T08:12:18	7231e935fe457e8b6e214e1d4234bd34e5af8f4d3bb64d5cdbc9a83d09a2c94e	active
+v7s5-82	docs/artifacts/v7s5-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T08:15:23	8ed138f78a43a42a570b4cc509a34bc5488366e880e4a506ef96a819e6734ae5	active
+v7s5-93	docs/artifacts/v7s5-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T08:18:19	a5718b566e62980fb31f04bcfa9571d4efd6647a7b9bf2f33c122220b33957bb	active
+v7s6-31	docs/artifacts/v7s6-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:03:41	acad2b11bc2726646e1a9579c8a92cd61e3b982ae7e060525c430b3351cb9a9a	active
+v7s6-82	docs/artifacts/v7s6-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:06:18	b63bab464dc6437e51896515541156be016df0dd76058de5b5d5017fb1cc5614	active
+v7s6-93	docs/artifacts/v7s6-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:10:19	3a1a3baf7ccb595e20242ca0954aa8ac8faefdbf657a6dd38b9cae1ed70bd9ae	active
+v7s7-31	docs/artifacts/v7s7-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:16:51	67e529d5f2c3de2f96022048f9fcbfd0f23d9157a34b5560d97d2321e7c4f9ea	active
+v7s7-82	docs/artifacts/v7s7-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:20:03	9c32dd379ee09e22d0e11e5420fb0f221a6987bab5773e081af54ca7218602bb	active
+v7s7-93	docs/artifacts/v7s7-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:23:31	c404aa0c6a748f3d7194fe77d99a0bf2f9b342bf032c352029b8f7c1c4ec3ae0	active
+v7s8-31	docs/artifacts/v7s8-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:31:27	563b0953b29bf9095716e3d0f55c20a94e4fa181637a258edcb589007a19a88d	active
+v7s8-82	docs/artifacts/v7s8-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:34:53	7270f44aa7a0f7df6aba4611fd7a63c17260fd7a45a738ec1dcaefd777b42523	active
+v7s8-93	docs/artifacts/v7s8-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:38:46	a13429ed275fed87f010a79843a1bc4984c61d3883fd305ddaf8c68c0fa7c595	active
+v7s9-31	docs/artifacts/v7s9-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:46:44	6ce1251f5dd97d59d9fb8898d871b23485355103b0c759eedcad6e29eff711ba	active
+v7s9-82	docs/artifacts/v7s9-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:50:03	4800c4a2809779c72ccb0b79dfd8a4aa423176f3f4a33282dab213192b97df20	active
+v7s9-93	docs/artifacts/v7s9-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T10:53:48	0958ddc132a47f14d6ee8ab25e0d46164fd9a951f06b7cc1ce4e9bd12c9b5310	active
+v7salt-31	docs/artifacts/v7salt-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T15:09:45	14a2c03e4a9c041ee39bd964f6eb0c10ffd509d35479f7eacb3d30422dde6a21	active
+v7seat-34	docs/artifacts/v7seat-34.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:18:18	abbc19bc3687225e77ba909e246548b803acc6fead465ff5579f4eb63e397a7a	active
+v7seat2-45	docs/artifacts/v7seat2-45.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:26:02	4bb680f4bfe25d5570372e0a2a900c3946940a012f54dae497a02177a822251e	active
+v7seat2-46	docs/artifacts/v7seat2-46.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:26:38	136c0f8da6f6b84c32c4d933706c11e41c9df0d9c1b345be34652dc7512a1fea	active
+v7seat2-48	docs/artifacts/v7seat2-48.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:27:57	240089931f04052e4b9787dd0b0466c754b18b06bfca17226f96bf302b8bac9c	active
+v7seat2-49	docs/artifacts/v7seat2-49.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:28:37	a011034591b13366bd6464bab3ca09dfd7fc1ab03e8da15bca31e9b4443dc755	active
+v7seat2-51	docs/artifacts/v7seat2-51.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T13:30:14	24dabe67bd5f125f7c5381b1cb30728a54db3cb050fa39d6e2c750fcc589d73f	active
+v7seat24-31	docs/artifacts/v7seat24-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18	历代上槽	2026-09-18T04:49:21	cfc870f356cfddd979478e40d3b329bfa42c3c6c373d75d86a09cbbeea412ce8	active
+v7seat24-81	docs/artifacts/v7seat24-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:51:05	174bb9d31be12f2a365d699e3583d5e6afbcc3aa832a88e4bd719771a9867d81	active
+v7seat24-82	docs/artifacts/v7seat24-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T04:52:46	94f7da90f840d5f9425356eefcf09fab1a47e0a0899dfa15b3d61c48613a00d5	active
+v7seat24b-91	docs/artifacts/v7seat24b-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:00:14	b8f719ebcc445ed5cfe2d4efacba0e4eff12b7bca187135ce33d274eec0e7881	active
+v7seat24b-92	docs/artifacts/v7seat24b-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:02:49	63076e7a60c68126c44e4e451695d5d291539d76f5843582fa667d1b0164718c	active
+v7seat24b-93	docs/artifacts/v7seat24b-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-18T05:05:15	ff7e5b561a9878cefb134d373da308576fa1991b891be46aa8b6fefb73b85b0c	active
+v7smoke-31	docs/artifacts/v7smoke-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-13T11:45:17	563cf010dcb81b678c4c95a47458b55581f29360312b50dc1bbfcea9fb051536	active
+v7stock1-31	docs/artifacts/v7stock1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:07:01	8e40b93e28c9285e7a9fa6ccd21aa1225176f6abebce673860d6cbef601f190f	active
+v7stock1-81	docs/artifacts/v7stock1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:08:18	9c72e27ee6e95ac2076da8fa5cb6bc7185b0dd117c06fd864228b20360f51b3d	active
+v7stock1-82	docs/artifacts/v7stock1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:09:38	75daa8b62d017eb200d4ca890f70f0addf88ba21b7b86054ebb2f2e2045810f6	active
+v7stock1-91	docs/artifacts/v7stock1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:10:43	bde974c1dce5bf0f937bf805c2708ef4ee1a9325cf62650467a39c8ccf27df74	active
+v7stock1-92	docs/artifacts/v7stock1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:11:39	09979c2e99bd1a54d0f3d8aa2d1c20155b0abfb41610692f9f04c98edbe1f432	active
+v7stock1-93	docs/artifacts/v7stock1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:12:35	f741f88ce6aab93bb814cadcd67a587d0e09ac871ebc00662031baff18492fb3	active
+v7stock2-31	docs/artifacts/v7stock2-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:33:06	0e3a7a5f840ab82e252180aa8d94a4621f0e547d99761b1f8836c3d62b9bcfb4	active
+v7stock2-81	docs/artifacts/v7stock2-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:34:32	dd7dd428d187546de02d0befb886cfc32f590acd13b15a07d1f2593023917fa3	active
+v7stock2-91	docs/artifacts/v7stock2-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:37:01	d2831ffda2c72f411138fd90d880e1fb4ddad377c4651a1109a5c7706af95b33	active
+v7stock2-92	docs/artifacts/v7stock2-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:38:08	b09f7fed0448601c8bc841e6fa5aec92cb427e6cdecb1a84cb6d3edc0ee133a1	active
+v7stock2-93	docs/artifacts/v7stock2-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T05:39:12	39039ece255425e6f8f55f2504fd51f23a09057774f068b79de45efc2663cfcb	active
+v7sub1-31	docs/artifacts/v7sub1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:05:18	b91193dbf0b0ac3ee578f5e7194642efbebcaa5b4d4af11f4c59f82e8dccf089	active
+v7sub1-81	docs/artifacts/v7sub1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:06:40	a9fcb1d9172219dc335d39a938dd1c558fcffe3015d3f72695a487ebbbf88c59	active
+v7sub1-82	docs/artifacts/v7sub1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:07:54	8fb3965f74e87c3fd0e377554eb5ab7cb990caca05684b7fd39561243db4af92	active
+v7sub1-91	docs/artifacts/v7sub1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:09:15	3a06478d58970918a051425ffe89db56256deaa40ec7c89fe47557d55d0f589d	active
+v7sub1-92	docs/artifacts/v7sub1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:10:31	174d817128b9a8a242f29178e93eca6409e4035ec99d3416c868f4cb16f2489b	active
+v7sub1-93	docs/artifacts/v7sub1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T14:11:56	c8bbaa8be0dc4dfbba56a380461ac0795658f515ad09ad22822a3bc9ab66b432	active
+v7t1-31	docs/artifacts/v7t1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T16:59:59	1363c685ec0167a20a2e83f020e24d4b960a6b00368c69d5141a8ffc598f42fb	active
+v7t1-82	docs/artifacts/v7t1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T17:04:10	1141252ffcf699b17049871a4784ef44d95bd90b439279c9ef2988a2eb56ad8b	active
+v7t1-93	docs/artifacts/v7t1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T17:09:24	cb4288e24badc508526fc61a1d2c4612fde3cfb07e189bf8a3d8e0c168d73a13	active
+v7t2-31	docs/artifacts/v7t2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T17:18:25	f92d9c545008dacc6cfed66d5fc3eac9a4a580d437e108ec22e1848a0b69fe0e	active
+v7t2-82	docs/artifacts/v7t2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T17:22:55	b2b87c8bf0c3c9edc9cc3b72c1a776fe5fe7807e6713d67e9408435735f419d9	active
+v7t2-93	docs/artifacts/v7t2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-20T17:27:58	1dd2f484529ac18b49a634d52e0d587401273405e3bf2255b6632386db771d74	active
+v7teach-32	docs/artifacts/v7teach-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T04:48:35	dd135dd4c1476f6fbc028d687d896e864156eb7463fa1b155bea4c480e5bb78b	active
+v7teach2-32	docs/artifacts/v7teach2-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T04:55:08	4e1a96db7b0d2e08dfdaef52cca2036ba452436ede327ba6ae10435b87c56cff	active
+v7tgt-44	docs/artifacts/v7tgt-44.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T04:52:11	a5a12040c6cdfe1020952605c61233ccdce1eed64f56766f904e81c8bc6acbe6	active
+v7tgt2-31	docs/artifacts/v7tgt2-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T04:55:52	972977a92aa4301536c43954d0940004e01e566bd1f49f82b2470aef32fab14e	active
+v7tgt2-52	docs/artifacts/v7tgt2-52.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16	历代上槽	2026-09-16T04:57:56	14be3f0531a8657680460698933ede968346c31f5703b1ade4bc323e2404ebef	active
+v7tgt4-62	docs/artifacts/v7tgt4-62.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:28:39	0ee03b6e2631217bb6ab3f2309e39598cbbbb5653735113b107eda9df1317245	active
+v7tgt4-63	docs/artifacts/v7tgt4-63.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:29:53	f8330f53037fca3850da866a78ce5d9aca99f935f82e778b44214d90a99437c7	active
+v7tgt4-64	docs/artifacts/v7tgt4-64.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:30:43	0b825e457862e907e96847ce8743521d00a1f129f138251ef4fba2411f35480e	active
+v7tgt4-66	docs/artifacts/v7tgt4-66.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:32:53	d484dee54416bead8f9f146325e56abed2e9803f98ff031c700b3a7cc12a6526	active
+v7tgt5-31	docs/artifacts/v7tgt5-31.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:39:10	a6d0e70b0874e9f95a6afbbffd014f712ff0e4cff39375f1bb3749aa14325f19	active
+v7tgt5-62	docs/artifacts/v7tgt5-62.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:41:01	01ab83c92c4cd2a6bd398ca6884fd889faeb29dc3c7b5b1eb08dd1773f1d3351	active
+v7tgt5-64	docs/artifacts/v7tgt5-64.bak	1.8	1	珠价/代数步进 B2（09-13～09-16：珠价/代数 + 小类） ‖ 47 枚 ‖ 09-12→09-16		2026-09-16T10:43:11	8355715867ca82624c3790416324323cd951f047254356dc61f8c1971f21e714	active
+v7u1-31	docs/artifacts/v7u1-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T03:08:29	b35bcec30b3692f774a4002dab30ead6dce6948b4b1a035e7738d20f50233282	active
+v7u1-82	docs/artifacts/v7u1-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T03:13:25	4360660819386cff1dbdb96124b3208164cf5db28c347c4b9c8a0483c92ef2f9	active
+v7u1-93	docs/artifacts/v7u1-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-21T03:18:16	2654a514bce2bb42d1ebb3b16957d9701cda7e759433c27e2fe37b554137cf24	active
+v7w3c-31	docs/artifacts/v7w3c-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:25:57	3a786066500fac47a33c7328870675f37a887d0951bb17bf8b87d6c9356795ee	active
+v7w3c-81	docs/artifacts/v7w3c-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:27:20	c08000799197f20bfd13ff1cecf4251c09fe03739b78fcd522cd0f0764c84036	active
+v7w3c-91	docs/artifacts/v7w3c-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:30:29	b517cba366ea25e1b2b9fe5c1eb840e0e91ab8da1ffa883e1035d889f04be324	active
+v7w3c-92	docs/artifacts/v7w3c-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:31:47	95fc97fdecdcf4b35911de70f05fadb59c05355d3d2ea7f423fdf8c1e553abf0	active
+v7w3c-93	docs/artifacts/v7w3c-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-16T16:33:27	846d6e496d1ebb15e8eb20331d1a22d14efda8857ac101c06ed4547260b110a8	active
+v7w3r1-31	docs/artifacts/v7w3r1-31.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:35:18	e605f5d913e15215ed2eed92ca47c61a1598f3496bc939e7df3d168229353255	active
+v7w3r1-81	docs/artifacts/v7w3r1-81.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:36:43	4d136f3dab6674e050e439917c330a2c03e7b039e279ea6f9beaf43b53f0f509	active
+v7w3r1-82	docs/artifacts/v7w3r1-82.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:37:59	946835125e374517cbbcafcf074b144cbfce8ab16b3ea8c7145eb6ce977777a9	active
+v7w3r1-91	docs/artifacts/v7w3r1-91.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:39:20	a167f00db4cc253d1d6b576fd2dbcc4b16a5dffb829ec0726e7bebb62916096a	active
+v7w3r1-92	docs/artifacts/v7w3r1-92.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:40:38	7a3e52a3a074043a2d44953b46042649e7cdd1ac3a0bd6f0678b91916f4fe54a	active
+v7w3r1-93	docs/artifacts/v7w3r1-93.bak	1.8	4	对手池步进 C2（09-16～09-18：对手池 16/19 + 小类） ‖ 128 枚 ‖ 09-16→09-19		2026-09-16T16:42:02	09b35edcef8c5547674280bb128adcf9f65f9f7e6ec7042c9fc9e2c8d45606ce	active
+v7wall-31	docs/artifacts/v7teach2-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15	历代上槽	2026-09-14T04:54:30	b5439a36c671aadedadae938c8e89bc3efa1913e4d95fc8392f46c4454d471f5	active
+v7wall-33	docs/artifacts/v7wall-33.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15	历代上槽	2026-09-14T04:23:54	c58088d4db4a769616e46659d73311e410e481dc33feb7e02c982b7db1b148c0	active
+v7wall-34	docs/artifacts/v7wall-34.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T04:24:34	c4a360c9faff86f2296c81dec8576eb2be52c61be401370bf872896819282c69	active
+v7wall-35	docs/artifacts/v7wall-35.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T04:25:08	ecf7d78795dc8be75fb65c30f672a9ef1a70e3b6eeeaf30ce9890e596cb1e2ea	active
+v7wall1-31	docs/artifacts/v7wall1-31.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:19:23	97414401ec84d33c489aa6d57e32f56ec5121192f22d35eefe5e5ae2236156a0	active
+v7wall1-81	docs/artifacts/v7wall1-81.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:20:55	37e6dd4ee972f3e06cbae996d9f82b81bc3df27654dab405b238b3b327a52c3f	active
+v7wall1-82	docs/artifacts/v7wall1-82.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:22:28	c1eece7e3291fec1e72d8e2300f3237fcec8d42bc9c158bc5c7206229b8c1202	active
+v7wall1-91	docs/artifacts/v7wall1-91.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:23:48	a94537a3a64adc239a4f832a6c571a31d5a543e1a120f65066048ecd9ce250b8	active
+v7wall1-92	docs/artifacts/v7wall1-92.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:25:20	061c7e3c10a26bf04cd7e4e30c72934229f77d3848a6a3c8be633a59c1c4608b	active
+v7wall1-93	docs/artifacts/v7wall1-93.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:26:33	a238a7085d7589eb8669c9d57268a25243fa6bb21d98ce2c9b9e4b10322d721d	active
+v7wall2-94	docs/artifacts/v7wall2-94.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:34:04	db9d8bb2b93bf6b809158d5b847f95bcf29553e30340c4afba409166e4751b30	active
+v7wall2-95	docs/artifacts/v7wall2-95.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:35:29	45d0f9fad658e0f40a8018ceeda98712f7e637dda6dbde312ea3cff22ac80676	active
+v7wall2-96	docs/artifacts/v7wall2-96.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:36:53	6922743cfadefe5eb852fc9a1c6bef3847762f031988661fb6b8d0969bcdfbbd	active
+v7wall2-97	docs/artifacts/v7wall2-97.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:38:12	f6541ac8a953cc647950ac10a5a591cc0a325a8bd701a00583f8cfe8c8e1d2db	active
+v7wall2-98	docs/artifacts/v7wall2-98.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:39:39	239ee3c9724f0302ac61d76eeaab2b6f1f6b05b328a80847b2cf71702c1d09b5	active
+v7wall2-99	docs/artifacts/v7wall2-99.bak	1.8	5	多样性步进 C1（09-16：多样性 5→30） ‖ 137 枚 ‖ 09-16→09-18		2026-09-17T16:41:12	8dac83e584106a4eeabe1e47d4539d88bffa8728ae610a04b55a3d15bac8a62d	active
+v7ws1-31	docs/artifacts/v7press3-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T04:59:14	acb5f99dc7434bff95ca2f56e87defe389f50b7a195fcb670f03001b4ddfe6e4	active
+v7ws2-31	docs/artifacts/v7ws2-31.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:16:01	dcf2b9a8d8f37c59a7256b08cd6a82172591807940518c5f0b7591fea3f59ff1	active
+v7ws2-81	docs/artifacts/v7ws2-81.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:18:15	d07f37126f12bef47ee16783a94b2adf0d2abf0bab78f5c59ad1b46251102f8f	active
+v7ws2-82	docs/artifacts/v7ws2-82.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:20:29	51c94d8b69d6313814b82028aac0ebac547f4a5612afb742922a3cfba8b91761	active
+v7ws2-91	docs/artifacts/v7ws2-91.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:23:04	5002c597e29dbc9b903bee937f6011ed0e7b0e15b5c6aeeddee2244bd3256da3	active
+v7ws2-92	docs/artifacts/v7ws2-92.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:25:09	d3ea284a25c3e938975c80172bcffdc3c92ee9bdd7b6bd1a984f72df1f6bda8f	active
+v7ws2-93	docs/artifacts/v7ws2-93.bak	1.8	6	对手池/珠价步进 C3（09-19～09-21：对手池 14→22） ‖ 133 枚 ‖ 09-19→09-21		2026-09-19T08:28:53	bb503ec4ba79e20f9fd3146027588f9ee41ef216aeb8c30d1758d0723ff7b1fb	active
+v9-31	docs/artifacts/v9-31.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:01:22	49eec3bc832e9ffd1fbad972ba791ad78717be82434f4118b596c62cdef6d3e5	active
+v9-32	docs/artifacts/v9-32.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:02:22	4979e5abadf50cda891d383b41163ffada3650313575b432f0f26770cbcf2f90	active
+v9-33	docs/artifacts/v9-33.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:03:31	65fa1ab63d1e782a5f420b9f1e3505de0ffb5c1fbe19577f6e3eaf19295a4a06	active
+v9-34	docs/artifacts/v9-34.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:04:29	345849fb283e134a49ba2b74d2ba393f63b715e639d1b21ab8c1a677f5d48da1	active
+v9-36	docs/artifacts/v9-36.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:06:42	b0a3a9367bb940552a6b6a4e5b4316946d08bddd7fc151f1dcc717d3f0b1f61e	active
+v9-41	docs/artifacts/v9-41.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:07:54	ecf43bfdbd44618ae4ce700c06c96fa0ad571d4bed30d56f7e66c59ede4cc2c8	active
+v9-42	docs/artifacts/v9-42.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:08:43	ceb506601eb747264c88b19e32fad4c8142affee19d51d9b6485837119e95457	active
+v9-43	docs/artifacts/v9-43.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:09:34	aa49ae8e51f55c63bb51f59c2b40995d6d0ef179b57bc9607c0527e0fec08ff4	active
+v9-44	docs/artifacts/v9-44.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:10:36	d04c1e0a73bcedba406ca33406785eecc189e9ecb78f872b43367e74f50d5655	active
+v9-45	docs/artifacts/v9-45.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:11:37	2e5a5ad1e31c4d15f3a3b905cf4c3f450e3d5c112771463a12f426d3cd17b37d	active
+v9-46	docs/artifacts/v9-46.bak	1.8	3	对手池步进 B1（09-13：对手池 1→77） ‖ 97 枚 ‖ 09-13→09-15		2026-09-14T16:12:41	b9c9cabefc05d1e335a18cda01533d5d6f2e4db69a77907509319ded156f5917	active
+W31	docs/artifacts/e234-out/W31.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:33:26	d57b032be5c616bec0e09ca1b5c19eaa93ff653d29a229e1d07a6fb2fe103b78	active
+W71	docs/artifacts/e234-out/W71.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:33:38	b3b82a6316e21a7073825c255f93e4b7a289fa6f4d5c18d2f082eea78ba09370	active
+X1	docs/artifacts/e234-out/X1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:04:33	6f2aeca881388e301373dbf0c28db14d0d51199b7ca85823cfc3432acf0210f0	active
+e1-teach-77003	champion-map/packs/e1-teach-77003.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:55:16	6e34f2b00aebda25155fed7ab233b7c70da81ffbbd81f154cab3f95547b2b1fd	active
+e1-ctl-77000	champion-map/packs/e1-ctl-77000.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:25:39	45d04236a4659f8c15e0a045304972f58eae243ca03520194f4739a82ff1da5f	active
+e2-grad-77002	champion-map/packs/e2-grad-77002.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:30	1100fb7f50f61f4c0482a78ea853321c9f7f0bae75fcb25eaeb9e34fc10940eb	active
+e2-teach-77000	champion-map/packs/e2-teach-77000.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:57	ad2caa76079b64af1e09133defc8d5232f9397e7ee8e90dda8b9fb7476cbac7b	active
+g12-keep-77000	champion-map/packs/g12-keep-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T11:58:15	947d35608aac63327215ca5920b7654946581ae4cc7a236a39b91075e4157d9b	active
+g14-h2-77001	champion-map/packs/g14-h2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T12:47:19	e0a6c0a6b5f9790f81aaeedfaa55c51767ce5e70dd7a62a74a742809ed65c2e4	active
+g15-long-77001	champion-map/packs/g15-long-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T13:25:43	e7ba72d9358b928648c74a507075b94ad9029a4769cf178171f505dafb2e8372	active
+g16-77001	champion-map/packs/g16-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:14:34	48dc87ad19fcd06c4c96b581508784e9c54c346573008b0b3141a2d1109f6720	active
+g17-77000	champion-map/packs/g17-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:59:57	6563ff8c41fe60c89e2df546a2b574252fdd03243c59ab7104caece813bf604a	active
+g18-77001	champion-map/packs/g18-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T17:36:22	62aaf4bc5ce002563f8f64e704bc3fa68c539984f7675de22dd9a67a0c094a5f	active
+t5-151-ringon	docs/artifacts/kept/e641-out__t5-151-ringon.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T17:55:23	1aec90e4c1f72dfd91aec0be9cd3374ca4329c16554b48acce7883d461c7f441	active
+t5-151-ringoff	docs/artifacts/kept/e641-out__t5-151-ringoff.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T17:58:13	57ebd5fb04dff001127e54ebb7eb316e643e46e43c7b514220949a9afac29828	active
+t5-G12H1-ringon	docs/artifacts/kept/e641-out__t5-G12H1-ringon.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T19:05:04	a417cea842739a5b9c52eba57a8becb66b7dd3071d0254b78310bf9335660ea3	active
+t5-G12H1-ringoff	docs/artifacts/kept/e641-out__t5-G12H1-ringoff.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T19:04:02	c0ad8b2923703db81855a87d812759667c9a219810292ad4c372c4773d5de412	active
+t5-T8-ringon	docs/artifacts/kept/e641-out__t5-T8-ringon.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T18:40:24	b59993c397621be904f7d7b152215b7e1471c982ed164898121f13ae618857f8	active
+G12H1	docs/artifacts/e608-out/G12H1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-15T17:04:01	0f02d4ad77a8814da46d863b8d5835e0009f51e78597d30514884d69cf99de57	active
+clone-79101	docs/artifacts/e608-out/clone-79101.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-15T15:18:47	7cf6da9d9e1a4eb4d70baf6c2c77cab819432f2cb11a5d8a531e7502a0ebb836	active
+Z1	docs/artifacts/e608-out/Z1.js	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-10-15T15:28:12	1843d10ccd65efb4fce02a17c8ec372987d401e1112e0ddcc90c114b298c4456	active
+Z2	docs/artifacts/e608-out/Z2.js	1.8	8	早期 env 臂（16 轴全空） ‖ 7 枚 ‖ 09-27→10-15		2026-10-15T15:26:20	08de9cc44d64c4ab7a0d9ab1fb03ffcf481d005568feccab53bf67dac88c6696	active
+night-T1-77002	docs/artifacts/night-T1-77002.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T07:50:43	da3d7729c25306eb482005b5493eaa5761ba5fc0f21f25083b84abb0ad656dea	active
+night-A0-77001	docs/artifacts/night-A0-77001.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T16:08:57	0922532e7c62f7213f4fe1d33ac6063c9b7d90ae2ab4e43f5ed028ca17449fd9	active
+night-T3-77002	docs/artifacts/night-T3-77002.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T18:57:18	5476000703e14e4629f67bfea3d9c7ef3707ee6295ccb39027669c4a1949b76b	active
+night-T3-77000	docs/artifacts/night-T3-77000.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T18:38:01	444c98d02d910ab5c9fcb83d35ddd94bc5b183f111da91499e61ced7b937a4ee	active
+D1-77000	champion-map/packs/D1-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:39:13	acb907a8e56ebb84b0048748c12cf026a76a4e89284ec953c03febfc4b674c88	active
+C2-77000	champion-map/packs/C2-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:08:11	aef1c778474d9962397caa614ed7df9033bacf875184dc25fea022d3328ba04f	active
+N2-77000	champion-map/packs/N2-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T17:06:48	0a5ca71f229f7e3c50b7c93bc7579c91156f218bc48e8ee974ac26b0d782375a	active
+Q4-77000	champion-map/packs/Q4-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T19:48:58	65a9547c92237a2ea29472aef16be8044a7ef1c56d3b9f22744f9a06490a6b18	active
+U2-77001	champion-map/packs/U2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T22:31:08	33a3a1e0cbc06e124391593126d717facc2ac43de6cbc2e913a4abbdc789d281	active
+RC1-77001	champion-map/packs/RC1-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T03:58:55	1a93057de0835ec2af2b353f070abb03f56887a6b7b0dda8a53bc6b594575c56	active
+V9-77001	champion-map/packs/V9-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T09:58:45	9a4383a08417aabdbaed39a28d04b6edd97b3566ba33bd28687eb16d29ac1264	active
+RW2-77001	champion-map/packs/RW2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T04:54:43	dfe05233ba902263c566cc0ff77ca61369a703ee747166f6c044e7d8ce2b45d7	active
+BAS-s41	scratch/ga-arms/BAS-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:54:39.277Z	8b5845a5868f34b130396f6b2d88d52b0d03098fbbf692f9dac9ca5755b45f41	active
+CBG-s13	scratch/ga-arms/CBG-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:27:00.968Z	f95eeb3c3eea78b98f5b53b52d975cb33425437444a601f30f03c2dedb42a767	active
+G3C-s13	scratch/ga-arms/G3C-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:38:21.271Z	1dabb8c57866147cbcd25e7c3c5696ad8ab02e63f72e40867db838db142165c9	active
+V7C-s13	scratch/ga-arms/V7C-s13.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:33:54.889Z	9d6fcfe468bca34e77c6255ffa007e70de2e72539005ce7efd64fe39e6ef57f6	active
+V7M-s13	scratch/ga-arms/V7M-s13.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:20:08.426Z	362429263fd2fceffb62dc3e54d3169282ade49746d53aea3b223f68be26d6f2	active
+BREAD-W05-s13	scratch/ga-arms/BREAD-W05-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:24:34.940Z	914dbca5803c5408d8173294ae973b349c0e609687a862809121ebcca1051890	active
+CBG-s41	scratch/ga-arms/CBG-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:27:05.714Z	ddc73621533322663fd3a2e105c68872b33f82a11a8ca0f0a4f3853575852a6f	active
+G3C-s41	scratch/ga-arms/G3C-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:38:30.410Z	2e2ef59b603fd4dd7beb3c7a6947d1019f29f20f77b3550e4ae3184eb8f1db6f	active
+V7C-s41	scratch/ga-arms/V7C-s41.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:34:45.087Z	0fdf4cc75c37f59859f9830328bd5d919fb79f687873c6d7918cadc71ffda74b	active
+V7M-s41	scratch/ga-arms/V7M-s41.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:20:33.293Z	13c9bd1e41ad6de33396b5161b8a0f457c9cd5c1caa5732419be20b9ae738395	active
+BREAD-W05-s41	scratch/ga-arms/BREAD-W05-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:25:50.111Z	5578f885a97067861d14715bb0b51ab69f32c61a950f3c79352c13af70bca99d	active
+CBG-s7	scratch/ga-arms/CBG-s7.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:25:41.324Z	1770b20b961da471b87490829b0e4704ebaafcc7a27d615063ed6cf9387bb20c	active
+G3M-s13	scratch/ga-arms/G3M-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:21:16.295Z	2ade4d25bb6dfae4fde2e908a64415c4e1f8082cb56fb86f2cfaf90cc8c96d31	active
+V7L-s13	scratch/ga-arms/V7L-s13.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:23:09.779Z	2344628ace48a65ea9c6c5e1531e8eb23019635642570e25cb6f779e3bd775e5	active
+BAS-s13	scratch/ga-arms/BAS-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:54:48.710Z	9543ef6b68a78d908ad4f24098f52041c13bbe00897d93eb2292477c73ba7705	active
+BREAD-W05-s7	scratch/ga-arms/BREAD-W05-s7.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:26:14.298Z	fe37f857a597bdddefca9c97ca43a420a7408707f084535c12437b8ad0ebb525	active
+CBGG-s13	scratch/ga-arms/CBGG-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T09:15:07.003Z	69c8312ba3b82bd12a1fba18a366ab09020ed307c4dfa766e6a4f7b0246792e6	active
+G3M-s41	scratch/ga-arms/G3M-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:21:11.680Z	8dde70abb7fb5814e195dc2ad39100a55b2da74980e19c5916b129b850234ac0	active
+V7L-s41	scratch/ga-arms/V7L-s41.js	1.8	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:22:44.197Z	e7023cfce564c0cf8be51d21054600751d8304734e7e99e38a6d7c73547043a4	active
+GD3-RATION	scratch/arms/GD3-RATION.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-01T02:43:20.774Z	37328e1d03f9b7efa3da8de56d1165eade4c640bbf29895b27439ecf22039238	active
+L5-D4a-s13	scratch/ga-arms/L5-D4a-s13.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T11:49:19.375Z	fe9dc350870a5e02631e17a67702dcf528512420320ff2463af0b29b6b39a7ce	active
+GD3ALL-PLAIN-s13	scratch/night3/GD3ALL-PLAIN-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T18:45:04.129Z	2fbfef97903a35020eaae7da3ee974e8948ff874b1da257aba29e326a0f30988	active
+GD3ALL-PUSHON-s41	scratch/night3/GD3ALL-PUSHON-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T23:48:43.997Z	0ccd6185e8d726ed89498d92332581eab3ae20ed46e909dff328d916e342a236	active
+G5DEF-s41	scratch/night5/G5DEF-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T16:08:12.822Z	fbb29a4564e32246c60293c881514d8732b2c31f26d5135fd21714d0845247e7	active
+CLONE-D4a	scratch/arms/CLONE-D4a.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T11:11:38.191Z	cf94eab38ad38fada5d821f1ea9ae4b91ecbedd6ad68fa7014e12c64b131c7c0	active
+D-a底座	scratch/night4/D-a-s41-base.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T18:35:26.409Z	491de0d62118cd2c96a7f45c544ebccdfaebc81d47b05187170f455dd9cc22fd	active
+D-a-s13	scratch/night4/D-a-s13.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T16:19:26.874Z	6ecec9d6d3427ad6c2885f0240b79e054019084e0ad9a1940c74ffa93e868876	active
+GD3ALL-G5-8p-s41	scratch/night3/GD3ALL-G5-8p-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T16:50:17.780Z	11fa0cdb1d3578c0b8a0e2c93e358caef22599d77c4c574173a30ea19a6baeaa	active
+TPG-s41	scratch/night6/TPG-s41.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T19:36:39.014Z	e82cbb8df7588c055e0e82ebb44f7f33f0cde4d96452e848b1525629404669b1	active
+EFFG-s41	scratch/night5/EFFG-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T15:32:59.498Z	f77704d70f0669ca1dd6407146c897616386694f20a9ea70ec24e72e447e201b	active
+D1200-s13	scratch/night5/D1200-s13.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T15:58:32.150Z	def41ea69db1570ebad5649fd3ebcd4e5e73f4b73fcc1b27f96c55efe4cd1642	active
+HPG-s7	scratch/night6/HPG-s7.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T19:05:23.700Z	b8b5cad3193432de5002db3cbd78a6b1ff6d14b545853766094257c2d2f6ea01	active
+GD3-SWORD	scratch/arms/GD3-SWORD.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-01T06:38:18.184Z	e60e5aceb0a19bbc73cc381cf12e76014aa16ce48591b62d2a5629c911b378a0	active
+CB-combo-v2	scratch/night4/CB-combo-v2.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T00:00:51.409Z	68424bc2dd71500ad1d2174b8b0193e675dd5402022534f2f3a6c6bdf7997eda	active
+GD3ALL-POPP-s17	scratch/night3/GD3ALL-POPP-s17.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T19:45:06.795Z	621f7dff615d352021bc732ec3927550de4d88f2f3b843c6b8ed738ab9bd6a0e	active
+GD3ALL-NGA2R-s41	scratch/night3/GD3ALL-NGA2R-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T18:23:08.092Z	d9689d316bd68b3ed16dcdc4531232c1b00fa2985e31b0d8d24e8e6dbba3798c	active
+L5-1200-s13	scratch/night5/L5-1200-s13.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T15:53:15.830Z	cd2a221d66d26fd48454c21630af17b181fde931c74f898171680ccefa5123ac	active
+CB3-s13	scratch/night6/CB3-s13.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T18:18:32.617Z	7ff66ae682daef64ba6e2cc321febc6377631e7adf33ae56b06c0055c9c6f217	active
+KDFULL400-s13	scratch/ga-arms/KDFULL400-s13.js	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:43:00.967Z	94199ccc2ded2295e88806dfdb526ad65943ff7adbaaf85b44af80bc7d54e45c	active
+KDFULLGA-s13	scratch/ga-arms/KDFULLGA-s13.js	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:13:19.312Z	2aa1200d0277ad38bf166bc346bb5f82d462438a6b7560b4835f77df7fe8712b	active
+GA-ration-s41	scratch/ga-arms/GA-ration-s41.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-01T05:05:12.648Z	c7b6dacdf58108c0f7af84bcddac02e87178566a9b0a47b260474be0c482a2f3	active
+WIDEFIX-s7	scratch/ga-arms/WIDEFIX-s7.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T13:18:55.752Z	db9ccebf2da15b03356087ec80ae783bbddbca8ef71e4d4f9e43ba982bd40e48	active
+KDFULL2	scratch/arms/KDFULL2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:01:38.394Z	9a9fa92f7341123c95f055239f0dafb2a29d5db9053363659b42867e7eb68f01	active
+KD-V7	scratch/arms/KD-V7.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T11:16:40.504Z	7f39e7494bcbd33ae33eaff1b047c2796edbf8a4d38611b43075ae72a19c45d7	active
+DSTR4-s13	docs/artifacts/2p0-pool/DSTR4-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T17:46:57.183Z	0eaba2eb0f9b177fe90254d95319775f1338b72c667b77b06beb03bdff54a019	active
+EFFG-s5	docs/artifacts/2p0-pool/EFFG-s5.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T16:06:31.396Z	22e15809aa00f3686cef3b45182cc15d773f9a45f69f3510ddbfabf316bd7e33	active
+EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-05T17:21:14.512Z	913ac78b75ae2d61bd7a5695edc6d8e73f5d4f9d94964cc90c6e5b3483f6799a	active
+GD3ALL-POPP-s41	docs/artifacts/2p0-pool/GD3ALL-POPP-s41.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T18:57:16.011Z	5579bbb8d4b070466e350991d2afe7f6cb5c23d09a0ce1c5b1fbf182c37abc06	active
+GD3ALL-PUSHON-s13	docs/artifacts/2p0-pool/GD3ALL-PUSHON-s13.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T23:48:30.585Z	941b9eb9a67f2c9ff889b33739f7d340b3fd1b412c2da355b510150f84ca7c2d	active
+D-b-hpseed-s13	docs/artifacts/2p0-pool/D-b-hpseed-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T16:05:43.028Z	a516a2ad5d66918e3add84867b9c4b54821d3f9a589a963712016c36b4c91156	active
+DDEF-s13	docs/artifacts/2p0-pool/DDEF-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T17:20:11.246Z	ec9c49834c6915365e1746ed42e89b008f32dc5238c41edb7d9c0a828bae92e8	active
+DSTR-s13	docs/artifacts/2p0-pool/DSTR-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T17:32:06.973Z	20c14adc5a332fa082be1a95e3f4296741cdf60c6a8627f3a060103927525a41	active
+LE-s13	docs/artifacts/2p0-pool/LE-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T23:10:55.101Z	402473447859f6dbcc3e87009d5c8a3ca943f992947e377a8d5ffb17155321df	active
+GD3ALL-G5-s13	docs/artifacts/2p0-pool/GD3ALL-G5-s13.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-01T16:40:32.793Z	cfc7f7d62a728aae07c957a5b2c0b2d7eafbb5bbbc048128d596c3c456049214	active
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T16:25:42.109Z	0f581faf2c3731227276fb98e78128d8d0507cbc61ff987d44a5ab83eaf8ea7b	active
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T17:23:29.409Z	1c36767ab2a92c71caa0b51772dce2983e946402641aa50e72a6130985f43c41	active
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T17:27:31.832Z	093ce1b302875e82791c1a5c02729035d1c2fef98ebc4a420143986f4f427ffb	active
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T16:30:29.912Z	3dd23503a880f576bcdb57e149f2e79bb39c34705e2e9a0a1bb76dd9b89db50b	active
+COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T17:32:46.317Z	7479dc9a23e4b6201650387558b8ad4283fa7fffa562012db0fe04ca4f3b143f	active
+CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:02.829Z	4e744b0848ea57b0f56d5c24ad808b542799152a19f8e4cea82d8033dfc3664c	active
+CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:25:35.822Z	c94b6dd767a2d055630cad06b6b53eda24de8b8ac73307b2feef573f06664671	active
+ADAPT2-Q-s7	docs/artifacts/night-adapt/ADAPT2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:53.171Z	f1758a0863ed6f7b8171d4c5088df07be1666b349a035a875dc6d36d204e7f1a	active
+KD-K2	docs/artifacts/night-adapt/KD-K2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:20.681Z	a19451d1ddcc66cb0fc1a6b0547bc93d35aa2e9572c0b27a0b052e8a865b3376	active
+KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T17:20:00.000Z	a21a7cf2d70fb0be7bbcace5b4f751f2fb1fab23d75e0b5b018dccec4fd11045	active
+KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:19.453Z	e70eb14808be4c04785620e37f8cf3bfc995c724eac6d5f1f8e3a5ab9680f4a7	active
+PASS2-Q-s13	docs/artifacts/night-adapt/PASS2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T00:44:35.803Z	59240a4970f081d3531182efede7282ed0800e7a6dd09c1e63bde8dc9ea5bfb3	active
+STR-B-Q-s13	docs/artifacts/night-adapt/STR-B-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T07:44:12.287Z	12de3a6b3f6e72a02a0084571f00d8fe6e80a1696eaec4b89318d3127912c672	active
+STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T08:01:18.508Z	b5fead765f44c293aeb9a194052a34b8b6e9b986cbd54bca1af889ca5f3bbc36	active
+KDG-B-Q-s13	docs/artifacts/night-adapt/KDG-B-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T09:14:56.193Z	a81e624c496a7515c0cbb92a874d09c53507e56e223a226a4b1a8c2c9f953a22	active
+KD-Qg-l	docs/artifacts/night-adapt/KD-Qg-l.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T17:12:26.319Z	325b74a1fa0d630875cf01405b235b58ffb01646f777a2069e7913ea04649b58	active
+KD-G2	docs/artifacts/night-adapt/KD-G2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-08T09:09:21.325Z	d48422500f97a47f5ca21a266d06b3eaa391001b89fa3bbdf537e482967f4a73	active
+FOCUS-Q-s13	scratch/ds-1108/FOCUS-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T12:41:04.185Z	ec9104e4d59301bcaaf1ec8e82b47c5de3a6b59f24c449565a934478ead2ab90	active
+CLEAR-Q-s13	scratch/ds-1108/CLEAR-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T12:17:04.254Z	9bc2b6294d882788d484f662e18a8327caf4686a356003a7288af2f77013bff8	active
+WIDE-Q-s13	scratch/ds-1108/WIDE-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T11:48:09.657Z	e5986a179199dd88402eda5f40826313703d5f4f6566b47c1e62d7458cf7848b	active
+WIDE2-Q-s13	scratch/ds-1108/WIDE2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T11:52:50.331Z	e8f8b67eac8dfb1eaa416832846fbeb8b379b21945686dd7d73af1146ec919da	active
+WIDE2-200	scratch/ds-1109/WIDE2-200.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-09T04:35:58.981Z	39712fd61384a122574e2ee930de1f87cad12a44a1f8d59413fd710d30e1edab	active
+WIDE2-300	scratch/ds-1109/WIDE2-300.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-09T04:41:03.549Z	cd68c3d96b19d2b2b7217d08eb6350ac5c3bbb9be93b323cf4d7385be3489095	active
+WSEL9-200	scratch/ds-1109/WSEL9-200.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-09T04:57:52.026Z	f66854839bae261814f42a71f3f868c4398cd6e7c628dc655e46638efa3e1025	active
+G5C-100	scratch/ds-1109/G5C-100.js	2.0	18	2.0 行为课程线（11-09 · 破防与还手）		2026-11-09T10:19:05.835Z	dfa5df3b597e7f54252b3720a9e98d114a7a94853696e1e63f7bfa910f351edd	active
+G5I-50	scratch/ds-1109/G5I-50.js	2.0	18	2.0 行为课程线（11-09 · 破防与还手）		2026-11-09T10:59:30.697Z	825421cf987c1827b43ce6fd486efdf7c54b8f855ea6d7e7667ed028ce58722b	active
+G5G-50	scratch/ds-1109/G5G-50.js	2.0	18	2.0 行为课程线（11-09 · 破防与还手）		2026-11-09T10:41:22.736Z	5a67679e3b97ddb478391b90b2c1b76003ce7bb45fa256db3e648d748e87b540	active
+G5J-50	scratch/ds-1109/G5J-50.js	2.0	18	2.0 行为课程线（11-09 · 破防与还手）		2026-11-09T11:09:24.911Z	d87bc562a70b1399a4bd7e63849c66a087da6107cb8415af92c1b48fae724da3	active
+MSB11-R2S306293884	docs/artifacts/night-adapt/MSB11-R2S306293884.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T21:35:07.593Z	a00f6e2c8222ed63ee6485463ca72bab400aeb5f468e06b50fec88ee577dcdd5	active
+MSB10-R1S1149480262	docs/artifacts/night-adapt/MSB10-R1S1149480262.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T20:05:04.532Z	35fc3c3996215032fe8354b629d8e909b08018f8bbafd97455392ec55e622063	active
+MSB8-charge-R1S1861674281	docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T18:51:58.364Z	b51a1b4cc204333400583e8987d4f565781c43a04dcd47ae29a092240ec0a945	active
+MSB8-bagua-R1S88974978	docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T18:59:17.885Z	f2a0024978c1a09ddc822933ffb4655b456ef715363db3605b9bd5cfbadcd4f9	active
+MSB6-R2S501866988	docs/artifacts/night-adapt/MSB6-R2S501866988.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T18:40:18.613Z	f4c1d968a8e85442643411f8902dc2a842efceeebd25dcbd746315b70d4ef9d7	active
+MSB6-R2S297540638	docs/artifacts/night-adapt/MSB6-R2S297540638.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T18:44:47.108Z	7e637d93ca94df30f5431285d6e7ea3b27b581b06da438d2dc14af5c91f6b227	active
+MSB9-R2S443656264	docs/artifacts/night-adapt/MSB9-R2S443656264.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T20:18:54.874Z	603533062783a676d6f8f6ccf8587071ee3737d3b2ce40954fb4a21174e37b7f	active
+MSB12-beadplan-R1S666728707	docs/artifacts/night-adapt/MSB12-beadplan-R1S666728707.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T22:12:56.635Z	e739f548f3eeae1234133e511dd2c11f2e8acbf338a10e261e3d34658e6866d9	active
+MSB12-seqboom-R1S1308870894	docs/artifacts/night-adapt/MSB12-seqboom-R1S1308870894.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T22:10:25.301Z	0c4481a5b546ff9097b602c7f625c0157e3c3e539290bb31fcc08d124d4fdc15	active
+S916R2B-R1S685223462	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T14:18:31.470Z	01a19c05fec299dae4b957762175d841b9716ab778663fcf090e77b1fc23da42	active
+MSB2-R1S1494663071	docs/artifacts/night-adapt/MSB2-R1S1494663071.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T00:00:36.478Z	9c2771eee801679f08dbb5f712e4a8084260def3d5746ccec34b5187f78ab217	active
+MSB13-R1S791820660	docs/artifacts/night-adapt/MSB13-R1S791820660.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T23:44:14.632Z	5401be54a13b74f57994159c3a2e062d43a06f33142370a653b810c3b29c998d	active
+MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T23:37:52.517Z	f55ae0ed6f620b9ec0c8114daa174ba54fb2bae6c685f8d23e0afbb244f59798	active
+MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T21:16:14.730Z	e49afa7cda864854a23f55c403c471ce7f4d49eab634e1938d1e3233c2b060e8	active
+MSB6-R1S1628871127	docs/artifacts/night-adapt/MSB6-R1S1628871127.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T17:27:06.853Z	8421f932b4bb081f06ff2ee7f06c51b531be2ab137d2589a17239b02f099cb67	active
+S916-R1S1704335642	docs/artifacts/night-adapt/S916-R1S1704335642.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T13:34:41.894Z	dca936f5b74557d085d7c662033a7755e2a8433fff857d619b36e9ab3cdd1947	active
+MSB2-R2S103437527	docs/artifacts/night-adapt/MSB2-R2S103437527.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-09T23:34:38.787Z	9195b92dd4a8dd7c3f92a0fbfc9e53fc9490720e77468849e2c0c9bcbed50e1a	active
+ADAPT-DEF-O5-s916	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T12:50:54.250Z	99f2f6db383386db0e9b2a51b033b298471b1bde4ab9e897677f238ea797a810	active
+MSB2-R1S773345716	docs/artifacts/night-adapt/MSB2-R1S773345716.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-09T23:05:07.390Z	d2b3eb6a283bcbbb1e52676c98575678a5719695001ae3ab7d578a5fd6d04ac8	active

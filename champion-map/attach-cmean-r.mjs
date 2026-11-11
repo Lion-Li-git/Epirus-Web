@@ -38,6 +38,28 @@ if (bh0.C2R !== undefined) for (const r of before.slice(1)) {
 copyFileSync(IN, IN + '.bak-cmean-r');
 const co = rd(IN);
 const h = Object.fromEntries(co[0].map((x, i) => [x, i]));
+/* 11-11 exam 批次戳守卫（attach-exam-stamp.mjs 写的六列）：
+ *   ① B 夹具只能一种；② 不许有行来自旧 -obs5 夹具；③ 有 B 值的行必须有来源戳。
+ *   没戳（旧表）不拦，但要印出来 —— 不能把“没标”当“同夹具”。 */
+if (h.examBs !== undefined || h.examBl !== undefined || h.examFix !== undefined) {
+  const fix = new Set(), bad = [], noSrc = [];
+  for (const r of co.slice(1)) {
+    const fb = r[h.examFix], bs = r[h.examBs], bl = r[h.examBl];
+    if (fb) fix.add(fb);
+    if (bs && /-obs5/.test(bs)) bad.push(r[0] + ' Bs=' + bs);
+    if (bl && /-obs5/.test(bl)) bad.push(r[0] + ' Bl=' + bl);
+    if (h.examBs !== undefined && r[h.P5R] !== undefined && r[h.P5R] !== '' && !bs) noSrc.push(r[0] + ' Bs');
+    if (h.examBl !== undefined && r[h.P5RL] !== undefined && r[h.P5RL] !== '' && !bl) noSrc.push(r[0] + ' Bl');
+  }
+  if (fix.size > 1 || bad.length || noSrc.length) {
+    console.error('⛔ exam 批次戳不一致：夹具 ' + fix.size + ' 种 ‖ 旧夹具 ' + bad.length + ' ‖ 缺来源 ' + noSrc.length +
+      (bad.length ? '\n   ' + bad.slice(0, 5).join(' | ') : '') + (noSrc.length ? '\n   ' + noSrc.slice(0, 5).join(' | ') : ''));
+    process.exit(2);
+  }
+  console.log('exam 批次戳 ✅ B 夹具唯一（' + [...fix][0] + '）‖ 旧夹具 0 ‖ 有值行来源齐全');
+} else {
+  console.log('⚠ exam 批次戳未在册（先跑 attach-exam-stamp.mjs；本次不拦，但 C 的来源无法对账）');
+}
 const appended = [];
 for (const c of NEWCR) if (h[c] === undefined) { co[0].push(c); h[c] = co[0].length - 1; appended.push(c); }
 for (const r of co) while (r.length < co[0].length) r.push('');

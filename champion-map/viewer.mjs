@@ -17,7 +17,8 @@
  *
  * 自包含：数据内联进 HTML、纯原生 JS + Canvas，**不引任何 CDN**（离线可开）。
  * 坐标来自 `coords.tsv`（由 `docs/artifacts/e287-out/e287-figs.mjs` 算好后拷进来）⇒ 交互页与静态图共用同一批坐标，不重算不漂移。
- * 用法：node champion-map/viewer.mjs [--out=index.html]
+ * 用法：node champion-map/rebuild-map.mjs   # 正路（先 attach-projcols 再烘）
+ *       node champion-map/viewer.mjs [--fit=coords-projcols.tsv] [--out=index.html]   # 直烘仅当 projcols 已最新
  *
  * §E294 追加（用户 10-04 第二轮：「旋转和缩放中心出问题了，一维也因此被裁掉了一块。
  *   二维的背景图能不能直接扩散到所有点的范围并且卡住缩放上界，不要看起来背景图很割裂」）：
@@ -153,7 +154,7 @@ const PROJTSNE = arg('proj', 'tsne') !== 'old';
 /* §G3（11-05 上午 · 千问）：`--fit` 的路径口径必须与下面 `OUT` 同族（§E608）——
  *   原来写死 `join(HERE, arg('fit',…))` ⇒ 传绝对路径会被拼成 `champion-map\D:\code\…` 而"表不存在"，
  *   看起来像"表坏了/没跑成"。这是本仓第五个栽在同一族上的旗标（`--out/--in/--seat/--chart` 都栽过）。 */
-const FITARG = arg('fit', 'coords.tsv');
+const FITARG = arg('fit', 'coords-projcols.tsv');
 /* 与 `proj-tsne --in` 同一条口径：原样(cwd 相对) → HERE 拼 → 只取文件名；三个都没有 ⇒ 报错列出试过的路径
  *   （原来只 `join(HERE, FITARG)` ⇒ 传 `champion-map/xxx.tsv` 会拼成双层而报"表不存在"，看着像表坏了）。 */
 const FITCAND = [FITARG, join(HERE, FITARG), join(HERE, FITARG.split(/[\\/]/).pop())];
@@ -162,6 +163,19 @@ if (!CF) { console.error('⛔ --fit=' + FITARG + ' 三个候选路径都不存�
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
+/* 阶段 3 守卫：--projcols=1 要吃 18/20 四列；gen3 没有这四列 ⇒ 必须走 rebuild-map.mjs
+ *   （先生成 coords-projcols.tsv）。不许静默退回 xt/yt，否则 1.8/2.0 预设会混用两套坐标。 */
+if (PROJCOLS) {
+  const need = ['xt18', 'yt18', 'xt20', 'yt20'];
+  const miss = need.filter(c => head.indexOf(c) < 0);
+  if (miss.length) {
+    console.error('⛔ 表 ' + CF + ' 缺 18/20 投影列 ' + miss.join('/') + '（表头 ' + head.length + ' 列）' +
+      '\n       ⇒ --projcols=1 会退化成 xt/yt 一套坐标，1.8/2.0 预设就混轴了。' +
+      '\n         正路：node champion-map/rebuild-map.mjs（先 attach-projcols 再 viewer）' +
+      '\n         或：--fit=coords-projcols.tsv（页面吃的就是这张）‖ 确实不要分版投影：--projcols=0');
+    process.exit(2);
+  }
+}
 /* 行数地板：原来写死 `< 50`，那是"整表 800+ 行"年代的口径 ⇒ 11-05 的**逐视图重投影**（2.0 只有 39 枚）会被它误杀，
  *   而误杀的形态和"表真的坏了"一模一样（都是 exit 2 + 一句话），所以不能直接删。改成旗标：默认地板降到 20
  *   （仍然拦得住"join 只写出几行"这类塌方），烘子集页时不必带旗标；要更狠的场合显式传 `--minrows=`。 */

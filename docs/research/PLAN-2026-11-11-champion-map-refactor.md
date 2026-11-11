@@ -1,6 +1,8 @@
 # 重构方案 · champion-map 输入表单一入口（2026-11-11）
 
-> 状态：提案（待用户点头）。触发事件：给 19 个 obs5 新点补短/长过线时，因为 `eps-full.mjs` / `feas.mjs` / `attach-hp.mjs` 硬编码 `coords.tsv`，只能临时把 926 行的 `coords-gen3-1105.tsv` 拷成 `coords.tsv`，跑完再还原。这是“输入表没有单一入口”的直接症状，不是数据问题。
+> 状态：阶段 1–3 已实施（本地提交 13d47061 / e2361bc3 / 15176e30，未推）。实施偏差：viewer 默认吃 coords-projcols.tsv（页面表），不是 gen3——gen3 缺 xt18/yt18/xt20/yt20；页面入口改为 rebuild-map.mjs。§3.2/§5 中“viewer 默认 gen3”的旧句按此偏差读。阶段 4（目录分层）未做。数据模型 A 已 backfill（2026-11-11 晚）：registry/rulers/batches/readings/features/projections 落盘；add-point 未做。
+>
+> 触发事件：给 19 个 obs5 新点补短/长过线时，因为 `eps-full.mjs` / `feas.mjs` / `attach-hp.mjs` 硬编码 `coords.tsv`，只能临时把 926 行的 `coords-gen3-1105.tsv` 拷成 `coords.tsv`，跑完再还原。这是“输入表没有单一入口”的直接症状，不是数据问题。
 
 ## 1. 现状
 
@@ -164,3 +166,33 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 1. 默认表是否就定 `coords-gen3-1105.tsv`（旧表只显式）？
 2. `attach-*` 的局部表默认 merge-only、要清空必须 `--allow-partial`，是否认可？
 3. 是否本次就做，还是先把 19 点数据/页面提交后再做？（建议先提交数据批，再做入口重构，避免把数据 diff 和脚本 diff 混在一起。）
+
+## 9. 实施记录（2026-11-11 晚）
+
+- 阶段 1 已落：champion-map/map-table.mjs（resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp）+
+  map-table-selftest.mjs（15/15）；feas.mjs 改走单一入口，缺省 gen3（旧 coords.tsv 显式），每次打印
+  [map-table] rows/cols/sha。
+- 阶段 3 已落：viewer --fit 默认改 coords-projcols.tsv；rebuild-map.mjs 已从 attach-projcols 改为
+  build-view(data) → viewer → shot 98/0（页面吃 data/build/coords-view.tsv）；viewer 在 --projcols=1 且缺
+  xt18/yt18/xt20/yt20 时 exit 2，不再静默退回 xt/yt；attach-projcols 改 map-table + 幂等。
+- 额外（考卷方向）：attach-exam-stamp.mjs 给 coords 追加 examA/examAL/examBs/examBl/examFix/examC 六列 +
+  EXAM-BATCHES.tsv（fixture/champ + run id）；attach-cmean-r.mjs 加夹具守卫。926/926 覆盖，B 夹具唯一 F2，
+  旧 obs5 夹具 0 行。详见 docs/research/FINDING-2026-11-11-exam-old-vs-new.md §3.6。
+- 阶段 2 已做：eps-full.mjs 改 resolveTable（缺省 gen3）；attach-hp/hlong/hshort 改 resolveTable + merge-only
+  （缺源保留原值，--allow-partial 才清）；attach-hp 新增 --target，attach-hlong 源/目标分离 --table 源 / --target 目标；
+  rebuild-coords 的两处调用已显式 --target=coords.tsv。
+- 阶段 2 验证：三个 attach 的 --check 在 gen3 上通过（hp 794/926、hlong 807/926、hshort 844/926，缺源保留）；temp 表写入 926×142 正常。
+- 数据结论：v7 内 A 升、B 降、C=(A+B)/2 抵消；B 下行不是逐行夹具漂移，是固定 F2 夹具的选择偏差。
+
+## 10. 数据模型 A（2026-11-11 晚，已落）
+
+- champion-map/data/：registry 926 / rulers 4 / batches 3 / readings 14,816 / h5-frozen 926 / features 926 / projections 926。
+- A/B 读数在长表；C=(A+B)/2 派生；H5 标 frozen、无写入路径。
+- backfill 对照：exam-view 926×25 与 coords-gen3 逐值 max_abs_diff=0 / mismatch=0；validate --strict 通过。
+- 换尺接口：pipeline/rulers.mjs --set-current=<id>；只改 current 指针 + 追加 readings，projections.tsv 不动；frozen 尺拒绝。
+- add-point.mjs 已落：readings/display 喂入 → registry/batch/readings/display（+features/projections）→ build-view →（--bake）rebuild-map → shot；当前不跑测量。
+- 完整 coords-view 146 列已由 data + display 编译；rebuild-map 已改吃 data/build/coords-view，页面 98/0（926 行对照 0 mismatch）。
+- measure-point.mjs 已跑通：A/B × multi/long 四张 exam4 + ruler-measure + feas(allLong/allMulti) + proj-tsne 整表重投影，拼 readings/display/projections；假点 rounds=1 约 50s。
+- 假点 --bake 已过：927 行 coords-view、页面 98/0（temp data）；projections 整表替换，避免新旧混坐标。
+- 未做：display 的 Sc/kin 等少数列、写入事务化、旧脚本退役、阶段 4 目录分层。
+
