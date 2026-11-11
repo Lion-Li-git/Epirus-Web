@@ -9,6 +9,11 @@
 | panel.tsv | 合并进 data/feasibility.tsv 的旧 ok（覆盖不全） |
 | fit.tsv | 复制到 data/fit.tsv |
 | e370-epsfull.tsv | 一次性产物，仅审计 |
+| attach-projcols.mjs | 旧 projcols 生成器；新链 build-view 直接从 display 编译 |
+| epsfull.tsv / e328-epsfull.tsv | 旧 attach-hp / rebuild-coords 输入；路径已指向本目录 |
+| e370-ruler.tsv | 旧 rebuild-coords --extra 默认；路径已指向本目录 |
+| eps.tsv | 旧 eps-scan 产物；路径已指向本目录 |
+| _e321-job1/2.tsv | 旧 attach-sc 输入；路径已指向本目录 |
 | eps04-check.mjs / reproj-check.mjs | 一次性探针，仅审计 |
 | duel.tsv / duelscan.mjs | 已删除（用户 2026-11-11：对旧冠军 Ldemo 的决斗着色无用） |
 

@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
-const EXTRA = String(arg('extra', 'champion-map/e370-ruler.tsv'));
+const EXTRA = String(arg('extra', 'champion-map/archive/2026-11-11-legacy-data/e370-ruler.tsv'));
 const DRY = process.argv.includes('--dry');
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
 const CO = join(HERE, 'coords.tsv');
@@ -95,7 +95,7 @@ for (const f of ['e287-ladder.svg', 'e287-map2.svg', 'e287-map3.svg', 'e287-figs
  *   那 728 名完全是"未测被当 0"造出来的假象。
  *   ⇒ --more 现在从 --extra 派生（`<批>-ruler.tsv` 的同名 `<批>-epsfull.tsv`），
  *     少一张就**当场停**（不许静默少测 —— 收尾那条核验也会兜住）。 */
-const HPMORE = ['e328-epsfull.tsv'];
+const HPMORE = ['archive/2026-11-11-legacy-data/e328-epsfull.tsv'];
 /* §E605 第⑥条：派生配对表名的那条 `base.replace(/-ruler\.tsv$/,'')` 只认"批名以 -ruler.tsv 结尾"这一种形状，
  *   而 METHODOLOGY 120.4「先并成一张再喂」给出的名字是 `ruler120-2026-10-10-all.tsv` ⇒ 它要的文件是
  *   `ruler120-2026-10-10-all.tsv-epsfull.tsv`（不存在，且**永远不会存在**）。

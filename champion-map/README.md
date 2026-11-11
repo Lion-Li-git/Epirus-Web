@@ -13,8 +13,8 @@
 | **某个包打起来是什么风格** | `e588-usage-*.tsv` | **每局出手次数**：`snipe defense defenseShare holo guard reflect bigT miniT gun railgun charge ring ji atkShare rounds`；四张 = `multi/long` × `ε=0/0.2` |
 | **池成员谁广、谁刷盾**（选池界面看不见的两列） | `archive/pool-traits.tsv`（11-07 归档；需要时按 README 命令再生） | 每枚一行：`Hplong Geff distinctKeys holo裸包 holo开档2 charges rounds noThreatStance 广度过线 送盾偏高` |
 | **攒 ep 的时机**（环/ジ 在什么局面用） | `archive/usage-buckets-2026-10-20.tsv`（归档；`behavior-profile --buckets=1` 再生） | 四格 = 能不能开环 × 这一回合挨没挨打；long 档 `Pearson(环@有ep·安全, 混合桌胜率) = +0.76`（`FINDING-2026-10-20-ring-payoff-ds.md` §十） |
-| **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 时代的 per-experiment 尺表+考卷表，信息已并入 `coords.tsv`；`e328-*`/`e370-*`/`e287-ruler` 因仍是链上缺省参数留在顶层 |
-| **对打结果** | `duel*.tsv` | `duel-run.mjs` 产出 |
+| **考卷/尺的读数（历史批次）** | `archive/eNNN-*.tsv` | §E608~E825 的 per-experiment 尺表+考卷表；`e328-*`/`e370-*` 已移入 `archive/2026-11-11-legacy-data/`，旧链按归档路径读 |
+| **对打结果（旧）** | `duel-run.mjs` 产出 | 页面不再读；`duel.tsv` / `duelscan.mjs` 已删除（用户 2026-11-11） |
 | **谱系图上的坐标与各列** | `coords.tsv`（1.8 遗留）‖ `coords-gen3-1105.tsv`（2.0 系 926，历史源）‖ `data/display.tsv`（统一展示表） | 页面由 `data/build/coords-view.tsv` 编译；旧 `coords-projcols.tsv` 已归档到 `archive/2026-11-11-legacy-data/` |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |

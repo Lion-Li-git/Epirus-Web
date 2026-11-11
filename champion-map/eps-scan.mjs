@@ -95,7 +95,7 @@ const HD = ['id', 'seed', 'eps', 'first', 'strict', 'bigt', 'ms'];
 /* §E608 数据丢失护栏：这台工具是**整张覆写** `champion-map/eps.tsv`（在册 485 行），
  *   而 `--limit=` 的窄跑只会算出几十行 ⇒ 一次冒烟就把册子截断（同一族今晚已经撞过 `oldpacks.tsv`：
  *   那台跑了一枚就把 17 行写成 2 行，退出码还是 0）。所以窄跑必须显式换目的地。 */
-const OUTP = arg('out', 'eps.tsv');
+const OUTP = arg('out', 'archive/2026-11-11-legacy-data/eps.tsv');
 if (LIM > 0 && !arg('out', '')) { console.error('⛔ 带了 --limit 却没给 --out ⇒ 拒绝覆写在册的 champion-map/eps.tsv' +
   '（整张重写会把没跑的行冲掉）。要窄跑就 `--out=eps.limited.tsv`（或指到 docs/artifacts/ 下）'); process.exit(2); }
 writeFileSync(join(HERE, OUTP), HD.join('\t') + '\n' +

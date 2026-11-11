@@ -30,7 +30,7 @@ function tsv(f) {
   const L = readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n'), h = L[0].split('\t');
   return L.slice(1).map(l => { const c = l.split('\t'); const o = {}; h.forEach((k, i) => o[k] = c[i]); return o; });
 }
-const jobs = ['_e321-job1.tsv', '_e321-job2.tsv'].map(tsv);
+const jobs = ['archive/2026-11-11-legacy-data/_e321-job1.tsv', 'archive/2026-11-11-legacy-data/_e321-job2.tsv'].map(tsv);
 
 /* ① 现役跨作业逐字相同 */
 const inc = [{}, {}];

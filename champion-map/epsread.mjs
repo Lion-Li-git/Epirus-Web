@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { load as loadSlotId } from './slot-identity.mjs';   /* §E600-A：活槽身份的唯一解析处 */
 const HERE = dirname(fileURLToPath(import.meta.url));
-const L = readFileSync(join(HERE, 'eps.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
+const L = readFileSync(join(HERE, 'archive/2026-11-11-legacy-data/eps.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
 const hd = Object.fromEntries(L[0].map((h, i) => [h, i]));
 const R = L.slice(1).map((r) => ({ id: r[hd.id], seed: +r[hd.seed], eps: r[hd.eps], first: +r[hd.first] }));
 

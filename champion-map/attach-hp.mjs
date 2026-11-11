@@ -33,7 +33,7 @@ const rd = (f) => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').rep
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 /* 11-11 单一入口：--table 仍是“读数源表”（向后兼容），目标表走 --target（缺省 gen3）；
  *   --from 是 --table 的新名字。旧命令 attach-hp --table=epsfull.tsv 仍可跑，只是默认写 gen3。 */
-const SRC = String(arg('from', arg('table', 'epsfull.tsv')));
+const SRC = String(arg('from', arg('table', 'archive/2026-11-11-legacy-data/epsfull.tsv')));
 const TARGET = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv', aliases: ['target'] });
 const ALLOW_PARTIAL = process.argv.includes('--allow-partial');
 let _T;
