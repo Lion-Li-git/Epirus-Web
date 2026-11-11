@@ -18,13 +18,15 @@
  *   10-21 跑 `--allMulti=1` 全库 803 枚实测 **2.4s/枚**（单片 465~489s，四片并行约 8 分钟）
  *   ⇒ 别拿 1.3 排期，那是少跑了两条腿的档。**不测考卷 H**（那是 §E290 的尺，已有）。
  * 可续跑 + 可分片 + 空跑必红（`--shard` 写错时曾差点把"一枚没量"当跑完发出去）。
- * 用法：node champion-map/feas.mjs [--shard=1/3] [--out=feas-s1.tsv] [--limit=0] [--ids=a,b]
+ * 用法：node champion-map/feas.mjs [--table=coords-gen3-1105.tsv|coords.tsv] [--shard=1/3] [--out=feas-s1.tsv] [--limit=0] [--ids=a,b]
+ * 11-11 起缺省读 gen3（旧 coords.tsv 必须显式）；路径/行数/sha 走 map-table.mjs 单一入口。
  */
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, selfPlay, reflectWall, seatSymmetry, aggressionProfile, densityProfile,
   chargeProfile, feasibilityOf, feasPlan, extractJsonObject } from '../tools/audit-lib.mjs';
+import { resolveTable, readTable, tableStamp } from './map-table.mjs';
 
 /* §E303 本目录从 docs/artifacts/e287-out/ 挪到仓库根 ⇒ 深度少两级，ROOT 与上面的 import 一起换。 */
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -67,18 +69,18 @@ const COLS = ['id', 'ok', 'nFail', 'fails', 'G', 'G2', 'wallDmg', 'fieldA', 'fie
   'legsMode'];
 
 /* ---- 名单：直接读坐标表 ⇒ "判了几枚"与"画了几枚"永远是同一批 ----
- *   ⚠ 先归一 CRLF：coords.tsv 的**末列**就是 path，用 split('\n') 会把它读成 "path\r" ⇒ indexOf 拿 −1。*/
-/* 名单源（11-05 补的洞）：以前这里**写死 coords.tsv**，而 2.0 那 39 枚根本不在 coords.tsv 里
- *   （它们在 coords-gen3-1105.tsv / coords-view-20.tsv）⇒ "从来没被这道闸判过"不是漏跑，是名单源少一批。
- *   `--table=` 让同一台闸能吃任意一张带 id+path 的表；默认仍是 coords.tsv ⇒ 1.8 那批的口径逐字不变。 */
-const ROSTER = arg('table', 'coords.tsv');
-const ct = readFileSync(join(HERE, ROSTER), 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
-const ch = ct[0].split('\t'), ci = ch.indexOf('id'), cpi = ch.indexOf('path');
-if (cpi < 0) { console.error('⛔ ' + ROSTER + ' 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
+ * 11-11 起走 map-table.mjs 单一入口：默认 gen3（旧 coords.tsv 只能显式 --table=coords.tsv）。
+ * 这样 2.0 那 95 枚不会再因为"名单源少一批"被静默漏判。 */
+const ROSTER = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv' });
+let ct;
+try { ct = readTable(ROSTER); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+const ci = ct.ix.id, cpi = ct.ix.path;
+if (cpi === undefined) { console.error('⛔ ' + ct.name + ' 没有 path 列 ⇒ 先跑 node champion-map/attach-path.mjs'); process.exit(2); }
 /* §E330：以前这里按 `docs/artifacts/<id>.bak` **猜**路径，猜不到就静默筛掉 ⇒ 那 183 枚臂产物
  *   真身在 `docs/artifacts/e234-out/…`，于是从来没被这道闸判过（图上整片"无判定"）。
  *   现在读表里那一列，并且**筛掉几枚就印几枚** —— 名单少一批不能是无声的。*/
-const all = ct.slice(1).map(l => { const c = l.split('\t'); return { id: c[ci], path: c[cpi] }; });
+console.log('[map-table] ' + tableStamp(ct));
+const all = ct.rows.map(c => ({ id: c[ci], path: c[cpi] }));
 let list = all.filter(e => e.path && existsSync(join(ROOT, e.path)));
 const drop = all.filter(e => !e.path || !existsSync(join(ROOT, e.path))).map(e => e.id || '(空 path)');
 if (drop.length) console.error('⛔ ' + drop.length + ' 枚在名单里但文件不存在（前 10：' + drop.slice(0, 10).join(' ') + '）');
@@ -91,7 +93,7 @@ const OUTP = /^[A-Za-z]:[\\\/]/.test(OUTARG) || OUTARG.startsWith('/') ? OUTARG 
 const done = new Set(existsSync(OUTP) ? readFileSync(OUTP, 'utf8').trim().split('\n').slice(1).map(l => l.split('\t')[0]) : []);
 if (!existsSync(OUTP)) writeFileSync(OUTP, COLS.join('\t') + '\n');
 const todo = list.filter((e, i) => i % SH[1] === SH[0] - 1 && !done.has(e.id));
-console.log('闸 = feasibilityOf 单一真源 ‖ 样本量 ' + FEAS_N.tag + ' ‖ 分片 ' + SH[0] + '/' + SH[1] + ' ‖ 名单源 = ' + ROSTER);
+console.log('闸 = feasibilityOf 单一真源 ‖ 样本量 ' + FEAS_N.tag + ' ‖ 分片 ' + SH[0] + '/' + SH[1] + ' ‖ 名单源 = ' + ct.name);
 console.log('名单 ' + list.length + ' 枚（坐标表全量）‖ 本片 ' + todo.length + ' 枚 ‖ 本 out 已量 ' + done.size + ' ⇒ ' + OUT);
 if (todo.length === 0 && list.length > 0) {
   console.error('⛔ 待量为 0（名单非空）⇒ 分片/续跑条件把全部筛掉了，这不是"跑完了"。shard=' + SH[0] + '/' + SH[1] + ' 已量=' + done.size);

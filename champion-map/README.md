@@ -18,11 +18,14 @@
 | **谱系图上的坐标与各列** | `coords.tsv`（1.8 面板）‖ `coords-gen3-1105.tsv`（2.0 系 926，现役真源）‖ `coords-projcols.tsv`（烘焙 fit 表） | 宽表（H 系列读数**已改名 H5 参照系**：`H5/Hp5/De5/Hlong5/Hplong5/Flong5` = 旧 5P 单卷读数，新四格卷上线后整列退出）；**由链生成，别手改** |
 | **重复包清单** | `dupes-manifest.tsv` | 与 `tools/dedupe-artifacts.mjs` 配套 |
 | **别名** | `coords-aliases.tsv` | 同一枚包的多个文件名 → 一个 `id` |
+| **这一行的 A/B/C 读数来自哪批** | `EXAM-BATCHES.tsv` + coords 的 `examA/examAL/examBs/examBl/examFix/examC` 六列 | 由 `attach-exam-stamp.mjs` 生成；`--check` 会拦 unknown / 旧夹具 / C 不符 |
 
 ## 二、页面（产物，不许手改）
 
 - `index.html` —— 谱系图页面，**是产物**：改 `viewer.mjs` 后必须 `node champion-map/viewer.mjs` 重烘。
 - `viewer.mjs` —— 页面源码（内含自检；`node champion-map/lint-viewer.mjs` 先绿再烘）。
+- `map-table.mjs` —— 输入表单一入口（阶段 1）：`resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp`；`map-table-selftest.mjs` 15 条。
+- `attach-exam-stamp.mjs` —— 给 coords 盖 `examA/examAL/examBs/examBl/examFix/examC` 六列；`--check` 只读，拦 unknown/旧夹具/C 不符。
 - `rebuild-coords.mjs` —— **九步链**：把所有 `attach-*.mjs` 串起来重建 `coords.tsv`（漏一步就丢列，v1.7.97 那次的 `Hlong` 就是这么丢的）。
 
 ## 三、`attach-*.mjs`：每列一个脚本
@@ -33,6 +36,7 @@
 | `attach-hlong.mjs` | `Hlong/Hplong/Flong/okLong/failsLong`（长程考卷） |
 | ⚑ **`okLong` 的 `-`** | 它来自 `feas.mjs --allLong=1` 的分片表：`0`/`1` = 判过/判不过；**`-` = 介入实验臂**（`t5-*-ringon/ringoff` 那 5 枚），**不是候选包、按设计不跑可行性子集** —— 不是漏测，也不参与任何筛选 |
 | `attach-sc.mjs` | `sc`（当选面打分） |
+| `attach-exam-stamp.mjs` | `examA/examAL/examBs/examBl/examFix/examC` 六列（考卷批次戳；`--check` 只读） |
 | `attach-kin.mjs` | 亲缘/父子边 |
 | `attach-path.mjs` | 谱系路径 |
 | `attach-dup.mjs` | 重复标记 |

@@ -164,3 +164,17 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 1. 默认表是否就定 `coords-gen3-1105.tsv`（旧表只显式）？
 2. `attach-*` 的局部表默认 merge-only、要清空必须 `--allow-partial`，是否认可？
 3. 是否本次就做，还是先把 19 点数据/页面提交后再做？（建议先提交数据批，再做入口重构，避免把数据 diff 和脚本 diff 混在一起。）
+
+## 9. 实施记录（2026-11-11 晚）
+
+- 阶段 1 已落：champion-map/map-table.mjs（resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp）+
+  map-table-selftest.mjs（15/15）；feas.mjs 改走单一入口，缺省 gen3（旧 coords.tsv 显式），每次打印
+  [map-table] rows/cols/sha。
+- 未接 viewer：--fit 仍默认 coords-projcols.tsv —— gen3 缺 xt18/yt18/xt20/yt20（1.8/2.0 预设要读）。
+  阶段 3 要么固定 rebuild-map.mjs（先 attach-projcols 再 viewer），要么把四列并进 gen3；不能只改默认值。
+- 额外（考卷方向）：attach-exam-stamp.mjs 给 coords 追加 examA/examAL/examBs/examBl/examFix/examC 六列 +
+  EXAM-BATCHES.tsv（fixture/champ + run id）；attach-cmean-r.mjs 加夹具守卫。926/926 覆盖，B 夹具唯一 F2，
+  旧 obs5 夹具 0 行。详见 docs/research/FINDING-2026-11-11-exam-old-vs-new.md §3.6。
+- 阶段 2 待做：eps-full.mjs / attach-hp/hlong/hshort 改 resolveTable + merge-only；feas 已做，其余未动。
+- 数据结论：v7 内 A 升、B 降、C=(A+B)/2 抵消；B 下行不是逐行夹具漂移，是固定 F2 夹具的选择偏差。
+
