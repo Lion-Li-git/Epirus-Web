@@ -13,6 +13,7 @@
 | data/readings/h5-frozen.tsv | 旧 H5 参考 | 只读；流水线不写 |
 | data/features.tsv | 一份权重的行为 | rounds/dmg/.../S/Geff |
 | data/projections.tsv | 一份权重的投影 | xt/yt/xt3/yt3/zt3/xt18/...；换尺不动 |
+| data/display.tsv | 新点/覆盖的展示行 | 表头 = coords-projcols 146 列；--bake 时新点必给 |
 
 ## 换尺接口
 
@@ -45,11 +46,18 @@ node champion-map/pipeline/validate.mjs --strict
 node champion-map/pipeline/rulers.mjs --list
 ```
 
-## 新点进图（下一步）
+## 新点进图（已落数据侧）
 
-目标是一条命令走完：
+```bash
+node champion-map/pipeline/add-point.mjs \
+  --pack=docs/artifacts/xxx.js --id=NEW-1 --ver=2.0 \
+  --readings=<ruler_id,cell,horizon,value,n> \
+  --display=<一行 display 表，表头=data/display.tsv> \
+  --batch=<batch_id> [--fixture=...] [--bake]
 ```
-add-point --pack=... --id=... --ver=2.0 --readings=<批表> [--bake]
-  → 登记 registry → 追加 batch/readings → validate → build-view → 页面重烘 → shot 98/0
-```
-当前 **尚未实现 add-point**；先完成数据模型 A 的 backfill/对照/门。
+
+- `--readings` 必给；A/B 当前尺的读数。
+- `--display` 在 `--bake` 时必给（146 列展示行；新点没有模板行会缺 rank/F/x2/Sc/kin 等）。
+- 流程：registry → batch/readings/display（+ features/projections）→ build-view →（--bake）rebuild-map → shot 98/0。
+- **本脚本不跑测量**：读数/display 由 ruler-measure/门禁产出后喂入；自动测量编排是下一步。
+- 写入不是事务式的：构建失败会报错，数据已落；回滚用 batch_id 手工撤。

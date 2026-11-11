@@ -172,9 +172,9 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 - 阶段 1 已落：champion-map/map-table.mjs（resolveTable/readTable/writeTable/assertColumns/assertFullTable/tableStamp）+
   map-table-selftest.mjs（15/15）；feas.mjs 改走单一入口，缺省 gen3（旧 coords.tsv 显式），每次打印
   [map-table] rows/cols/sha。
-- 阶段 3 已落：viewer --fit 默认改 coords-projcols.tsv；新增 rebuild-map.mjs（attach-exam-stamp --check →
-  attach-projcols → viewer → shot 98/0）；viewer 在 --projcols=1 且缺 xt18/yt18/xt20/yt20 时 exit 2，
-  不再静默退回 xt/yt；attach-projcols 改 map-table + 幂等（已有四列原位覆盖）。
+- 阶段 3 已落：viewer --fit 默认改 coords-projcols.tsv；rebuild-map.mjs 已从 attach-projcols 改为
+  build-view(data) → viewer → shot 98/0（页面吃 data/build/coords-view.tsv）；viewer 在 --projcols=1 且缺
+  xt18/yt18/xt20/yt20 时 exit 2，不再静默退回 xt/yt；attach-projcols 改 map-table + 幂等。
 - 额外（考卷方向）：attach-exam-stamp.mjs 给 coords 追加 examA/examAL/examBs/examBl/examFix/examC 六列 +
   EXAM-BATCHES.tsv（fixture/champ + run id）；attach-cmean-r.mjs 加夹具守卫。926/926 覆盖，B 夹具唯一 F2，
   旧 obs5 夹具 0 行。详见 docs/research/FINDING-2026-11-11-exam-old-vs-new.md §3.6。
@@ -190,5 +190,7 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 - A/B 读数在长表；C=(A+B)/2 派生；H5 标 frozen、无写入路径。
 - backfill 对照：exam-view 926×25 与 coords-gen3 逐值 max_abs_diff=0 / mismatch=0；validate --strict 通过。
 - 换尺接口：pipeline/rulers.mjs --set-current=<id>；只改 current 指针 + 追加 readings，projections.tsv 不动；frozen 尺拒绝。
-- 未做：add-point.mjs（登记/追加/校验/编译/重烘一条命令）、完整 coords-view 由 data 编译、viewer 改吃 build、旧脚本退役、阶段 4 目录分层。
+- add-point.mjs 已落：readings/display 喂入 → registry/batch/readings/display（+features/projections）→ build-view →（--bake）rebuild-map → shot；当前不跑测量。
+- 完整 coords-view 146 列已由 data + display 编译；rebuild-map 已改吃 data/build/coords-view，页面 98/0（926 行对照 0 mismatch）。
+- 未做：自动测量编排（ruler-measure/exam-4n/feas 串成 add-point 的上游）、新点 display 行自动生成、旧脚本退役、阶段 4 目录分层。
 

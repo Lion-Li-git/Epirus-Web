@@ -26,6 +26,7 @@ const rd = read('readings/current.tsv');
 const feat = read('features.tsv');
 const proj = read('projections.tsv');
 const h5 = read('readings/h5-frozen.tsv');
+const disp = read('display.tsv');
 if (errs.length) { console.error('⛔ ' + errs.join('\n⛔ ')); process.exit(2); }
 
 const regIds = new Set();
@@ -64,10 +65,10 @@ for (const r of rd.rows) {
     m.n++; cover.set(pid, m);
   }
 }
-for (const p of ['features.tsv', 'projections.tsv', 'readings/h5-frozen.tsv']) {
-  const t = p === 'features.tsv' ? feat : p === 'projections.tsv' ? proj : h5;
+for (const p of ['features.tsv', 'projections.tsv', 'readings/h5-frozen.tsv', 'display.tsv']) {
+  const t = p === 'features.tsv' ? feat : p === 'projections.tsv' ? proj : p === 'display.tsv' ? disp : h5;
   if (!t) continue;
-  const idCol = t.ix.pack_id;
+  const idCol = t.ix.pack_id !== undefined ? t.ix.pack_id : t.ix.id;
   const s = new Set();
   for (const r of t.rows) { const id = r[idCol]; if (!regIds.has(id)) errs.push(p + ' 指向未登记 ' + id); if (s.has(id)) errs.push(p + ' 重复 ' + id); s.add(id); }
 }

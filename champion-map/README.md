@@ -60,7 +60,7 @@
 ```bash
 node champion-map/rebuild-coords.mjs          # 重建 coords.tsv（九步链）
 node champion-map/attach-hlong.mjs --check    # 检查长程列在不在
-node champion-map/rebuild-map.mjs             # 页面唯一入口：戳 → projcols → viewer → shot 98/0
+node champion-map/rebuild-map.mjs             # 页面唯一入口：戳 → build-view(data) → viewer → shot 98/0
 node champion-map/viewer.mjs                  # 仅当 coords-projcols.tsv 已是最新时才直接烘
 node tools/promote-champion.mjs <pack> --dry  # 单枚上槽体检（≈2.5 分钟）
 node tools/probe-pool.mjs --subject=<pack>    # 池尺对打（默认 support=2）

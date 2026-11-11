@@ -11,7 +11,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from '
 import { join, resolve, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { readTable, writeTable } from '../map-table.mjs';
-import { buildView } from './build-view.mjs';
+import { buildView, buildCoordsView } from './build-view.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const FORCE = process.argv.includes('--force');
@@ -104,6 +104,7 @@ wt('features.tsv', feats);
 wt('projections.tsv', projs);
 wt('readings/h5-frozen.tsv', h5);
 wt('readings/current.tsv', rd);
+wt('display.tsv', [pj.header]);  // 只放模板头；新点的 display 行由 add-point 追加
 wt('rulers.tsv', rulers);
 wt('batches.tsv', batches);
 const README = `# data/ · champion-map 数据模型 A（2026-11-11）
@@ -118,6 +119,7 @@ const README = `# data/ · champion-map 数据模型 A（2026-11-11）
 | batches.tsv | 一行 = 一次考试批次 | batch_id/ruler/axis/fixture/champ/run/source/rows |
 | readings/current.tsv | 长表 | pack_id,ruler_id,cell,horizon,value,n,batch_id |
 | readings/h5-frozen.tsv | 宽表 | 旧 H5 参考；frozen，不更新 |
+| display.tsv | 一行 = 新点/覆盖的 display 行 | viewer 还需要的展示列（rank/F/x2/Sc/kin/ok 等）；只放新点，旧点仍用 coords-projcols 模板 |
 | features.tsv | 一行 = 一份权重 | 行为列（rounds/dmg/.../S/Geff） |
 | projections.tsv | 一行 = 一份权重 | xt/yt/xt3/yt3/zt3/xt18/yt18/xt20/yt20；换尺不动 |
 | build/exam-view.tsv | 视图 | 由 readings + rulers 编译；与 coords-gen3 逐值对照 |
@@ -127,5 +129,7 @@ const README = `# data/ · champion-map 数据模型 A（2026-11-11）
 `;
 writeFileSync(join(DATA, 'README.md'), README, 'utf8');
 const r = buildView({ data: DATA, compare: CO });
+const cv = buildCoordsView({ data: DATA });
 console.log('✅ backfill 完成：' + r.viewPath);
+console.log('coords-view：' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);
 console.log('对照 max_abs_diff=' + (r.report.compare ? r.report.compare.max_abs_diff : 'n/a') + ' mismatches=' + (r.report.compare ? r.report.compare.mismatches : 'n/a'));

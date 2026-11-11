@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /* rebuild-map.mjs —— 阶段 3：页面只走这一条入口。
  *   ① attach-exam-stamp --check（数据来源戳）
- *   ② attach-projcols（gen3 → coords-projcols，幂等）
- *   ③ viewer（吃 bake-flags.txt 的 --fit=coords-projcols.tsv）
+ *   ② build-view（data/ → data/build/coords-view，canonical + display）
+ *   ③ viewer（吃 data/build/coords-view.tsv）
  *   ④ shot --hash=mode=tree&check=1（页内自检，0 FAIL 才收工）
  * 为什么不能只把 viewer 的 --fit 默认改 gen3：gen3 没有 xt18/yt18/xt20/yt20，
  *   1.8/2.0 预设会退回 xt/yt 混轴；所以页面入口固定是先派生 projcols 再烘。
@@ -10,11 +10,13 @@
  */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
+const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
+const DATA = resolve(arg('data', 'champion-map/data'));
 const DRY = process.argv.includes('--dry');
 const SKIP_SHOT = process.argv.includes('--skip-shot');
 const run = (args, tag) => {
@@ -31,16 +33,17 @@ console.log('rebuild-map: ' + (DRY ? 'dry' : 'run'));
 /* ① 数据戳：缺 unknown / 旧夹具 / C 不符会 exit 2 */
 run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
 if (DRY) process.exit(0);
-/* ② 派生页面表 */
-run([join(HERE, 'attach-projcols.mjs'),
-  '--in=champion-map/coords-gen3-1105.tsv',
-  '--out=champion-map/coords-projcols.tsv'], '② attach-projcols');
-/* ③ 烘页面：flags 以 bake-flags.txt 为单一来源 */
+/* ② 从 data/ 编译完整页面视图（canonical + display 模板） */
+run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
+  '--compare=champion-map/coords-gen3-1105.tsv'], '② build-view 编译 coords-view');
+const viewPath = join(DATA, 'build/coords-view.tsv');
+if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
+/* ③ 烘页面：flags 以 bake-flags.txt 为单一来源；--fit 固定到 data 编译产物 */
 const flagFile = join(HERE, 'bake-flags.txt');
-const flags = existsSync(flagFile)
+const flags = (existsSync(flagFile)
   ? readFileSync(flagFile, 'utf8').replace(/\r/g, '').trim().split(/\s+/).filter(Boolean)
-  : ['--fit=coords-projcols.tsv', '--preset=all', '--projcols=1', '--verpages=0'];
-run([join(HERE, 'viewer.mjs'), ...flags], '③ viewer 烘 index.html');
+  : ['--preset=all', '--projcols=1', '--verpages=0']).filter((x) => !x.startsWith('--fit='));
+run([join(HERE, 'viewer.mjs'), '--fit=' + viewPath, ...flags], '③ viewer 烘 index.html');
 /* ④ 页内自检 */
 if (!SKIP_SHOT) {
   const out = run([join(HERE, 'shot.mjs'), '--hash=mode=tree&check=1', '--dump'], '④ shot 页内自检');
@@ -48,7 +51,7 @@ if (!SKIP_SHOT) {
     console.error('⛔ 页内自检不是 0 FAIL：' + (out.match(/断言：[^\n]*/) || ['（没找到断言行）'])[0]);
     process.exit(1);
   }
-  console.log('✅ rebuild-map 完成：projcols + index.html + 98/0 自检');
+  console.log('✅ rebuild-map 完成：data coords-view + index.html + 98/0 自检');
 } else {
   console.log('✅ rebuild-map 完成（--skip-shot：未跑页内自检）');
 }

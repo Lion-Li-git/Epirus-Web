@@ -115,11 +115,95 @@ export function buildView(opts) {
   return { report, viewPath, header: HEAD, rows: out };
 }
 
+/* 完整页面视图：以 data/ 为源，模板只提供 viewer 还需的纯展示列（rank/F/x2/Sc/kin/ok 等）。
+ * 新点没有模板行时，行从空开始，只填 canonical 列；缺 display 列由 add-point/门禁负责。 */
+export function buildCoordsView(opts) {
+  opts = opts || {};
+  const data = resolve(opts.data || 'champion-map/data');
+  const templatePath = resolve(opts.template || 'champion-map/coords-projcols.tsv');
+  const tpl = readTable(templatePath);
+  const displayPath = resolve(opts.display || join(data, 'display.tsv'));
+  const disp = existsSync(displayPath) ? readTable(displayPath) : null;
+  if (disp && disp.header.join('\t') !== tpl.header.join('\t')) throw new Error('display.tsv 表头与模板不一致');
+  const reg = readTable(join(data, 'registry.tsv'));
+  const feats = readTable(join(data, 'features.tsv'));
+  const projs = readTable(join(data, 'projections.tsv'));
+  const h5 = readTable(join(data, 'readings/h5-frozen.tsv'));
+  const rd = readTable(join(data, 'readings/current.tsv'));
+  const rulers = loadRulers(join(data, 'rulers.tsv'));
+  const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
+  const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
+  const head = tpl.header.slice();
+  const ix = Object.fromEntries(head.map((h, i) => [h, i]));
+  const by = (t, idCol) => new Map(t.rows.map((r) => [r[t.ix[idCol]], r]));
+  const fm = by(feats, 'pack_id'), pm = by(projs, 'pack_id'), hm = by(h5, 'pack_id');
+  const vals = new Map(), nvals = new Map();
+  for (const r of rd.rows) {
+    const k = r[rd.ix.pack_id] + '|' + r[rd.ix.ruler_id] + '|' + r[rd.ix.cell] + '|' + r[rd.ix.horizon];
+    vals.set(k, r[rd.ix.value]); nvals.set(k, r[rd.ix.n]);
+  }
+  const tplById = new Map(tpl.rows.map((r) => [r[tpl.ix.id], r]));
+  const dispById = new Map((disp ? disp.rows : []).map((r) => [r[disp.ix.id], r]));
+  const rows = [], missingDisplay = [];
+  const get = (pid, rid, c, h) => vals.get(pid + '|' + rid + '|' + c + '|' + h);
+  const getN = (pid, rid, c, h) => nvals.get(pid + '|' + rid + '|' + c + '|' + h);
+  const set = (row, col, v) => { if (v !== undefined && v !== null && ix[col] !== undefined) row[ix[col]] = String(v); };
+  for (const r of reg.rows) {
+    const pid = r[reg.ix.pack_id];
+    const tr = dispById.get(pid) || tplById.get(pid);
+    const row = tr ? tr.slice() : new Array(head.length).fill('');
+    if (!tr) missingDisplay.push(pid);
+    set(row, 'id', pid);
+    set(row, 'path', r[reg.ix.path]);
+    set(row, 'ver', r[reg.ix.ver]);
+    set(row, 'lineage', r[reg.ix.lineage]);
+    const f = fm.get(pid), p = pm.get(pid), h = hm.get(pid);
+    for (const c of ['S', 'Geff', 'rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg']) {
+      if (f) set(row, c, f[feats.ix[c]]);
+    }
+    for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20']) {
+      if (p) set(row, c, p[projs.ix[c]]);
+    }
+    if (h) for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5']) set(row, c, h[h5.ix[c]]);
+    for (const hz of HORIZONS) for (const cell of CELLS) {
+      const suf = hz[1], hor = hz[0];
+      const av = get(pid, A, cell, hor), bv = get(pid, B, cell, hor);
+      if (av !== undefined) { set(row, 'P' + cell + suf, av); set(row, 'n' + cell + suf, getN(pid, A, cell, hor)); }
+      if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, B, cell, hor)); }
+      if (av !== undefined && bv !== undefined) set(row, 'C' + cell + 'R' + suf, (Number(av) + Number(bv)) / 2);
+    }
+    rows.push(row);
+  }
+  let maxD = 0, mism = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (dispById.has(rows[i][0])) continue;
+    const tr = tplById.get(rows[i][0]);
+    if (!tr) continue;
+    for (let c = 0; c < head.length; c++) {
+      const a = rows[i][c], b = tr[c];
+      if (a === b) continue;
+      const na = Number(a), nb = Number(b);
+      if (isFinite(na) && isFinite(nb)) {
+        const d = Math.abs(na - nb); if (d > maxD) maxD = d; if (d > 1e-9) mism++;
+      } else mism++;
+    }
+  }
+  if (mism) throw new Error('coords-view 与模板不一致：mismatch=' + mism + ' max_abs_diff=' + maxD);
+  const outPath = join(data, 'build/coords-view.tsv');
+  if (!opts.noWrite) {
+    mkdirSync(join(data, 'build'), { recursive: true });
+    writeTable(outPath, { header: head, rows }, { backup: false });
+  }
+  return { path: outPath, header: head, rows, missingDisplay };
+}
+
 const IS_MAIN = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_MAIN) {
   try {
     const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/coords-gen3-1105.tsv'), noWrite: process.argv.includes('--no-write') });
+    const cv = buildCoordsView({ data: arg('data', 'champion-map/data'), noWrite: process.argv.includes('--no-write') });
     console.log('exam-view: ' + r.rows.length + ' 行 × ' + r.header.length + ' 列 ⇒ ' + r.viewPath);
+    console.log('coords-view: ' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);
     if (r.report.compare) console.log('对照 ' + r.report.compare.path + '：matched ' + r.report.compare.matched + ' ‖ max_abs_diff ' + r.report.compare.max_abs_diff + ' ‖ mismatch ' + r.report.compare.mismatches);
     console.log('current A/B = ' + r.report.current_rulers.A + ' / ' + r.report.current_rulers.B + ' ‖ projections 未参与换尺');
   } catch (e) {

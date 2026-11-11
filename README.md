@@ -101,7 +101,7 @@ Epirus-Web/
 ├─ champion-map/                 冠军演化图 / 谱系图（现行产物 = 单页 index.html，版本切换在页内换投影）
 │   ├─ index.html                  ★ 产物（自包含、双击即开；由 viewer.mjs 烘，不许手改）
 │   ├─ viewer.mjs                  ★ 烘页面那台：四个视图 + 页内自检
-│   ├─ rebuild-map.mjs              ★ 页面唯一入口：批次戳 → attach-projcols → viewer → shot 98/0
+│   ├─ rebuild-map.mjs              ★ 页面唯一入口：批次戳 → build-view(data) → viewer → shot 98/0
 │   ├─ data/                        ★ 数据模型 A：registry/rulers/batches/readings/features/projections
 │   ├─ pipeline/                    ★ backfill / build-view / validate / rulers（换尺接口）
 │   ├─ map-table.mjs               ★ 输入表单一入口（resolve/read/write/守卫；selftest 15 条）
