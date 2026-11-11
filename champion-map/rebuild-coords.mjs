@@ -119,7 +119,7 @@ const HPMORE = ['e328-epsfull.tsv'];
  *   折行之后一行=一份权重，身份从解析来、对账在同一张表上做，这两步才谈得上"对得上"。
  *   代价（已如实告诉用户并得到点头）：`Sc/Scd/Scs/Sch/kin` 五列从此落在 `aliasN/aliasIds` 之后 ⇒
  *   面板的**列序**与 git 里那一版不同（读者全部按列名 indexOf 取数，语义不变；对照复现的比法因此改成"按列名逐列比"，见本文件收尾那条）。 */
-run('attach-hp.mjs', ['--table=' + HPBASE, '--more=' + HPMORE.join(',')], '② attach-hp 头号尺（来源 ' + HPBASE + ' ‖ 补 ' + HPMORE.join(' ‖ ') + '）');
+run('attach-hp.mjs', ['--table=' + HPBASE, '--target=coords.tsv', '--more=' + HPMORE.join(',')], '② attach-hp 头号尺（来源 ' + HPBASE + ' ‖ 补 ' + HPMORE.join(' ‖ ') + ' ‖ 目标 coords.tsv）');
 /* §E488：这一步原来把 `e370-ruler.tsv` **写死**在 --ruler 里，而不是转发 `--extra=` 的那一串
  *   ⇒ 正是本文件头注自己列的第 ② 条病（"attach-path 的 --ruler 不给全 ⇒ 没覆盖到的枚退回顶层猜路径"）：
  *   本轮加三枚融合粒时，它们的 path 变成"按 <id>.bak 猜"，attach-path 自己的守卫当场拒绝（那是对的）。
@@ -196,7 +196,7 @@ run('attach-kin.mjs', ['--from=' + FROM], '⑨ attach-kin 搬当选键 + 打 kin
  *   而这一步原来写死缺省 ⇒ 手跑 `attach-hlong --table=<新表>` 会被本链的第⑩步用旧缺省**覆盖掉**（修了又没修，最坏那种）。
  *   ⚑ 10-23 实测到这条预言成真：缺省表不含 5 枚 ring 臂 ⇒ 重建把它们打回 `-`（v1.7.130 于 10-21 补平过，今天第二次掉）。
  *   原注释留着：加参数而不是改缺省值这件事，在缺省表**本身完整**时才成立；今天这张不含全部枚 ⇒ 缺省直接关掉。 */
-run('attach-hlong.mjs', ['--table=' + HLONG], '⑩ attach-hlong 长程桌三列 + 全腿长程过线（来源 ' + HLONG + '）');
+run('attach-hlong.mjs', ['--table=' + HLONG, '--target=coords.tsv'], '⑩ attach-hlong 长程桌三列 + 全腿长程过线（来源 ' + HLONG + ' → coords.tsv）');
 
 /* 收尾核验：列名不许重复、每行宽度一致、lineage/kin 两列的类必须还是那几类 */
 const L = rd(CO), h = L[0].split('\t'), rows = L.slice(1).map(l => l.split('\t'));

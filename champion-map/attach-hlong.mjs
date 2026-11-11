@@ -16,13 +16,15 @@
  *   ③ `Flong` 用的 `T` 与页面当前滑轨默认值**必须是同一个**（`viewer.mjs` 的 `T` 默认），否则两根轴不同尺。
  *   ④ 覆盖报数：量到 N ‖ 没量到 M（点名前 8 枚）—— 覆盖率本身就是要给用户看的数。
  *
- * 用法：node champion-map/attach-hlong.mjs **--table=<长程桌源表>** [--check] [--t=0.10]
+ * 用法：node champion-map/attach-hlong.mjs **--table=<长程桌源表>** [--target=coords-gen3-1105.tsv] [--check] [--t=0.10] [--allow-partial]
+ *   11-11 起 --table 仍是源表；目标表走 --target，缺省 gen3；缺源默认保留原值（merge-only）。
  *   ⚠ `--table` 从 v1.8.27 起**必给**（原来那个缺省表不含全部枚，静默吃它就是把缺枚打回 `-`）。
  *   幂等：列已存在则**原地回写**（不重复加列）。
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveTable, readTable, writeTable, tableStamp } from './map-table.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = f => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -32,7 +34,12 @@ const CHECK = process.argv.includes('--check');
  *   而 §E641 那 5 枚 ring 臂的读数在别的表里 ⇒ 链子按缺省跑一遍就把它们**静默写回 `-`**。
  *   这已经发生两次（v1.7.130 于 10-21 补平、10-23 的重建又抹掉），而没有任何门会红。
  *   ⇒ 现在必须显式交表；今天在册的完整表是 `epsfull-long-2026-10-23.tsv`（807 行 = 798 + 5 ring + 4 爆珠臂）。 */
-const TAB = String(arg('table', ''));
+const TAB = String(arg('from', arg('table', '')));
+const TARGET = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv', aliases: ['target'] });
+const ALLOW_PARTIAL = process.argv.includes('--allow-partial');
+let _T;
+try { _T = readTable(TARGET); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+console.log('[map-table] target ' + tableStamp(_T));
 if (!TAB) {
   console.error('⛔ 必须显式给 `--table=<长程桌源表>`（缺省表已按用户 10-23 的裁定关掉）。\n'
     + '   为什么不给缺省：缺省表不含全部枚 ⇒ 不给表就等于把缺枚的读数静默打回 `-`（这病 10-21 修过、10-23 又犯）。\n'
@@ -77,7 +84,7 @@ const OKL = {};
     }
   } }
 
-const CO = rd(arg('table', 'coords.tsv')), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
+const CO = [_T.header].concat(_T.rows), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
 const COLS = ['Hlong5', 'Hplong5', 'Flong5', 'okLong', 'failsLong'];   // 11-07 改名：H 系列 → H5 参照名
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
@@ -87,32 +94,32 @@ if (idx.some(x => x === undefined)) {
   for (let i = 1; i < CO.length; i++) while (CO[i].length < at) CO[i].push('');
   idx = COLS.map((c, k) => at + k);
 }
-let nHit = 0, nOk = 0, miss = [], okMiss = [];
+let nHit = 0, nOk = 0, miss = [], okMiss = [], kept = 0, cleared = 0;
 for (let i = 1; i < CO.length; i++) {
   const r = CO[i], id = r[ch.id]; if (!id) continue;
-  /* 三列考卷/页面/势：没量到就整组写 `-`（**不许当 0**）*/
-  if (HP2[id] === undefined) { for (let k = 0; k < 3; k++) r[idx[k]] = '-'; miss.push(id); }
-  else {
+  /* 三列考卷/页面/势：没量到就保留原值（merge-only）；--allow-partial 才清成 -（**不许当 0**）*/
+  if (HP2[id] === undefined) {
+    if (ALLOW_PARTIAL) { for (let k = 0; k < 3; k++) r[idx[k]] = '-'; cleared++; }
+    else kept++;
+    miss.push(id);
+  } else {
     r[idx[0]] = HL[id].toFixed(2); r[idx[1]] = HP2[id].toFixed(2);
-    /* ⚠ 标度必须跟页面那根 `F = Hp/100 + T·S`（工具栏 F窗口 的提示语就是这个式子）逐字一致。
-     *   第一版写成 `Hp + T·S` ⇒ 两根轴差 100 倍，"ΔF 均值 40"就是这么来的（同一个 bug 的免费探测器：
-     *   差值大得离谱就该先怀疑自己抄错了式子，而不是先解释成"两桌差很多"）。 */
+    /* ⚠ 标度必须跟页面那根 F = Hp/100 + T·S（工具栏 F窗口 的提示语就是这个式子）逐字一致。 */
     r[idx[2]] = (HP2[id] / 100 + T * (+r[ch.S] || 0)).toFixed(4);
     nHit++;
   }
   const o = OKL[id];
-  if (!o || o.ok === null) { r[idx[3]] = '-'; r[idx[4]] = ''; okMiss.push(id); }
-  else { r[idx[3]] = String(o.ok); r[idx[4]] = (o.fails || '').replace(/[\t\n]/g, ' '); nOk++; }
+  if (!o || o.ok === null) {
+    if (ALLOW_PARTIAL) { r[idx[3]] = '-'; r[idx[4]] = ''; }
+    okMiss.push(id);
+  } else { r[idx[3]] = String(o.ok); r[idx[4]] = (o.fails || '').replace(/[\t\n]/g, ' '); nOk++; }
 }
-const out = CO.map(r => r.join('\t')).join('\n') + '\n';
 if (CHECK) {
-  console.log('✔ 只核不写：考卷/页面量到 ' + nHit + ' 枚 ‖ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）‖ 过线(全腿长程) ' + nOk + ' 枚 ‖ 无 ' + okMiss.length + ' 枚');
+  console.log('✔ 只核不写：考卷/页面量到 ' + nHit + ' 枚 ‖ 没量到 ' + miss.length + ' 枚（缺源保留 ' + kept + ' 行）‖ 过线(全腿长程) ' + nOk + ' 枚 ‖ 无 ' + okMiss.length + ' 枚');
   process.exitCode = nHit >= 700 ? 0 : 1;
 } else {
-  writeFileSync(join(HERE, arg('table', 'coords.tsv')), out, 'utf8');
-  console.log('已写 ' + arg('table', 'coords.tsv') + '：五列 ' + COLS.join('/') + '（T=' + T + '）‖ 考卷/页面量到 ' + nHit + ' ‖ 没量到 ' + miss.length +
-    (miss.length ? '（前 8：' + miss.slice(0, 8).join(' ') + '）' : '') +
-    ' ‖ 过线(全腿长程) ' + nOk + ' ‖ 无 ' + okMiss.length);
-  console.log('⚠ 坐标一列未动 —— 点坐标是**行为轴**（探针列），换桌形不改它们；变的只有颜色与一维排序。');
-  console.log('⚠ 绿环（在册 `ok`）也**没动** —— 把环换成"全腿长程"等于换判据的主语，那是另一件要裁的事（日志 #47）。');
+  const w = writeTable(TARGET, { header: CO[0], rows: CO.slice(1) }, { backupTool: 'attach-hlong' });
+  console.log('已写 ' + _T.name + '：五列 ' + COLS.join('/') + '（T=' + T + '）‖ 考卷/页面量到 ' + nHit + ' ‖ 没量到 ' + miss.length + '（保留 ' + kept + '）' +
+    ' ‖ 过线(全腿长程) ' + nOk + ' ‖ 无 ' + okMiss.length + ' ‖ 备份 ' + (w.backup ? '有' : '无'));
+  console.log('⚠ 坐标一列未动；绿环（在册 ok）也没动。');
 }

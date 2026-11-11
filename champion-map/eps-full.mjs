@@ -16,7 +16,7 @@
  * 用法：node champion-map/eps-full.mjs [--seed=77000] [--jobs=4] [--games=120]
  *       [--epsTier=lv:regular]   页面臂的剂量取自 `DIFF_TIERS` 那一档（§E597：不给就还是老写法 ε=0.2 常数 = 今天的**简单档**）
  *       [--pageOnly=1 --examFrom=<同格式表>]   只重测页面臂，考卷列从那张表搬（成立前提见下面 `PAGE_ONLY` 的注释）
- *       [--out=<表>] [--extra=<清单>] [--onlyExtra]
+ *       [--table=coords-gen3-1105.tsv|coords.tsv] [--out=<表>] [--extra=<清单>] [--onlyExtra]
  *   产物：champion-map/epsfull.tsv（增量写，中途可读）= id / exam / page / d / hp_old / ms / examG / pageDose
  */
 import { readFileSync, writeFileSync, existsSync, appendFileSync, copyFileSync } from 'node:fs';
@@ -24,6 +24,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { load as loadSlotId } from './slot-identity.mjs';   /* §E608：副名→主名的唯一翻译处（CO_PATH 按主名登记） */
+import { resolveTable, readTable, tableStamp } from './map-table.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -38,7 +39,11 @@ const GAMES = Number(arg('games', 30));
 if (!isFinite(GAMES) || GAMES <= 0) { console.error('⛔ --games 必须是正数（每组合局数），收到 `' + arg('games', '') + '`'); process.exit(2); }
 const OUT = join(HERE, arg('out', 'epsfull.tsv'));   // §E328：可另指一张表，别把两批混进 epsfull.tsv
 
-const CO = readFileSync(join(HERE, 'coords.tsv'), 'utf8').trim().split('\n').map((l) => l.split('\t'));
+const IN = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv' });
+let _T;
+try { _T = readTable(IN); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+console.log('[map-table] ' + tableStamp(_T));
+const CO = [_T.header].concat(_T.rows);
 const ch = Object.fromEntries(CO[0].map((h, i) => [h, i]));
 const ids = CO.slice(1).map((r) => r[ch.id]).filter(Boolean);
 const HOLD = {}; for (const r of CO.slice(1)) HOLD[r[ch.id]] = +r[ch.H];

@@ -17,18 +17,24 @@
  *   ③ 覆盖报数：量到 N ‖ 没量到 M（点名前 8 枚）+ 过/不过各几枚 —— 覆盖率本身是要给用户看的数。
  *   ④ 幂等：列已存在则原地回写，不重复加列。
  *
- * 用法：node champion-map/attach-hshort.mjs [--check]
+ * 用法：node champion-map/attach-hshort.mjs [--table=coords-gen3-1105.tsv] [--check] [--allow-partial]
+ *   11-11 起目标表缺省 gen3；缺源默认保留原值（merge-only）。
  *   先跑：node champion-map/feas.mjs --allMulti=1 --shard=k/4 --out=feas-short-sK.tsv   （k=1..4）
  */
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveTable, readTable, writeTable, tableStamp } from './map-table.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const rd = f => readFileSync(join(HERE, f), 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
 const CHECK = process.argv.includes('--check');
 /* 目标表（11-05）：以前写死 coords.tsv，而 2.0 那批只在 coords-gen3-1105.tsv / coords-view-20.tsv 里
  *   ⇒ 挂不上。`--table=` 指哪张写哪张，默认 coords.tsv ⇒ 1.8 那批逐字不变。 */
-const TABLE = (() => { const a = process.argv.find(x => x.indexOf('--table=') === 0); return a ? a.slice(8) : 'coords.tsv'; })();
+const TABLE = resolveTable(process.argv, { baseDir: HERE, defaultTable: 'coords-gen3-1105.tsv', aliases: ['table'] });
+const ALLOW_PARTIAL = process.argv.includes('--allow-partial');
+let _T;
+try { _T = readTable(TABLE); } catch (e) { console.error('⛔ ' + e.message); process.exit(2); }
+console.log('[map-table] target ' + tableStamp(_T));
 
 const OKS = {};
 { /* 11-05：输入从"写死 s1..s4"改成收 `feas-short-*.tsv` 全族 ⇒ 2.0 那批的分片（feas-short-g3-*.tsv）能进来。
@@ -48,7 +54,7 @@ const OKS = {};
       OKS[r[fh.id]] = { ok: r[fh.ok] === '1' ? 1 : (r[fh.ok] === '0' ? 0 : null), fails: String(r[fh.fails] || '').slice(0, 120) };
     } } }
 
-const CO = rd(TABLE), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
+const CO = [_T.header].concat(_T.rows), ch = Object.fromEntries(CO[0].map((x, i) => [x, i]));
 const COLS = ['okShort', 'failsShort'];
 let idx = COLS.map(c => ch[c]);
 if (idx.some(x => x === undefined)) {
@@ -58,22 +64,26 @@ if (idx.some(x => x === undefined)) {
   for (let i = 1; i < CO.length; i++) while (CO[i].length < at) CO[i].push('');
   idx = COLS.map((c, k) => at + k);
 }
-let nHit = 0, nOk = 0, miss = [];
+let nHit = 0, nOk = 0, miss = [], kept = 0, cleared = 0;
 for (let i = 1; i < CO.length; i++) {
   const r = CO[i], id = r[ch.id]; if (!id) continue;
   const e = OKS[id];
-  if (!e) { r[idx[0]] = '-'; r[idx[1]] = ''; miss.push(id); continue; }
+  if (!e) {
+    if (ALLOW_PARTIAL) { r[idx[0]] = '-'; r[idx[1]] = ''; cleared++; }
+    else kept++;
+    miss.push(id); continue;
+  }
   r[idx[0]] = e.ok === null ? '-' : String(e.ok);
   r[idx[1]] = e.fails;
   nHit++; if (e.ok === 1) nOk++;
 }
 const srcIds = Object.keys(OKS), orphan = srcIds.filter(k => !CO.slice(1).some(r => r[ch.id] === k));
 if (CHECK) {
-  if (miss.length) { console.error('⛔ --check：有 ' + miss.length + ' 枚coords 行没有全腿短程判定（前 8：' + miss.slice(0, 8).join(' ') + '）'); process.exit(2); }
-  console.log('--check ✅ 全 ' + (CO.length - 1) + ' 行都有 okShort');
+  if (nHit < 700) { console.error('⛔ --check：只量到 ' + nHit + ' 枚（< 700）⇒ 覆盖率不足，不敢当在册读数'); process.exit(2); }
+  console.log('--check ✅ 挂上 ' + nHit + '/' + (CO.length - 1) + ' 枚；缺源 ' + miss.length + ' 枚（保留 ' + kept + ' 行）');
   process.exit(0);
 }
-writeFileSync(join(HERE, TABLE), CO.map(r => r.join('\t')).join('\n') + '\n');
-console.log(TABLE + ' 列数 ' + CO[0].length + ' ‖ 挂上 ' + nHit + '/' + (CO.length - 1) + ' 枚 ⇒ 全腿短程过 ' + nOk + ' ‖ 不过 ' + (nHit - nOk));
-if (miss.length) console.log('⚠ 没量到 ' + miss.length + ' 枚（写 `-`，不是 0）：' + miss.slice(0, 8).join(' ') + (miss.length > 8 ? ' …' : ''));
+const w = writeTable(TABLE, { header: CO[0], rows: CO.slice(1) }, { backupTool: 'attach-hshort' });
+console.log(_T.name + ' 列数 ' + CO[0].length + ' ‖ 挂上 ' + nHit + '/' + (CO.length - 1) + ' 枚 ⇒ 全腿短程过 ' + nOk + ' ‖ 不过 ' + (nHit - nOk) + ' ‖ 备份 ' + (w.backup ? '有' : '无'));
+if (miss.length) console.log('⚠ 没量到 ' + miss.length + ' 枚（缺源保留 ' + kept + ' 行；--allow-partial 才清成 -）：' + miss.slice(0, 8).join(' ') + (miss.length > 8 ? ' …' : ''));
 if (orphan.length) console.log('⚠ 分片表里有 ' + orphan.length + ' 枚不在 coords 名单上（前 8：' + orphan.slice(0, 8).join(' ') + '）⇒ 图上看不见它们');
