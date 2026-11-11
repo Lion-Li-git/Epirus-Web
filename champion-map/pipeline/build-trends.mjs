@@ -49,14 +49,17 @@ function chart(title, keys, colors) {
          '<text x="' + (Lp - 8) + '" y="' + (y + 4).toFixed(1) + '" fill="#9fb0cc" font-size="11" text-anchor="end">' + v.toFixed(3) + '</text>';
   }
   let s = '<svg viewBox="0 0 ' + W + ' ' + Hh + '" width="100%" role="img"><rect width="' + W + '" height="' + Hh + '" fill="#111827"/>' + g +
-    '<text x="' + Lp + '" y="13" fill="#dce6f5" font-size="13">' + title + '</text>';
+    '<text x="' + Lp + '" y="16" fill="#dce6f5" font-size="14" font-weight="600">' + title + '</text>';
+  if (lo < 0 && hi > 0) { const zy = yOf(0); s += '<line x1="' + Lp + '" x2="' + (W - Rp) + '" y1="' + zy.toFixed(1) + '" y2="' + zy.toFixed(1) + '" stroke="#64748b" stroke-dasharray="2 4"/>'; }
   keys.forEach((key, ki) => {
     const pts = roll(key, 30);
-    s += '<polyline fill="none" stroke="' + colors[ki] + '" stroke-width="2" points="' + pts.map(p => p.x.toFixed(1) + ',' + yOf(p.y).toFixed(1)).join(' ') + '"/>';
-    for (const p of pts) s += '<circle cx="' + p.x.toFixed(1) + '" cy="' + yOf(p.y).toFixed(1) + '" r="1.8" fill="' + famColor(p.r.fam) + '" opacity=".72"><title>' + esc(p.r.id) + ' ‖ ' + key + '=' + p.y.toFixed(4) + ' ‖ fam=' + esc(p.r.fam) + ' ‖ ' + (p.r.ts || '') + '</title></circle>';
+    const dash = ki === 1 ? ' stroke-dasharray="9 6"' : '';
+    s += '<polyline fill="none" stroke="' + colors[ki] + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + dash + ' points="' + pts.map(p => p.x.toFixed(1) + ',' + yOf(p.y).toFixed(1)).join(' ') + '"/>';
   });
   keys.forEach((key, ki) => {
-    s += '<rect x="' + (W - 250 + ki * 120) + '" y="8" width="10" height="10" fill="' + colors[ki] + '"/><text x="' + (W - 236 + ki * 120) + '" y="17" fill="#dce6f5" font-size="11">' + key + '</text>';
+    const x = W - 330 + ki * 150, y = 22;
+    s += '<line x1="' + x + '" x2="' + (x + 28) + '" y1="' + y + '" y2="' + y + '" stroke="' + colors[ki] + '" stroke-width="3"' + (ki === 1 ? ' stroke-dasharray="9 6"' : '') + '/>';
+    s += '<text x="' + (x + 36) + '" y="' + (y + 4) + '" fill="#dce6f5" font-size="12">' + key + (ki === 0 ? '（短·实线）' : '（长·虚线）') + '</text>';
   });
   return s + '</svg>';
 }
@@ -81,11 +84,11 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<style>body{margin:0;background:#0f1522;color:#dce6f5;font:13px system-ui,"Microsoft YaHei",sans-serif}main{max-width:1280px;margin:0 auto;padding:18px 20px 40px}h1{font-size:20px;margin:0 0 6px}a{color:#9fc3ff;text-decoration:none}.sub{color:#9fb0cc;line-height:1.7;margin-bottom:14px}.card{background:#131a29;border:1px solid #33415c;border-radius:8px;padding:10px 12px;margin:12px 0}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #2a3446;padding:5px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#9fb0cc;font-weight:500}.note{color:#9fb0cc;font-size:12px;line-height:1.6}</style></head><body><main>' +
 '<h1>Epirus 考卷 A/B/C 趋势</h1><div class="sub">30 枚滑动平均 · 按 ts 排序 · 数据 data/display.tsv（926 枚）· <a href="index.html">← 返回冠军查看器</a></div>' +
 '<div class="note">A = v2 脚本桌 page dose（P5/P5L）‖ B = F2 固定夹具（P5R/P5RL）‖ C = (A+B)/2。H5 是冻结旧参考，不在此图。家族/时代几乎共线，趋势不要当同谱系学习曲线。</div>' +
-'<div class="card"><h2>A 轴 · 脚本桌</h2>' + chart('A：P5（短）/ P5L（长）', ['P5','P5L'], ['#4dabf7','#74c0fc']) + '</div>' +
-'<div class="card"><h2>B 轴 · F2 固定夹具</h2>' + chart('B：P5R（短）/ P5RL（长）', ['P5R','P5RL'], ['#ffa94d','#ffd43b']) + '</div>' +
-'<div class="card"><h2>C 轴 · 综合</h2>' + chart('C：C5R（短）/ C5RL（长）', ['C5R','C5RL'], ['#9775fa','#b197fc']) + '</div>' +
+'<div class="card"><h2>A 轴 · 脚本桌</h2>' + chart('A：P5（短） / P5L（长）', ['P5','P5L'], ['#38bdf8','#fb7185']) + '</div>' +
+'<div class="card"><h2>B 轴 · F2 固定夹具</h2>' + chart('B：P5R（短） / P5RL（长）', ['P5R','P5RL'], ['#fb923c','#22d3ee']) + '</div>' +
+'<div class="card"><h2>C 轴 · 综合</h2>' + chart('C：C5R（短） / C5RL（长）', ['C5R','C5RL'], ['#a78bfa','#4ade80']) + '</div>' +
 '<div class="card"><h2>首尾 25% 与斜率（每 100 枚）</h2><table><thead><tr><th>列</th><th>early</th><th>late</th><th>Δ</th><th>slope/100</th></tr></thead><tbody>' + summary(['P5','P5L','P5R','P5RL','C5R','C5RL']) + '</tbody></table></div>' +
-'<div class="note">家族色点：每个滑动点的 <title> 里带 id/ts；族色只作参考，不做拟合。V111 应仍在 B 轴底部。</div>' +
+'<div class="note">实线 = 短程，虚线 = 长程；已去掉家族色点，避免颜色噪声。V111 应仍在 B 轴底部。</div>' +
 '</main></body></html>';
 writeFileSync(join(ROOT, 'champion-map', 'trends.html'), html, 'utf8');
 console.log('已写 champion-map/trends.html：' + (html.length / 1024).toFixed(1) + ' KB');
