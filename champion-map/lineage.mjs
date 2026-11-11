@@ -796,7 +796,9 @@ mergeDefs('r61fix-31', ['v7aim1-31', 'v7aim2-31'], '对手池/珠价步进 C3（
  *   ⚠ 名单里**不含**「臂线·零散」那 9 枚 —— 它们已经由上面那段按年代搬进来了（10-21 那版靠号点，
  *   把 27/28 当成两个原始组；今天按锚枚点，这条被上面那道"两个锚已是同一个家族"的检查挡下来，
  *   所以我按它的提示把名单改短，而不是拿 `⚠ 跳过` 糊过去）。 */
-mergeDefs('R-s107', ['P-s22'], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
+/* 11-12 夜：本行按其自带判据已过期（聚类在这台机的现行行集上已把两族自然并拢，d===kd ⇒ exit 2）——
+ *   注释原文：「本机（数据全）撞这条 = 合并表过期 ⇒ 名单要更新」。删行 = 更新；历史账见 git。 */
+// mergeDefs('R-s107', ['P-s22'], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
 function relabel(anchor, label) { const d = defOf(anchor, '改名'); const rs = d.g.rs;
   touch(d);
   d.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10); }

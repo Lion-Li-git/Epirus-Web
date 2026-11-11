@@ -41,6 +41,15 @@ fd0f04703545ca55	canonical	docs/artifacts/ADAPT-C4-s13-band5.bak	docs/artifacts/
 fd0f04703545ca55	move	docs/artifacts/night-adapt/ADAPT-C4-s13.js	docs/artifacts/ADAPT-C4-s13-band5.bak	2026-11-07T15:46:34.486Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/ADAPT-C4-s13.js
 0a62349c62a40da4	canonical	docs/artifacts/ADAPT-D4-s13-band4.bak	docs/artifacts/ADAPT-D4-s13-band4.bak	2026-11-07T16:02:29.713Z	0	disk	
 0a62349c62a40da4	move	docs/artifacts/night-adapt/ADAPT-D4-s13.js	docs/artifacts/ADAPT-D4-s13-band4.bak	2026-11-07T16:02:29.731Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/ADAPT-D4-s13.js
+a4b86904af55ce55	canonical	docs/artifacts/ADAPT-DEF-O5-s915-band3.bak	docs/artifacts/ADAPT-DEF-O5-s915-band3.bak	2026-11-10T12:39:47.076Z	0	disk	
+a4b86904af55ce55	move	docs/artifacts/ADAPT-DEF-O5-s915-band5.bak	docs/artifacts/ADAPT-DEF-O5-s915-band3.bak	2026-11-10T12:39:47.087Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/ADAPT-DEF-O5-s915-band5.bak
+d3444092a9ac703f	canonical	docs/artifacts/ADAPT-DEF-O5-s915-band4.bak	docs/artifacts/ADAPT-DEF-O5-s915-band4.bak	2026-11-10T12:39:47.081Z	0	disk	
+d3444092a9ac703f	move	docs/artifacts/night-adapt/ADAPT-DEF-O5-s915.js	docs/artifacts/ADAPT-DEF-O5-s915-band4.bak	2026-11-10T12:39:47.101Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/ADAPT-DEF-O5-s915.js
+90caef56fc1ea7dd	canonical	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	2026-11-10T12:50:54.227Z	0	disk	
+90caef56fc1ea7dd	move	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	2026-11-10T12:50:54.250Z	27	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js
+90caef56fc1ea7dd	move	docs/artifacts/ADAPT-DEF2-O5-s917-band6.bak	docs/artifacts/ADAPT-DEF-O5-s916-band4.bak	2026-11-10T12:59:32.776Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/ADAPT-DEF2-O5-s917-band6.bak
+297b116efe29890a	canonical	docs/artifacts/ADAPT-DEF2-O5-s917-band2.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band2.bak	2026-11-10T12:59:32.755Z	0	disk	
+297b116efe29890a	move	docs/artifacts/ADAPT-DEF2-O5-s917-band3.bak	docs/artifacts/ADAPT-DEF2-O5-s917-band2.bak	2026-11-10T12:59:32.761Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/ADAPT-DEF2-O5-s917-band3.bak
 fa28800eae6a3d7c	canonical	docs/artifacts/night-adapt/KD-Qg.bak	docs/artifacts/night-adapt/KD-Qg.bak	2026-11-07T17:12:27.551Z	0	disk	
 fa28800eae6a3d7c	move	docs/artifacts/ADAPT2-Q-s13-band1.bak	docs/artifacts/night-adapt/KD-Qg.bak	2026-11-07T17:21:49.542Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/ADAPT2-Q-s13-band1.bak
 fa28800eae6a3d7c	move	docs/artifacts/ADAPT2-Q-s13-band2.bak	docs/artifacts/night-adapt/KD-Qg.bak	2026-11-07T17:21:52.209Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/ADAPT2-Q-s13-band2.bak
@@ -160,7 +169,7 @@ cb8df9309acbbb0e	canonical	docs/artifacts/DEFW-A4-s13-band6.bak	docs/artifacts/D
 cb8df9309acbbb0e	move	docs/artifacts/night-adapt/DEFW-A4-s13.js	docs/artifacts/DEFW-A4-s13-band6.bak	2026-11-07T15:57:54.120Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/DEFW-A4-s13.js
 2fc47cf81d978187	canonical	docs/artifacts/DEFW-B4-s13-band6.bak	docs/artifacts/DEFW-B4-s13-band6.bak	2026-11-07T16:07:07.020Z	0	disk	
 2fc47cf81d978187	move	docs/artifacts/night-adapt/DEFW-B4-s13.js	docs/artifacts/DEFW-B4-s13-band6.bak	2026-11-07T16:07:07.023Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/DEFW-B4-s13.js
-d490dc136293cfc4	canonical	docs/artifacts/eval-out/win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	73	git	
+d490dc136293cfc4	canonical	docs/artifacts/eval-out/win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	70	git	
 d490dc136293cfc4	move	docs/artifacts/kept/eval-out__win-Ldemo.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/eval-out__win-Ldemo.bak
 d490dc136293cfc4	move	docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak	docs/artifacts/eval-out/win-Ldemo.bak	2026-09-27T08:55:34.724Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SHIPPED-Ldemo-2026-10-11-pre-T8s114.bak
 46ca109c8ed7e41e	canonical	docs/artifacts/night-adapt/FOCUS-Q-s13.js	docs/artifacts/night-adapt/FOCUS-Q-s13.js	2026-11-08T12:41:04.185Z	0	git	
@@ -192,17 +201,17 @@ d82c2b8d938c13c1	canonical	docs/artifacts/KDG-C-Q-s41-band1.bak	docs/artifacts/K
 d82c2b8d938c13c1	move	docs/artifacts/night-adapt/KDG-C-Q-s41.js	docs/artifacts/KDG-C-Q-s41-band1.bak	2026-11-08T09:33:41.271Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/KDG-C-Q-s41.js
 23644e20a2e37ff3	canonical	docs/artifacts/KDG-C-Q-s7-band1.bak	docs/artifacts/KDG-C-Q-s7-band1.bak	2026-11-08T09:31:18.253Z	0	disk	
 23644e20a2e37ff3	move	docs/artifacts/night-adapt/KDG-C-Q-s7.js	docs/artifacts/KDG-C-Q-s7-band1.bak	2026-11-08T09:31:21.254Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/KDG-C-Q-s7.js
-3d7fca4e50920e03	canonical	docs/artifacts/kept/artifacts__E51-t8-713.bak	docs/artifacts/kept/artifacts__E51-t8-713.bak	2026-09-26T17:10:37.082Z	3	git	
+3d7fca4e50920e03	canonical	docs/artifacts/kept/artifacts__E51-t8-713.bak	docs/artifacts/kept/artifacts__E51-t8-713.bak	2026-09-26T17:10:37.082Z	2	git	
 3d7fca4e50920e03	move	docs/artifacts/kept/e50-out__E51-t8-713.bak	docs/artifacts/kept/artifacts__E51-t8-713.bak	2026-09-26T17:10:37.082Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e50-out__E51-t8-713.bak
-ee82e7694b6eb4be	canonical	docs/artifacts/kept/e120-out__N5L-05.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-27T22:37:05.923Z	5	git	
+ee82e7694b6eb4be	canonical	docs/artifacts/kept/e120-out__N5L-05.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-27T22:37:05.923Z	3	git	
 ee82e7694b6eb4be	move	docs/artifacts/kept/e120-out__SQ2-15-31.bak	docs/artifacts/kept/e120-out__N5L-05.bak	2026-09-28T03:04:58.884Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e120-out__SQ2-15-31.bak
-f19bb211a8cb32cb	canonical	docs/artifacts/kept/e78-out__G08-31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-27T20:13:46.206Z	17	git	
+f19bb211a8cb32cb	canonical	docs/artifacts/kept/e78-out__G08-31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-27T20:13:46.206Z	9	git	
 f19bb211a8cb32cb	move	docs/artifacts/kept/e124-out__blk0t00-s31.bak	docs/artifacts/kept/e78-out__G08-31.bak	2026-09-28T08:13:21.636Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__blk0t00-s31.bak
-fbc3926b144ee593	canonical	docs/artifacts/kept/e78-out__G08-71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-27T20:14:09.156Z	14	git	
+fbc3926b144ee593	canonical	docs/artifacts/kept/e78-out__G08-71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-27T20:14:09.156Z	9	git	
 fbc3926b144ee593	move	docs/artifacts/kept/e124-out__blk0t00-s71.bak	docs/artifacts/kept/e78-out__G08-71.bak	2026-09-28T08:13:47.602Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__blk0t00-s71.bak
 67c0d06448e37b81	canonical	docs/artifacts/kept/e124-out__pre_edit.js	docs/artifacts/kept/e124-out__pre_edit.js	2026-09-28T08:01:44.006Z	0	git	
 67c0d06448e37b81	move	docs/artifacts/kept/e124-out__post_off.js	docs/artifacts/kept/e124-out__pre_edit.js	2026-09-28T08:07:59.222Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e124-out__post_off.js
-5727b5d25afffe2a	canonical	docs/artifacts/kept/e68-out__V2-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T17:29:38.947Z	11	git	
+5727b5d25afffe2a	canonical	docs/artifacts/kept/e68-out__V2-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T17:29:38.947Z	6	git	
 5727b5d25afffe2a	move	docs/artifacts/kept/e78-out__NOL24-71.bak	docs/artifacts/kept/e68-out__V2-71.bak	2026-09-27T20:19:04.373Z	0	git	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/kept/e78-out__NOL24-71.bak
 79d790d16d05bd84	canonical	docs/artifacts/mini-obs4-band1.bak	docs/artifacts/mini-obs4-band1.bak	2026-11-09T17:06:25.812Z	0	disk	
 79d790d16d05bd84	move	docs/artifacts/mini-obs4-band4.bak	docs/artifacts/mini-obs4-band1.bak	2026-11-09T17:06:30.614Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/mini-obs4-band4.bak
@@ -212,10 +221,218 @@ fbc3926b144ee593	move	docs/artifacts/kept/e124-out__blk0t00-s71.bak	docs/artifac
 4279cd176fc9b024	move	docs/artifacts/MIX8-s17-band4.bak	docs/artifacts/MIX8-s17-band2.bak	2026-11-05T23:32:16.597Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MIX8-s17-band4.bak
 034d776757f1c2cd	canonical	docs/artifacts/MIXHP-s13-band1.bak	docs/artifacts/MIXHP-s13-band1.bak	2026-11-06T16:21:39.287Z	0	disk	
 034d776757f1c2cd	move	docs/artifacts/MIXHP-L120-s13-band5.bak	docs/artifacts/MIXHP-s13-band1.bak	2026-11-06T18:50:24.349Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MIXHP-L120-s13-band5.bak
+a1517ef65124d9b7	canonical	docs/artifacts/MSB10-R1S1085426378-band1.bak	docs/artifacts/MSB10-R1S1085426378-band1.bak	2026-11-10T20:07:29.059Z	0	disk	
+a1517ef65124d9b7	move	docs/artifacts/night-adapt/MSB10-R1S1085426378.js	docs/artifacts/MSB10-R1S1085426378-band1.bak	2026-11-10T20:07:36.176Z	13	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R1S1085426378.js
+f683e8d0c6537211	canonical	docs/artifacts/night-adapt/MSB10-R1S1149480262.js	docs/artifacts/night-adapt/MSB10-R1S1149480262.js	2026-11-10T20:04:56.813Z	104	disk	
+f683e8d0c6537211	move	docs/artifacts/MSB10-R1S1149480262-band1.bak	docs/artifacts/night-adapt/MSB10-R1S1149480262.js	2026-11-10T20:04:56.813Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R1S1149480262-band1.bak
+400f65882b80fe23	canonical	docs/artifacts/MSB10-R1S1149480262-seg2.bak	docs/artifacts/MSB10-R1S1149480262-seg2.bak	2026-11-10T19:25:41.950Z	0	disk	
+400f65882b80fe23	move	docs/artifacts/MSB10-R1S1149480262-band3.bak	docs/artifacts/MSB10-R1S1149480262-seg2.bak	2026-11-10T20:05:04.510Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R1S1149480262-band3.bak
+04e77c0530525dd1	canonical	docs/artifacts/MSB10-R1S543421817-band1.bak	docs/artifacts/MSB10-R1S543421817-band1.bak	2026-11-10T20:00:54.096Z	0	disk	
+04e77c0530525dd1	move	docs/artifacts/MSB10-R1S543421817-band5.bak	docs/artifacts/MSB10-R1S543421817-band1.bak	2026-11-10T20:01:02.083Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R1S543421817-band5.bak
+f539fcfea4cd3e9c	canonical	docs/artifacts/MSB10-R1S543421817-band3.bak	docs/artifacts/MSB10-R1S543421817-band3.bak	2026-11-10T20:01:02.070Z	0	disk	
+f539fcfea4cd3e9c	move	docs/artifacts/MSB10-R1S543421817-band4.bak	docs/artifacts/MSB10-R1S543421817-band3.bak	2026-11-10T20:01:02.078Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R1S543421817-band4.bak
+f539fcfea4cd3e9c	move	docs/artifacts/night-adapt/MSB10-R1S543421817.js	docs/artifacts/MSB10-R1S543421817-band3.bak	2026-11-10T20:01:02.095Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R1S543421817.js
+ff65e095d28d1501	canonical	docs/artifacts/MSB10-R1S939077071-band1.bak	docs/artifacts/MSB10-R1S939077071-band1.bak	2026-11-10T20:08:44.987Z	0	disk	
+ff65e095d28d1501	move	docs/artifacts/night-adapt/MSB10-R1S939077071.js	docs/artifacts/MSB10-R1S939077071-band1.bak	2026-11-10T20:08:52.452Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R1S939077071.js
+608c15fb9fb31595	canonical	docs/artifacts/MSB10-R1S939077071-seg4.bak	docs/artifacts/MSB10-R1S939077071-seg4.bak	2026-11-10T19:36:48.917Z	0	disk	
+608c15fb9fb31595	move	docs/artifacts/MSB10-R1S939077071-band6.bak	docs/artifacts/MSB10-R1S939077071-seg4.bak	2026-11-10T20:08:52.443Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R1S939077071-band6.bak
+310cf572fd45e518	canonical	docs/artifacts/MSB10-R2S1006060409-band5.bak	docs/artifacts/MSB10-R2S1006060409-band5.bak	2026-11-10T20:39:35.707Z	0	disk	
+310cf572fd45e518	move	docs/artifacts/night-adapt/MSB10-R2S1006060409.js	docs/artifacts/MSB10-R2S1006060409-band5.bak	2026-11-10T20:39:35.722Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R2S1006060409.js
+00c1fbe62465da9f	canonical	docs/artifacts/MSB10-R2S1668802756-seg4.bak	docs/artifacts/MSB10-R2S1668802756-seg4.bak	2026-11-10T20:23:20.492Z	0	disk	
+00c1fbe62465da9f	move	docs/artifacts/MSB10-R2S1668802756-band2.bak	docs/artifacts/MSB10-R2S1668802756-seg4.bak	2026-11-10T20:41:29.283Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R2S1668802756-band2.bak
+050014dafb3eea22	canonical	docs/artifacts/MSB10-R2S1668802756-band3.bak	docs/artifacts/MSB10-R2S1668802756-band3.bak	2026-11-10T20:41:29.290Z	0	disk	
+050014dafb3eea22	move	docs/artifacts/night-adapt/MSB10-R2S1668802756.js	docs/artifacts/MSB10-R2S1668802756-band3.bak	2026-11-10T20:41:29.309Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R2S1668802756.js
+5b3cfff377840b12	canonical	docs/artifacts/MSB10-R2S1698738428-seg1.bak	docs/artifacts/MSB10-R2S1698738428-seg1.bak	2026-11-10T20:17:43.272Z	0	disk	
+5b3cfff377840b12	move	docs/artifacts/MSB10-R2S1698738428-band1.bak	docs/artifacts/MSB10-R2S1698738428-seg1.bak	2026-11-10T20:43:40.712Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB10-R2S1698738428-band1.bak
+62803e677d517b62	canonical	docs/artifacts/MSB10-R2S932152902-band2.bak	docs/artifacts/MSB10-R2S932152902-band2.bak	2026-11-10T20:47:57.914Z	0	disk	
+62803e677d517b62	move	docs/artifacts/night-adapt/MSB10-R2S932152902.js	docs/artifacts/MSB10-R2S932152902-band2.bak	2026-11-10T20:47:57.945Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB10-R2S932152902.js
+970c77da80818f40	canonical	docs/artifacts/night-adapt/MSB11-R1S130778313.js	docs/artifacts/night-adapt/MSB11-R1S130778313.js	2026-11-10T21:16:14.730Z	16	git	
+970c77da80818f40	move	docs/artifacts/MSB11-R1S130778313-band2.bak	docs/artifacts/night-adapt/MSB11-R1S130778313.js	2026-11-10T21:16:14.705Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R1S130778313-band2.bak
+970c77da80818f40	move	docs/artifacts/MSB11-R2S1663363345-band1.bak	docs/artifacts/night-adapt/MSB11-R1S130778313.js	2026-11-10T21:41:48.078Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R2S1663363345-band1.bak
+d945e1011cb10c9f	canonical	docs/artifacts/MSB11-R1S130780637-band4.bak	docs/artifacts/MSB11-R1S130780637-band4.bak	2026-11-10T21:16:11.247Z	0	disk	
+d945e1011cb10c9f	move	docs/artifacts/night-adapt/MSB11-R1S130780637.js	docs/artifacts/MSB11-R1S130780637-band4.bak	2026-11-10T21:16:11.261Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB11-R1S130780637.js
+c0cf6652d1e138d4	canonical	docs/artifacts/MSB11-R1S2127472120-seg4.bak	docs/artifacts/MSB11-R1S2127472120-seg4.bak	2026-11-10T20:53:28.864Z	0	disk	
+c0cf6652d1e138d4	move	docs/artifacts/MSB11-R1S2127472120-band1.bak	docs/artifacts/MSB11-R1S2127472120-seg4.bak	2026-11-10T21:07:43.349Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R1S2127472120-band1.bak
+d0099a5045f24240	canonical	docs/artifacts/MSB11-R1S2127472120-seg1.bak	docs/artifacts/MSB11-R1S2127472120-seg1.bak	2026-11-10T20:48:22.272Z	0	disk	
+d0099a5045f24240	move	docs/artifacts/MSB11-R1S2127472120-band3.bak	docs/artifacts/MSB11-R1S2127472120-seg1.bak	2026-11-10T21:07:48.969Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R1S2127472120-band3.bak
+531246a13e715133	canonical	docs/artifacts/MSB11-R1S2127472120-band6.bak	docs/artifacts/MSB11-R1S2127472120-band6.bak	2026-11-10T21:07:48.983Z	0	disk	
+531246a13e715133	move	docs/artifacts/night-adapt/MSB11-R1S2127472120.js	docs/artifacts/MSB11-R1S2127472120-band6.bak	2026-11-10T21:07:48.988Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB11-R1S2127472120.js
+7b2459e041616fca	canonical	docs/artifacts/MSB11-R1S970490141-band2.bak	docs/artifacts/MSB11-R1S970490141-band2.bak	2026-11-10T21:14:39.586Z	0	disk	
+7b2459e041616fca	move	docs/artifacts/night-adapt/MSB11-R1S970490141.js	docs/artifacts/MSB11-R1S970490141-band2.bak	2026-11-10T21:14:39.622Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB11-R1S970490141.js
+a4c86f669db34856	canonical	docs/artifacts/MSB11-R2S1212711901-band1.bak	docs/artifacts/MSB11-R2S1212711901-band1.bak	2026-11-10T21:45:46.420Z	0	disk	
+a4c86f669db34856	move	docs/artifacts/night-adapt/MSB11-R2S1212711901.js	docs/artifacts/MSB11-R2S1212711901-band1.bak	2026-11-10T21:45:53.149Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB11-R2S1212711901.js
+0dded7c49438c9bf	canonical	docs/artifacts/MSB11-R2S1212711901-band5.bak	docs/artifacts/MSB11-R2S1212711901-band5.bak	2026-11-10T21:45:53.140Z	0	disk	
+0dded7c49438c9bf	move	docs/artifacts/MSB11-R2S1212711901-band6.bak	docs/artifacts/MSB11-R2S1212711901-band5.bak	2026-11-10T21:45:53.144Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R2S1212711901-band6.bak
+f5a78bba8e117d50	canonical	docs/artifacts/MSB11-R2S1430566437-band1.bak	docs/artifacts/MSB11-R2S1430566437-band1.bak	2026-11-10T21:40:50.620Z	0	disk	
+f5a78bba8e117d50	move	docs/artifacts/night-adapt/MSB11-R2S1430566437.js	docs/artifacts/MSB11-R2S1430566437-band1.bak	2026-11-10T21:40:56.527Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB11-R2S1430566437.js
+ecd209ccd4a5c394	canonical	docs/artifacts/MSB11-R2S1663363345-seg3.bak	docs/artifacts/MSB11-R2S1663363345-seg3.bak	2026-11-10T21:25:20.541Z	0	disk	
+ecd209ccd4a5c394	move	docs/artifacts/MSB11-R2S1663363345-band3.bak	docs/artifacts/MSB11-R2S1663363345-seg3.bak	2026-11-10T21:41:54.014Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R2S1663363345-band3.bak
+656c3761cfd3df6c	canonical	docs/artifacts/night-adapt/MSB11-R2S306293884.js	docs/artifacts/night-adapt/MSB11-R2S306293884.js	2026-11-10T21:35:07.593Z	43	git	
+656c3761cfd3df6c	move	docs/artifacts/MSB11-R2S306293884-band4.bak	docs/artifacts/night-adapt/MSB11-R2S306293884.js	2026-11-10T21:35:07.575Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R2S306293884-band4.bak
+5738a2f38647e938	canonical	docs/artifacts/MSB11-R2S306293884-seg3.bak	docs/artifacts/MSB11-R2S306293884-seg3.bak	2026-11-10T21:25:22.608Z	0	disk	
+5738a2f38647e938	move	docs/artifacts/MSB11-R2S306293884-band5.bak	docs/artifacts/MSB11-R2S306293884-seg3.bak	2026-11-10T21:35:07.580Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB11-R2S306293884-band5.bak
+a5f0e58c03edef98	canonical	docs/artifacts/MSB12-beadplan-R1S666728707-band3.bak	docs/artifacts/MSB12-beadplan-R1S666728707-band3.bak	2026-11-10T22:12:56.605Z	0	disk	
+a5f0e58c03edef98	move	docs/artifacts/night-adapt/MSB12-beadplan-R1S666728707.js	docs/artifacts/MSB12-beadplan-R1S666728707-band3.bak	2026-11-10T22:12:56.635Z	3	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-beadplan-R1S666728707.js
+18713c195ceb7fb9	canonical	docs/artifacts/MSB12-combo-R1S818672831-band6.bak	docs/artifacts/MSB12-combo-R1S818672831-band6.bak	2026-11-10T22:37:44.582Z	0	disk	
+18713c195ceb7fb9	move	docs/artifacts/night-adapt/MSB12-combo-R1S818672831.js	docs/artifacts/MSB12-combo-R1S818672831-band6.bak	2026-11-10T22:37:44.588Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-combo-R1S818672831.js
+d257b1e312133790	canonical	docs/artifacts/MSB12-minechain-R1S1198126643-band3.bak	docs/artifacts/MSB12-minechain-R1S1198126643-band3.bak	2026-11-10T22:25:25.070Z	0	disk	
+d257b1e312133790	move	docs/artifacts/night-adapt/MSB12-minechain-R1S1198126643.js	docs/artifacts/MSB12-minechain-R1S1198126643-band3.bak	2026-11-10T22:25:25.089Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-minechain-R1S1198126643.js
+62b24c56ef155886	canonical	docs/artifacts/MSB12-ring-R1S1107461849-band1.bak	docs/artifacts/MSB12-ring-R1S1107461849-band1.bak	2026-11-10T22:29:20.799Z	0	disk	
+62b24c56ef155886	move	docs/artifacts/night-adapt/MSB12-ring-R1S1107461849.js	docs/artifacts/MSB12-ring-R1S1107461849-band1.bak	2026-11-10T22:29:28.080Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-ring-R1S1107461849.js
+c241bdaa81af73f8	canonical	docs/artifacts/MSB12-seqelec-R1S1019747920-band2.bak	docs/artifacts/MSB12-seqelec-R1S1019747920-band2.bak	2026-11-10T22:19:31.085Z	0	disk	
+c241bdaa81af73f8	move	docs/artifacts/night-adapt/MSB12-seqelec-R1S1019747920.js	docs/artifacts/MSB12-seqelec-R1S1019747920-band2.bak	2026-11-10T22:19:31.115Z	1	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-seqelec-R1S1019747920.js
+2244dd1ff3e44ee5	canonical	docs/artifacts/MSB12-seqelec2-R1S2018094672-band4.bak	docs/artifacts/MSB12-seqelec2-R1S2018094672-band4.bak	2026-11-10T22:26:28.972Z	0	disk	
+2244dd1ff3e44ee5	move	docs/artifacts/night-adapt/MSB12-seqelec2-R1S2018094672.js	docs/artifacts/MSB12-seqelec2-R1S2018094672-band4.bak	2026-11-10T22:26:28.996Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB12-seqelec2-R1S2018094672.js
+c1e56191fff77580	canonical	docs/artifacts/MSB13-R1S1600911541-band6.bak	docs/artifacts/MSB13-R1S1600911541-band6.bak	2026-11-10T23:42:18.932Z	0	disk	
+c1e56191fff77580	move	docs/artifacts/night-adapt/MSB13-R1S1600911541.js	docs/artifacts/MSB13-R1S1600911541-band6.bak	2026-11-10T23:42:18.937Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB13-R1S1600911541.js
+b0c4959280b391bd	canonical	docs/artifacts/MSB13-R1S335253386-band6.bak	docs/artifacts/MSB13-R1S335253386-band6.bak	2026-11-10T23:22:32.264Z	0	disk	
+b0c4959280b391bd	move	docs/artifacts/night-adapt/MSB13-R1S335253386.js	docs/artifacts/MSB13-R1S335253386-band6.bak	2026-11-10T23:22:32.277Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB13-R1S335253386.js
+63b578037d88bfc3	canonical	docs/artifacts/MSB13-R1S57705721-band1.bak	docs/artifacts/MSB13-R1S57705721-band1.bak	2026-11-10T23:42:30.946Z	0	disk	
+63b578037d88bfc3	move	docs/artifacts/night-adapt/MSB13-R1S57705721.js	docs/artifacts/MSB13-R1S57705721-band1.bak	2026-11-10T23:42:39.076Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB13-R1S57705721.js
+5625693e5e54f30a	canonical	docs/artifacts/MSB13-R1S791820660-band5.bak	docs/artifacts/MSB13-R1S791820660-band5.bak	2026-11-10T23:44:14.615Z	0	disk	
+5625693e5e54f30a	move	docs/artifacts/night-adapt/MSB13-R1S791820660.js	docs/artifacts/MSB13-R1S791820660-band5.bak	2026-11-10T23:44:14.632Z	182	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB13-R1S791820660.js
+625b9eaadd3dc631	canonical	docs/artifacts/MSB14-drain-R1S1309859507-band1.bak	docs/artifacts/MSB14-drain-R1S1309859507-band1.bak	2026-11-10T23:44:16.494Z	0	disk	
+625b9eaadd3dc631	move	docs/artifacts/night-adapt/MSB14-drain-R1S1309859507.js	docs/artifacts/MSB14-drain-R1S1309859507-band1.bak	2026-11-10T23:44:23.367Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB14-drain-R1S1309859507.js
+90feb44206d9379c	canonical	docs/artifacts/MSB14-drain-R1S1309859507-seg4.bak	docs/artifacts/MSB14-drain-R1S1309859507-seg4.bak	2026-11-10T23:14:28.029Z	0	disk	
+90feb44206d9379c	move	docs/artifacts/MSB14-drain-R1S1309859507-band2.bak	docs/artifacts/MSB14-drain-R1S1309859507-seg4.bak	2026-11-10T23:44:23.341Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB14-drain-R1S1309859507-band2.bak
+023b93f598237da3	canonical	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	2026-11-10T23:37:52.517Z	2	git	
+023b93f598237da3	move	docs/artifacts/MSB14-railgun-R1S175656469-band6.bak	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	2026-11-10T23:37:52.499Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB14-railgun-R1S175656469-band6.bak
+09c0c074f04757c5	canonical	docs/artifacts/MSB15-bigt-R1S498076845-band3.bak	docs/artifacts/MSB15-bigt-R1S498076845-band3.bak	2026-11-11T16:37:30.728Z	0	disk	
+09c0c074f04757c5	move	docs/artifacts/night-adapt/MSB15-bigt-R1S498076845.js	docs/artifacts/MSB15-bigt-R1S498076845-band3.bak	2026-11-11T16:37:30.768Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-bigt-R1S498076845.js
+0d478215ba9ec597	canonical	docs/artifacts/MSB15-bigt-R2S1931337189-band2.bak	docs/artifacts/MSB15-bigt-R2S1931337189-band2.bak	2026-11-11T17:17:18.478Z	0	disk	
+0d478215ba9ec597	move	docs/artifacts/night-adapt/MSB15-bigt-R2S1931337189.js	docs/artifacts/MSB15-bigt-R2S1931337189-band2.bak	2026-11-11T17:17:18.518Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-bigt-R2S1931337189.js
+41c7a35923051d2e	canonical	docs/artifacts/MSB15-bigt-R2S1931337189-seg1.bak	docs/artifacts/MSB15-bigt-R2S1931337189-seg1.bak	2026-11-11T16:45:55.667Z	0	disk	
+41c7a35923051d2e	move	docs/artifacts/MSB15-bigt-R2S1931337189-band5.bak	docs/artifacts/MSB15-bigt-R2S1931337189-seg1.bak	2026-11-11T17:17:18.499Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-bigt-R2S1931337189-band5.bak
+8df90ef778a99b68	canonical	docs/artifacts/MSB15-bigt-R3S1701594066-band6.bak	docs/artifacts/MSB15-bigt-R3S1701594066-band6.bak	2026-11-11T17:51:57.861Z	0	disk	
+8df90ef778a99b68	move	docs/artifacts/night-adapt/MSB15-bigt-R3S1701594066.js	docs/artifacts/MSB15-bigt-R3S1701594066-band6.bak	2026-11-11T17:51:57.869Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-bigt-R3S1701594066.js
+5c036b5bdfeccbb2	canonical	docs/artifacts/MSB15-breadth-R1S1124697562-seg4.bak	docs/artifacts/MSB15-breadth-R1S1124697562-seg4.bak	2026-11-11T16:18:43.624Z	0	disk	
+5c036b5bdfeccbb2	move	docs/artifacts/MSB15-breadth-R1S1124697562-band1.bak	docs/artifacts/MSB15-breadth-R1S1124697562-seg4.bak	2026-11-11T16:38:50.690Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-breadth-R1S1124697562-band1.bak
+76655ffc9cfed0aa	canonical	docs/artifacts/MSB15-breadth-R1S1124697562-band2.bak	docs/artifacts/MSB15-breadth-R1S1124697562-band2.bak	2026-11-11T16:39:01.784Z	0	disk	
+76655ffc9cfed0aa	move	docs/artifacts/night-adapt/MSB15-breadth-R1S1124697562.js	docs/artifacts/MSB15-breadth-R1S1124697562-band2.bak	2026-11-11T16:39:01.825Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-breadth-R1S1124697562.js
+6fa003bd7655ec23	canonical	docs/artifacts/MSB15-breadth-R2S1990932597-band5.bak	docs/artifacts/MSB15-breadth-R2S1990932597-band5.bak	2026-11-11T17:18:05.767Z	0	disk	
+6fa003bd7655ec23	move	docs/artifacts/night-adapt/MSB15-breadth-R2S1990932597.js	docs/artifacts/MSB15-breadth-R2S1990932597-band5.bak	2026-11-11T17:18:05.792Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-breadth-R2S1990932597.js
+38d2c755bbc84c71	canonical	docs/artifacts/MSB15-breadth-R3S538220852-band3.bak	docs/artifacts/MSB15-breadth-R3S538220852-band3.bak	2026-11-11T17:54:33.526Z	0	disk	
+38d2c755bbc84c71	move	docs/artifacts/night-adapt/MSB15-breadth-R3S538220852.js	docs/artifacts/MSB15-breadth-R3S538220852-band3.bak	2026-11-11T17:54:33.562Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-breadth-R3S538220852.js
+1d60de8f61cf9175	canonical	docs/artifacts/MSB15-breadth-R3S538220852-band4.bak	docs/artifacts/MSB15-breadth-R3S538220852-band4.bak	2026-11-11T17:54:33.535Z	0	disk	
+1d60de8f61cf9175	move	docs/artifacts/MSB15-breadth-R3S538220852-band5.bak	docs/artifacts/MSB15-breadth-R3S538220852-band4.bak	2026-11-11T17:54:33.542Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-breadth-R3S538220852-band5.bak
+6f29d7e0b70e4255	canonical	docs/artifacts/MSB15-curse-R1S1094478832-seg4.bak	docs/artifacts/MSB15-curse-R1S1094478832-seg4.bak	2026-11-11T16:18:51.525Z	0	disk	
+6f29d7e0b70e4255	move	docs/artifacts/MSB15-curse-R1S1094478832-band1.bak	docs/artifacts/MSB15-curse-R1S1094478832-seg4.bak	2026-11-11T16:30:59.017Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-curse-R1S1094478832-band1.bak
+13e2bc3a327e44fc	canonical	docs/artifacts/MSB15-curse-R1S1094478832-band2.bak	docs/artifacts/MSB15-curse-R1S1094478832-band2.bak	2026-11-11T16:31:10.291Z	0	disk	
+13e2bc3a327e44fc	move	docs/artifacts/night-adapt/MSB15-curse-R1S1094478832.js	docs/artifacts/MSB15-curse-R1S1094478832-band2.bak	2026-11-11T16:31:10.337Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-curse-R1S1094478832.js
+ffb6e1422d3810c3	canonical	docs/artifacts/MSB15-curse-R1S1094478832-seg1.bak	docs/artifacts/MSB15-curse-R1S1094478832-seg1.bak	2026-11-11T16:10:06.951Z	0	disk	
+ffb6e1422d3810c3	move	docs/artifacts/MSB15-curse-R1S1094478832-band4.bak	docs/artifacts/MSB15-curse-R1S1094478832-seg1.bak	2026-11-11T16:31:10.312Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-curse-R1S1094478832-band4.bak
+41642be92677877a	canonical	docs/artifacts/MSB15-curse-R2S1510455175-band3.bak	docs/artifacts/MSB15-curse-R2S1510455175-band3.bak	2026-11-11T17:14:52.555Z	0	disk	
+41642be92677877a	move	docs/artifacts/night-adapt/MSB15-curse-R2S1510455175.js	docs/artifacts/MSB15-curse-R2S1510455175-band3.bak	2026-11-11T17:14:52.586Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-curse-R2S1510455175.js
+3daa99db3fe9f96f	canonical	docs/artifacts/MSB15-curse-R3S2005890385-band4.bak	docs/artifacts/MSB15-curse-R3S2005890385-band4.bak	2026-11-11T17:41:48.613Z	0	disk	
+3daa99db3fe9f96f	move	docs/artifacts/MSB15-curse-R3S2005890385-seg1.bak	docs/artifacts/MSB15-curse-R3S2005890385-band4.bak	2026-11-11T17:48:32.091Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-curse-R3S2005890385-seg1.bak
+67d1ba3f901bddef	canonical	docs/artifacts/MSB15-drain2-R1S162144803-band2.bak	docs/artifacts/MSB15-drain2-R1S162144803-band2.bak	2026-11-11T16:24:19.158Z	0	disk	
+67d1ba3f901bddef	move	docs/artifacts/night-adapt/MSB15-drain2-R1S162144803.js	docs/artifacts/MSB15-drain2-R1S162144803-band2.bak	2026-11-11T16:24:19.194Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-drain2-R1S162144803.js
+4e63d292a276e273	canonical	docs/artifacts/MSB15-drain2-R1S1853688973-band6.bak	docs/artifacts/MSB15-drain2-R1S1853688973-band6.bak	2026-11-11T16:28:38.734Z	0	disk	
+4e63d292a276e273	move	docs/artifacts/night-adapt/MSB15-drain2-R1S1853688973.js	docs/artifacts/MSB15-drain2-R1S1853688973-band6.bak	2026-11-11T16:28:38.743Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-drain2-R1S1853688973.js
+c800f3f04a87903a	canonical	docs/artifacts/MSB15-drain2-R2S213694720-band4.bak	docs/artifacts/MSB15-drain2-R2S213694720-band4.bak	2026-11-11T16:58:15.330Z	0	disk	
+c800f3f04a87903a	move	docs/artifacts/night-adapt/MSB15-drain2-R2S213694720.js	docs/artifacts/MSB15-drain2-R2S213694720-band4.bak	2026-11-11T16:58:15.366Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-drain2-R2S213694720.js
+a413fa2b84eccfc8	canonical	docs/artifacts/MSB15-drain2-R2S703929909-seg2.bak	docs/artifacts/MSB15-drain2-R2S703929909-seg2.bak	2026-11-11T16:41:50.065Z	0	disk	
+a413fa2b84eccfc8	move	docs/artifacts/MSB15-drain2-R2S703929909-band3.bak	docs/artifacts/MSB15-drain2-R2S703929909-seg2.bak	2026-11-11T17:21:19.457Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-drain2-R2S703929909-band3.bak
+2d7f2f3d1f01d126	canonical	docs/artifacts/MSB15-drain2-R2S703929909-band4.bak	docs/artifacts/MSB15-drain2-R2S703929909-band4.bak	2026-11-11T17:21:19.467Z	0	disk	
+2d7f2f3d1f01d126	move	docs/artifacts/night-adapt/MSB15-drain2-R2S703929909.js	docs/artifacts/MSB15-drain2-R2S703929909-band4.bak	2026-11-11T17:21:19.494Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-drain2-R2S703929909.js
+8ca8b4c208f623c9	canonical	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	2026-11-11T17:30:36.477Z	0	disk	
+8ca8b4c208f623c9	move	docs/artifacts/MSB15-drain2-R3S1318458355-band2.bak	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	2026-11-11T18:02:19.655Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-drain2-R3S1318458355-band2.bak
+8ca8b4c208f623c9	move	docs/artifacts/MSB15-drain2-R3S1318458355-band5.bak	docs/artifacts/MSB15-drain2-R3S1318458355-seg1.bak	2026-11-11T18:02:19.681Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-drain2-R3S1318458355-band5.bak
+ec33f33fd1dae14d	canonical	docs/artifacts/MSB15-drain2-R3S1318458355-band3.bak	docs/artifacts/MSB15-drain2-R3S1318458355-band3.bak	2026-11-11T18:02:19.665Z	0	disk	
+ec33f33fd1dae14d	move	docs/artifacts/night-adapt/MSB15-drain2-R3S1318458355.js	docs/artifacts/MSB15-drain2-R3S1318458355-band3.bak	2026-11-11T18:02:19.715Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-drain2-R3S1318458355.js
+d6e5f086424ed594	canonical	docs/artifacts/MSB15-elec-R1S315740278-band5.bak	docs/artifacts/MSB15-elec-R1S315740278-band5.bak	2026-11-11T16:31:49.211Z	0	disk	
+d6e5f086424ed594	move	docs/artifacts/night-adapt/MSB15-elec-R1S315740278.js	docs/artifacts/MSB15-elec-R1S315740278-band5.bak	2026-11-11T16:31:49.239Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-elec-R1S315740278.js
+35f58799d53bfeb0	canonical	docs/artifacts/MSB15-elec-R1S599417655-band2.bak	docs/artifacts/MSB15-elec-R1S599417655-band2.bak	2026-11-11T16:32:35.771Z	0	disk	
+35f58799d53bfeb0	move	docs/artifacts/MSB15-elec-R1S599417655-band3.bak	docs/artifacts/MSB15-elec-R1S599417655-band2.bak	2026-11-11T16:32:35.780Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R1S599417655-band3.bak
+431db399724b678f	canonical	docs/artifacts/MSB15-elec-R1S599417655-seg1.bak	docs/artifacts/MSB15-elec-R1S599417655-seg1.bak	2026-11-11T15:53:37.956Z	0	disk	
+431db399724b678f	move	docs/artifacts/MSB15-elec-R1S599417655-band6.bak	docs/artifacts/MSB15-elec-R1S599417655-seg1.bak	2026-11-11T16:32:35.803Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R1S599417655-band6.bak
+e26ee70d6d05f3aa	canonical	docs/artifacts/MSB15-elec-R2S519673310-band2.bak	docs/artifacts/MSB15-elec-R2S519673310-band2.bak	2026-11-11T17:13:54.785Z	0	disk	
+e26ee70d6d05f3aa	move	docs/artifacts/night-adapt/MSB15-elec-R2S519673310.js	docs/artifacts/MSB15-elec-R2S519673310-band2.bak	2026-11-11T17:13:54.836Z	7	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-elec-R2S519673310.js
+6c6f2b62a29ed387	canonical	docs/artifacts/MSB15-elec-R2S519673310-seg4.bak	docs/artifacts/MSB15-elec-R2S519673310-seg4.bak	2026-11-11T16:46:53.442Z	0	disk	
+6c6f2b62a29ed387	move	docs/artifacts/MSB15-elec-R2S519673310-band5.bak	docs/artifacts/MSB15-elec-R2S519673310-seg4.bak	2026-11-11T17:13:54.816Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R2S519673310-band5.bak
+a8e82fb715c91906	canonical	docs/artifacts/MSB15-elec-R2S880603932-seg4.bak	docs/artifacts/MSB15-elec-R2S880603932-seg4.bak	2026-11-11T16:47:43.089Z	0	disk	
+a8e82fb715c91906	move	docs/artifacts/MSB15-elec-R2S880603932-band1.bak	docs/artifacts/MSB15-elec-R2S880603932-seg4.bak	2026-11-11T17:14:57.393Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R2S880603932-band1.bak
+0f6b49628d08331f	canonical	docs/artifacts/MSB15-elec-R2S880603932-band6.bak	docs/artifacts/MSB15-elec-R2S880603932-band6.bak	2026-11-11T17:15:08.172Z	0	disk	
+0f6b49628d08331f	move	docs/artifacts/night-adapt/MSB15-elec-R2S880603932.js	docs/artifacts/MSB15-elec-R2S880603932-band6.bak	2026-11-11T17:15:08.182Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-elec-R2S880603932.js
+6443fb1be4e7f2c1	canonical	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	2026-11-11T17:22:27.550Z	0	disk	
+6443fb1be4e7f2c1	move	docs/artifacts/MSB15-elec-R3S1097843063-band5.bak	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	2026-11-11T17:58:21.130Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R3S1097843063-band5.bak
+6443fb1be4e7f2c1	move	docs/artifacts/MSB15-elec-R3S1097843063-band6.bak	docs/artifacts/MSB15-elec-R3S1097843063-seg1.bak	2026-11-11T17:58:21.139Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-elec-R3S1097843063-band6.bak
+cbb24f73216cef1b	canonical	docs/artifacts/MSB15-elec-R3S1813479417-band4.bak	docs/artifacts/MSB15-elec-R3S1813479417-band4.bak	2026-11-11T17:44:58.682Z	0	disk	
+cbb24f73216cef1b	move	docs/artifacts/night-adapt/MSB15-elec-R3S1813479417.js	docs/artifacts/MSB15-elec-R3S1813479417-band4.bak	2026-11-11T17:44:58.712Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-elec-R3S1813479417.js
+8620935185cae7d8	canonical	docs/artifacts/MSB15-laser-R1S791004115-band6.bak	docs/artifacts/MSB15-laser-R1S791004115-band6.bak	2026-11-11T16:34:20.863Z	0	disk	
+8620935185cae7d8	move	docs/artifacts/night-adapt/MSB15-laser-R1S791004115.js	docs/artifacts/MSB15-laser-R1S791004115-band6.bak	2026-11-11T16:34:20.873Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-laser-R1S791004115.js
+ad0858756f705376	canonical	docs/artifacts/MSB15-laser-R2S430573695-band4.bak	docs/artifacts/MSB15-laser-R2S430573695-band4.bak	2026-11-11T17:08:21.887Z	0	disk	
+ad0858756f705376	move	docs/artifacts/night-adapt/MSB15-laser-R2S430573695.js	docs/artifacts/MSB15-laser-R2S430573695-band4.bak	2026-11-11T17:08:21.906Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-laser-R2S430573695.js
+d8872ff66f63093b	canonical	docs/artifacts/MSB15-laser-R3S1859130085-band2.bak	docs/artifacts/MSB15-laser-R3S1859130085-band2.bak	2026-11-11T18:01:43.255Z	0	disk	
+d8872ff66f63093b	move	docs/artifacts/MSB15-laser-R3S1859130085-band6.bak	docs/artifacts/MSB15-laser-R3S1859130085-band2.bak	2026-11-11T18:01:43.291Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-laser-R3S1859130085-band6.bak
+eb263a8c47aa71cd	canonical	docs/artifacts/MSB15-laser-R3S1859130085-band3.bak	docs/artifacts/MSB15-laser-R3S1859130085-band3.bak	2026-11-11T18:01:43.264Z	0	disk	
+eb263a8c47aa71cd	move	docs/artifacts/night-adapt/MSB15-laser-R3S1859130085.js	docs/artifacts/MSB15-laser-R3S1859130085-band3.bak	2026-11-11T18:01:43.298Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-laser-R3S1859130085.js
+c08eb3b8b9e7c248	canonical	docs/artifacts/MSB15-laser-R3S1859130085-seg1.bak	docs/artifacts/MSB15-laser-R3S1859130085-seg1.bak	2026-11-11T17:18:01.554Z	0	disk	
+c08eb3b8b9e7c248	move	docs/artifacts/MSB15-laser-R3S1859130085-band4.bak	docs/artifacts/MSB15-laser-R3S1859130085-seg1.bak	2026-11-11T18:01:43.270Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-laser-R3S1859130085-band4.bak
+05d41091230936e3	canonical	docs/artifacts/MSB15-ring-R1S1040485129-band2.bak	docs/artifacts/MSB15-ring-R1S1040485129-band2.bak	2026-11-11T16:14:24.793Z	0	disk	
+05d41091230936e3	move	docs/artifacts/night-adapt/MSB15-ring-R1S1040485129.js	docs/artifacts/MSB15-ring-R1S1040485129-band2.bak	2026-11-11T16:14:24.839Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-ring-R1S1040485129.js
+9b6d904c09aa807c	canonical	docs/artifacts/MSB15-ring-R1S307147650-seg3.bak	docs/artifacts/MSB15-ring-R1S307147650-seg3.bak	2026-11-11T15:57:27.480Z	0	disk	
+9b6d904c09aa807c	move	docs/artifacts/MSB15-ring-R1S307147650-band3.bak	docs/artifacts/MSB15-ring-R1S307147650-seg3.bak	2026-11-11T16:22:31.917Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-ring-R1S307147650-band3.bak
+53c0f00e784d2243	canonical	docs/artifacts/MSB15-ring-R1S307147650-band5.bak	docs/artifacts/MSB15-ring-R1S307147650-band5.bak	2026-11-11T16:22:31.932Z	0	disk	
+53c0f00e784d2243	move	docs/artifacts/night-adapt/MSB15-ring-R1S307147650.js	docs/artifacts/MSB15-ring-R1S307147650-band5.bak	2026-11-11T16:22:31.953Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-ring-R1S307147650.js
+604987654e0ad1ee	canonical	docs/artifacts/MSB15-ring-R2S356976677-band5.bak	docs/artifacts/MSB15-ring-R2S356976677-band5.bak	2026-11-11T17:15:49.092Z	0	disk	
+604987654e0ad1ee	move	docs/artifacts/night-adapt/MSB15-ring-R2S356976677.js	docs/artifacts/MSB15-ring-R2S356976677-band5.bak	2026-11-11T17:15:49.108Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-ring-R2S356976677.js
+440d438fd399d1bf	canonical	docs/artifacts/MSB15-ring-R2S897114511-band2.bak	docs/artifacts/MSB15-ring-R2S897114511-band2.bak	2026-11-11T17:04:23.133Z	0	disk	
+440d438fd399d1bf	move	docs/artifacts/night-adapt/MSB15-ring-R2S897114511.js	docs/artifacts/MSB15-ring-R2S897114511-band2.bak	2026-11-11T17:04:23.172Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-ring-R2S897114511.js
+493aa4b0355b19f4	canonical	docs/artifacts/MSB15-soupb-R1S190353054-band2.bak	docs/artifacts/MSB15-soupb-R1S190353054-band2.bak	2026-11-11T17:09:42.796Z	0	disk	
+493aa4b0355b19f4	move	docs/artifacts/night-adapt/MSB15-soupb-R1S190353054.js	docs/artifacts/MSB15-soupb-R1S190353054-band2.bak	2026-11-11T17:09:42.834Z	7	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-soupb-R1S190353054.js
+4c08507bd7d45772	canonical	docs/artifacts/MSB15-soupb-R1S190353054-band5.bak	docs/artifacts/MSB15-soupb-R1S190353054-band5.bak	2026-11-11T17:09:42.819Z	0	disk	
+4c08507bd7d45772	move	docs/artifacts/MSB15-soupb-R1S190353054-band6.bak	docs/artifacts/MSB15-soupb-R1S190353054-band5.bak	2026-11-11T17:09:42.824Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-soupb-R1S190353054-band6.bak
+67ec47e522c3769f	canonical	docs/artifacts/MSB15-soupb-R2S74063325-band1.bak	docs/artifacts/MSB15-soupb-R2S74063325-band1.bak	2026-11-11T17:39:06.609Z	0	disk	
+67ec47e522c3769f	move	docs/artifacts/night-adapt/MSB15-soupb-R2S74063325.js	docs/artifacts/MSB15-soupb-R2S74063325-band1.bak	2026-11-11T17:39:18.178Z	12	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15-soupb-R2S74063325.js
+66f784dd32afc460	canonical	docs/artifacts/MSB15-soupb-R3S1828856017-seg2.bak	docs/artifacts/MSB15-soupb-R3S1828856017-seg2.bak	2026-11-11T18:12:02.071Z	0	disk	
+66f784dd32afc460	move	docs/artifacts/MSB15-soupb-R3S1828856017-band2.bak	docs/artifacts/MSB15-soupb-R3S1828856017-seg2.bak	2026-11-11T18:25:27.197Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-soupb-R3S1828856017-band2.bak
+1d8610a5ae2502f9	canonical	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	2026-11-11T18:09:44.052Z	0	disk	
+1d8610a5ae2502f9	move	docs/artifacts/MSB15-soupb-R3S1828856017-band3.bak	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	2026-11-11T18:25:27.202Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-soupb-R3S1828856017-band3.bak
+e2c179c155aedc66	canonical	docs/artifacts/MSB15-soupb-R4S1246356811-seg4.bak	docs/artifacts/MSB15-soupb-R4S1246356811-seg4.bak	2026-11-11T18:36:37.755Z	0	disk	
+e2c179c155aedc66	move	docs/artifacts/MSB15-soupb-R4S1246356811-band4.bak	docs/artifacts/MSB15-soupb-R4S1246356811-seg4.bak	2026-11-11T18:48:39.763Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15-soupb-R4S1246356811-band4.bak
+c9ca2ebbe61aad64	canonical	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	2026-11-11T19:21:25.022Z	0	disk	
+c9ca2ebbe61aad64	move	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-band6.bak	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	2026-11-11T19:46:40.143Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-hit-bigT-R1S2123535820-band6.bak
+7dc8aed566503c39	canonical	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band1.bak	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band1.bak	2026-11-11T19:37:18.801Z	0	disk	
+7dc8aed566503c39	move	docs/artifacts/night-adapt/MSB15R-hit-bigT-R1S258967927.js	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band1.bak	2026-11-11T19:37:27.663Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-hit-bigT-R1S258967927.js
+428d8fc0a2e61cf5	canonical	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band5.bak	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band5.bak	2026-11-11T19:37:27.654Z	0	disk	
+428d8fc0a2e61cf5	move	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band6.bak	docs/artifacts/MSB15R-hit-bigT-R1S258967927-band5.bak	2026-11-11T19:37:27.658Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-hit-bigT-R1S258967927-band6.bak
+bf4e24a51fc51fc6	canonical	docs/artifacts/MSB15R-hit-mix-R1S2057836694-band5.bak	docs/artifacts/MSB15R-hit-mix-R1S2057836694-band5.bak	2026-11-11T19:38:42.921Z	0	disk	
+bf4e24a51fc51fc6	move	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	docs/artifacts/MSB15R-hit-mix-R1S2057836694-band5.bak	2026-11-11T19:38:42.934Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js
+cf2fe776c2eba55e	canonical	docs/artifacts/MSB15R-hit-mix-R1S469609925-band2.bak	docs/artifacts/MSB15R-hit-mix-R1S469609925-band2.bak	2026-11-11T19:40:27.876Z	0	disk	
+cf2fe776c2eba55e	move	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S469609925.js	docs/artifacts/MSB15R-hit-mix-R1S469609925-band2.bak	2026-11-11T19:40:27.907Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-hit-mix-R1S469609925.js
+8ae32719c70c8e33	canonical	docs/artifacts/MSB15R-imit-bigT-R1S928337601-seg1.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-seg1.bak	2026-11-11T18:10:43.249Z	0	disk	
+8ae32719c70c8e33	move	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band2.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-seg1.bak	2026-11-11T18:23:15.416Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-imit-bigT-R1S928337601-band2.bak
+40ed43363be797c5	canonical	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band3.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band3.bak	2026-11-11T18:23:15.423Z	0	disk	
+40ed43363be797c5	move	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band6.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band3.bak	2026-11-11T18:23:15.439Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-imit-bigT-R1S928337601-band6.bak
+4f58d3572b40218f	canonical	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band4.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band4.bak	2026-11-11T18:23:15.428Z	0	disk	
+4f58d3572b40218f	move	docs/artifacts/night-adapt/MSB15R-imit-bigT-R1S928337601.js	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band4.bak	2026-11-11T18:23:15.447Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-imit-bigT-R1S928337601.js
+1c53d03ad26da27b	canonical	docs/artifacts/MSB15R-imit-bigT-R1S942253744-band6.bak	docs/artifacts/MSB15R-imit-bigT-R1S942253744-band6.bak	2026-11-11T18:29:54.831Z	0	disk	
+1c53d03ad26da27b	move	docs/artifacts/night-adapt/MSB15R-imit-bigT-R1S942253744.js	docs/artifacts/MSB15R-imit-bigT-R1S942253744-band6.bak	2026-11-11T18:29:54.837Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-imit-bigT-R1S942253744.js
+cc6d017c47cd6c66	canonical	docs/artifacts/MSB15R-laser-hard-R1S1427902809-band5.bak	docs/artifacts/MSB15R-laser-hard-R1S1427902809-band5.bak	2026-11-11T18:54:32.127Z	0	disk	
+cc6d017c47cd6c66	move	docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1427902809.js	docs/artifacts/MSB15R-laser-hard-R1S1427902809-band5.bak	2026-11-11T18:54:32.137Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1427902809.js
+b628da3a93e8aadf	canonical	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band3.bak	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band3.bak	2026-11-11T19:03:18.621Z	0	disk	
+b628da3a93e8aadf	move	docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1952331727.js	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band3.bak	2026-11-11T19:03:18.639Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1952331727.js
+11909b2eb76eaf0a	canonical	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band5.bak	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band5.bak	2026-11-11T19:03:18.630Z	0	disk	
+11909b2eb76eaf0a	move	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band6.bak	docs/artifacts/MSB15R-laser-hard-R1S1952331727-band5.bak	2026-11-11T19:03:18.634Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-laser-hard-R1S1952331727-band6.bak
+c57b4f4b140c252d	canonical	docs/artifacts/MSB15R-ring-full-R1S1966304024-band4.bak	docs/artifacts/MSB15R-ring-full-R1S1966304024-band4.bak	2026-11-11T18:31:57.118Z	0	disk	
+c57b4f4b140c252d	move	docs/artifacts/night-adapt/MSB15R-ring-full-R1S1966304024.js	docs/artifacts/MSB15R-ring-full-R1S1966304024-band4.bak	2026-11-11T18:31:57.140Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-ring-full-R1S1966304024.js
+05f5d8c1706b28ac	canonical	docs/artifacts/MSB15R-ring-full-R1S596368090-band3.bak	docs/artifacts/MSB15R-ring-full-R1S596368090-band3.bak	2026-11-11T18:25:41.334Z	0	disk	
+05f5d8c1706b28ac	move	docs/artifacts/night-adapt/MSB15R-ring-full-R1S596368090.js	docs/artifacts/MSB15R-ring-full-R1S596368090-band3.bak	2026-11-11T18:25:41.355Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-ring-full-R1S596368090.js
+423f6d05999542a8	canonical	docs/artifacts/MSB15R-selbigt-strong-R1S1662726628-band3.bak	docs/artifacts/MSB15R-selbigt-strong-R1S1662726628-band3.bak	2026-11-11T19:02:24.307Z	0	disk	
+423f6d05999542a8	move	docs/artifacts/night-adapt/MSB15R-selbigt-strong-R1S1662726628.js	docs/artifacts/MSB15R-selbigt-strong-R1S1662726628-band3.bak	2026-11-11T19:02:24.324Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-selbigt-strong-R1S1662726628.js
+1d17f67a9a0a9176	canonical	docs/artifacts/MSB15R-selbigt-strong-R1S561894048-band4.bak	docs/artifacts/MSB15R-selbigt-strong-R1S561894048-band4.bak	2026-11-11T18:53:22.850Z	0	disk	
+1d17f67a9a0a9176	move	docs/artifacts/night-adapt/MSB15R-selbigt-strong-R1S561894048.js	docs/artifacts/MSB15R-selbigt-strong-R1S561894048-band4.bak	2026-11-11T18:53:22.866Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-selbigt-strong-R1S561894048.js
+7466aeae2caa5071	canonical	docs/artifacts/MSB15R-seq10-elec-R1S1269446072-band6.bak	docs/artifacts/MSB15R-seq10-elec-R1S1269446072-band6.bak	2026-11-11T19:30:56.264Z	0	disk	
+7466aeae2caa5071	move	docs/artifacts/night-adapt/MSB15R-seq10-elec-R1S1269446072.js	docs/artifacts/MSB15R-seq10-elec-R1S1269446072-band6.bak	2026-11-11T19:30:56.269Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB15R-seq10-elec-R1S1269446072.js
+eecb816dc8397f6f	canonical	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	2026-11-11T19:09:54.366Z	0	disk	
+eecb816dc8397f6f	move	docs/artifacts/MSB15R-seq10-elec-R1S970589095-band2.bak	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	2026-11-11T19:27:44.406Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB15R-seq10-elec-R1S970589095-band2.bak
 a1f68db2345ac83f	canonical	docs/artifacts/MSB2-R1S1216168629-band3.bak	docs/artifacts/MSB2-R1S1216168629-band3.bak	2026-11-09T23:10:30.531Z	0	disk	
 a1f68db2345ac83f	move	docs/artifacts/night-adapt/MSB2-R1S1216168629.js	docs/artifacts/MSB2-R1S1216168629-band3.bak	2026-11-09T23:10:30.552Z	7	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R1S1216168629.js
 fadcd98fca6bea05	canonical	docs/artifacts/MSB2-R1S1494663071-band4.bak	docs/artifacts/MSB2-R1S1494663071-band4.bak	2026-11-10T00:00:36.458Z	0	disk	
-fadcd98fca6bea05	move	docs/artifacts/night-adapt/MSB2-R1S1494663071.js	docs/artifacts/MSB2-R1S1494663071-band4.bak	2026-11-10T00:00:36.478Z	14	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R1S1494663071.js
+fadcd98fca6bea05	move	docs/artifacts/night-adapt/MSB2-R1S1494663071.js	docs/artifacts/MSB2-R1S1494663071-band4.bak	2026-11-10T00:00:36.478Z	62	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R1S1494663071.js
+fadcd98fca6bea05	move	docs/artifacts/SMOKE-FITCHAMP-band1.bak	docs/artifacts/MSB2-R1S1494663071-band4.bak	2026-11-10T05:17:08.503Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-FITCHAMP-band1.bak
+fadcd98fca6bea05	move	docs/artifacts/SMOKE-XB-band1.bak	docs/artifacts/MSB2-R1S1494663071-band4.bak	2026-11-10T05:57:12.461Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-XB-band1.bak
 70c710846e79f865	canonical	docs/artifacts/MSB2-R1S151592686-band1.bak	docs/artifacts/MSB2-R1S151592686-band1.bak	2026-11-09T23:04:25.481Z	0	disk	
 70c710846e79f865	move	docs/artifacts/night-adapt/MSB2-R1S151592686.js	docs/artifacts/MSB2-R1S151592686-band1.bak	2026-11-09T23:04:29.124Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R1S151592686.js
 9af87c0242271767	canonical	docs/artifacts/MSB2-R1S773345716-band2.bak	docs/artifacts/MSB2-R1S773345716-band2.bak	2026-11-09T23:05:07.361Z	0	disk	
@@ -234,6 +451,148 @@ bdaf5c018729b39a	move	docs/artifacts/MSB2-R2S103437527-band4.bak	docs/artifacts/
 6f95dc67076b9792	move	docs/artifacts/night-adapt/MSB2-R2S14546465.js	docs/artifacts/MSB2-R2S14546465-band1.bak	2026-11-09T23:30:38.830Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R2S14546465.js
 88671df816ff55a8	canonical	docs/artifacts/MSB2-R2S78964838-band1.bak	docs/artifacts/MSB2-R2S78964838-band1.bak	2026-11-09T23:37:30.728Z	0	disk	
 88671df816ff55a8	move	docs/artifacts/night-adapt/MSB2-R2S78964838.js	docs/artifacts/MSB2-R2S78964838-band1.bak	2026-11-09T23:37:34.987Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB2-R2S78964838.js
+6581894d9055951f	canonical	docs/artifacts/MSB3-R1S1428643599-band2.bak	docs/artifacts/MSB3-R1S1428643599-band2.bak	2026-11-10T05:02:23.187Z	0	disk	
+6581894d9055951f	move	docs/artifacts/MSB3-R1S1428643599-band3.bak	docs/artifacts/MSB3-R1S1428643599-band2.bak	2026-11-10T05:02:23.192Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB3-R1S1428643599-band3.bak
+9229cb74f703cee8	canonical	docs/artifacts/MSB3-R1S1428643599-band6.bak	docs/artifacts/MSB3-R1S1428643599-band6.bak	2026-11-10T05:02:23.209Z	0	disk	
+9229cb74f703cee8	move	docs/artifacts/night-adapt/MSB3-R1S1428643599.js	docs/artifacts/MSB3-R1S1428643599-band6.bak	2026-11-10T05:02:23.214Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB3-R1S1428643599.js
+adf0110e9f595b0a	canonical	docs/artifacts/MSB3-R1S2091617905-band3.bak	docs/artifacts/MSB3-R1S2091617905-band3.bak	2026-11-10T05:06:37.043Z	0	disk	
+adf0110e9f595b0a	move	docs/artifacts/night-adapt/MSB3-R1S2091617905.js	docs/artifacts/MSB3-R1S2091617905-band3.bak	2026-11-10T05:06:37.064Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB3-R1S2091617905.js
+1c6462d0b133d85b	canonical	docs/artifacts/MSB3-R1S60338354-band6.bak	docs/artifacts/MSB3-R1S60338354-band6.bak	2026-11-10T05:08:32.631Z	0	disk	
+1c6462d0b133d85b	move	docs/artifacts/night-adapt/MSB3-R1S60338354.js	docs/artifacts/MSB3-R1S60338354-band6.bak	2026-11-10T05:08:32.636Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB3-R1S60338354.js
+561d38226fa8357e	canonical	docs/artifacts/MSB4-R1S1335338872-band1.bak	docs/artifacts/MSB4-R1S1335338872-band1.bak	2026-11-10T05:41:20.564Z	0	disk	
+561d38226fa8357e	move	docs/artifacts/night-adapt/MSB4-R1S1335338872.js	docs/artifacts/MSB4-R1S1335338872-band1.bak	2026-11-10T05:41:25.892Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB4-R1S1335338872.js
+ca7c04ccab25f5b6	canonical	docs/artifacts/MSB4-R1S1928336850-band1.bak	docs/artifacts/MSB4-R1S1928336850-band1.bak	2026-11-10T05:37:09.370Z	0	disk	
+ca7c04ccab25f5b6	move	docs/artifacts/night-adapt/MSB4-R1S1928336850.js	docs/artifacts/MSB4-R1S1928336850-band1.bak	2026-11-10T05:37:14.288Z	21	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB4-R1S1928336850.js
+ca992811b58d7aef	canonical	docs/artifacts/MSB4-R1S922202334-band3.bak	docs/artifacts/MSB4-R1S922202334-band3.bak	2026-11-10T05:30:43.237Z	0	disk	
+ca992811b58d7aef	move	docs/artifacts/night-adapt/MSB4-R1S922202334.js	docs/artifacts/MSB4-R1S922202334-band3.bak	2026-11-10T05:30:43.261Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB4-R1S922202334.js
+0277b4fc112c1037	canonical	docs/artifacts/MSB5-R1S808369991-band6.bak	docs/artifacts/MSB5-R1S808369991-band6.bak	2026-11-10T11:03:16.844Z	0	disk	
+0277b4fc112c1037	move	docs/artifacts/night-adapt/MSB5-R1S808369991.js	docs/artifacts/MSB5-R1S808369991-band6.bak	2026-11-10T11:03:16.848Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB5-R1S808369991.js
+154df468fe284a51	canonical	docs/artifacts/MSB5-R1S928337601-band3.bak	docs/artifacts/MSB5-R1S928337601-band3.bak	2026-11-10T11:09:40.306Z	0	disk	
+154df468fe284a51	move	docs/artifacts/night-adapt/MSB5-R1S928337601.js	docs/artifacts/MSB5-R1S928337601-band3.bak	2026-11-10T11:09:40.330Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB5-R1S928337601.js
+9d01d51f5d678846	canonical	docs/artifacts/MSB5-R1S942253744-band5.bak	docs/artifacts/MSB5-R1S942253744-band5.bak	2026-11-10T11:15:43.357Z	0	disk	
+9d01d51f5d678846	move	docs/artifacts/night-adapt/MSB5-R1S942253744.js	docs/artifacts/MSB5-R1S942253744-band5.bak	2026-11-10T11:15:43.365Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB5-R1S942253744.js
+d7dcb6a89b3a2df4	canonical	docs/artifacts/MSB6-R1S105176564-seg2.bak	docs/artifacts/MSB6-R1S105176564-seg2.bak	2026-11-10T17:12:37.932Z	0	disk	
+d7dcb6a89b3a2df4	move	docs/artifacts/MSB6-R1S105176564-band5.bak	docs/artifacts/MSB6-R1S105176564-seg2.bak	2026-11-10T17:51:08.082Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R1S105176564-band5.bak
+0018c12f8f2f75f7	canonical	docs/artifacts/MSB6-R1S1474868357-band3.bak	docs/artifacts/MSB6-R1S1474868357-band3.bak	2026-11-10T17:41:38.336Z	0	disk	
+0018c12f8f2f75f7	move	docs/artifacts/night-adapt/MSB6-R1S1474868357.js	docs/artifacts/MSB6-R1S1474868357-band3.bak	2026-11-10T17:41:38.366Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S1474868357.js
+693badb84c4892cd	canonical	docs/artifacts/MSB6-R1S1628871127-band2.bak	docs/artifacts/MSB6-R1S1628871127-band2.bak	2026-11-10T17:27:06.809Z	0	disk	
+693badb84c4892cd	move	docs/artifacts/night-adapt/MSB6-R1S1628871127.js	docs/artifacts/MSB6-R1S1628871127-band2.bak	2026-11-10T17:27:06.853Z	21	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S1628871127.js
+cecfd10badfdc57e	canonical	docs/artifacts/MSB6-R1S1628871127-seg1.bak	docs/artifacts/MSB6-R1S1628871127-seg1.bak	2026-11-10T17:07:14.612Z	0	disk	
+cecfd10badfdc57e	move	docs/artifacts/MSB6-R1S1628871127-band3.bak	docs/artifacts/MSB6-R1S1628871127-seg1.bak	2026-11-10T17:27:06.817Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R1S1628871127-band3.bak
+3b5145008a799c55	canonical	docs/artifacts/MSB6-R1S1921558624-band3.bak	docs/artifacts/MSB6-R1S1921558624-band3.bak	2026-11-10T17:33:59.527Z	0	disk	
+3b5145008a799c55	move	docs/artifacts/night-adapt/MSB6-R1S1921558624.js	docs/artifacts/MSB6-R1S1921558624-band3.bak	2026-11-10T17:33:59.557Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S1921558624.js
+73c7511337dbac9c	canonical	docs/artifacts/MSB6-R1S1923454505-band6.bak	docs/artifacts/MSB6-R1S1923454505-band6.bak	2026-11-10T17:35:40.976Z	0	disk	
+73c7511337dbac9c	move	docs/artifacts/night-adapt/MSB6-R1S1923454505.js	docs/artifacts/MSB6-R1S1923454505-band6.bak	2026-11-10T17:35:40.986Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S1923454505.js
+4739ba5bbc899bbb	canonical	docs/artifacts/MSB6-R1S262834093-band2.bak	docs/artifacts/MSB6-R1S262834093-band2.bak	2026-11-10T17:47:01.266Z	0	disk	
+4739ba5bbc899bbb	move	docs/artifacts/MSB6-R1S262834093-band4.bak	docs/artifacts/MSB6-R1S262834093-band2.bak	2026-11-10T17:47:01.277Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R1S262834093-band4.bak
+f1b8831d8fc913b7	canonical	docs/artifacts/MSB6-R1S262834093-band5.bak	docs/artifacts/MSB6-R1S262834093-band5.bak	2026-11-10T17:47:01.282Z	0	disk	
+f1b8831d8fc913b7	move	docs/artifacts/night-adapt/MSB6-R1S262834093.js	docs/artifacts/MSB6-R1S262834093-band5.bak	2026-11-10T17:47:01.292Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S262834093.js
+1e6d81e71bdd8d9a	canonical	docs/artifacts/MSB6-R1S739033611-band2.bak	docs/artifacts/MSB6-R1S739033611-band2.bak	2026-11-10T17:45:47.025Z	0	disk	
+1e6d81e71bdd8d9a	move	docs/artifacts/MSB6-R1S739033611-band4.bak	docs/artifacts/MSB6-R1S739033611-band2.bak	2026-11-10T17:45:47.038Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R1S739033611-band4.bak
+e79f17fe58b26bb2	canonical	docs/artifacts/MSB6-R1S739033611-band5.bak	docs/artifacts/MSB6-R1S739033611-band5.bak	2026-11-10T17:45:47.042Z	0	disk	
+e79f17fe58b26bb2	move	docs/artifacts/night-adapt/MSB6-R1S739033611.js	docs/artifacts/MSB6-R1S739033611-band5.bak	2026-11-10T17:45:47.052Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S739033611.js
+5fbcc91cf25fde32	canonical	docs/artifacts/MSB6-R1S949175392-seg4.bak	docs/artifacts/MSB6-R1S949175392-seg4.bak	2026-11-10T17:14:31.085Z	0	disk	
+5fbcc91cf25fde32	move	docs/artifacts/MSB6-R1S949175392-band1.bak	docs/artifacts/MSB6-R1S949175392-seg4.bak	2026-11-10T17:39:01.424Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R1S949175392-band1.bak
+9cf66efd37cc3f52	canonical	docs/artifacts/MSB6-R1S949175392-band4.bak	docs/artifacts/MSB6-R1S949175392-band4.bak	2026-11-10T17:39:08.215Z	0	disk	
+9cf66efd37cc3f52	move	docs/artifacts/night-adapt/MSB6-R1S949175392.js	docs/artifacts/MSB6-R1S949175392-band4.bak	2026-11-10T17:39:08.235Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R1S949175392.js
+1e4d923828322512	canonical	docs/artifacts/MSB6-R2S1116161300-band2.bak	docs/artifacts/MSB6-R2S1116161300-band2.bak	2026-11-10T18:49:56.597Z	0	disk	
+1e4d923828322512	move	docs/artifacts/night-adapt/MSB6-R2S1116161300.js	docs/artifacts/MSB6-R2S1116161300-band2.bak	2026-11-10T18:49:56.655Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S1116161300.js
+7a2a80b6289671cb	canonical	docs/artifacts/MSB6-R2S1848977024-band1.bak	docs/artifacts/MSB6-R2S1848977024-band1.bak	2026-11-10T18:44:06.552Z	0	disk	
+7a2a80b6289671cb	move	docs/artifacts/night-adapt/MSB6-R2S1848977024.js	docs/artifacts/MSB6-R2S1848977024-band1.bak	2026-11-10T18:44:15.983Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S1848977024.js
+1c7ea03c1e595c0b	canonical	docs/artifacts/MSB6-R2S1902103616-band4.bak	docs/artifacts/MSB6-R2S1902103616-band4.bak	2026-11-10T18:28:54.916Z	0	disk	
+1c7ea03c1e595c0b	move	docs/artifacts/night-adapt/MSB6-R2S1902103616.js	docs/artifacts/MSB6-R2S1902103616-band4.bak	2026-11-10T18:28:54.969Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S1902103616.js
+805c036abef262ac	canonical	docs/artifacts/MSB6-R2S1902103616-seg4.bak	docs/artifacts/MSB6-R2S1902103616-seg4.bak	2026-11-10T18:09:31.656Z	0	disk	
+805c036abef262ac	move	docs/artifacts/MSB6-R2S1902103616-band6.bak	docs/artifacts/MSB6-R2S1902103616-seg4.bak	2026-11-10T18:28:54.946Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R2S1902103616-band6.bak
+d49f19160a8d245c	canonical	docs/artifacts/MSB6-R2S197156432-band6.bak	docs/artifacts/MSB6-R2S197156432-band6.bak	2026-11-10T18:48:48.509Z	0	disk	
+d49f19160a8d245c	move	docs/artifacts/night-adapt/MSB6-R2S197156432.js	docs/artifacts/MSB6-R2S197156432-band6.bak	2026-11-10T18:48:48.519Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S197156432.js
+e0f92c41d5ad2a8f	canonical	docs/artifacts/MSB6-R2S297540638-seg1.bak	docs/artifacts/MSB6-R2S297540638-seg1.bak	2026-11-10T17:58:33.139Z	0	disk	
+e0f92c41d5ad2a8f	move	docs/artifacts/MSB6-R2S297540638-band1.bak	docs/artifacts/MSB6-R2S297540638-seg1.bak	2026-11-10T18:44:37.641Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R2S297540638-band1.bak
+d4fabbea581ccd6a	canonical	docs/artifacts/MSB6-R2S297540638-band4.bak	docs/artifacts/MSB6-R2S297540638-band4.bak	2026-11-10T18:44:47.068Z	0	disk	
+d4fabbea581ccd6a	move	docs/artifacts/night-adapt/MSB6-R2S297540638.js	docs/artifacts/MSB6-R2S297540638-band4.bak	2026-11-10T18:44:47.108Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S297540638.js
+30dfbac8a58b36d4	canonical	docs/artifacts/MSB6-R2S297540638-seg4.bak	docs/artifacts/MSB6-R2S297540638-seg4.bak	2026-11-10T18:13:47.780Z	0	disk	
+30dfbac8a58b36d4	move	docs/artifacts/MSB6-R2S297540638-band5.bak	docs/artifacts/MSB6-R2S297540638-seg4.bak	2026-11-10T18:44:47.087Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB6-R2S297540638-band5.bak
+5bca9995d72d1fa9	canonical	docs/artifacts/MSB6-R2S501866988-band1.bak	docs/artifacts/MSB6-R2S501866988-band1.bak	2026-11-10T18:40:08.176Z	0	disk	
+5bca9995d72d1fa9	move	docs/artifacts/night-adapt/MSB6-R2S501866988.js	docs/artifacts/MSB6-R2S501866988-band1.bak	2026-11-10T18:40:18.613Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S501866988.js
+6370725ba1e72d24	canonical	docs/artifacts/MSB6-R2S792696-band1.bak	docs/artifacts/MSB6-R2S792696-band1.bak	2026-11-10T18:29:56.568Z	0	disk	
+6370725ba1e72d24	move	docs/artifacts/night-adapt/MSB6-R2S792696.js	docs/artifacts/MSB6-R2S792696-band1.bak	2026-11-10T18:30:06.664Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S792696.js
+e3d3e8f6dc1a6965	canonical	docs/artifacts/MSB6-R2S928798190-band5.bak	docs/artifacts/MSB6-R2S928798190-band5.bak	2026-11-10T18:33:05.800Z	0	disk	
+e3d3e8f6dc1a6965	move	docs/artifacts/night-adapt/MSB6-R2S928798190.js	docs/artifacts/MSB6-R2S928798190-band5.bak	2026-11-10T18:33:05.821Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB6-R2S928798190.js
+a2d44d9cb9c05dbb	canonical	docs/artifacts/MSB7-R1S1020649171-band1.bak	docs/artifacts/MSB7-R1S1020649171-band1.bak	2026-11-10T18:05:41.990Z	0	disk	
+a2d44d9cb9c05dbb	move	docs/artifacts/night-adapt/MSB7-R1S1020649171.js	docs/artifacts/MSB7-R1S1020649171-band1.bak	2026-11-10T18:05:52.139Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R1S1020649171.js
+d8bb86b1bd2008f1	canonical	docs/artifacts/MSB7-R1S1020649171-seg1.bak	docs/artifacts/MSB7-R1S1020649171-seg1.bak	2026-11-10T17:20:05.566Z	0	disk	
+d8bb86b1bd2008f1	move	docs/artifacts/MSB7-R1S1020649171-band2.bak	docs/artifacts/MSB7-R1S1020649171-seg1.bak	2026-11-10T18:05:52.060Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB7-R1S1020649171-band2.bak
+f7a7413d34e9efc8	canonical	docs/artifacts/MSB7-R1S1111497638-band1.bak	docs/artifacts/MSB7-R1S1111497638-band1.bak	2026-11-10T18:14:18.058Z	0	disk	
+f7a7413d34e9efc8	move	docs/artifacts/night-adapt/MSB7-R1S1111497638.js	docs/artifacts/MSB7-R1S1111497638-band1.bak	2026-11-10T18:14:27.902Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R1S1111497638.js
+ef83b786a4606f2a	canonical	docs/artifacts/MSB7-R1S1918001636-band4.bak	docs/artifacts/MSB7-R1S1918001636-band4.bak	2026-11-10T17:57:53.198Z	0	disk	
+ef83b786a4606f2a	move	docs/artifacts/night-adapt/MSB7-R1S1918001636.js	docs/artifacts/MSB7-R1S1918001636-band4.bak	2026-11-10T17:57:53.241Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R1S1918001636.js
+f2df7e390f1ad9d7	canonical	docs/artifacts/MSB7-R1S1997572284-band1.bak	docs/artifacts/MSB7-R1S1997572284-band1.bak	2026-11-10T17:56:57.996Z	0	disk	
+f2df7e390f1ad9d7	move	docs/artifacts/night-adapt/MSB7-R1S1997572284.js	docs/artifacts/MSB7-R1S1997572284-band1.bak	2026-11-10T17:57:08.731Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R1S1997572284.js
+b3af6c7714a066b2	canonical	docs/artifacts/MSB7-R2S1010066917-band1.bak	docs/artifacts/MSB7-R2S1010066917-band1.bak	2026-11-10T19:20:29.736Z	0	disk	
+b3af6c7714a066b2	move	docs/artifacts/MSB7-R2S1010066917-band4.bak	docs/artifacts/MSB7-R2S1010066917-band1.bak	2026-11-10T19:20:39.149Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB7-R2S1010066917-band4.bak
+b3af6c7714a066b2	move	docs/artifacts/night-adapt/MSB7-R2S1010066917.js	docs/artifacts/MSB7-R2S1010066917-band1.bak	2026-11-10T19:20:39.175Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R2S1010066917.js
+77df9c4584da1a05	canonical	docs/artifacts/MSB7-R2S1318607149-band3.bak	docs/artifacts/MSB7-R2S1318607149-band3.bak	2026-11-10T19:14:02.868Z	0	disk	
+77df9c4584da1a05	move	docs/artifacts/night-adapt/MSB7-R2S1318607149.js	docs/artifacts/MSB7-R2S1318607149-band3.bak	2026-11-10T19:14:02.920Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R2S1318607149.js
+d50a88f11baa9982	canonical	docs/artifacts/MSB7-R2S1318607149-seg2.bak	docs/artifacts/MSB7-R2S1318607149-seg2.bak	2026-11-10T18:30:43.263Z	0	disk	
+d50a88f11baa9982	move	docs/artifacts/MSB7-R2S1318607149-band4.bak	docs/artifacts/MSB7-R2S1318607149-seg2.bak	2026-11-10T19:14:02.875Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB7-R2S1318607149-band4.bak
+2b2f75c3c0a89682	canonical	docs/artifacts/MSB7-R2S1318607149-seg4.bak	docs/artifacts/MSB7-R2S1318607149-seg4.bak	2026-11-10T18:39:15.443Z	0	disk	
+2b2f75c3c0a89682	move	docs/artifacts/MSB7-R2S1318607149-band5.bak	docs/artifacts/MSB7-R2S1318607149-seg4.bak	2026-11-10T19:14:02.893Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB7-R2S1318607149-band5.bak
+601aee2f59ac6771	canonical	docs/artifacts/MSB7-R2S1457282484-band3.bak	docs/artifacts/MSB7-R2S1457282484-band3.bak	2026-11-10T19:06:37.481Z	0	disk	
+601aee2f59ac6771	move	docs/artifacts/night-adapt/MSB7-R2S1457282484.js	docs/artifacts/MSB7-R2S1457282484-band3.bak	2026-11-10T19:06:37.506Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R2S1457282484.js
+e3b1196503fff83c	canonical	docs/artifacts/MSB7-R2S231868653-band5.bak	docs/artifacts/MSB7-R2S231868653-band5.bak	2026-11-10T19:21:21.741Z	0	disk	
+e3b1196503fff83c	move	docs/artifacts/night-adapt/MSB7-R2S231868653.js	docs/artifacts/MSB7-R2S231868653-band5.bak	2026-11-10T19:21:21.768Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB7-R2S231868653.js
+ff84eb7e4d632f68	canonical	docs/artifacts/MSB8-bagua-R1S88974978-band6.bak	docs/artifacts/MSB8-bagua-R1S88974978-band6.bak	2026-11-10T18:59:17.878Z	0	disk	
+ff84eb7e4d632f68	move	docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js	docs/artifacts/MSB8-bagua-R1S88974978-band6.bak	2026-11-10T18:59:17.885Z	28	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js
+2b02ea3dc36bdceb	canonical	docs/artifacts/MSB8-bigT-R1S2059206767-band1.bak	docs/artifacts/MSB8-bigT-R1S2059206767-band1.bak	2026-11-10T18:54:52.702Z	0	disk	
+2b02ea3dc36bdceb	move	docs/artifacts/MSB8-bigT-R1S2059206767-band5.bak	docs/artifacts/MSB8-bigT-R1S2059206767-band1.bak	2026-11-10T18:55:00.116Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB8-bigT-R1S2059206767-band5.bak
+3d57727fae78a01d	canonical	docs/artifacts/MSB8-bigT-R1S2059206767-band6.bak	docs/artifacts/MSB8-bigT-R1S2059206767-band6.bak	2026-11-10T18:55:00.125Z	0	disk	
+3d57727fae78a01d	move	docs/artifacts/night-adapt/MSB8-bigT-R1S2059206767.js	docs/artifacts/MSB8-bigT-R1S2059206767-band6.bak	2026-11-10T18:55:00.131Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-bigT-R1S2059206767.js
+6bd206eb57800661	canonical	docs/artifacts/MSB8-charge-R1S1861674281-band3.bak	docs/artifacts/MSB8-charge-R1S1861674281-band3.bak	2026-11-10T18:51:58.293Z	0	disk	
+6bd206eb57800661	move	docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js	docs/artifacts/MSB8-charge-R1S1861674281-band3.bak	2026-11-10T18:51:58.364Z	180	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js
+f3139187b79fba57	canonical	docs/artifacts/MSB8-guard-R1S1857937758-band1.bak	docs/artifacts/MSB8-guard-R1S1857937758-band1.bak	2026-11-10T18:57:50.249Z	0	disk	
+f3139187b79fba57	move	docs/artifacts/night-adapt/MSB8-guard-R1S1857937758.js	docs/artifacts/MSB8-guard-R1S1857937758-band1.bak	2026-11-10T18:57:58.558Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-guard-R1S1857937758.js
+47936fa70ba94f99	canonical	docs/artifacts/MSB8-holo-R1S86278239-band5.bak	docs/artifacts/MSB8-holo-R1S86278239-band5.bak	2026-11-10T18:49:33.084Z	0	disk	
+47936fa70ba94f99	move	docs/artifacts/night-adapt/MSB8-holo-R1S86278239.js	docs/artifacts/MSB8-holo-R1S86278239-band5.bak	2026-11-10T18:49:33.112Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-holo-R1S86278239.js
+981e3af92e6b47bf	canonical	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	2026-11-10T18:04:28.319Z	0	disk	
+981e3af92e6b47bf	move	docs/artifacts/MSB8-railgun-R1S1393099249-band5.bak	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	2026-11-10T18:48:58.759Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB8-railgun-R1S1393099249-band5.bak
+981e3af92e6b47bf	move	docs/artifacts/MSB8-railgun-R1S1393099249-band6.bak	docs/artifacts/MSB8-railgun-R1S1393099249-seg1.bak	2026-11-10T18:48:58.769Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB8-railgun-R1S1393099249-band6.bak
+ecac1a16e1c87b9e	canonical	docs/artifacts/MSB8-reflect-R1S516842538-band3.bak	docs/artifacts/MSB8-reflect-R1S516842538-band3.bak	2026-11-10T18:58:37.036Z	0	disk	
+ecac1a16e1c87b9e	move	docs/artifacts/night-adapt/MSB8-reflect-R1S516842538.js	docs/artifacts/MSB8-reflect-R1S516842538-band3.bak	2026-11-10T18:58:37.069Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-reflect-R1S516842538.js
+71a0a8bbd0c96613	canonical	docs/artifacts/MSB8-sword-R1S778040134-band4.bak	docs/artifacts/MSB8-sword-R1S778040134-band4.bak	2026-11-10T18:55:48.046Z	0	disk	
+71a0a8bbd0c96613	move	docs/artifacts/night-adapt/MSB8-sword-R1S778040134.js	docs/artifacts/MSB8-sword-R1S778040134-band4.bak	2026-11-10T18:55:48.075Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB8-sword-R1S778040134.js
+8474392725c6f8e8	canonical	docs/artifacts/MSB9-g5c-R1S1569714228-band2.bak	docs/artifacts/MSB9-g5c-R1S1569714228-band2.bak	2026-11-10T19:38:20.099Z	0	disk	
+8474392725c6f8e8	move	docs/artifacts/night-adapt/MSB9-g5c-R1S1569714228.js	docs/artifacts/MSB9-g5c-R1S1569714228-band2.bak	2026-11-10T19:38:20.136Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-g5c-R1S1569714228.js
+1c65b9a3b49530b5	canonical	docs/artifacts/MSB9-g5c-R1S2010094737-band3.bak	docs/artifacts/MSB9-g5c-R1S2010094737-band3.bak	2026-11-10T19:42:29.505Z	0	disk	
+1c65b9a3b49530b5	move	docs/artifacts/night-adapt/MSB9-g5c-R1S2010094737.js	docs/artifacts/MSB9-g5c-R1S2010094737-band3.bak	2026-11-10T19:42:29.544Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-g5c-R1S2010094737.js
+d845bd1c1e98f313	canonical	docs/artifacts/MSB9-R1S1582243476-seg1.bak	docs/artifacts/MSB9-R1S1582243476-seg1.bak	2026-11-10T19:11:44.077Z	0	disk	
+d845bd1c1e98f313	move	docs/artifacts/MSB9-R1S1582243476-band1.bak	docs/artifacts/MSB9-R1S1582243476-seg1.bak	2026-11-10T19:39:08.907Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-R1S1582243476-band1.bak
+d792861ce9e3a499	canonical	docs/artifacts/MSB9-R1S1918573253-band3.bak	docs/artifacts/MSB9-R1S1918573253-band3.bak	2026-11-10T19:44:57.348Z	0	disk	
+d792861ce9e3a499	move	docs/artifacts/night-adapt/MSB9-R1S1918573253.js	docs/artifacts/MSB9-R1S1918573253-band3.bak	2026-11-10T19:44:57.383Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R1S1918573253.js
+326b27aa76ca2431	canonical	docs/artifacts/MSB9-R1S2056215739-band4.bak	docs/artifacts/MSB9-R1S2056215739-band4.bak	2026-11-10T19:42:51.173Z	0	disk	
+326b27aa76ca2431	move	docs/artifacts/night-adapt/MSB9-R1S2056215739.js	docs/artifacts/MSB9-R1S2056215739-band4.bak	2026-11-10T19:42:51.196Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R1S2056215739.js
+622598d4ede470f9	canonical	docs/artifacts/MSB9-R1S2056215739-seg3.bak	docs/artifacts/MSB9-R1S2056215739-seg3.bak	2026-11-10T19:16:16.408Z	0	disk	
+622598d4ede470f9	move	docs/artifacts/MSB9-R1S2056215739-band6.bak	docs/artifacts/MSB9-R1S2056215739-seg3.bak	2026-11-10T19:42:51.186Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-R1S2056215739-band6.bak
+a91cbcee6a50f48c	canonical	docs/artifacts/MSB9-R1S333453513-band1.bak	docs/artifacts/MSB9-R1S333453513-band1.bak	2026-11-10T19:46:08.986Z	0	disk	
+a91cbcee6a50f48c	move	docs/artifacts/night-adapt/MSB9-R1S333453513.js	docs/artifacts/MSB9-R1S333453513-band1.bak	2026-11-10T19:46:17.738Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R1S333453513.js
+37cd505036092906	canonical	docs/artifacts/MSB9-R1S333453513-band2.bak	docs/artifacts/MSB9-R1S333453513-band2.bak	2026-11-10T19:46:17.700Z	0	disk	
+37cd505036092906	move	docs/artifacts/MSB9-R1S333453513-band3.bak	docs/artifacts/MSB9-R1S333453513-band2.bak	2026-11-10T19:46:17.710Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-R1S333453513-band3.bak
+383c1c79aeaf085a	canonical	docs/artifacts/MSB9-R2S1112532101-band2.bak	docs/artifacts/MSB9-R2S1112532101-band2.bak	2026-11-10T20:23:06.615Z	0	disk	
+383c1c79aeaf085a	move	docs/artifacts/MSB9-R2S1112532101-band6.bak	docs/artifacts/MSB9-R2S1112532101-band2.bak	2026-11-10T20:23:06.639Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-R2S1112532101-band6.bak
+674be20c4dea9301	canonical	docs/artifacts/MSB9-R2S1112532101-band3.bak	docs/artifacts/MSB9-R2S1112532101-band3.bak	2026-11-10T20:23:06.622Z	0	disk	
+674be20c4dea9301	move	docs/artifacts/night-adapt/MSB9-R2S1112532101.js	docs/artifacts/MSB9-R2S1112532101-band3.bak	2026-11-10T20:23:06.645Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R2S1112532101.js
+ebfac99f294ee9d0	canonical	docs/artifacts/MSB9-R2S1597175670-band1.bak	docs/artifacts/MSB9-R2S1597175670-band1.bak	2026-11-10T20:28:22.791Z	0	disk	
+ebfac99f294ee9d0	move	docs/artifacts/night-adapt/MSB9-R2S1597175670.js	docs/artifacts/MSB9-R2S1597175670-band1.bak	2026-11-10T20:28:29.748Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R2S1597175670.js
+c2bee92c2fba6f9b	canonical	docs/artifacts/MSB9-R2S1663058548-seg4.bak	docs/artifacts/MSB9-R2S1663058548-seg4.bak	2026-11-10T20:01:40.591Z	0	disk	
+c2bee92c2fba6f9b	move	docs/artifacts/MSB9-R2S1663058548-band2.bak	docs/artifacts/MSB9-R2S1663058548-seg4.bak	2026-11-10T20:17:28.986Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-R2S1663058548-band2.bak
+9ac0d1c42c41875c	canonical	docs/artifacts/MSB9-R2S1663058548-band4.bak	docs/artifacts/MSB9-R2S1663058548-band4.bak	2026-11-10T20:17:29.009Z	0	disk	
+9ac0d1c42c41875c	move	docs/artifacts/night-adapt/MSB9-R2S1663058548.js	docs/artifacts/MSB9-R2S1663058548-band4.bak	2026-11-10T20:17:29.035Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R2S1663058548.js
+779a2165fa8fea49	canonical	docs/artifacts/MSB9-R2S443656264-band2.bak	docs/artifacts/MSB9-R2S443656264-band2.bak	2026-11-10T20:18:54.841Z	0	disk	
+779a2165fa8fea49	move	docs/artifacts/night-adapt/MSB9-R2S443656264.js	docs/artifacts/MSB9-R2S443656264-band2.bak	2026-11-10T20:18:54.874Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-R2S443656264.js
+9f1607b053bb322e	canonical	docs/artifacts/MSB9-seq-R1S1712079342-band2.bak	docs/artifacts/MSB9-seq-R1S1712079342-band2.bak	2026-11-10T19:47:12.032Z	0	disk	
+9f1607b053bb322e	move	docs/artifacts/night-adapt/MSB9-seq-R1S1712079342.js	docs/artifacts/MSB9-seq-R1S1712079342-band2.bak	2026-11-10T19:47:12.070Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-seq-R1S1712079342.js
+b5188adb9f226d88	canonical	docs/artifacts/MSB9-seq-R1S1712079342-seg4.bak	docs/artifacts/MSB9-seq-R1S1712079342-seg4.bak	2026-11-10T19:20:06.778Z	0	disk	
+b5188adb9f226d88	move	docs/artifacts/MSB9-seq-R1S1712079342-band6.bak	docs/artifacts/MSB9-seq-R1S1712079342-seg4.bak	2026-11-10T19:47:12.060Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MSB9-seq-R1S1712079342-band6.bak
+ef2a0f91d7c2df0f	canonical	docs/artifacts/MSB9-seq-R1S606717132-band5.bak	docs/artifacts/MSB9-seq-R1S606717132-band5.bak	2026-11-10T19:47:55.854Z	0	disk	
+ef2a0f91d7c2df0f	move	docs/artifacts/night-adapt/MSB9-seq-R1S606717132.js	docs/artifacts/MSB9-seq-R1S606717132-band5.bak	2026-11-10T19:47:55.869Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/MSB9-seq-R1S606717132.js
 206a93fabfa23653	canonical	docs/artifacts/MUTFLAT-s15-band1.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:04.419Z	0	disk	
 206a93fabfa23653	move	docs/artifacts/MUTFLAT-s15-band5.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:07.042Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MUTFLAT-s15-band5.bak
 206a93fabfa23653	move	docs/artifacts/MUTFLAT-s15-band6.bak	docs/artifacts/MUTFLAT-s15-band1.bak	2026-11-05T23:56:07.045Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/MUTFLAT-s15-band6.bak
@@ -265,6 +624,37 @@ d7f514aae3a23577	canonical	docs/artifacts/OBS5-Q-s41-band3.bak	docs/artifacts/OB
 d7f514aae3a23577	move	docs/artifacts/night-adapt/OBS5-Q-s41.js	docs/artifacts/OBS5-Q-s41-band3.bak	2026-11-09T19:49:51.708Z	7	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/OBS5-Q-s41.js
 e500051a05802cb8	canonical	docs/artifacts/night-adapt/PASS2-Q-s13.js	docs/artifacts/night-adapt/PASS2-Q-s13.js	2026-11-08T00:44:35.803Z	27	git	
 e500051a05802cb8	move	docs/artifacts/PASS2-Q-s13-band5.bak	docs/artifacts/night-adapt/PASS2-Q-s13.js	2026-11-08T00:44:35.797Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/PASS2-Q-s13-band5.bak
+cf1d3f0b3bb079db	canonical	docs/artifacts/S916-R1S1060412595-band6.bak	docs/artifacts/S916-R1S1060412595-band6.bak	2026-11-10T13:35:36.004Z	0	disk	
+cf1d3f0b3bb079db	move	docs/artifacts/night-adapt/S916-R1S1060412595.js	docs/artifacts/S916-R1S1060412595-band6.bak	2026-11-10T13:35:36.009Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916-R1S1060412595.js
+829d9efa67c49d23	canonical	docs/artifacts/S916-R1S1704335642-band4.bak	docs/artifacts/S916-R1S1704335642-band4.bak	2026-11-10T13:34:41.882Z	0	disk	
+829d9efa67c49d23	move	docs/artifacts/night-adapt/S916-R1S1704335642.js	docs/artifacts/S916-R1S1704335642-band4.bak	2026-11-10T13:34:41.894Z	84	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916-R1S1704335642.js
+99e90e0394d88940	canonical	docs/artifacts/S916-R1S573569134-band3.bak	docs/artifacts/S916-R1S573569134-band3.bak	2026-11-10T13:32:19.641Z	0	disk	
+99e90e0394d88940	move	docs/artifacts/night-adapt/S916-R1S573569134.js	docs/artifacts/S916-R1S573569134-band3.bak	2026-11-10T13:32:19.658Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916-R1S573569134.js
+ab81ea46f97544c9	canonical	docs/artifacts/S916R2B-R1S1062426886-band6.bak	docs/artifacts/S916R2B-R1S1062426886-band6.bak	2026-11-10T14:13:23.389Z	0	disk	
+ab81ea46f97544c9	move	docs/artifacts/night-adapt/S916R2B-R1S1062426886.js	docs/artifacts/S916R2B-R1S1062426886-band6.bak	2026-11-10T14:13:23.395Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S1062426886.js
+1c1c6a10daa0e561	canonical	docs/artifacts/S916R2B-R1S1098066977-band2.bak	docs/artifacts/S916R2B-R1S1098066977-band2.bak	2026-11-10T14:11:16.082Z	0	disk	
+1c1c6a10daa0e561	move	docs/artifacts/night-adapt/S916R2B-R1S1098066977.js	docs/artifacts/S916R2B-R1S1098066977-band2.bak	2026-11-10T14:11:16.122Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S1098066977.js
+75287066827c3ccb	canonical	docs/artifacts/S916R2B-R1S1249867118-band2.bak	docs/artifacts/S916R2B-R1S1249867118-band2.bak	2026-11-10T14:05:58.979Z	0	disk	
+75287066827c3ccb	move	docs/artifacts/night-adapt/S916R2B-R1S1249867118.js	docs/artifacts/S916R2B-R1S1249867118-band2.bak	2026-11-10T14:05:59.011Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S1249867118.js
+bec1689a0bb02896	canonical	docs/artifacts/S916R2B-R1S1408282248-band1.bak	docs/artifacts/S916R2B-R1S1408282248-band1.bak	2026-11-10T14:15:28.898Z	0	disk	
+bec1689a0bb02896	move	docs/artifacts/S916R2B-R1S1408282248-band4.bak	docs/artifacts/S916R2B-R1S1408282248-band1.bak	2026-11-10T14:15:33.122Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/S916R2B-R1S1408282248-band4.bak
+bec1689a0bb02896	move	docs/artifacts/night-adapt/S916R2B-R1S1408282248.js	docs/artifacts/S916R2B-R1S1408282248-band1.bak	2026-11-10T14:15:33.137Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S1408282248.js
+ee4362e815f26cc0	canonical	docs/artifacts/S916R2B-R1S1725743042-band4.bak	docs/artifacts/S916R2B-R1S1725743042-band4.bak	2026-11-10T14:09:53.191Z	0	disk	
+ee4362e815f26cc0	move	docs/artifacts/night-adapt/S916R2B-R1S1725743042.js	docs/artifacts/S916R2B-R1S1725743042-band4.bak	2026-11-10T14:09:53.208Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S1725743042.js
+22f260e072c7add4	canonical	docs/artifacts/S916R2B-R1S2000717743-band6.bak	docs/artifacts/S916R2B-R1S2000717743-band6.bak	2026-11-10T14:12:22.377Z	0	disk	
+22f260e072c7add4	move	docs/artifacts/night-adapt/S916R2B-R1S2000717743.js	docs/artifacts/S916R2B-R1S2000717743-band6.bak	2026-11-10T14:12:22.383Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S2000717743.js
+2e9b09f1a7084b3f	canonical	docs/artifacts/S916R2B-R1S371963301-band2.bak	docs/artifacts/S916R2B-R1S371963301-band2.bak	2026-11-10T14:13:50.251Z	0	disk	
+2e9b09f1a7084b3f	move	docs/artifacts/night-adapt/S916R2B-R1S371963301.js	docs/artifacts/S916R2B-R1S371963301-band2.bak	2026-11-10T14:13:50.291Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S371963301.js
+8ae650b32e5e1009	canonical	docs/artifacts/S916R2B-R1S685223462-band2.bak	docs/artifacts/S916R2B-R1S685223462-band2.bak	2026-11-10T14:18:31.432Z	0	disk	
+8ae650b32e5e1009	move	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	docs/artifacts/S916R2B-R1S685223462-band2.bak	2026-11-10T14:18:31.470Z	201	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S685223462.js
+8e3377412c1cb686	canonical	docs/artifacts/S916R2B-R1S745300182-band6.bak	docs/artifacts/S916R2B-R1S745300182-band6.bak	2026-11-10T14:07:21.712Z	0	disk	
+8e3377412c1cb686	move	docs/artifacts/night-adapt/S916R2B-R1S745300182.js	docs/artifacts/S916R2B-R1S745300182-band6.bak	2026-11-10T14:07:21.719Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S745300182.js
+a75704b530262da8	canonical	docs/artifacts/S916R2B-R1S768291681-band3.bak	docs/artifacts/S916R2B-R1S768291681-band3.bak	2026-11-10T14:14:45.503Z	0	disk	
+a75704b530262da8	move	docs/artifacts/night-adapt/S916R2B-R1S768291681.js	docs/artifacts/S916R2B-R1S768291681-band3.bak	2026-11-10T14:14:45.525Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S768291681.js
+6c7c3f55ea22472c	canonical	docs/artifacts/S916R2B-R1S769889016-band2.bak	docs/artifacts/S916R2B-R1S769889016-band2.bak	2026-11-10T14:18:48.796Z	0	disk	
+6c7c3f55ea22472c	move	docs/artifacts/night-adapt/S916R2B-R1S769889016.js	docs/artifacts/S916R2B-R1S769889016-band2.bak	2026-11-10T14:18:48.821Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S769889016.js
+7aede7e7223ca03b	canonical	docs/artifacts/S916R2B-R1S997133553-band3.bak	docs/artifacts/S916R2B-R1S997133553-band3.bak	2026-11-10T14:19:02.331Z	0	disk	
+7aede7e7223ca03b	move	docs/artifacts/night-adapt/S916R2B-R1S997133553.js	docs/artifacts/S916R2B-R1S997133553-band3.bak	2026-11-10T14:19:02.359Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/S916R2B-R1S997133553.js
 2bdd3e4c97585604	canonical	docs/artifacts/STR-A-Q-s13-band2.bak	docs/artifacts/STR-A-Q-s13-band2.bak	2026-11-08T07:33:42.421Z	0	disk	
 2bdd3e4c97585604	move	docs/artifacts/STR-A-Q-s13-band4.bak	docs/artifacts/STR-A-Q-s13-band2.bak	2026-11-08T07:33:42.432Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-A-Q-s13-band4.bak
 2bdd3e4c97585604	move	docs/artifacts/night-adapt/STR-A-Q-s13.js	docs/artifacts/STR-A-Q-s13-band2.bak	2026-11-08T07:33:42.448Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/night-adapt/STR-A-Q-s13.js
@@ -297,9 +687,14 @@ c166a34112ce081e	move	docs/artifacts/OBS5-D-s13-band5.bak	docs/artifacts/OBS5-Q-
 3b971e258a542e55	move	docs/artifacts/OBS5-D-s13-band6.bak	docs/artifacts/OBS5-Q-s13-band5.bak	2026-11-09T20:55:04.381Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/OBS5-D-s13-band6.bak
 de85af8599a8b789	canonical	docs/artifacts/P2A-s41-band4.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.898Z	0	disk	
 de85af8599a8b789	move	docs/artifacts/P2A-s41-band5.bak	docs/artifacts/P2A-s41-band4.bak	2026-11-05T16:34:46.902Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/P2A-s41-band5.bak
+c12641786de8dfc4	canonical	docs/artifacts/S916R2B-R1S745300182-band2.bak	docs/artifacts/S916R2B-R1S745300182-band2.bak	2026-11-10T14:07:21.687Z	0	disk	
+c12641786de8dfc4	move	docs/artifacts/S916R2B-R1S745300182-band3.bak	docs/artifacts/S916R2B-R1S745300182-band2.bak	2026-11-10T14:07:21.693Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/S916R2B-R1S745300182-band3.bak
 d2046df0147eb4a9	canonical	docs/artifacts/SMOKE-SW2-band2.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-03T12:57:11.823Z	0	disk	
 d2046df0147eb4a9	move	docs/artifacts/SMOKE-CR-band3.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-05T16:30:50.155Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-CR-band3.bak
 d2046df0147eb4a9	move	docs/artifacts/SMOKE-CR-band4.bak	docs/artifacts/SMOKE-SW2-band2.bak	2026-11-05T16:30:50.160Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-CR-band4.bak
+82416eb69be80512	canonical	docs/artifacts/SMOKE-FITCHAMP-band2.bak	docs/artifacts/SMOKE-FITCHAMP-band2.bak	2026-11-10T05:17:13.668Z	0	disk	
+82416eb69be80512	move	docs/artifacts/SMOKE-FITCHAMP-band4.bak	docs/artifacts/SMOKE-FITCHAMP-band2.bak	2026-11-10T05:17:13.678Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-FITCHAMP-band4.bak
+82416eb69be80512	move	docs/artifacts/SMOKE-XB-band2.bak	docs/artifacts/SMOKE-FITCHAMP-band2.bak	2026-11-10T05:57:17.517Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-XB-band2.bak
 fd129add8d33b68c	canonical	docs/artifacts/SMOKE-MX-band3.bak	docs/artifacts/SMOKE-MX-band3.bak	2026-11-05T16:32:17.794Z	0	disk	
 fd129add8d33b68c	move	docs/artifacts/SMOKE-passive-band3.bak	docs/artifacts/SMOKE-MX-band3.bak	2026-11-08T12:14:10.459Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-passive-band3.bak
 d046294836c01098	canonical	docs/artifacts/SMOKE-MX-band4.bak	docs/artifacts/SMOKE-MX-band4.bak	2026-11-05T16:32:17.799Z	0	disk	
@@ -309,8 +704,10 @@ d046294836c01098	move	docs/artifacts/SMOKE-passive-band4.bak	docs/artifacts/SMOK
 66bc2f92eb807f51	move	docs/artifacts/SMOKE-SW2-band1.bak	docs/artifacts/SMOKE-NORM-s13-band2.bak	2026-11-03T12:57:09.202Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE-SW2-band1.bak
 900cb457bd922ba8	canonical	docs/artifacts/SMOKE2-band1.bak	docs/artifacts/SMOKE2-band1.bak	2026-11-08T12:15:04.607Z	0	disk	
 900cb457bd922ba8	move	docs/artifacts/SMOKE3-band1.bak	docs/artifacts/SMOKE2-band1.bak	2026-11-08T12:16:35.810Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE3-band1.bak
+900cb457bd922ba8	move	docs/artifacts/smoke-out-band1.bak	docs/artifacts/SMOKE2-band1.bak	2026-11-10T16:38:21.626Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/smoke-out-band1.bak
 f8c6b067f2bf2773	canonical	docs/artifacts/SMOKE2-band2.bak	docs/artifacts/SMOKE2-band2.bak	2026-11-08T12:15:08.423Z	0	disk	
 f8c6b067f2bf2773	move	docs/artifacts/SMOKE3-band2.bak	docs/artifacts/SMOKE2-band2.bak	2026-11-08T12:16:39.459Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/SMOKE3-band2.bak
+f8c6b067f2bf2773	move	docs/artifacts/smoke-out-band2.bak	docs/artifacts/SMOKE2-band2.bak	2026-11-10T16:38:26.573Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/smoke-out-band2.bak
 29474671aca2ece8	canonical	docs/artifacts/STR-B-Q-s13-band2.bak	docs/artifacts/STR-B-Q-s13-band2.bak	2026-11-08T07:44:12.265Z	0	disk	
 29474671aca2ece8	move	docs/artifacts/STR-B3-Q-s13-band2.bak	docs/artifacts/STR-B-Q-s13-band2.bak	2026-11-08T08:13:24.617Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/STR-B3-Q-s13-band2.bak
 da58e843d231f0eb	canonical	docs/artifacts/STR-B-Q-s13-band3.bak	docs/artifacts/STR-B-Q-s13-band3.bak	2026-11-08T07:44:12.269Z	0	disk	

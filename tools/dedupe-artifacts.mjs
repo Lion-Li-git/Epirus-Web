@@ -51,7 +51,9 @@ const has = k => process.argv.includes('--' + k);
 const bad = process.argv.slice(2).filter(a => a.startsWith('--') && !['plan', 'write-manifest', 'quarantine', 'restore', 'check', 'include-tracked', 'repoint', 'apply', 'audit', 'scope', 'to']
   .some(f => a === '--' + f || a.startsWith('--' + f.split('=')[0] + '=')));
 if (bad.length) { console.error('⛔ 不认识的参数：' + bad.join(' ') + '（只认 plan/write-manifest/quarantine/restore/check/repoint/apply/include-tracked/scope/to）'); process.exit(2); }
-const SCOPE = String(arg('scope', 'docs/artifacts,d180-bands')).split(',').map(s => s.trim()).filter(Boolean);
+/* 11-12 夜：d180-bands 已随旧链归档消失（.gitignore 屏着、盘上无此目录）⇒ 默认 scope 只剩 docs/artifacts；
+ *   要扫别处仍可 --scope= 显式给。 */
+const SCOPE = String(arg('scope', 'docs/artifacts')).split(',').map(s => s.trim()).filter(Boolean);
 const QDIR = arg('to', '');
 const MAN = join(ROOT, 'champion-map', 'dupes-manifest.tsv');
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
