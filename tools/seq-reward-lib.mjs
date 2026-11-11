@@ -32,16 +32,36 @@
 export function makeSeqReward(R, W, kind) {
   const w = Number(W) || 0;
   if (!w) return null;
-  const BOOM = kind === 'boom';                       // v1.8.37：缺省/undefined/'elec' 都走电珠原义
+  /* 11-12 夜（ZCode · 研究矩阵结论"机会注入不转行为"）：第三档 `hit:<键,键>` = **按真实落地伤害付费**——
+   *   `deliverDamage` 全卡携带 `{type:'damage', source, via, amt}`（大雷 resolve.js:947 `source/via` 实证），
+   *   决策点扫一次即可判定，**零新旋钮**（复用 EPIRUS_SEQ_W 的档位 + KIND 的枚举）。
+   *   只认落地（被格挡/无效化的 damage 事件不发生）；非伤害技能（ring/curse）与无归因的 mine 不在射程。 */
+  const HIT = /^hit:([a-zA-Z,]+)$/.exec(kind || '');
+  const HIT_KEYS = HIT ? new Set(HIT[1].split(',').filter(Boolean)) : null;
+  const BOOM = !HIT && kind === 'boom';               // v1.8.37：缺省/undefined/'elec' 都走电珠原义
   const BEAD_KIND = BOOM ? 'boom' : 'elec';
   const TERM = BOOM ? R.SK.LASER_EYE : R.SK.RAILGUN;
-  const REASON = BOOM ? '序列奖励(蓄爆珠→激光眼)' : '序列奖励(蓄能→电磁炮)';
+  const REASON = HIT ? '技能命中奖励(' + [...HIT_KEYS].join('/') + ')' : (BOOM ? '序列奖励(蓄爆珠→激光眼)' : '序列奖励(蓄能→电磁炮)');
   return {
-    w: w, kind: BEAD_KIND, paid: 0, events: 0, granted: [], charges: 0, firstCharge: -1, firstPayRound: -1,   // granted：给谁、第几局，便于自证
+    w: w, kind: HIT ? 'hit:' + [...HIT_KEYS].join(',') : BEAD_KIND, paid: 0, events: 0, granted: [], charges: 0, firstCharge: -1, firstPayRound: -1,   // granted：给谁、第几局，便于自证
+    hitKeys: HIT ? [...HIT_KEYS] : null, byKey: {},
     /** 每个决策点调一次。**幂等**：同一事件不会被处理两次（cursor 记账）。 */
     tick: function (state) {
       const evs = state.events, n = evs.length;
       let k = state.__seqCur || 0;
+      if (HIT_KEYS) {
+        for (; k < n; k++) {
+          const e = evs[k];
+          if (e.type === 'damage' && e.source != null && e.via && HIT_KEYS.has(e.via)) {
+            state.p[e.source].ep += w;
+            state.events.push({ type: 'ep', pid: e.source, delta: w, reason: REASON });
+            this.paid += w; this.events++; this.byKey[e.via] = (this.byKey[e.via] || 0) + 1;
+            this.granted.push(e.source); if (this.firstPayRound < 0) this.firstPayRound = state.round;
+          }
+        }
+        state.__seqCur = evs.length;
+        return;
+      }
       const pend = state.__seqPend || (state.__seqPend = {});
       for (; k < n; k++) {
         const e = evs[k];
@@ -82,6 +102,8 @@ export function makeSeqReward(R, W, kind) {
  *   付款只发生在别的路径上（实测四轮 A/B 付款 78/28/125/165 次，而**当选冠军逐字相同** ⇒
  *   那些付款**从没进入被用来打分的对局**）。这也正是击杀奖励要用 `patchResolve/patchPlay` 改源码的原因。
  * 手法：把定义改名成 `__policyChooserN_raw`，再加一层同名包装 ⇒ **所有 13 个内部调用点**自动走包装。
+ * 11-12 夜：`__SKW`（技能命中奖励，skill-reward-lib）与 `__SEQ` **串联**——两个都定义时两层都生效
+ *   （外层先 tick SEQ 再 tick SKW，顺序无语义差别：两者都是对同一事件流的独立记账）。
  */
 export function patchEvoChooser(txt) {
   const A = '  function policyChooserN(params, temp, eps, epsK, epsMode) {';
@@ -94,6 +116,9 @@ export function patchEvoChooser(txt) {
     .replace(RAW,
       '  function policyChooserN(params, temp, eps, epsK, epsMode) {\n' +
       '    const f = __policyChooserN_raw(params, temp, eps, epsK, epsMode);\n' +
-      '    return (typeof __SEQ !== \'undefined\' && __SEQ) ? __SEQ.wrapOne(f) : f;\n' +
+      '    let g = f;\n' +
+      '    if (typeof __SEQ !== \'undefined\' && __SEQ) g = __SEQ.wrapOne(g);\n' +
+      '    if (typeof __SKW !== \'undefined\' && __SKW) g = __SKW.wrapOne(g);\n' +
+      '    return g;\n' +
       '  }\n' + RAW);
 }

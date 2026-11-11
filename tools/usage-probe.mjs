@@ -103,7 +103,8 @@ if (process.argv.includes('--self-test')) {
 }
 
 /* ---------- 名单 ---------- */
-const CO = readFileSync(join(HERE, '..', 'champion-map', 'coords.tsv'), 'utf8').replace(/\r\n/g, '\n').trim().split('\n').map(l => l.split('\t'));
+/* 11-12 夜修：coords.tsv 随数据模型重构搬进 data/page/（旧根路径 ENOENT，DS 重构漏了这处读者） */
+const CO = readFileSync(join(HERE, '..', 'champion-map', 'data', 'page', 'coords.tsv'), 'utf8').replace(/\r\n/g, '\n').trim().split('\n').map(l => l.split('\t'));
 const ch0 = Object.fromEntries(CO[0].map((c, i) => [c, i]));
 const rowsC = CO.slice(1).map(r => ({ id: r[ch0.id], path: r[ch0.path] })).filter(e => e.id && e.path);
 let list = rowsC;

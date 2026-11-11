@@ -741,8 +741,15 @@ if (!(SEQ_W >= 0 && SEQ_W <= 10)) {
   console.error('[train-3p] ⛔ EPIRUS_SEQ_W=' + process.env.EPIRUS_SEQ_W + ' 不是合法档（只认 0~10 的数字，0=关）');
   process.exit(6);
 }
-if (SEQ_KIND !== 'elec' && SEQ_KIND !== 'boom') {
-  console.error('[train-3p] ⛔ EPIRUS_SEQ_KIND=' + process.env.EPIRUS_SEQ_KIND + ' 不是合法档（只认 elec/boom，缺省 elec）');
+/* 11-12 夜（研究矩阵结论）：第三档 `hit:<键,键>` = 按真实落地伤害付费（见 seq-reward-lib 头注）——
+ *   键名必须**在卡表里**且是伤害卡（黑键同族：拼错的键 = 奖励永远付不出 = 静默空转 ⇒ 响亮拒）。 */
+const SEQ_HIT = /^hit:([a-zA-Z,]+)$/.exec(SEQ_KIND);
+if (SEQ_HIT) {
+  const BYK = sb.window.EpirusRules.byKey || {};
+  const bad = SEQ_HIT[1].split(',').filter(Boolean).filter((k) => !BYK[k] || k === 'ji');
+  if (bad.length) { console.error('[train-3p] ⛔ EPIRUS_SEQ_KIND=' + SEQ_KIND + ' 里的键不在卡表（或是 ジ）：' + bad.join(',')); process.exit(6); }
+} else if (SEQ_KIND !== 'elec' && SEQ_KIND !== 'boom') {
+  console.error('[train-3p] ⛔ EPIRUS_SEQ_KIND=' + process.env.EPIRUS_SEQ_KIND + ' 不是合法档（只认 elec/boom/hit:<键,键>，缺省 elec）');
   process.exit(6);
 }
 if (SEQ_W > 0) {
@@ -751,11 +758,18 @@ if (SEQ_W > 0) {
   sb.__SEQ = SEQ;
   sb.window.EpirusTrainer.policyChooserN = SEQ.wrapChooserFactory(sb.window.EpirusTrainer.policyChooserN);
   console.log('[序列奖励] EPIRUS_SEQ_W=' + SEQ_W + ' EPIRUS_SEQ_KIND=' + SEQ_KIND + ' ⇒ **在内存里**给"' +
-    (SEQ_KIND === 'boom' ? '蓄爆珠 → 激光眼' : '蓄能[电珠] → 下一回合电磁炮') + '"每次完成 +' + SEQ_W +
+    (SEQ.hitKeys ? '命中(' + SEQ.hitKeys.join('/') + ') 每次真实落地' : (SEQ_KIND === 'boom' ? '蓄爆珠 → 激光眼' : '蓄能[电珠] → 下一回合电磁炮')) + '" +' + SEQ_W +
     ' ep（仓库文件一字不动 ⇒ 规则指纹不变；本臂产物**不是**现状规则下的冠军，`meta.recipe.env` 会记下）');
   /* v1.5.229：收尾必须印**实际付了多少** —— 否则"奖励没效果"分不清是"代际太短"还是"训练场里这个事件根本不发生"
    * （后者意味着奖励永远付不出去，梯度为零 ⇒ 与击杀奖励"付得太少"同族，但更极端）。 */
   process.on('exit', function () {
+    if (SEQ.hitKeys) {
+      console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（分母：本臂总局数 ' + GENS * GAMES * POP +
+        ' ‖ 按键：' + SEQ.hitKeys.map((k) => k + '=' + (SEQ.byKey[k] || 0)).join(' · ') +
+        ' · 首次付款第 ' + SEQ.firstPayRound + ' 回合；每局 ' + (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +
+        (SEQ.events === 0 ? '  ⛔ **一次命中都没有** ⇒ 奖励付不出去（课程/热启动的问题，不是奖励的问题）' : ''));
+      return;
+    }
     console.log('[序列奖励·结账] 本臂共发放 ' + SEQ.events + ' 次 · ' + SEQ.paid + ' ep（分母：充到' +
       (SEQ_KIND === 'boom' ? '爆珠' : '电珠') + ' ' + SEQ.charges +
       ' 次 · 首次第 ' + SEQ.firstCharge + ' 回合 · 首次付款第 ' + SEQ.firstPayRound + ' 回合；每股 ' + (SEQ.events / Math.max(1, GENS * GAMES * POP)).toFixed(4) + ' 次）' +

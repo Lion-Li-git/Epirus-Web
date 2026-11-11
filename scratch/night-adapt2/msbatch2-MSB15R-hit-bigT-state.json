@@ -1,0 +1,53 @@
+{
+ "base": 209,
+ "arm": "MSB15R-hit-bigT",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "champT": {
+  "mean": 0.13825749999999998,
+  "min": 0.06,
+  "spread": 0.1804
+ },
+ "seedIdx": 2,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+   "champMean": 0.13825749999999998,
+   "pool": [
+    {
+     "label": "S2123535820",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+     "mean": 0.13825749999999998,
+     "min": 0.06
+    },
+    {
+     "label": "S258967927",
+     "pack": "docs/artifacts/night-adapt/MSB15R-hit-bigT-R1S258967927.js",
+     "mean": 0.052237500000000006,
+     "min": -0.0612
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+    "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js"
+   ]
+  }
+ ]
+}

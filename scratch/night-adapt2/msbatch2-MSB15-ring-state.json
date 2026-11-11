@@ -1,0 +1,88 @@
+{
+ "base": 152,
+ "arm": "MSB15-ring",
+ "rounds": 6,
+ "branches": 2,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champT": {
+  "mean": 0.4103925,
+  "min": 0.2177,
+  "spread": 0.3468
+ },
+ "seedIdx": 4,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S307147650",
+     "pack": "docs/artifacts/night-adapt/MSB15-ring-R1S307147650.js",
+     "mean": 0.37246999999999997,
+     "min": 0.1843
+    },
+    {
+     "label": "S1040485129",
+     "pack": "docs/artifacts/night-adapt/MSB15-ring-R1S1040485129.js",
+     "mean": 0.062975,
+     "min": -0.055
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S897114511",
+     "pack": "docs/artifacts/night-adapt/MSB15-ring-R2S897114511.js",
+     "mean": 0.22604249999999998,
+     "min": 0.0612
+    },
+    {
+     "label": "S356976677",
+     "pack": "docs/artifacts/night-adapt/MSB15-ring-R2S356976677.js",
+     "mean": 0.154955,
+     "min": 0.1089
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  }
+ ]
+}

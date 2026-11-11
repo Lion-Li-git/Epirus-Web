@@ -1,0 +1,17 @@
+{
+ "base": 211,
+ "arm": "MSB15R-hit-eco",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "champion": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "champT": {
+  "mean": 0.13825749999999998,
+  "min": 0.06,
+  "spread": 0.1804
+ },
+ "seedIdx": 0,
+ "history": []
+}

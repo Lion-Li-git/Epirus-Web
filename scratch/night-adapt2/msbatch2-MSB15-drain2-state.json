@@ -1,0 +1,88 @@
+{
+ "base": 153,
+ "arm": "MSB15-drain2",
+ "rounds": 6,
+ "branches": 2,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champT": {
+  "mean": 0.4103925,
+  "min": 0.2177,
+  "spread": 0.3468
+ },
+ "seedIdx": 4,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S1853688973",
+     "pack": "docs/artifacts/night-adapt/MSB15-drain2-R1S1853688973.js",
+     "mean": 0.3031625,
+     "min": 0.18
+    },
+    {
+     "label": "S162144803",
+     "pack": "docs/artifacts/night-adapt/MSB15-drain2-R1S162144803.js",
+     "mean": 0.24744499999999997,
+     "min": 0.1757
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S213694720",
+     "pack": "docs/artifacts/night-adapt/MSB15-drain2-R2S213694720.js",
+     "mean": 0.3238725,
+     "min": 0.1469
+    },
+    {
+     "label": "S703929909",
+     "pack": "docs/artifacts/night-adapt/MSB15-drain2-R2S703929909.js",
+     "mean": 0.27903999999999995,
+     "min": 0.1071
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  }
+ ]
+}

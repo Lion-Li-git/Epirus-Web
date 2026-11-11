@@ -1,0 +1,53 @@
+{
+ "base": 206,
+ "arm": "MSB15R-laser-hard",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champT": {
+  "mean": 0.4103925,
+  "min": 0.2177,
+  "spread": 0.3468
+ },
+ "seedIdx": 2,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S1427902809",
+     "pack": "docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1427902809.js",
+     "mean": 0.27270250000000007,
+     "min": 0.09
+    },
+    {
+     "label": "S1952331727",
+     "pack": "docs/artifacts/night-adapt/MSB15R-laser-hard-R1S1952331727.js",
+     "mean": 0.12093000000000001,
+     "min": 0.0228
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  }
+ ]
+}

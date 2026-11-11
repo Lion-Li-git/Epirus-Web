@@ -1,0 +1,74 @@
+{
+ "base": 156,
+ "arm": "MSB15-curse",
+ "rounds": 5,
+ "branches": 1,
+ "gens": 200,
+ "margin": 0.03,
+ "start": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+ "champT": {
+  "mean": 0.4103925,
+  "min": 0.2177,
+  "spread": 0.3468
+ },
+ "seedIdx": 2,
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S1094478832",
+     "pack": "docs/artifacts/night-adapt/MSB15-curse-R1S1094478832.js",
+     "mean": 0.35750000000000004,
+     "min": 0.2008
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  },
+  {
+   "round": 2,
+   "champion": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+   "champMean": 0.4103925,
+   "pool": [
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "冠军",
+     "pack": "docs/artifacts/night-adapt/MSB13-R1S791820660.js",
+     "mean": 0.4103925,
+     "min": 0.2177
+    },
+    {
+     "label": "S1510455175",
+     "pack": "docs/artifacts/night-adapt/MSB15-curse-R2S1510455175.js",
+     "mean": 0.0743325,
+     "min": 0.0142
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/night-adapt/MSB13-R1S791820660.js"
+   ]
+  }
+ ]
+}

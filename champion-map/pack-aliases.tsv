@@ -464,3 +464,11 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-11T18:06:22.137Z	66f784dd32afc460	docs/artifacts/MSB15-soupb-R3S1828856017-seg2.bak	docs/artifacts/MSB15-soupb-R3S1828856017-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
 2026-11-11T18:06:22.143Z	1d8610a5ae2502f9	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	docs/artifacts/MSB15-soupb-R3S1828856017-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
 2026-11-11T18:06:22.166Z	1d8610a5ae2502f9	docs/artifacts/MSB15-soupb-R3S1828856017-seg1.bak	docs/artifacts/night-adapt/MSB15-soupb-R3S1828856017.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T18:23:15.421Z	8ae32719c70c8e33	docs/artifacts/MSB15R-imit-bigT-R1S928337601-seg1.bak	docs/artifacts/MSB15R-imit-bigT-R1S928337601-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-11T18:25:27.227Z	1d8610a5ae2502f9	docs/artifacts/MSB15-soupb-R3S1828856017-band3.bak	docs/artifacts/night-adapt/MSB15-soupb-R3S1828856017.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T18:48:39.766Z	e2c179c155aedc66	docs/artifacts/MSB15-soupb-R4S1246356811-seg4.bak	docs/artifacts/MSB15-soupb-R4S1246356811-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-11T18:48:39.787Z	e2c179c155aedc66	docs/artifacts/MSB15-soupb-R4S1246356811-seg4.bak	docs/artifacts/night-adapt/MSB15-soupb-R4S1246356811.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T19:27:44.414Z	eecb816dc8397f6f	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	docs/artifacts/MSB15R-seq10-elec-R1S970589095-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-11T19:27:44.451Z	eecb816dc8397f6f	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	docs/artifacts/night-adapt/MSB15R-seq10-elec-R1S970589095.js	train-3p	未复制：同一粒权重已有真身
+2026-11-11T19:46:40.147Z	c9ca2ebbe61aad64	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-11T19:46:40.153Z	c9ca2ebbe61aad64	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	docs/artifacts/night-adapt/MSB15R-hit-bigT-R1S2123535820.js	train-3p	未复制：同一粒权重已有真身
