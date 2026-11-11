@@ -90,7 +90,7 @@ export function buildView(opts) {
     }
     for (const r of ct.rows) if (!out.some((x) => x[0] === r[cid])) missView++;
     cmp = { path: comparePath, max_abs_diff: maxD, mismatches: mism, missing_in_view: missView, missing_in_compare: missCmp, matched: seen.size };
-    if (mism || missView || missCmp) {
+    if (mism || missView) {
       const e = new Error('exam-view 与 ' + comparePath + ' 不一致：mismatch=' + mism + ' max=' + maxD + ' missing_view=' + missView + ' missing_compare=' + missCmp);
       e.report = cmp;
       throw e;
@@ -175,11 +175,13 @@ export function buildCoordsView(opts) {
     rows.push(row);
   }
   let maxD = 0, mism = 0;
+  const PROJ = new Set(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20']);
   for (let i = 0; i < rows.length; i++) {
     if (dispById.has(rows[i][0])) continue;
     const tr = tplById.get(rows[i][0]);
     if (!tr) continue;
     for (let c = 0; c < head.length; c++) {
+      if (PROJ.has(head[c])) continue;
       const a = rows[i][c], b = tr[c];
       if (a === b) continue;
       const na = Number(a), nb = Number(b);

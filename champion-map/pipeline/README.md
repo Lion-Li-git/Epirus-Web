@@ -46,17 +46,17 @@ node champion-map/pipeline/validate.mjs --strict
 node champion-map/pipeline/rulers.mjs --list
 ```
 
-## 自动测量（第一版，2026-11-11 晚）
+## 自动测量（2026-11-11 晚，已跑通假点）
 
 ```bash
 node champion-map/pipeline/measure-point.mjs \
   --pack=docs/artifacts/xxx.js --id=NEW-1 --ver=2.0 [--rounds=12] [--no-add] [--bake]
 ```
 
-- 自动跑 A/B × multi/long 四张 exam4 + ruler-measure，拼 readings/display，再调用 add-point。
-- 实测单腿（A multi + ruler，rounds=1）：22s/枚；staging 已 gitignore。
-- **display 仍是半成品**：投影/rank/F/ok 环留空，`--bake` 很可能过不了页检；先 `--no-add` 或默认 add 看数据。
-- 还没接 feas（okLong/okShort）与 proj-tsne。
+- 自动跑 A/B × multi/long 四张 exam4 + ruler-measure + feas(allLong/allMulti) + proj-tsne（整表重投影），拼 readings/display/projections，再调用 add-point。
+- 实测 rounds=1 假点：四腿 + ruler + feas + proj 约 50s；写出 16 条 readings、146 列 display、927 行 projections。
+- 假点 `--bake` 已跑通：927 行 coords-view + 页面 **98 PASS / 0 FAIL**（temp data，未动在册）。
+- display 里 `Sc/kin` 等少数列仍空；H5 只写新点参考（`ruler-measure H`），旧 H5 表不动。
 
 ## 新点进图（已落数据侧）
 
@@ -70,6 +70,7 @@ node champion-map/pipeline/add-point.mjs \
 
 - `--readings` 必给；A/B 当前尺的读数。
 - `--display` 在 `--bake` 时必给（146 列展示行；新点没有模板行会缺 rank/F/x2/Sc/kin 等）。
+- `--projections=<927 行全表>`：`measure-point` 会传；整表重投影后旧点坐标也一起换，避免新旧混两套坐标。
 - 流程：registry → batch/readings/display（+ features/projections）→ build-view →（--bake）rebuild-map → shot 98/0。
 - **本脚本不跑测量**：读数/display 由 ruler-measure/门禁产出后喂入；自动测量编排是下一步。
 - 写入不是事务式的：构建失败会报错，数据已落；回滚用 batch_id 手工撤。

@@ -29,6 +29,7 @@ const FAMLAB = String(arg('fam-label', '')).trim();
 const LINEAGE = String(arg('lineage', 'new')).trim();
 const RD = arg('readings', '') ? resolve(arg('readings', '')) : '';
 const DISP = arg('display', '') ? resolve(arg('display', '')) : '';
+const PJ = arg('projections', '') ? resolve(arg('projections', '')) : '';
 const BATCH = String(arg('batch', '')).trim();
 const FIXTURE = String(arg('fixture', '-')).trim();
 const SOURCE = String(arg('source', 'manual')).trim();
@@ -81,10 +82,18 @@ wt('readings/current.tsv', rd, rd.rows.concat(newReadings));
 if (dispRow) wt('display.tsv', display, display.rows.concat([dispRow]));
 /* 从 display 同步 features/projections（新点 canonical 列不能只留在 display） */
 if (dispRow) {
-  const ft = readTable(join(DATA, 'features.tsv')), pt = readTable(join(DATA, 'projections.tsv'));
+  const ft = readTable(join(DATA, 'features.tsv'));
   const frow = [ID].concat(['rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg', 'S', 'Geff'].map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
-  const prow = [ID].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'].map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
   wt('features.tsv', ft, ft.rows.concat([frow]));
+}
+if (PJ) {
+  const pt = readTable(join(DATA, 'projections.tsv')), pj = readTable(PJ);
+  if (pj.header.join('\t') !== pt.header.join('\t')) { console.error('⛔ projections 表头不一致'); process.exit(2); }
+  if (pj.rows.length !== reg.rows.length + 1) { console.error('⛔ projections 行数 ' + pj.rows.length + ' ≠ registry+1 ' + (reg.rows.length + 1)); process.exit(2); }
+  wt('projections.tsv', pt, pj.rows);
+} else if (dispRow) {
+  const pt = readTable(join(DATA, 'projections.tsv'));
+  const prow = [ID].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'].map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
   wt('projections.tsv', pt, pt.rows.concat([prow]));
 }
 try {

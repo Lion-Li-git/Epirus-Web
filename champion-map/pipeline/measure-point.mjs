@@ -9,7 +9,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { readTable } from '../map-table.mjs';
+import { readTable, writeTable } from '../map-table.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DRY = process.argv.includes('--dry');
@@ -17,6 +17,8 @@ const NO_ADD = process.argv.includes('--no-add');
 const BAKE = process.argv.includes('--bake');
 const SKIP_LONG = process.argv.includes('--skip-long');
 const SKIP_B = process.argv.includes('--skip-b');
+const SKIP_FEAS = process.argv.includes('--skip-feas');
+const SKIP_PROJ = process.argv.includes('--skip-proj');
 const ROOT = resolve(process.cwd());
 const HERE = join(ROOT, 'champion-map');
 const PACK = resolve(arg('pack', ''));
@@ -31,6 +33,7 @@ const rul = readTable(join(HERE, 'data/rulers.tsv'));
 const bRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.status] === 'current');
 if (!bRow) { console.error('⛔ 没有 current B 尺'); process.exit(2); }
 const F2 = bRow[rul.ix.fixture];
+const F2ARG = F2.replace(/x\d+$/, '').split('+').join(',');
 const rel = PACK.replace(ROOT + '\\', '').replace(/\\/g, '/');
 const extra = join(ST, ID + '-extra.tsv'), only = join(ST, ID + '-only.txt');
 if (!DRY) {
@@ -50,8 +53,8 @@ const ex = (tag, mode, axis, extraArgs) => {
 ex('a-multi', 'multi', 'A');
 if (!SKIP_LONG) ex('a-long', 'long', 'A');
 if (!SKIP_B) {
-  ex('b-multi', 'multi', 'B', ['--champ=' + F2]);
-  if (!SKIP_LONG) ex('b-long', 'long', 'B', ['--champ=' + F2]);
+  ex('b-multi', 'multi', 'B', ['--champ=' + F2ARG, '--champn=1']);
+  if (!SKIP_LONG) ex('b-long', 'long', 'B', ['--champ=' + F2ARG, '--champn=1']);
 }
 const featOut = join(ST, ID + '-ruler.tsv');
 addRun('ruler', ['champion-map/ruler-measure.mjs', '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),
@@ -103,12 +106,66 @@ for (const c of cell) {
   if (vals['a' + c + 'L'] !== undefined && vals['b' + c + 'L'] !== undefined) setD('C' + c + 'RL', (Number(vals['a' + c + 'L']) + Number(vals['b' + c + 'L'])) / 2);
 }
 setD('examG', fr[ft.ix.examG] || '120');
+/* H5 参考：ruler-measure 的 H 是旧考卷口径（120 局）；新点只写参考值，不改旧 H5 表。 */
+const H = Number(fr[ft.ix.H]), S = Number(fr[ft.ix.S]);
+if (isFinite(H)) setD('H5', H.toFixed(2));
+if (isFinite(H) && isFinite(S)) setD('F', (H / 100 + 0.1 * S).toFixed(6));
+/* rank：按 F 降序，现有 926 + 新点一起算 */
+if (isFinite(H) && isFinite(S)) {
+  const base = readTable(join(HERE, 'coords-projcols.tsv'));
+  const newF = H / 100 + 0.1 * S;
+  const rank = 1 + base.rows.filter((r) => Number(r[base.ix.F]) > newF).length;
+  setD('rank', String(rank));
+}
+/* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */
+if (!SKIP_FEAS) {
+  const fIn = join(ST, ID + '-feas-input.tsv');
+  const bg = readTable(join(HERE, 'coords-gen3-1105.tsv'));
+  const row = new Array(bg.header.length).fill('');
+  row[bg.ix.id] = ID; row[bg.ix.path] = rel;
+  writeTable(fIn, { header: bg.header, rows: bg.rows.concat([row]) }, { backup: false });
+  for (const [flag, okCol, failCol] of [['--allLong=1', 'okLong', 'failsLong'], ['--allMulti=1', 'okShort', 'failsShort']]) {
+    const out = join(ST, ID + '-feas-' + (flag.indexOf('Long') >= 0 ? 'long' : 'short') + '.tsv');
+    execFileSync('node', [join(HERE, 'feas.mjs'), '--table=' + fIn, '--ids=' + ID, '--out=' + out, flag], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+    const FT = readTable(out); const rr = FT.rows.find((x) => x[FT.ix.id] === ID);
+    if (rr) { setD(okCol, rr[FT.ix.ok]); setD(failCol, rr[FT.ix.fails]); }
+  }
+}
+/* 投影：把新点并入 projcols 副本，跑 proj-tsne；旧点坐标会整体重排，但只写 staging 副本。 */
+if (!SKIP_PROJ) {
+  const pIn = join(ST, ID + '-proj-input.tsv');
+  const pj = readTable(join(HERE, 'coords-projcols.tsv'));
+  writeTable(pIn, { header: pj.header, rows: pj.rows.concat([D]) }, { backup: false });
+  execFileSync('node', [join(HERE, 'proj-tsne.mjs'), '--in=' + pIn], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+  const PT = readTable(pIn); const pr = PT.rows.find((x) => x[PT.ix.id] === ID);
+  if (pr) {
+    for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3']) setD(c, pr[PT.ix[c]]);
+    setD('x2', pr[PT.ix.xt]); setD('y2', pr[PT.ix.yt]);
+    setD('xt20', pr[PT.ix.xt]); setD('yt20', pr[PT.ix.yt]);
+  }
+}
+/* 投影整表回写：proj-tsne 重排了全部坐标；把 927 行一起交给 add-point，避免新旧点混两套投影。 */
+let projFile = '';
+if (!SKIP_PROJ) {
+  const PT = readTable(join(ST, ID + '-proj-input.tsv'));
+  const prh = ['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'];
+  const prs = [prh];
+  for (const r of PT.rows) {
+    const id = r[PT.ix.id];
+    if (!id) continue;
+    prs.push([id, r[PT.ix.xt], r[PT.ix.yt], r[PT.ix.xt3], r[PT.ix.yt3], r[PT.ix.zt3],
+      r[PT.ix.xt18], r[PT.ix.yt18], id === ID ? r[PT.ix.xt] : r[PT.ix.xt20], id === ID ? r[PT.ix.yt] : r[PT.ix.yt20]]);
+  }
+  projFile = join(ST, ID + '-projections.tsv');
+  writeFileSync(projFile, prs.map((x) => x.join('\t')).join('\n') + '\n', 'utf8');
+}
 const dispFile = join(ST, ID + '-display.tsv');
 writeFileSync(dispFile, [dispHead.join('\t'), D.join('\t')].join('\n') + '\n', 'utf8');
 console.log('readings ' + (rd.length - 1) + ' 条 ‖ display ' + basename(dispFile));
 if (NO_ADD) { console.log('--no-add：停在 ' + join(ST, ID + '-readings.tsv')); process.exit(0); }
 const addArgs = [join(HERE, 'pipeline/add-point.mjs'), '--id=' + ID, '--pack=' + PACK, '--ver=' + VER,
   '--readings=' + join(ST, ID + '-readings.tsv'), '--display=' + dispFile, '--batch=measure-' + ID];
+if (projFile) addArgs.push('--projections=' + projFile);
 if (BAKE) addArgs.push('--bake');
 const out = execFileSync('node', addArgs, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 console.log(out.trim().split('\n').slice(-6).join('\n'));
