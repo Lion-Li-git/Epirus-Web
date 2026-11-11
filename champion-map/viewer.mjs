@@ -850,11 +850,10 @@ function backOf(d) {   /* 返回"父节点的 ts"，当且仅当它晚于本枚�
  *   ⇒ 这个数不能当"比现役强多少"读，而它除了这个意思之外没有别的意思。
  *   'ds/da/db/dm' 四列留在表里当账：**不上色、不进明细、档从下拉撤掉**，计数一并撤。 */
 /* 11-07 H5 撤场：NEPS/NBRIT/NSTRONG（部署口径 Δε 计数）随子系统一起退 */
-/* §E615 长程桌那一档的计数：**只算有读数的枚**（缺测写 '-' → null，绝不进分母）
- *   §E672 改成数 Hplong（原来数 fl）：长程 F 现在是**现算**的（Hplong/100 + T·S），烘死的 Flong 不再是分母的来源。 */
-var NHLONG = 0;
-(function () { for (var i = 0; i < N; i++) { var d = P[i];
-  if (['X2L','X3L','X5L','X8L'].some(function (k) { return d[k] !== null && d[k] !== undefined && isFinite(d[k]); })) NHLONG++; } })();
+/* §E615 长程桌那一档的计数：**只算当前尺族的读数**（缺测写 '-' → null，绝不进分母）。
+ * 2026-11-11：这里原来还数旧 X*L 族（A 轴 ε=0 考卷），而 11-11 主尺已转 C·R
+ *   ⇒ 19 枚只有 C*RL 的新点被报成"缺长程"、页头说不画（实际 Fv 有值）。
+ *   统一改走 NHP()（它读 st.XP+XSUF 当前族、与 Fv/X4 同一判据），旧计数据此撤掉。 */
 /* §E321 当选键那条腿的计数：NSEL = **有读数**的枚数（留空 = 这台仪器没测过，绝不当 0）。
  *   §E600-A：原来还分 NSELUP / NSELSOFT / NSELDOWN，判据是"与某一枚参照包的配对差 ≥+2pt 且 ≥6/8 同号"——
  *   参照物一退场这三个数就没有主语了，一并撤（'Scd/Scs/Sch' 三列留在表里当账，只是不再上色、不再进明细）。 */
@@ -1113,7 +1112,7 @@ var TPAD = { l: 392 * devicePixelRatio, t: 40 * devicePixelRatio };
  *   ⇒ 正确的位置就是这里：Fv 是**单一函数、41 处消费**（谱系点色 / 三维高度与颜色 / 一维位置 / 名次 / 立体 / 冠军序列 / F窗口）
  *     改这一层，全部视图一起跟着换；而颜色下拉与排序按钮里那两档是我上一版塞错地方，已撤。
  *   ⚠ 缺测**不许静默退回默认桌**（那等于一张图上混两把尺）⇒ 必须在表头报出来。
- *   ⚠ 但报的是**枚数**（N − NHLONG，纯函数的面板属性），不是"回退了几次"：Fv 每帧被叫几十次
+ *   ⚠ 但报的是**枚数**（N − NHP()，纯函数的面板属性），不是"回退了几次"：Fv 每帧被叫几十次
  *     （颜色 / 高度 / 排序比较器 / 标签 / 色带三端都走它），早先那个累加器 NFALL 会随拖动画布和拉滑块
  *     无上限上涨（用户 10-16 傍晚："缺测回默认桌 人次这个东西会随着拖动画布或调整滑块疯狂上涨"）
  *     ⇒ 一个只量"你动了多少下鼠标"的数不是读数，删。 */
@@ -3444,7 +3443,7 @@ function drawBody() {
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHLONG + '/' + N + (N === NHLONG ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHLONG) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHP() + '/' + N + (N === NHP() ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHP()) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · 颜色 = ' + (st.color === 'F' ? 'F（线上口径势）' : st.color === 'seed' ? 'RNG seed（包名后缀）' : st.color === 'gl' ? '长程广度 G(long)' : st.color === 'pm' ? ('进池体检（实测 ' + NPRM + ' 枚）') : st.color === 'sc' ? ('当选键（绝对值 · 实测 ' + NSEL + ' 枚）') : '训练方法家族') +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */

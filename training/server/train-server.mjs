@@ -1,5 +1,5 @@
 /* Epirus — 训练服务（Node，零依赖）：SSE 实时推送进度，训练完写 js/bundled-champion.js。
- * 启动：双击 tools/start-train-server.cmd，或 node server/train-server.mjs [端口=8787]
+ * 启动：双击 training/start-train-server.cmd，或 node training/server/train-server.mjs [端口=8787]
  * 浏览器训练页「连接远程训练」即可实时看进度；游戏仍双击 index.html 即玩。
  * 语义说明：
  *   - /train?gens=N  从当前 checkpoint 继续训练 N 代（持续训练：训练完再点一次会接着练）。
@@ -923,7 +923,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   res.writeHead(200, { 'Content-Type': 'text/plain;charset=utf-8', 'Access-Control-Allow-Origin': '*' });
-  res.end('Epirus train server running. 在游戏训练页点「开始训练/连接远程训练」即可实时看进度。双击 tools/start-train-server.cmd 启动。');
+  res.end('Epirus train server running. 在游戏训练页点「开始训练/连接远程训练」即可实时看进度。双击 training/start-train-server.cmd 启动。');
 });
 
 server.listen(PORT, () => console.log('Epirus train server on http://127.0.0.1:' + PORT));
