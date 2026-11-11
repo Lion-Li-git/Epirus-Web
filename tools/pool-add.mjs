@@ -76,7 +76,7 @@ function syncChart() {
  * ⇒ 住在 `champion-map/packs/` 的包**即使已跟踪也被报"不在 git 里"**，而它给的补救提示 `git add -f <PACK>`
  * 对那个路径又不生效（不在同一个 `ls-files` 输出域）⇒ 死路，逼人去造第二份 `.bak`。
  * `packs/README.md` 的原话是"只在图上的包不该再存一份入库拷贝"，入池成员本来就住 `packs/` ⇒ 该修的是这道闸。 */
-const trackedSet = () => new Set(execSync('git ls-files docs/artifacts champion-map/packs', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
+const trackedSet = () => new Set(execSync('git ls-files docs/artifacts champion-map/packs scratch/ds-1109', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
 const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
 /* 人席杀刀的**参照物**（§E598 · 2026-10-12 用户裁定 A）：
