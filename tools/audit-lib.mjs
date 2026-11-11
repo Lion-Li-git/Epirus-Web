@@ -51,6 +51,7 @@ export function humanPrototypes(B) {
     ['全程只防御', B.pickDefend, 'defend'],
     ['只攒不打(农民)', B.pickFarmer, 'farmer'],
     ['只枪压制', B.pickGunSpam, 'gunspam'],
+    ['规则理解·自适应', B.pickAdaptive, 'adaptive'],
     ['攒钱+反弹(会玩)', function (st, pid, legal) {
       const k = B.pickReflectSpam(st, pid, legal);
       if (typeof k === 'string' && k) return k;
