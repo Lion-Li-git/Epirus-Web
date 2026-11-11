@@ -219,7 +219,7 @@ node scratch/night-adapt2/msbatch2.mjs --base=201 --rounds=1 --branches=3 --gens
 
 **数据模型 / 新点进图（2026-11-11）**：源表在 champion-map/data/（registry/rulers/batches/readings/features/projections/display），页面由 build-view 编译成 coords-view 后交给 rebuild-map。换尺只追加 readings 并切 rulers.tsv 的 current；新点用 pipeline/measure-point.mjs 自动跑四腿+feas+投影，再经 add-point 写入并重烘。
 
-**页面元数据 / 趋势**：lineage/pool/promote/ship/slot/coords 已收进 champion-map/data/page/；A/B/C 趋势页是 champion-map/trends.html（LOWESS span 0.20，x=点序），页面左上角有入口。
+**页面元数据 / 趋势**：lineage/pool/promote/ship/slot/coords 已收进 champion-map/data/page/；A/B/C 趋势页是 champion-map/trends.html（LOWESS span 0.08，x=点序），页面左上角有入口。
 
 ### 训练期的门与杀
 
