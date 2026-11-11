@@ -25,7 +25,7 @@ import { dirname, join } from 'node:path';
 import * as slotIdentity from './slot-identity.mjs';   /* §E604：副名⇒主名的唯一翻译处（现役名折行后是 `Ldemo` 的副名） */
 const HERE = dirname(fileURLToPath(import.meta.url));
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.split('=')[1] : d; };
-const TABLE = arg('table', 'epsfull120-2026-10-10.tsv');
+const TABLE = arg('table', 'archive/2026-11-11-legacy-data/epsfull120-2026-10-10.tsv');
 const GEAR = Number(arg('gear', 120));
 const CHECK = process.argv.includes('--check');
 /* ⚠ 读 TSV 只剥行尾换行，绝不整文件 .trim()（§E314/§E375 —— 末行行尾的空单元格会被连着 tab 削掉） */
