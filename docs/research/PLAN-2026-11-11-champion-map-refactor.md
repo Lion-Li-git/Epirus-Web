@@ -192,5 +192,6 @@ tableStamp(table) -> 'coords-gen3-1105.tsv rows=926 sha=...'
 - 换尺接口：pipeline/rulers.mjs --set-current=<id>；只改 current 指针 + 追加 readings，projections.tsv 不动；frozen 尺拒绝。
 - add-point.mjs 已落：readings/display 喂入 → registry/batch/readings/display（+features/projections）→ build-view →（--bake）rebuild-map → shot；当前不跑测量。
 - 完整 coords-view 146 列已由 data + display 编译；rebuild-map 已改吃 data/build/coords-view，页面 98/0（926 行对照 0 mismatch）。
-- 未做：自动测量编排（ruler-measure/exam-4n/feas 串成 add-point 的上游）、新点 display 行自动生成、旧脚本退役、阶段 4 目录分层。
+- measure-point.mjs 第一版已落：自动跑 A/B × multi/long 四张 exam4 + ruler-measure，拼 readings/display，再调 add-point；实测 A multi + ruler（rounds=1）22s/枚。
+- 未做：feas（okLong/okShort）、proj-tsne 投影、rank/F/ok 展示列自动生成；`--bake` 对新点还没跑通页检；旧脚本退役、阶段 4 目录分层。
 

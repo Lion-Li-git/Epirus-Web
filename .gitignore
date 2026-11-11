@@ -158,3 +158,5 @@ champion-map/_*.json
 champion-map/eps313-agg.tsv
 # 2026-11-11 数据模型 A：build/ 是编译产物（exam-view/report），源头是 data/*.tsv。
 champion-map/data/build/
+# 新点测量中间产物（measure-point 的 exam4/ruler/readings/display）
+champion-map/staging/

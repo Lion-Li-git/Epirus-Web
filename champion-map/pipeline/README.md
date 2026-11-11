@@ -46,6 +46,18 @@ node champion-map/pipeline/validate.mjs --strict
 node champion-map/pipeline/rulers.mjs --list
 ```
 
+## 自动测量（第一版，2026-11-11 晚）
+
+```bash
+node champion-map/pipeline/measure-point.mjs \
+  --pack=docs/artifacts/xxx.js --id=NEW-1 --ver=2.0 [--rounds=12] [--no-add] [--bake]
+```
+
+- 自动跑 A/B × multi/long 四张 exam4 + ruler-measure，拼 readings/display，再调用 add-point。
+- 实测单腿（A multi + ruler，rounds=1）：22s/枚；staging 已 gitignore。
+- **display 仍是半成品**：投影/rank/F/ok 环留空，`--bake` 很可能过不了页检；先 `--no-add` 或默认 add 看数据。
+- 还没接 feas（okLong/okShort）与 proj-tsne。
+
 ## 新点进图（已落数据侧）
 
 ```bash
