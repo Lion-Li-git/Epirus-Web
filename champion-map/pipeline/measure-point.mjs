@@ -19,6 +19,7 @@ const SKIP_LONG = process.argv.includes('--skip-long');
 const SKIP_B = process.argv.includes('--skip-b');
 const SKIP_FEAS = process.argv.includes('--skip-feas');
 const SKIP_PROJ = process.argv.includes('--skip-proj');
+const AUDIT = process.argv.includes('--audit');
 const ROOT = resolve(process.cwd());
 const HERE = join(ROOT, 'champion-map');
 const PACK = resolve(arg('pack', ''));
@@ -164,3 +165,18 @@ if (FAMLAB) addArgs.push('--fam-label=' + FAMLAB);
 if (BAKE) addArgs.push('--bake');
 const out = execFileSync('node', addArgs, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 console.log(out.trim().split('\n').slice(-6).join('\n'));
+if (AUDIT) {
+  /* 自动 12 线：测完立刻跑 promote，并把裁决写进 data/page/promote.tsv（页面 pv 着色读它）。
+   *   这一步本来就该在 add-point 之后自动发生；--audit 默认关是因为一次 3 分钟，批量进图只想看形状时可跳过。 */
+  const pr = execFileSync('node', ['tools/promote-champion.mjs', PACK, '--dry', '--games=10', '--exam-games=20', '--json'],
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+  const line = String(pr).split('\n').filter((x) => x.indexOf('EPIRUS_JSON ') === 0).pop();
+  if (!line) { console.error('⛔ --audit：promote 没有吐 EPIRUS_JSON'); process.exit(2); }
+  const J = JSON.parse(line.slice('EPIRUS_JSON '.length));
+  const pt = readTable(join(HERE, 'data/page/promote.tsv'));
+  const row = new Array(pt.header.length).fill('');
+  row[pt.ix.id] = ID; row[pt.ix.verdict] = J.blocked ? 'block' : 'pass';
+  row[pt.ix.blocks] = (J.classes && J.classes.length) ? J.classes.join(',') : '—';
+  writeTable(join(HERE, 'data/page/promote.tsv'), { header: pt.header, rows: pt.rows.filter((r) => r[pt.ix.id] !== ID).concat([row]), backup: false });
+  console.log('audit: ' + ID + ' ⇒ ' + row[pt.ix.verdict] + ' ' + row[pt.ix.blocks]);
+}

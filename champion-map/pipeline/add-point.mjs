@@ -9,7 +9,7 @@
  *       →（--bake）rebuild-map → shot 98/0。
  * 注：本脚本不跑测量；读数/display 由 ruler-measure / 门禁产出后喂进来。
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
@@ -71,7 +71,7 @@ const parentId = cand && dispIds.has(cand) ? cand : '';   /* 只连图上存在�
 const parentSrc = parentWid ? (parentId ? 'seedpack-wid' : 'unknown-wid') : 'root';
 const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unknown');
 const pointWid = widOf(packText);
-const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || now), metaSeed, nameSeed: '',
+const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || statSync(PACK).mtime.toISOString()), metaSeed, nameSeed: '',
   parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };
 const ltab = VER === '2.0' ? linG3 : linMain;
 for (const c of ['ruler_id', 'cell', 'horizon', 'value', 'n']) if (readTable(RD).ix[c] === undefined) { console.error('⛔ readings 缺列 ' + c); process.exit(2); }

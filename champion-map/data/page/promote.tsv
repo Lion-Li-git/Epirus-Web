@@ -162,3 +162,6 @@ U2-77001	pass	—
 MSB11-R2S306293884	pass	—			
 MSB14-railgun-R1S175656469	pass	—			
 MSB11-R1S130778313	pass	—			
+MSB15R-HITMIX	block	field-a			
+MSB15-SOUPB	block	behavior-gate			
+MSB15R-GD4RAT	block	field-a,breadth-multi			
