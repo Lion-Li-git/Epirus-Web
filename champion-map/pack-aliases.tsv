@@ -472,3 +472,18 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-11T19:27:44.451Z	eecb816dc8397f6f	docs/artifacts/MSB15R-seq10-elec-R1S970589095-seg2.bak	docs/artifacts/night-adapt/MSB15R-seq10-elec-R1S970589095.js	train-3p	未复制：同一粒权重已有真身
 2026-11-11T19:46:40.147Z	c9ca2ebbe61aad64	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
 2026-11-11T19:46:40.153Z	c9ca2ebbe61aad64	docs/artifacts/MSB15R-hit-bigT-R1S2123535820-seg2.bak	docs/artifacts/night-adapt/MSB15R-hit-bigT-R1S2123535820.js	train-3p	未复制：同一粒权重已有真身
+2026-11-12T16:10:11.122Z	0bc14f31120f8ae9	docs/artifacts/MSB15R-gd4keep-R1S1682546951-band4.bak	docs/artifacts/night-adapt/MSB15R-gd4keep-R1S1682546951.js	train-3p	band 夹具同批落盘未登记（v2.0.7 补账）					
+2026-11-12T16:10:11.122Z	99026b2c90c26855	docs/artifacts/MSB15R-gd4keep-R1S600595401-band6.bak	docs/artifacts/night-adapt/MSB15R-gd4keep-R1S600595401.js	train-3p	band 夹具同批落盘未登记（v2.0.7 补账）					
+2026-11-12T16:10:11.122Z	ba7a47c028912c5d	docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js	docs/artifacts/MSB15R-gd4rat-R1S1155875730-band1.bak	train-3p	band 夹具同批落盘未登记（v2.0.7 补账）					
+2026-11-12T16:10:11.122Z	9c2be84b8df66042	docs/artifacts/MSB15R-gd4rat-R1S680041201-band4.bak	docs/artifacts/night-adapt/MSB15R-gd4rat-R1S680041201.js	train-3p	band 夹具同批落盘未登记（v2.0.7 补账）					
+2026-11-12T16:51:24.297Z	31c8a676c0e8466a	docs/artifacts/MSB16-R1S1355910883-seg1.bak	docs/artifacts/MSB16-R1S1355910883-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-12T17:29:42.924Z	44a74e8553e5e0fc	docs/artifacts/MSB16T-R1S855046359-seg1.bak	docs/artifacts/MSB16T-R1S855046359-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-12T17:29:42.934Z	44a74e8553e5e0fc	docs/artifacts/MSB16T-R1S855046359-seg1.bak	docs/artifacts/MSB16T-R1S855046359-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-12T17:29:42.941Z	44a74e8553e5e0fc	docs/artifacts/MSB16T-R1S855046359-seg1.bak	docs/artifacts/night-adapt/MSB16T-R1S855046359.js	train-3p	未复制：同一粒权重已有真身
+2026-11-12T18:18:02.654Z	7b0301f301015518	docs/artifacts/MSB16-R1S1355910883-band2.bak	docs/artifacts/night-adapt/MSB16-R1S1355910883.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	8c35645119f48503	docs/artifacts/MSB16-R1S1355910883-band3.bak	docs/artifacts/MSB16-R1S1355910883-band5.bak	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	5c1576abdceda5f9	docs/artifacts/MSB16T-R1S1616219090-band2.bak	docs/artifacts/night-adapt/MSB16T-R1S1616219090.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	1d7d9e854cbb8e74	docs/artifacts/MSB16T-R1S1616219090-band5.bak	docs/artifacts/MSB16T-R1S1616219090-band6.bak	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	847b8ea043afa036	docs/artifacts/MSB17-R1S1454169188-band3.bak	docs/artifacts/MSB17-R1S1454169188-band6.bak	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	7b10958bed239bcf	docs/artifacts/MSB17-R1S1454169188-band4.bak	docs/artifacts/night-adapt/MSB17-R1S1454169188.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T18:18:02.654Z	3d41fadb3492da08	docs/artifacts/MSB17-R1S413727588-band1.bak	docs/artifacts/night-adapt/MSB17-R1S413727588.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）

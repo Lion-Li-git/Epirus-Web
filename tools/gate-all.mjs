@@ -12,7 +12,7 @@
  *   node tools/gate-all.mjs --np --no-browser    # 本地近似"无浏览器"那一档：np 整轮 + spec
  *   ⚠ **CI 的阻断档不是这个形状**（v1.7.67 更正）：CI 走 `.github/workflows/gates.yml` 的 **16 路 `--part=` 矩阵**
  *     （每部分一台机），`--no-browser` 只是本机想复现"摘掉浏览器那三道"时的近似。
- * ⛔ **默认不跑整轮**（用户 2026-11-06 裁定：「禁止随意跑整轮」）—— 整轮 = `--np` 那一遍 = 171 条。
+ * ⛔ **默认不跑整轮**（用户 2026-11-06 裁定：「禁止随意跑整轮」）—— 整轮 = `--np` 那一遍（条数现读 `--list-parts --json`；2026-11-13 实数 172）。
  *   只在三种场合跑：① CI（`.github/workflows/gates.yml` 的 `--part` 矩阵，自动）；② 用户点名；
  *   ③ 你改了**注册面本身**（`np-test.mjs` 的 GRP/PARTS、`gate-parts-check`、`gates/_ctx.mjs`）且确实要复核。
  *   其余一律 `--auto` / `--group=` / `--part=` / `--only=`；怎么挑门看 `tools/gates/README.md`（该文件的 §3 是判定表）。
@@ -84,11 +84,12 @@ if (process.argv.includes('--auto')) {
     /* v2.0.2（11-07）：**训练面不再有 `train` 组** —— 训练那 8 个部分文件 10-27/10-31 已按用户裁定整组删除，
      * runner 的 CUM 只剩 meta/ship/ui/probe/engine。这里原来仍返回 'train' ⇒ `--auto` 发出 `--group=train` ⇒
      * runner 直接 `⛔ 不认识`（exit 2，**一条门都没跑**）。Qoder 在 v2.0.2 撞上并按「坏命令」记档、用 probe 绕过。
-     * 现在：训练面 → **probe**（累计 probe+ship+meta = 90 条，覆盖量具/池/出厂/纪律），
-     * 并且**另起一条 `--part=engine-fuzz`**（13 条）—— 因为 engine-fuzz 的夹具直接 `import` 训练侧
-     * （`Bots.pickAggro` / `Play.autoGameN`，D54 就是拿它做的对称性烟测）⇒ 只跑 probe 会漏掉那条耦合。
-     * 判据仍是「只会多跑，不会少跑」：90 + 13 = 103 条，仍远小于整轮 171。 */
-    if (/^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'probe';
+     * v2.0.7（11-13 用户裁定）：**训练侧门禁不进主门禁/CI** —— 只在跑训练时开（train-selftest / knobs --check）。
+     *   ⇒ 这里**不补** `training/` 映射：training/** 改动落到底部 meta（仓库纪律那 16 条，管 CHANGELOG/.bak 记账），
+     *     这是**有意的少跑**，不是缺口；搬走前的死路径（tools/train-3p ‖ tools/train-best）从正则里摘除。
+     *   js/train/ ‖ js/bundled* 仍是**产品面**（浏览器 bundle + 玩家 AI，probe 组的门在读它们）⇒ probe 路由保留；
+     *   engine-fuzz 的耦合腿（EXTRA_FUZZ）同理只认产品面。 */
+    if (/^js\/train\/|^js\/bundled|^tools\/(eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib|probe-|analyze-|keep-artifact)/.test(p)) return 'probe';
     if (/^docs\/(METHODOLOGY|RULES-2P|RULES-NP)\.md$|^docs\/artifacts\/(e129-out\/matrix\.json|train-3p-out\.js|e161-ply\.mjs|e168-style-human\.mjs|e169-beadprice\.mjs|\.training-live\.sha1)$/.test(p)) return 'ship';
     /* 池装配契约的输入面（`D234` 那族读它们）⇒ ship，别让它们掉进 meta */
     if (/^champion-map\/(pool-[^/]*|pack-[^/]*|seat-rule|slot-identity)/.test(p)) return 'ship';
@@ -125,8 +126,9 @@ if (process.argv.includes('--auto')) {
     console.log('--auto 判据（改动 ' + changed.size + ' 个路径）：');
     for (const g of Object.keys(by).sort((x, y) => RANK[y] - RANK[x]))
       console.log('  ' + g.padEnd(7) + by[g].length + ' 个 ‖ ' + by[g].slice(0, 4).join(' ') + (by[g].length > 4 ? ' …' : ''));
-    /* 训练面还牵动 engine-fuzz（D54 的夹具直接 import Bots）⇒ 除 probe 外另跑那 13 条。 */
-    const TRAIN_SURFACE = /^js\/train\/|^js\/bundled|^tools\/(train-3p|train-best|eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib)/;
+    /* 产品 AI 面还牵动 engine-fuzz（D54 的夹具直接 import Bots）⇒ 除 probe 外另跑那 13 条。
+     * v2.0.7（11-13 用户裁定）：只认**产品面**路径；训练侧（training/）不进主门禁 ⇒ 不在这里出现。 */
+    const TRAIN_SURFACE = /^js\/train\/|^js\/bundled|^tools\/(eval-5p|style-exam|promote-champion|ring2-run|human-pool|pool-frontier-lib)/;
     EXTRA_FUZZ = Array.from(changed).some(function (p) { return TRAIN_SURFACE.test(p); });
     GRPA = top === 'engine' ? '' : top;
     console.log('--auto ⇒ np 跑 ' + (GRPA ? '--group=' + GRPA : '**整轮**（engine 面 ⇒ 不分组）') +

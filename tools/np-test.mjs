@@ -6,7 +6,7 @@
  *   · runner 自己留着 t/PASS/FAIL/__skipped/__KEYS/ONLY/GROUP/RUNSET/GRP/CUM/KEY2G/gateKey 与收尾块。
  *
  * 用法（`--only=` / `--group=` / `--list-groups` 与拆前逐字相同）：
- *   node tools/np-test.mjs                    整轮（现数见 --list-parts --json 的 total；171）——⛔ **默认不跑**，见 tools/gates/README.md
+ *   node tools/np-test.mjs                    整轮（现数见 --list-parts --json 的 total；2026-11-13 实数 172）——⛔ **默认不跑**，见 tools/gates/README.md
  *   node tools/np-test.mjs --group=meta       只跑仓库纪律那一组（含累计依赖）
  *   node tools/np-test.mjs --part=train-evo   只跑**那一个部分文件**里的门（2026-10-14 DS 加；见下"两个轴"）
  *      ⚠ 与 `--group` **不是同一个轴**：`--group` 是**累计深度轴**（meta ⊂ ship ⊂ train/ui ⊂ probe ⊂ engine=全部，
@@ -49,13 +49,13 @@ const PARTS = [
   { part: 'engine-fuzz', group: 'engine', file: 'tools/gates/engine-fuzz.mjs', mod: PART1 },   /* 13 条 */
   { part: 'ship-feas', group: 'ship', file: 'tools/gates/ship-feas.mjs', mod: PART7 },   /* 14 条 */
   { part: 'ship-pool', group: 'ship', file: 'tools/gates/ship-pool.mjs', mod: PART8 },   /* 1 条 */
-  { part: 'ship-promote', group: 'ship', file: 'tools/gates/ship-promote.mjs', mod: PART9 },   /* 21 条 */
+  { part: 'ship-promote', group: 'ship', file: 'tools/gates/ship-promote.mjs', mod: PART9 },   /* 20 条 */
   { part: 'ship-artifact', group: 'ship', file: 'tools/gates/ship-artifact.mjs', mod: PART10 },   /* 1 条 */
   { part: 'probe-libs', group: 'probe', file: 'tools/gates/probe-libs.mjs', mod: PART11 },   /* 4 条 */
   { part: 'probe-instruments', group: 'probe', file: 'tools/gates/probe-instruments.mjs', mod: PART12 },   /* 33 条 */
   { part: 'ui-contract', group: 'ui', file: 'tools/gates/ui-contract.mjs', mod: PART13 },   /* 8 条（v1.7.115 加 D236） */
-  { part: 'meta-repo', group: 'meta', file: 'tools/gates/meta-repo.mjs', mod: PART14 },   /* 12 条 */
-  { part: 'meta-lint', group: 'meta', file: 'tools/gates/meta-lint.mjs', mod: PART15 },   /* 4 条 */
+  { part: 'meta-repo', group: 'meta', file: 'tools/gates/meta-repo.mjs', mod: PART14 },   /* 13 条 */
+  { part: 'meta-lint', group: 'meta', file: 'tools/gates/meta-lint.mjs', mod: PART15 },   /* 3 条 */
 ];
 const PART_GROUPS = {
   engine: ['engine-rules', 'engine-fuzz'],
@@ -289,7 +289,7 @@ if (PART && GROUP) {
  *   要跑多段请分别调用（一次一个 `--part=<名>`）。 */
 /* 10-30 傍晚补：**不认识的 `--` 旗标要响亮失败**（仓规同 `probe-ep-reach --cost` 那两条）。
  * 触发场景不是我猜的：10-30 有人把 `--groups`（少个 `list-` 前缀、多个 s）当列组命令传进来 ⇒ 旧版**静默忽略**，
- * 于是"我想列一下分组"变成"把整轮 171 条开跑"，280 秒后才被 kill（`--help` 那一族在册，这是它的兄弟）。
+ * 于是"我想列一下分组"变成"把整轮（172 条）开跑"，280 秒后才被 kill（`--help` 那一族在册，这是它的兄弟）。
  * 名单 = 全仓实际用过的旗标（`--only/--part/--group/--list-parts/--list-groups/--list-order/--json/--explain=`）。 */
 rejectUnknownFlags(process.argv.slice(2), ['list-parts', 'list-order', 'list-groups', 'explain', 'only', 'group', 'part', 'json'], 'np-test');
 const STRAY = process.argv.slice(2).filter(function (a) { return a[0] !== '-'; });

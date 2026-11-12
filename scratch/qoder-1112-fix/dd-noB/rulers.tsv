@@ -1,0 +1,5 @@
+ruler_id	axis	label	status	unit	fixture	batch_id	formula	note
+a-v2-page-1109	A	v2 脚本桌（page dose）	current	excess	v2-scripts(28 seats)	a-1109		A 轴现行
+b-f2-page-1111	B	F2 冠军夹具（page dose）	reference	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-1111		B 轴现行；固定 F2 夹具
+c-cr	C	C=(A+B)/2	current	excess	-	-	(A+B)/2	派生，不存 readings
+h5-page-1109	H5	旧 H5 页面卷	frozen	percent	legacy	h5-1109		frozen reference；流水线不写

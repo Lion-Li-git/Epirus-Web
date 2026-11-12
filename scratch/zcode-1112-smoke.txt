@@ -1,0 +1,37 @@
+PASS 对局页可见 & 技能按钮=30
+PASS 多人专用技能置灰(≥2 disabled)
+PASS 双方 HP 显示 3
+PASS 点击出招:ジ
+PASS 点击出招:防御
+PASS 点击出招:ジ
+PASS 点击出招:防御
+PASS 日志有第 4 回合
+PASS 界面无 over 覆盖层
+screenshot-battle saved
+PASS 远程训练UI存在
+remoteHint = "服务未启动。请双击 training/start-train-server.cmd 启动（或 node training/server/train-server.mjs）——检测到后自动连接…"
+PASS 服务未启动提示
+PASS 按钮未锁死
+screenshot-train saved
+PASS 12 种（人数 × 血量）组合全部建得出局
+PASS 每格的人数真落到座位数
+PASS 每格的血量真落到 mode.hp 与每个座位的初始血
+PASS （人数 × 血量）映射的像恰好盖住 MODES 全部 key（无幽灵、无没入口的模式）
+PASS 2 人局：三张多人专用卡全部标注为「多人模式」（用户点名的回归，逐血量判）
+PASS 正对照：3~5 人局那三张不许被当「多人专用」挡掉
+  sweep 4 血格 = ["2人→multi4(hp4)","3人→multi4(hp4)","4人→multi4(hp4)","5人→multi4(hp4)"]
+  sweep 2 人格 = ["3血→standard 卡=多人模式|多人模式|多人模式","4血→multi4 卡=多人模式|多人模式|多人模式","5血→long 卡=多人模式|多人模式|多人模式"]
+screenshot-long saved
+PASS 每个难度档都点得动，且 B.diff / tierOf 跟着变成那一档
+PASS 冠军档报"是冠军"、风格档报"不是冠军"，且都不许落到兜底格（兜底=包没解开的信号）
+PASS 档位列表不随人数被裁短（2 人 = 5 人，这就是"2 人并进同一条阶梯"的行为定义）
+PASS 表里每一档都在下拉里（少一档 = 页面把表裁了）
+PASS 默认档在册且是 lv:regular（改默认档 = 改所有老用户的手感，属产品裁定）
+PASS 包随人数换：2 人那一格 aiInfo 报 2P 冠军、多人那一格改走池（§E286 换包裁定在页面上看得见；池上线后多人侧由池供给）
+PASS 下拉里没有"同一个脚本占两格"（被阶梯认领的风格不许再以"风格"重复出现）
+  ladder rows = ["lv:sparring:champ:池·","lv:regular:champ:池·","lv:hard:champ:池·"]
+  ladder 2人 = {"list":["lv:sparring","lv:regular","lv:hard","st:reflectmix","st:breakdef","st:mix","st:aggro","st:combocounter","st:toolkit"],"pack2":"2P","tier":"lv:regular"}  5人 = {"list":["lv:sparring","lv:regular","lv:hard","st:reflectmix","st:breakdef","st:mix","st:aggro","st:combocounter","st:toolkit"],"pack2":"池·","tier":"lv:regular"}
+
+JS errors: (none)
+SUMMARY: SMOKE OK
+EXIT=0

@@ -1,0 +1,7 @@
+cwd: D:\code\Epirus-Web
+A 老seg(MSB16, 昨夜写): true
+B 老final(night-adapt): true
+C 自写即时: true
+child exit: 0
+D 子进程写: true
+EXIT=0

@@ -2,6 +2,29 @@
 > **历史账**：v1.x–v2.0.4 的版本节（约 7400 行）于 11-08 白班被裁出本文件且当时未留档；
 > 11-08 午后补档 ⇒ 全文见 [docs/CHANGELOG-archive-2026-11-08.md](docs/CHANGELOG-archive-2026-11-08.md)（自 e6d926ce^ 逐字导出）。
 
+> 产物点名（D82）：MSB16-R1S1355910883-band1.bak, MSB16-R1S1355910883-band2.bak, MSB16-R1S1355910883-band3.bak, MSB16-R1S1355910883-band4.bak, MSB16-R1S1355910883-band5.bak, MSB16-R1S1355910883-band6.bak, MSB16-R1S1355910883-seg1.bak, MSB16-R1S1355910883-seg2.bak, MSB16T-R1S855046359-band1.bak, MSB16T-R1S855046359-band2.bak, MSB16T-R1S855046359-band3.bak, MSB16T-R1S855046359-band4.bak, MSB16T-R1S855046359-band5.bak, MSB16T-R1S855046359-band6.bak, MSB16T-R1S855046359-seg1.bak, MSB17-R1S1454169188-band1.bak, MSB17-R1S1454169188-band2.bak, MSB17-R1S1454169188-band3.bak, MSB17-R1S1454169188-band4.bak, MSB17-R1S1454169188-band5.bak, MSB17-R1S1454169188-band6.bak, MSB17-R1S1454169188-seg1.bak, MSB17-R1S1454169188-seg2.bak, MSB17-R1S413727588-band1.bak, MSB17-R1S413727588-band2.bak, MSB17-R1S413727588-band3.bak, MSB17-R1S413727588-band4.bak, MSB17-R1S413727588-band5.bak, MSB17-R1S413727588-band6.bak, MSB17-R1S413727588-seg1.bak, MSB17-R1S413727588-seg2.bak, MSB16T-R1S1616219090-band1.bak, MSB16T-R1S1616219090-band2.bak, MSB16T-R1S1616219090-band3.bak, MSB16T-R1S1616219090-band4.bak, MSB16T-R1S1616219090-band5.bak, MSB16T-R1S1616219090-band6.bak, MSB16T-R1S1616219090-seg1.bak
+
+## v2.0.7 — 11-13 夜（**规则文档对齐 + R66 过载炮编号化 + 量具/门禁收口 + 训练基建**）
+
+- **规则文档对齐两处（代码自 2026-09 起即如此，本次只改文档——"先文档后代码"的文档补课）**：
+  - **R49（回魂唯一性）**：旧句「复活回合再触发 ⇒ 状态重置重新判定」描述的路径在引擎里不可达（复活回合 `infiniteEnergy` 使回魂触发检查的 `!infiniteEnergy` 永假，`checkOver` 亦把该席视作存活）⇒ 按 2026-11-12 用户裁定改写为「回魂每局至多触发一次」；`tests/spec.js` 补钉行为用例（复活回合再挑衅并死亡 ⇒ 不再复活）⇒ **spec 64/64**。
+  - **N20⑥（地雷转移）**：文档旧句「不会被转移伤害转移」与 v1.5.136 N6 用户裁定（非当回合埋的雷其波可被【转移伤害】单跳转走）矛盾 ⇒ 按 N6 对齐（2026-11-12 用户授权自选，取保留实现：与 R63「转移不在乎来源」同族）；顺带清掉该节陈旧的「实现要点（待做）」块与漂移行号。
+- **过载炮 pierce 平衡研究**（用户 23:5x 勘误「机制不动」后降为研究题）：双沙箱同种子配对实测（`scratch/zcode-1112-research/cannon-study.mjs`），结论 = **建议保留 `pierce:{defense,reflect}`**（去 pierce ⇒ 被剑/坦克/狙击严格支配：纯防御墙 150/150 胜 → 0/150 自伤致死；原型制御/八卦对炮的既有答案不变；三段循环 φ3 清 ep 实测 28 次均 3.3 ジ）。全文 `docs/research/FINDING-2026-11-13-cannon-pierce-zcode.md`。
+- **R66 落地（2026-11-13 用户裁定「过载炮保留」）**：v1.3.14 的"新规"句补上裁定编号——`RULES-2P` R15 矩阵加炮行（防/反/藤 P，八卦 J，原型 B，可转移）+ §过载炮 R66 条目；`rules.js` desc 勘误（「失ジ」=使用者付光全部ジ的费用而非效果；φ3 **清空目标全部ジ** desc 原漏写；pierce 口径写全：藤甲同穿、金刚盾跳反击、原型/八卦照常）；`tests/spec.js` 炮用例扩 4 钉（藤甲同穿 ‖ 原型照挡 ‖ 金刚盾跳反击 ‖ 八卦双向照判 seqRng 钉死）；`v2v4-lib.mjs` pierceDef 校验无需改（`pierce.defense` 表驱动 + CANNON 硬编码的既有形态已对）。**desc 动了 `rules.js` ⇒ 指纹换代**：两线上槽按 v2.0.6 先例重测考卷 + 新指纹记回 meta（3P 走 `promote-champion`，2P 走 `promote-champion2p`）。
+- **门禁/量具收口**：
+  - `gate-all.mjs` --auto 摘除训练侧死路径（`tools/(train-3p|train-best)`；11-13 用户裁定：训练侧门禁不进主门禁/CI ⇒ `training/**` 落 meta 是**有意的少跑**，注释已写明）；`js/train/`、`js/bundled*` 产品面 probe 路由保留。
+  - **D191 四条未登记重复补账**（MSB15R-gd4keep ×2 + gd4rat ×2 的 band 夹具同批副本）：孪生体逐条定位（band 产品 .bak ↔ night-adapt 副本，mtime 相差几十毫秒 = PROBLEMS #9 的形状），按 `pack-aliases.tsv` 既有 train-3p 形态登记 ⇒ 门绿；**根因（train-3p 收尾 widIndex 进程内一遍）未修**，每批臂复发一次的账仍在。
+  - 口径数对齐：门总数 171/173 → **172**（np-test 头注 + PARTS 三处注释 + gates/README + gate-all 头注）；spec 用例数 52/55/61 → 现读（`tests/RESULT.txt` 记沿革）；CI 矩阵注释（16/19 路 vs 实际 11 路）未动。
+  - `knobs.mjs --check` 补「**在用但无注解**」拦截腿（AGENTS.md 铁律 1 的执行缺口：此前只拦无登记）+ `train-3p.mjs` SELF_ENV_KEYS 14 行无注解键逐键补注（语义逐一查过读取点）⇒ 册重生成，--check 绿（无注解 0）。
+- **训练基建（msbatch2 段内选粒）**：臂候选从 {final} 扩成 {final + BAND_DIR 下的 segK 快照}，argmax C 选臂冠军（并列取 final > 高 seg）；exit=9 臂走 seg 候选、seg 全无才父代顶替。⚠ 首版实现拿 `OUTDIR`（=night-adapt）探 seg 而探空、静默退化成旧行为（MSB16/MSB17/MSB16T 三跑实锤后自抓：**seg 与 final 分家是 train-3p:2428 的既有设计**，seg 按 `BAND_DIR_NAME` 落 `docs/artifacts` 根）——已修为 `EPIRUS_BAND_DIR || 'docs/artifacts'` 对齐 `train-3p:2498`。
+- **训练读数（全部在新臂上现测）**：
+  - **蒸馏三线全部过 mastery 预注册尺**：GD4-BIGT（电磁炮 ✔）/ GD4-RATION（环 ✔ 3 段三连）/ **GD4-LASER（新蒸馏：激光眼 ✔ 560%/局、打防席 506/506）**。
+  - **多线保持 = 负结果**：GD5-R14RAT（ration 教师**叠加蒸馏**在 R14 产物上）环 ✔ 3 段三连但 **bigT 被洗掉（540% → 0%）**——蒸馏重写键层，naive 叠加不是解；R14 产物（bigT ✔ + railgun ✔）仍是「两条同时保住」的现役答案，ring 第三线保持开放。
+  - **lasereye GA 线 = 量换语义**：MSB17 换代冠军（C -0.319 → -0.227）激光眼 922%/局但打防席 272/820 = 33% < 50% ⇒ mastery ✘（与 R15 同形状）。
+  - **B 轴双夹具记数（单包，信息量小）**：MSB17 冠军 B X̄₄ F2 = -0.299 ‖ F3k2 = -0.304（Δ≈-0.004；与 30 枚样本的整体 -0.089 偏移方向不一致，只记数）。
+- **2P 池考古结论（待裁，本版未动）**：难度阶梯早已同步主桌（v1.6.5/66）；「桌上是谁」未同步——2P 原生池 7 枚 v7 + 2 枚 v7 代跨人数邀请成员（10-21 换代），主池 2.0 包有 P2 四格卷读数但从未上 2P 桌。
+- 收工交接：`docs/research/STATUS-2026-11-13-night3-zcode.md` ‖ 研究计划与执行：`docs/research/PLAN-2026-11-12-night3-zcode.md`。
+
 ## v2.0.6 — 11-08 深夜（**引擎规则修**：地雷不再因雷主死亡而静默作废；用户裁定 2026-11-08）
 
 - **实机 bug**（results/2.0 的 27回合局 r17）：玩家埋雷同回合被 枪×2+狙击枪 击杀，雷没响。四局对账：只有「踩雷那一下恰好致命」的雷会哑火。

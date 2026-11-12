@@ -504,6 +504,37 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
       ' ⇒ 这一行画不出来（家族 20 第一次就是这么空的），必须给至少一枚非空训练时刻');
     eq(newBad.length, 0, '⑫c 新家族（fam>=20）的行必须带全 ts/wid/metaSeed/parentSrc：' + newBad.slice(0, 8).join(' ‖ ') +
       ' ⇒ 自动进图只写 id/fam/ts 会得到“有行但数据全空”');
+    /* ⑫d 融合行的第二/第三父边。为什么钉这条（11-12 实测）：两张家谱表里 `parentSrc=soup` 一共 7 枚
+     *   （lineage.tsv 6 + lineage-g3.tsv 1），它们的第二/第三父**全是手写进表的**；而 add-point 生成的谱系行
+     *   只有 12 个字段、压根不写 parentOf2/parentSrc2/parentOf3/parentSrc3（那两个名字在 add-point 里出现 0 次），
+     *   也没有任何入参能把额外的父传进去 ⇒ 新的融合点走自动进图就只剩一根边，而"有父边"在图上看着完全正常。
+     *   ⚠ 两表列集不一样：lineage.tsv 有 parentOf2/parentName2/parentSrc2 而**没有第三父那一维**，
+     *     lineage-g3.tsv 才有 parentOf3/parentSrc3 ⇒ 必须按这张表自己的表头判，
+     *     拿一张表的列去套另一张会把 6 枚老汤全误报成缺列（"算不出"不许当"算过且干净"，也不许反过来）。 */
+    {
+      const soupBad = [], soupGap = [], judged = [];
+      let soupSeen = 0;
+      for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
+        const R2 = rd(f), C2 = R2[0].split('\t');
+        const iId = C2.indexOf('id'), iPS = C2.indexOf('parentSrc'), iP = C2.indexOf('parentOf'), iP2 = C2.indexOf('parentOf2');
+        const iPS2 = C2.indexOf('parentSrc2'), iPS3 = C2.indexOf('parentSrc3'), iP3 = C2.indexOf('parentOf3');
+        if (iId < 0 || iPS < 0 || iP < 0 || iP2 < 0) { judged.push(f.replace(/^.*\//, '') + '(没得判：缺 parentOf2 这一列)'); continue; }
+        judged.push(f.replace(/^.*\//, '') + '✓');
+        for (const line of R2.slice(1)) {
+          const c = line.split('\t');
+          const nonempty = (i) => i >= 0 && c[i] !== undefined && String(c[i]).trim() !== '';
+          const soup = c[iPS] === 'soup' || (iPS2 >= 0 && c[iPS2] === 'soup');
+          if (!soup) continue;
+          soupSeen++;
+          if (!nonempty(iP2)) soupBad.push(c[iId] + '(parentSrc=' + c[iPS] + (iPS2 >= 0 ? '/2=' + c[iPS2] : '') + ')');
+          if (nonempty(iP3) && !nonempty(iP2)) soupGap.push(c[iId]);
+        }
+      }
+      eq(soupBad.length, 0, '⑫d 标成 soup 的行必须带第二父（parentOf2 非空）：量过 ' + soupSeen + ' 枚 ‖ 缺 ' + soupBad.length +
+        ' 枚（' + soupBad.slice(0, 8).join(' ‖ ') + '）⇒ 融合点只剩一根边时图上看着"有父"，但谱系把"混了谁的权重"读成了单亲热启动');
+      eq(soupGap.length, 0, '⑫d 不许 parentOf3 有值而 parentOf2 空（边编号断档）：' + soupGap.slice(0, 8).join(' ‖ ') +
+        ' ‖ 判过的表 ' + judged.join(' '));
+    }
   }
 });
 }

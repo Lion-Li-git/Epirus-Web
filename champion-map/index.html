@@ -577,8 +577,9 @@ function H4STR(d, L) { L = (L === undefined) ? ((st.ftab === 'long') ? 'L' : '')
 function X4F(d, L) { var x = X4T(d, L); return (x === null || !isFinite(x)) ? '未测' : x.toFixed(3); }
 function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
-function FLBL() { return 'F = X̄₄(' + st.XP + st.XSUF + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=脚本桌 v2，B=' +
-  (st.XSUF === 'R' ? 'F2 滚动夹具（MSB11+MSB10+MSB8-charge+Q-s47）' : '冠军桌固定夹具') +
+function XFAM() { return st.XP + (st.XSUF ? '·' + st.XSUF : ''); }   /* 族名怎么念：C·R / C / P / X（表里 10 处写的是 C·R，别在页面上印成 CR） */
+function FLBL() { return 'F = X̄₄(' + XFAM() + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=v2 脚本桌，B=' +
+  (st.XSUF === 'R' ? 'F2 冠军夹具（MSB11+MSB10+MSB8-charge+Q-s47）' : '冠军桌固定夹具') +
   (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
@@ -983,7 +984,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 F2 滚动夹具' +
+    '\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 F2 冠军夹具 MSB11+MSB10+MSB8-charge+Q-s47' +
     (d.pv === null || d.pv === undefined ? '' : '\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
@@ -5019,11 +5020,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
          *   而那正是这条 clause 什么都没判的形状（gate-audit R8）⇒ 另数 oldCalc，要求它 > 0。 */
         if (isFinite(fOld)) { oldCalc++; if (Math.abs(fOld - Fv(d)) < 1e-9) oldSame++; }
       }
-      T('主尺（C·R = F2 滚动夹具综合分）：白名单逐枚落地 ‖ Fv 等于手算 C·R ‖ 与旧 C 族不是同一串数',
+      T('主尺（' + XFAM() + ' = F2 冠军夹具综合分）：白名单逐枚落地 ‖ Fv 等于手算 C·R ‖ 与旧 C 族不是同一串数',
         have === N && samp.length > 0 && newSame === samp.length && oldCalc > 0 && oldSame < oldCalc,
         'C·R 至少一格有值 ' + have + '/' + N + ' 枚 ‖ 抽样 ' + samp.length + ' 枚：合 C·R ' + newSame +
         ' ‖ 旧 C 算得出 ' + oldCalc + ' 枚其中合 Fv ' + oldSame +
-        '（桌形=' + (L ? 'long' : 'multi') + ' ‖ 族=' + st.XP + st.XSUF + '）');
+        '（桌形=' + (L ? 'long' : 'multi') + ' ‖ 族=' + XFAM() + '）');
     } catch (E) {
       T('主尺（C·R）：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
     }

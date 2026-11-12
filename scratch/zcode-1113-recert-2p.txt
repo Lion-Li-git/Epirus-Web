@@ -1,0 +1,32 @@
+现有 2P 包：参数量 5689，特征维度 shapeOf = {"v":7,"featS":213,"featA":22,"featN":235,"legacy":false}
+文件头注释：/* Epirus 内置冠军：由 tools/train-best.mjs 生成（3 候选择优，500 代，总 541s）。不要手改。 */
+
+== 2P 考卷（20 基准 × 40 局，temp 0.15） ==
+   random          95.0%
+   aggro          100.0%
+   defend         100.0%
+   balanced       100.0%
+   breakdef       100.0%
+   wall           100.0%
+   reflectspam    100.0%
+   guardspam      100.0%
+   baguaspam      100.0%
+   combocounter   100.0%
+   mix             82.5%
+   tankline       100.0%
+   heavyfire      100.0%
+   guardgun       100.0%
+   protowall      100.0%
+   whiff          100.0%
+   reflectmix      90.0%
+   reflecttank    100.0%
+   defreflectgun  100.0%
+   beadburst      100.0%
+   平均 = 98.37%   最差基准 = 82.50%   过门 = 是
+
+回读自检：冠军包 ok（参数量 5689，权重逐字节未变）；meta 指纹 = 668081a2
+缓存戳 bundled-champion.js?v=mw80fji7 → bundled-champion.js?v=mwdw9tf5
+
+✅ 已补记：js/bundled-champion.js   rulesFingerprint = 668081a2（meta 里记的 = 668081a2）
+   下一步：node tools/np-test.mjs（D16 现在会同时守 2P 与 3P 两个包）
+EXIT2P=0

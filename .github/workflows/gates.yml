@@ -118,7 +118,7 @@ jobs:
           fi
       - name: 并集守卫（全部部分的并集必须 = 整轮；少跑一条就红。条数由脚本现读 ⇒ 这里不写死）
         run: node tools/gate-parts-check.mjs
-      - name: spec（2 人引擎 52 用例）
+      - name: spec（2 人引擎用例；条数现读不写死，历史沿革见 tests/RESULT.txt）
         run: node tools/spec-run.mjs
       # 11-11 夜（训练侧独立子仓）：旋钮册防腐烂跟着仓库走 —— env 读取或 SELF_ENV_KEYS 注解变了没重生成 ⇒ 红。
       #   生成器/册都在 training/（这条是"配置事实真源"的卫生门，独立于 np 部件体系）。

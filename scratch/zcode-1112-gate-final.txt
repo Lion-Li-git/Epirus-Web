@@ -1,0 +1,32 @@
+warning: in the working copy of 'champion-map/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/pack-aliases.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/night-adapt2/triplet-ledger.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/RESULT.txt', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/gates/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'training/TRAINING-KNOBS.md', LF will be replaced by CRLF the next time Git touches it
+--auto 判据（改动 52 个路径）：
+  engine 5 个 ‖ index.html tests/RESULT.txt tests/spec.js tools/gate-all.mjs …
+  probe  1 个 ‖ champion-map/viewer.mjs
+  ship   4 个 ‖ champion-map/pack-aliases.tsv docs/RULES-2P.md docs/RULES-NP.md tools/gates/ship-pool.mjs
+  meta   42 个 ‖ .github/workflows/gates.yml CHANGELOG.md README.md champion-map/index.html …
+--auto ⇒ np 跑 **整轮**（engine 面 ⇒ 不分组）；⚠ 分组那一遍**不是认证**
+▶ 起跑 np …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+⛔ np 红（exit=1）· 完整输出：docs/artifacts/gate-fail-np.txt
+   失败的门（共 1 条）：
+   ✘ D191 kept/ 别名检测（v1.5.285 · §E128）：按权重本体分组 · 已知别名必须查到 · 读不出不许当"无重复"  → ④ 未登记的重复必须为 0（实测 7 ‖ 点名：docs/artifacts/night-adapt/MSB16-R1S1355910883.js docs
+   ⚑ 池成员 15 枚 {"hard":6,"soft":9} ‖ 体检没量过的自动成员 0 枚 ‖ 人席没量过的 15 枚（**没测 ≠ 过关**）
+  ✔ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话
+§E335 分组在册 ✅ 172 条门全部归组（171 个键）
+
+N人测试：通过 171 / 172
+
+⚠ unit-broken 的 JSON **损坏**：broken 缺起始引号 ⇒ 本工具已按「只补引号」修复后继续。（调用者不是线上槽文件 ⇒ 这是测试夹具或中间产物，不是生产缺陷；两个真线上槽由门 D168 的 ③ 腿直接读并核过。）
+
+门禁：np 171/172（281.2s） · spec 64/64（0.2s） · smoke OK（10.1s） · battle OK（34.5s） · map OK（5.0s）
+⛔ 结论：**不是全绿** —— np 红
+EXIT=7

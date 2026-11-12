@@ -958,6 +958,30 @@
     eq(st.winner, 1, '电脑胜');
   });
 
+  t('R49 回魂唯一性（2026-11-12 用户裁定）：复活回合内再次挑衅并死亡 ⇒ 不再复活', function () {
+    const st = game(); setEp(st, 2, 1); st.p[0].hp = 1; st.p[1].hp = 1;
+    // 回合1：你(1血)挑衅电脑；电脑枪击你 ⇒ 触发第一次回魂
+    X.startTurn(st);
+    S.attemptAction(st, 0, SK.TAUNT);
+    S.attemptAction(st, 1, SK.GUN);
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.p[0].reviveNext, '第一次回魂触发(待复活)');
+    // 回合2：你复活(1血无限能量)，再次挑衅电脑并再次被打死
+    X.startTurn(st);
+    eq(st.p[0].hp, 1, '复活');
+    ok(st.p[0].infiniteEnergy, '无限能量');
+    S.attemptAction(st, 0, SK.TAUNT);   // 免费再挑衅
+    S.attemptAction(st, 1, SK.GUN);     // 电脑再枪击：履约 + 把你打回 0
+    X.resolveActions(st); X.endTurn(st);
+    /* 回魂触发检查要求 !infiniteEnergy ⇒ 复活窗口内永不再触发（R49 每局至多一次） */
+    eq(st.p[0].reviveNext, false, '复活回合内不再触发回魂（R49）');
+    eq(st.p[0].hp, 0, '回合末强制死亡');
+    // 回合3：不再复活，对局结束
+    X.startTurn(st);
+    ok(st.over, '对局结束');
+    eq(st.winner, 1, '电脑胜');
+  });
+
   t('R1 回合上限死局判定', function () {
     const st = game('standard', { next: function () { return 0.9; } });
     setEp(st, 99, 99);
@@ -1062,7 +1086,7 @@
     eq(st2.p[0].chains.length + st2.p[1].chains.length, 0, '普通伤害照旧消耗连边（回归）');
   });
 
-  t('过载炮新规：打穿防御与反弹，但被任何攻击类技能抵消', function () {
+  t('R66 过载炮（2026-11-13 用户裁定「保留」）：打穿防御/反弹/藤甲，原型照挡、八卦照判、金刚盾跳反击，被任何攻击类技能抵消', function () {
     // ① 打穿防御
     let st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     play(st, R.SK.CANNON, R.SK.GUARD);
@@ -1072,6 +1096,10 @@
     play(st, R.SK.CANNON, R.SK.REFLECT);
     eq(st.p[1].hp, 2, '过载炮应穿过反弹造成 1 伤');
     eq(st.p[0].hp, 3, '反弹不应回打施法者');
+    // ②b 打穿藤甲（藤甲与反弹在引擎同支，pierce.reflect 一并覆盖）R66
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.ARMOR);
+    eq(st.p[1].hp, 2, '过载炮应穿过藤甲造成 1 伤');
     // ③ 被任意攻击类技能抵消：对手回击 → 炮哑火
     st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     play(st, R.SK.CANNON, R.SK.GUN);
@@ -1081,6 +1109,22 @@
     st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     ok(R.ATK_EFFECT.indexOf(R.SK.BIG_T) < 0, '大雷不在 ATK_EFFECT 里');
     ok(R.ATK_EFFECT.indexOf(R.SK.CANNON) >= 0, '过载炮自身属于 ATK_EFFECT');
+    // ⑤ 原型制御照挡（pierce 不覆盖原型，平衡账 FINDING-2026-11-13）R66
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.PROTO);
+    eq(st.p[1].hp, 3, '原型制御应照挡过载炮（pierce 不覆盖原型）');
+    // ⑥ 金刚盾：pierce.defense 跳过 50% 反击判定直接落伤 R66
+    st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, R.SK.CANNON, R.SK.JINSHIELD);
+    eq(st.p[1].hp, 2, '过载炮应穿过金刚盾造成 1 伤');
+    eq(st.p[0].hp, 3, '金刚盾反击判定应被 pierce.defense 跳过（不回打施法者）');
+    // ⑦ 八卦阵照判 50%（pierce 不绕判定，双向钉死）
+    const bagWin = game('standard', seqRng([0.1])); setEp(bagWin, 5, 0);
+    play(bagWin, R.SK.CANNON, R.SK.BAGUA);
+    eq(bagWin.p[1].hp, 3, '八卦阵判定胜应挡下过载炮（pierce 不绕判定）');
+    const bagLose = game('standard', seqRng([0.9])); setEp(bagLose, 5, 0);
+    play(bagLose, R.SK.CANNON, R.SK.BAGUA);
+    eq(bagLose.p[1].hp, 2, '八卦阵判定败过载炮照常落伤');
   });
 
   /* ============ 输出 ============ */

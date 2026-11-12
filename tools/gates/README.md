@@ -1,7 +1,7 @@
 # 门禁（tools/gates/）—— 怎么跑 · 每个部分管什么
 
 > **规矩第一条：默认不跑整轮。**
-> 整轮 = `node tools/np-test.mjs`（171 条 · 本机约 4~5 分钟）= `--group=engine`。
+> 整轮 = `node tools/np-test.mjs`（172 条 · 本机约 4~5 分钟）= `--group=engine`。
 > 挑门这件事**已经有自动化**（`node tools/gate-all.mjs --auto` / CI 的 `--part` 矩阵），
 > 所以「不知道跑哪组」不是跑整轮的理由 —— 先看 §3 的判定表，再不行就问用户。
 > 用户 2026-11-06 原话：「我们有很好的自动跑门禁系统，可以自动检测哪些门禁要跑……**禁止随意跑整轮**」。
@@ -20,7 +20,7 @@
 | 看执行顺序（原始行号 + 门名） | `node tools/np-test.mjs --list-order` |
 | 本机想快 | `node tools/gate-par.mjs`（同一份名单，按部分并发） |
 | 改完页面想验交互 | `node tools/smoke.mjs` / `node tools/battle-test.mjs`（真 Chrome，各 15~35 秒） |
-| 引擎用例（不当门禁跑） | `node tools/spec-run.mjs`（61 条，0.4 秒） |
+| 引擎用例（不当门禁跑） | `node tools/spec-run.mjs`（条数以 spec-run 自印为准；2026-11-13 实数 64，0.4 秒） |
 
 ⚠ **`--group=engine` 就是整轮**（`CUM.engine = null` ⇒ 全部）。它不是「只跑引擎组」，别拿它当轻量选项。
 
@@ -30,7 +30,7 @@
 
 ```
 gate-all.mjs      五道一起跑 + 一行总结论（np / spec / smoke / battle / champion-map 页内自检）
-   ├─ np-test.mjs      ← 门禁本体（171 条，注册 / 过滤 / 执行 / 收尾都在这里）
+   ├─ np-test.mjs      ← 门禁本体（172 条，注册 / 过滤 / 执行 / 收尾都在这里）
    │    └─ gates/*.mjs ← 11 个部分文件（门体全在这里；本 README 也在这一层）
    ├─ spec-run.mjs     ← 引擎用例（不是门禁，但认证里算一道）
    └─ smoke / battle-test / champion-map/shot.mjs  ← 真 Chrome 三道（需要浏览器）
@@ -48,8 +48,8 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 
 | 轴 | 语义 | 取值 | 能当认证吗 |
 |---|---|---|---|
-| `--group=` | **累计深度轴**：跑一组 = 这一组 + 它依赖的更浅组 | `meta`(16) ⊂ `ship`(53) ⊂ `ui`(61) / `probe`(90) ⊂ `engine`=全部(171) | 不能（工具会自己印「只跑了 N / 171」） |
-| `--part=` | **分区轴**：11 个部分文件互不重叠、并集 = 171 | 见 §4 的 11 行 | 不能（同上） |
+| `--group=` | **累计深度轴**：跑一组 = 这一组 + 它依赖的更浅组 | `meta`(16) ⊂ `ship`(52) ⊂ `ui`(60) / `probe`(89) ⊂ `engine`=全部(172)（2026-11-13 实数；组内条数现读 `--list-parts --json`） | 不能（工具会自己印「只跑了 N / 172」） |
+| `--part=` | **分区轴**：11 个部分文件互不重叠、并集 = 172 | 见 §4 的 11 行 | 不能（同上） |
 | `--only=` | **单条**（子串匹配，不是列表） | `D234` / `N8` / `R65`… | 不能（同上） |
 
 - `--part` 与 `--group` **不许同时给**（一个是分区轴、一个是累计深度轴，混起来只会得到「看着像全量」的假绿，runner 会直接拒）。
@@ -68,7 +68,7 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 |---|---|---|
 | `js/core/**`、`tests/**`、`index.html`、`server/**`、`tools/np-test.mjs`、`tools/gate-all.mjs`、`tools/spec-run.mjs`、`tools/gates/_ctx.mjs`、未跟踪的**新目录** | engine | ⚠ **整轮**（保守方向：宁可多跑） |
 | `tools/gates/<前缀>-*.mjs` | 按前缀映射到 engine / ship / probe / meta / ui | 那一组 |
-| `js/ui/**`、`tools/smoke.mjs`、`tools/battle-test.mjs` | ui | `--group=ui`（61） |
+| `js/ui/**`、`tools/smoke.mjs`、`tools/battle-test.mjs` | ui | `--group=ui`（60） |
 | `js/train/**`、`js/bundled*`、`tools/train-*`、`tools/eval-5p`、`tools/promote-champion*`、`tools/probe-*`、`tools/analyze-*` | probe | `--group=probe`（88）+ **另跑 `--part=engine-fuzz`**（13，D54 夹具 import `Bots`） |
 | `docs/METHODOLOGY.md`、`docs/RULES-2P.md`、`docs/RULES-NP.md`、`champion-map/pool-*`、`champion-map/pack-*` | ship | 同上 |
 | `tools/*.mjs`、`champion-map/*.mjs`、`docs/debug/**` | probe | `--group=probe`（90） |
@@ -76,14 +76,14 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 
 **注意 engine 那一行**：`--auto` 碰到 `js/core/**`（哪怕只改了一句注释）就会退回整轮。这是设计上的保守方向，
 不是 bug。想避免它，就显式给 `--group=` 或 `--part=`。例：只动了 `js/core/resolve.js` 的注释 ⇒
-`node tools/np-test.mjs --part=engine-rules` + `--part=engine-fuzz` 两条就够（75 条，而不是 171 条）。
+`node tools/np-test.mjs --part=engine-rules` + `--part=engine-fuzz` 两条就够（75 条，而不是 172 条）。
 
-⚠ `--auto` 的结论**也不是认证**：总结论行会写「只跑了 N / 171」。
+⚠ `--auto` 的结论**也不是认证**：总结论行会写「只跑了 N / 172」。
 
 ---
 ## 4. 11 个部分：每条门管什么
 
-11 个部分**互不重叠、并集 = 171**（`node tools/gate-parts-check.mjs` 钉）。每部分给四项：管什么 / 什么时候必跑 / 命令 / 门清单。
+11 个部分**互不重叠、并集 = 172**（`node tools/gate-parts-check.mjs` 钉）。每部分给四项：管什么 / 什么时候必跑 / 命令 / 门清单。
 「什么时候必跑」= 那部分的门**读哪一层的输入**（同一个判定也写在 `np-test.mjs` 的路径映射表里，可用 `--list-parts --explain=<门键>` 复算）。
 
 ### 4.1 `engine-rules` — 62 条 ‖ 组 `engine` ‖ 门体 `engine-rules.mjs`
@@ -406,7 +406,7 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 | `✘ 门名  → 断言名 … got=… want=…` | 失败（`got/want` 是判据的真值，引用时必须带上） |
 | `⏩ 缓存命中（<key> · 省 N 秒）` | 那条门的**确定性子进程**没重跑；断言照旧在新旧输出上跑过（不是跳过） |
 | `⚠ …（只警告）` | 明确标成不阻断的腿（例：D82 的 mtime 半边、D118 的产品代理栏） |
-| `⚠ --part/--group/--only：只跑了 N / 171` | **少跑提醒**。引用这一遍时必须带着这句，不许说「全绿」 |
+| `⚠ --part/--group/--only：只跑了 N / 172` | **少跑提醒**。引用这一遍时必须带着这句，不许说「全绿」 |
 | `N人测试：通过 P / T（· 跳过 K）` | 收尾总结（`T` = 去掉 Skip 后的分母） |
 
 **退出码**（`np-test.mjs`）：
@@ -451,10 +451,10 @@ gate-parts-check.mjs  并集守卫：11 个部分拼回来必须正好等于全�
 
 ## 7. 禁止事项（按严重度）
 
-1. **不许随手跑整轮。** 整轮 = `node tools/np-test.mjs` = `--group=engine`（171 条 · 4~5 分钟）。
+1. **不许随手跑整轮。** 整轮 = `node tools/np-test.mjs` = `--group=engine`（172 条 · 4~5 分钟）。
    合法的三个场合：① CI（自动）；② 用户点名；③ 你动了**注册面本身**（`np-test.mjs` 的 `GRP`/`PARTS`、`gate-parts-check`、`_ctx.mjs`）
    且确实需要一次复核。其余一律用 `--auto` / `--group=` / `--part=` / `--only=`。
-2. **不许把窄跑说成「全绿」。** 工具每次都会印「只跑了 N / 171」；转述时必须原样带上，
+2. **不许把窄跑说成「全绿」。** 工具每次都会印「只跑了 N / 172」；转述时必须原样带上，
    这是本仓记过两次账的事（`continue-on-error` 的作业红着而 run 显示 success 那次）。
 3. **不许改判据去喂字符串。** 门红时先问「该不该红」（`gate-audit` 那套），再决定是修代码还是改门；
    放宽地板 / 改判词去凑绿是本仓明令禁止的动作。

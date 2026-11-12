@@ -150,11 +150,49 @@ for (let round = history.length + 1; round <= ROUNDS; round++) {
   if (!okArms.length) { log('⛔ 轮 ' + round + ' 全败'); process.exit(9); }
   for (const d of done2.filter((x) => x.code !== 0)) log('⚠ 臂败 seed=' + d.seed + ' exit=' + d.code + '（不进父母池）');
 
+  /* ===== 段内选粒（11-13 夜3班 · 用户裁定的白天计划 P2.1）=====
+   * 病（11-12 复盘 §1.5）：多数臂 C 在 seg1-2 见顶后衰减，final 不是 C 最优点 ⇒ 每轮 ~20 次换代只发生 2 次。
+   * 改：每臂的池内候选从 {final} 扩成 {final + 已落盘的 segK 快照}（配方 HOLDOUT_SEG=50 ⇒ 200 代 4 个），
+   *     臂冠军 = argmax C(均值) over 候选（并列取 final > 高 seg）。exit=9（final 与已有粒同权重被守卫拦）
+   *     的臂也走同一选粒——候选只剩 seg 们，**不再无条件用父代顶替**（seg 比父代强就进池）。
+   * 代价：每臂多量 ≤4 个候选（exam-4n × 2 桌形），全部并发 ⇒ 轮末墙钟约 +2~4min（18 核吃得住）。 */
+  const SEGPICK = arg('segpick', '1') !== '0';
+  async function armEntry(seed, packPath, code, dup) {
+    if (!SEGPICK) return { label: 'S' + seed, pack: packPath, t: (code === 0 && existsSync(packPath)) ? await measure(packPath) : null };
+    const armName = ARM + '-R' + round + 'S' + seed;
+    /* seg 的落盘目录 = train-3p 的 `BAND_DIR_NAME`（`EPIRUS_BAND_DIR || 'docs/artifacts'`，train-3p:2498）——
+     * ⚠ **不是 OUTDIR**（final 的目录）：本臂最初的实现拿 OUTDIR 探 seg ⇒ 永远探空、段内选粒静默退化成旧行为
+     *   （11-13 夜3班 MSB16/MSB17/MSB16T 三跑实锤，自抓于诊断臂；seg 与 final 分家是 train-3p:2428 的既有设计）。 */
+    const BAND_DIR = process.env.EPIRUS_BAND_DIR || 'docs/artifacts';
+    const cands = [];
+    /* dup（exit=9 守卫拦重）的 packPath 是**父代顶替**，不是本臂产物 ⇒ 不当 final 候选，只看 seg */
+    if (code === 0 && !dup && existsSync(packPath)) cands.push({ k: 'final', p: packPath });
+    for (let k = 1; k <= 8; k++) {
+      const sp = BAND_DIR + '/' + armName + '-seg' + k + '.bak';
+      if (existsSync(sp)) cands.push({ k: 'seg' + k, p: sp });
+    }
+    if (!cands.length) return { label: 'S' + seed, pack: null, t: null };
+    log('段内选粒 S' + seed + '：候选 ' + cands.length + ' 个 [' + cands.map((c) => c.k).join(',') + ']');
+    const ms = await Promise.all(cands.map(async (c) => ({ k: c.k, p: c.p, t: await measure(c.p) })));
+    const good = ms.filter((m) => m.t);
+    if (!good.length) { log('⚠ 臂 S' + seed + ' 的 ' + cands.length + ' 个候选全测不出 ⇒ 该臂不进池'); return { label: 'S' + seed, pack: null, t: null }; }
+    const orderK = (k) => (k === 'final' ? 99 : Number(String(k).slice(3)));
+    good.sort((a, b) => (b.t.mean - a.t.mean) || (orderK(b.k) - orderK(a.k)));
+    const best = good[0];
+    if (good.length > 1) log('段内选粒 S' + seed + '：候选 ' + good.map((m) => m.k + '=' + m.t.mean.toFixed(4)).join(' ') + ' ⇒ 取 ' + best.k + '（' + best.p.split('/').pop() + '）');
+    return { label: 'S' + seed, pack: best.p, t: best.t };
+  }
+
   /* 本轮收尾：各臂 triplet（臂自带）→ 父母池 = 臂们 + 现有冠军（同口径重测）→ √n 保留 → 2+1 分配 */
   /* ⚑ 11-10 修：原来这里走 measureFromLedger（A 轴台账）——换 C 准则后我把它置 null ⇒ 臂全被丢掉、只剩冠军（本轮就是这么白判的）。改为一律现测 C。 */
-  /* 11-11：重测并发（原来 4 包串行 ≈8min/轮是吞吐瓶颈；exam-4n 单线程 ⇒ 并发只吃核，不碰任何随机流） */
+  /* 11-11：重测并发（原来 4 包串行 ≈8min/轮是吞吐瓶颈；exam-4n 单线程 ⇒ 并发只吃核，不碰任何随机流）
+   * 11-13：臂候选 = 段内选粒（final + segK，argmax C）；exit=9 臂走 seg 候选，seg 全无才用父代顶替。 */
   const measured = await Promise.all([
-    ...okArms.map(async (d) => ({ label: 'S' + d.seed, pack: d.packPath, t: await measure(d.packPath) })),
+    ...done2.map(async (d, i) => {
+      const e = await armEntry(d.seed, d.packPath, d.code, d.dup);
+      if (!e.pack) { log('⚠ 臂 S' + d.seed + ' 无可用候选 ⇒ 用父代 ' + parents[i].split('/').pop() + ' 顶替该席'); return { label: 'S' + d.seed, pack: parents[i], t: await measure(parents[i]) }; }
+      return e;
+    }),
     (async () => ({ label: '冠军', pack: champion, t: await measure(champion) }))(),
   ]);
   const pool = measured.filter((m) => m.t);

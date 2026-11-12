@@ -98,7 +98,7 @@ const POP = Number(process.argv[5] || 12);
  * 改法：启动时把 env 里出现的 `EPIRUS_*` 与本工具闭集比对，命中**暗键** ⇒ 打印名单 + `exit 6`
  *   （与 D119/D120 的"要了开关不许静默"同一条规矩）。有意为之的情形用 `EPIRUS_ALLOW_DARK=1` 放行。 */
 const SELF_ENV_KEYS = [
-  'EPIRUS_ANCHOR', 'EPIRUS_ANCHOR_TO', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',
+  'EPIRUS_ANCHOR', 'EPIRUS_ANCHOR_TO', 'EPIRUS_ARM', 'EPIRUS_BAND_DIR', 'EPIRUS_CLEAR_W', 'EPIRUS_HOTSTART',   // 锚定正则 λ(v1.5.153,0=关) ‖ 锚定对象 seed/widest ‖ 臂名(产物/台账) ‖ band 产物目录(默认 docs/artifacts) ‖ 逐代清对手奖励(§N8b) ‖ 热启动开关(配 SEEDPACK)
   'EPIRUS_ARCH2', 'EPIRUS_MUT_MODE',   // §E821（10-28 傍晚 · 千问）：2.0 架构原型 + 段感知/扁平变异算子档（默认关 ⇒ 逐字回到 v7）
   'EPIRUS_SEL_EVAL_SEEDS',   // §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
@@ -107,8 +107,8 @@ const SELF_ENV_KEYS = [
   'EPIRUS_BREADTH_FATAL',   // DS 11-03：名人堂全塌缩时中止（默认关 ⇒ 旧行为逐字同）
   'EPIRUS_EFFSKILL_MIN',    // DS 11-03：有效技能数下限（非ジ份额 ≥0.5% 的键数；0=关）
   'EPIRUS_EFFSKILL_SHARE',  // DS 11-03：上面那条"份额"的阈值（默认 0.005）
-  'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',
-  'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',
+  'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',   // 每代 top-3 健康门槛(宽粒优先,饿退不杀) ‖ 门槛测量局数(默认6) ‖ 带内取宽带宽 ‖ 连续K代bestFit不进步⇒整臂终止
+  'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',   // 名人堂逐粒追踪开关 ‖ 追踪 JSONL 落盘路径(默认 scratch/hall-trace/<臂>.jsonl)
   'EPIRUS_POPSTAT', 'EPIRUS_POPSTAT_K', 'EPIRUS_POPSTAT_OUT',   // #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变）
   'EPIRUS_HALL_TRACE_PROBE',   // ⤵ 11-01 深：M-1 连续下限罚（默认 0）
   'EPIRUS_FITGW',   // 11-01 深（PREREG-MERGER §一）：指纹行加 top-3 只测不选的宽读数（默认关）
@@ -161,7 +161,7 @@ const SELF_ENV_KEYS = [
    * 而是本入口的白名单从来没登记它（实测 10-26 01:2x 冒烟：`⛔ 检测到本入口读不到的旋钮：EPIRUS_SUB_BEAD` ⇒ exit 6，
    * 一秒响、零成本，这正是这条闸该有的样子）。登记之后 `EFFECTIVE_ENV` 会自动把它写进产物的 `meta.recipe.env`。
    * ⚑ 与 v1.8.37 夜班续的 `EPIRUS_SUB_BEAD_KIND`（珠种，走 econ 单一来源）**要一起设**：只设珠种 = 钩子不进。 */
-  'EPIRUS_SUB_BEAD',
+  'EPIRUS_SUB_BEAD',   // 模仿教师的蓄能钩子（与 EPIRUS_SUB_BEAD_KIND 一起设才进；只设珠种=钩子不进）
   'EPIRUS_SEQ_KIND',   // v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
   'EPIRUS_FAMILY_FIELD',   // §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数
@@ -175,17 +175,17 @@ const SELF_ENV_KEYS = [
   'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
                          //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
-  'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',
-  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',
-  'EPIRUS_WIDTH_LAND_W',
-  'EPIRUS_WALL_BREAK_W',
-  'EPIRUS_DEF_ADAPT_W',
-  'EPIRUS_DRAIN_HEAL_W',
-  'EPIRUS_DEF_IDLE_W',
+  'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',   // 出厂写槽开关(=1 才写 js/bundled*,默认关) ‖ 种子 ‖ 热启动包 ‖ 2P切片局数(默认 GAMES/2) ‖ 2P对手集 'exam'=对产品考卷基准
+  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',   // 2P 切片并入多人脚本池(默认不并,防稀释) ‖ 2P 切片 fit 权重(0=关)
+  'EPIRUS_WIDTH_LAND_W',   // 落地广度奖励（v1.7.90，默认关）
+  'EPIRUS_WALL_BREAK_W',   // 破反弹墙奖励（v1.8.39，默认关）
+  'EPIRUS_DEF_ADAPT_W',   // 多血适度防御奖励（DS 11-02，默认关）
+  'EPIRUS_DRAIN_HEAL_W',   // 残血摄魂奖励（DS 11-02，默认关）
+  'EPIRUS_DEF_IDLE_W',   // 白防罚（DS 11-02，默认关）
   'EPIRUS_PAIRED',   /* 2026-10-28（DS）：配对评估 —— 同代所有个体吃同一批局（common random numbers），默认关 */
-  'EPIRUS_REFLECT_W',
-  'EPIRUS_GUARD_HIT_W',
-  'EPIRUS_BEAD_WASTE_W',
+  'EPIRUS_REFLECT_W',   // 真反射 credit（PREREG §二十六·4，只给 reflect 事件付钱，默认关）
+  'EPIRUS_GUARD_HIT_W',   // 打龟奖励（§E816 A案，只给打在本回合摆防御目标上的伤害付钱，默认关）
+  'EPIRUS_BEAD_WASTE_W',   // 过期珠浪费惩罚（PREREG §二十九，数 beadExpire 事件不碰花费侧，默认关）
   /* ===== 11-11 夜（ZCode）：补登记 sweep —— 在用未登记 68 条清零（清单 = 生成器 docs/TRAINING-KNOBS.md「在用未登记」节，
    * 剔除 ECON/FIGHT/TRAIN 三份单一来源表已管的 37 条）。注解一律同行 //（收割按行取）；详注在读取点旁边。 ===== */
   'EPIRUS_ALLOW_DARK',   // 闸放行旗（=1 放行「本入口读不到的键」）；用臂必须自己补回逐键回执证据（见上 ⚑ 块）

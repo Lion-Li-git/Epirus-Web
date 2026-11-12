@@ -1,0 +1,6 @@
+t0 existsSync(自写): true
+t+3s existsSync(子已改写): true childAlive: true
+child close code=0 t=17:41:39
+t+close existsSync: true
+child output captured len: 0
+EXIT=0

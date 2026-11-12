@@ -136,7 +136,17 @@ if (CHECK) {
     console.error('⛔ ' + DOC + ' 过期（env 读取或 SELF_ENV_KEYS 注解变了没重生成）⇒ 跑 `node tools/knob-registry.mjs` 后随改动一起提交');
     process.exit(1);
   }
-  console.log('旋钮册新鲜 ✅（全集 ' + universe.length + ' ‖ 在用 ' + live.length + ' ‖ 未登记 ' + unreg.length + ' ‖ 暗键 ' + dark.length + '）');
+  /* 11-13 夜3班（铁律 1 执行缺口补齐）：**登记了但注解为空**的在用键 = "有人读、没人写它干什么"
+   *   —— AGENTS.md 铁律 1 的原话是"--check 会拦无注解的读取"，此前这里只拦"无登记"，注解空格照样绿。
+   *   现在与"在用未登记"同罪同罚：exit 1 点名。单一来源表（econ/fight/train-env）的注解住在表代码里，
+   *   不走行尾收割 ⇒ 它们不算这格（与 unreg 的豁免同口径）。 */
+  const unnoted = live.filter((r) => !r.inSelf && !r.single && !r.note);
+  if (unnoted.length) {
+    console.error('⛔ 在用但无注解 ' + unnoted.length + ' 根（SELF_ENV_KEYS 行尾 // 必须写它干什么）⇒ ' +
+      unnoted.map((r) => r.k).join(' '));
+    process.exit(1);
+  }
+  console.log('旋钮册新鲜 ✅（全集 ' + universe.length + ' ‖ 在用 ' + live.length + ' ‖ 未登记 ' + unreg.length + ' ‖ 无注解 ' + unnoted.length + ' ‖ 暗键 ' + dark.length + '）');
   process.exit(0);
 }
 writeFileSync(DOC, content);

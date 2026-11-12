@@ -106,6 +106,66 @@ const OUT = arg('out', 'index.html');
  *     不许在页面里再写死一份（两处各写一遍 = 早晚漂移，白名单同族病）。 */
 const XCOL = 'C';
 const XSUF = 'R';
+/* ===== 主尺的**身份**不写在这里，住在注册表里（11-12 数据模型 A）=====
+ *   `data/rulers.tsv`  = 每条尺的 axis/status/label/batch_id（status=current 且 axis=B 的那条就是现在算数的 B 轴）
+ *   `data/batches.tsv` = 那条尺的 batch 行，`champ` 列是夹具成员（'+' 分隔）
+ *   为什么非搬不可：这段代码原来在**三处**写死 F2 那四枚的名字（补测命令 ‖ 烘页日志 ‖ 页内尺说明），
+ *   而 11-12 实测全仓**没有任何门禁读 rulers.tsv**（tools/ scripts/ champion-map/*.mjs 三处 grep 全空，
+ *   只有 6 个 pipeline 工具读它）⇒ 真换 B 轴尺的那天，注册表改了、读数改了、页面出处没改，而且一条都不红。
+ *   ⚠ 列名拼法（XCOL/XSUF）留在代码里是有意的：那是 display.tsv 的物理列名，注册表没有这一维。
+ *     所以这里把"注册表里当前那条 C 尺 ↔ 页面这一族怎么拼"钉成一张表：**认不出就拒绝出图**，
+ *     而不是继续拿旧文案往下印 —— 新增一族列名本来就要改这里，这条守卫只是把"要改这里"变成响亮的前提。 */
+const RULER_FAMILY = { 'c-cr': ['C', 'R'] };
+/* `--datadir=` 是给**反向实验**用的（gate-audit R4 第③步要造一个"它该抓的注册表"）：
+ *   没有这个口子就只能去改在册的 data/*.tsv，而那是三个班共用的表。 */
+const DATADIR = arg('datadir', 'data');
+function readTsv(rel) {
+  /* 路径口径与 `--out=`/`--fit=` 同族（§E608）：带盘符或前导 `/` 的是绝对路径，不许再拼一层 HERE
+   *   （`join` 遇到后面的绝对段**不会**重置，会把两个路径黏在一起 ⇒ 表"不存在"，看着像注册表丢了）。 */
+  const base = /^[A-Za-z]:[\/\\]/.test(DATADIR) || DATADIR[0] === '/' ? DATADIR : join(HERE, DATADIR);
+  const p = join(base, rel);
+  if (!existsSync(p)) return null;
+  const t = readFileSync(p).replace(/\n+$/, '').split('\n').map((l) => l.split('\t'));
+  return { ix: Object.fromEntries(t[0].map((x, i) => [x, i])), rows: t.slice(1), path: p };
+}
+const RULERINFO = (function () {
+  const ru = readTsv('rulers.tsv'), ba = readTsv('batches.tsv');
+  if (!ru || !ba) return { err: '读不到 data/rulers.tsv 或 data/batches.tsv（注册表是主尺身份的唯一出处）' };
+  for (const c of ['ruler_id', 'axis', 'status', 'label', 'batch_id']) if (ru.ix[c] === undefined) return { err: 'rulers.tsv 缺列 ' + c };
+  for (const c of ['batch_id', 'champ']) if (ba.ix[c] === undefined) return { err: 'batches.tsv 缺列 ' + c };
+  const cur = (ax) => ru.rows.filter((r) => r[ru.ix.axis] === ax && r[ru.ix.status] === 'current');
+  const A = cur('A'), B = cur('B'), C = cur('C');
+  if (A.length !== 1 || B.length !== 1 || C.length !== 1)
+    return { err: 'axis A/B/C 的 current 尺各须恰好 1 条（实测 A=' + A.length + ' B=' + B.length + ' C=' + C.length + '）' };
+  const cid = C[0][ru.ix.ruler_id], want = RULER_FAMILY[cid];
+  if (!want) return { err: '当前 C 尺是 ' + cid + '，而这段代码只知道 ' + Object.keys(RULER_FAMILY).join('/') +
+    ' 的列名拼法 ⇒ 页面还不知道这一族怎么拼，先在这里加一行（别改文案凑绿）' };
+  if (want[0] !== XCOL || want[1] !== XSUF)
+    return { err: '当前 C 尺 ' + cid + ' 说列族该是 ' + want.join('') + '，而 XCOL/XSUF 写的是 ' + XCOL + '/' + XSUF + ' ⇒ 两处在说不同的尺' };
+  const brow = ba.rows.find((r) => r[ba.ix.batch_id] === B[0][ru.ix.batch_id]);
+  if (!brow) return { err: 'rulers 说 B 尺的批次是 ' + B[0][ru.ix.batch_id] + '，batches.tsv 里没有这一行' };
+  const raw = String(brow[ba.ix.champ] || '').split('+').filter(Boolean);
+  if (!raw.length) return { err: '批次 ' + B[0][ru.ix.batch_id] + ' 的 champ 是空的 ⇒ 报不出夹具是谁' };
+  /* 实测注册表把席位倍数写在名字里（`Q-s47x1` 而不是 `Q-s47`），而批量器要的 `--champ=` 用的是包名 ⇒
+   *   照抄就会给出一条跑不通的补测命令。这里剥掉尾部 `xN`，同时**点名**让注册表的维护者知道这一格混了两件事
+   *   （剥掉是让它今天能用，不是让它永远可以这么写）。 */
+  const champ = raw.map((s) => s.replace(/x\d+$/, ''));
+  const dirty = raw.filter((s, i) => s !== champ[i]).join(',');
+  return { aId: A[0][ru.ix.ruler_id], bId: B[0][ru.ix.ruler_id], cId: cid, aLabel: A[0][ru.ix.label],
+    bLabel: B[0][ru.ix.label], batchId: B[0][ru.ix.batch_id], champ: champ, champDirty: dirty };
+})();
+if (RULERINFO.err) { console.error('⛔ 主尺身份核不出来：' + RULERINFO.err +
+  '\n   ⇒ 宁可不出图。页面上一切名次/颜色都建立在"这是哪把尺"之上，说不清出处就等于在印旧结论。'); process.exit(2); }
+const CHAMP_CSV = RULERINFO.champ.join(',');            /* 补测命令里的 --champ= */
+const CHAMP_SHORT = RULERINFO.champ.map((s) => s.replace(/-R\d+S\d+$/, '')).join('+');   /* 页面上那串简写 */
+/* 页面文案用**去掉括号尾巴**的短名：注册表 label 是 `F2 冠军夹具（page dose）`，直接拼进
+ *   `B=…（MSB11+…）` 就成了两层括号，读起来像打字错误。剂量这一维在悬停卡别处已经说了。 */
+const SHORTLAB = (s) => String(s || '').replace(/（[^（）]*）\s*$/, '').trim();
+const A_SHORT = SHORTLAB(RULERINFO.aLabel), B_SHORT = SHORTLAB(RULERINFO.bLabel);
+console.log('主尺身份 ⇐ 注册表：A=' + RULERINFO.aId + ' B=' + RULERINFO.bId + '（批次 ' + RULERINFO.batchId + ' ‖ 夹具 ' +
+  RULERINFO.champ.length + ' 枚 ' + CHAMP_SHORT + '）');
+if (RULERINFO.champDirty) console.log('⚠ batches.tsv 的 champ 列把席位倍数写进了名字（' + RULERINFO.champDirty +
+  '）⇒ 这里按包名剥掉才拼得出补测命令；请注册表那一格只放包名，倍数另开一列');
 /* §G3：三张预置图的初始版本模式。
  *   ⚠ 11-05 傍晚的实测事故（本班自己造的）：按文件名习惯传了 `--preset=20`，而合法取值是 `all/1.8/2.0`
  *     ⇒ 原来这一行**静默回落成 'all'** ⇒ 子集页丢掉 SUBSETP 判据域，页内自检从 `74/3/22 SKIP` 变成
@@ -243,12 +303,12 @@ if (PROJTSNE) {
      '\n       前 8 枚：' + noX.concat(noXL).slice(0, 8).map(r => r.id).join(' ') +
      '\n       ⇒ F = X̄₄ + T·S 是图上**所有**排序的底，空格会被当“未测”灰掉 ⇒ 先补测再烘。' +
      '\n       补测（multi + long 必须一起跑，仓规）：node tools/exam-4n-full.mjs --out=… --extra=… --only=… --mode=multi|long' +
-     ' --dose=page --exam=B --champ=MSB11-R2S306293884,MSB10-R1S1149480262,MSB8-charge-R1S1861674281,Q-s47 --champn=1' +
+     ' --dose=page --exam=B --champ=' + CHAMP_CSV + ' --champn=1' +
      '\n       再 intake ⇒ node champion-map/attach-cmean-r.mjs'); process.exit(2); }
    console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 ' + XC(2) + '/' + XC(2, 'L') + ' 全部在册（' +
-     (XSUF === 'R' ? '综合分 C·R=(A+B)/2：A=脚本桌 v2，B=F2 滚动夹具 MSB11+MSB10+MSB8-charge+Q-s47'
+     (XSUF === 'R' ? '综合分 C·R=(A+B)/2：A=' + RULERINFO.aLabel + '，B=' + RULERINFO.bLabel + ' ' + CHAMP_SHORT
        : XCOL === 'C' ? '综合分 C=(A+B)/2（旧固定夹具）' : XCOL === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') +
-     ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ A=exam4-page-1109 · B=exam4-F2-page-1111 + -long-1111）'); }
+     ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ 出处按注册表：A=' + RULERINFO.aId + ' ‖ B=' + RULERINFO.bId + '（批次 ' + RULERINFO.batchId + '））'); }
 const fitP = join(HERE, 'data/fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线/混合桌闸：2026-11-11 数据模型统一后只读 data/feasibility.tsv。
@@ -1137,8 +1197,9 @@ function H4STR(d, L) { L = (L === undefined) ? ((st.ftab === 'long') ? 'L' : '')
 function X4F(d, L) { var x = X4T(d, L); return (x === null || !isFinite(x)) ? '未测' : x.toFixed(3); }
 function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
-function FLBL() { return 'F = X̄₄(' + st.XP + st.XSUF + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=脚本桌 v2，B=' +
-  (st.XSUF === 'R' ? 'F2 滚动夹具（MSB11+MSB10+MSB8-charge+Q-s47）' : '冠军桌固定夹具') +
+function XFAM() { return st.XP + (st.XSUF ? '·' + st.XSUF : ''); }   /* 族名怎么念：C·R / C / P / X（表里 10 处写的是 C·R，别在页面上印成 CR） */
+function FLBL() { return 'F = X̄₄(' + XFAM() + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=${A_SHORT}，B=' +
+  (st.XSUF === 'R' ? '${B_SHORT}（${CHAMP_SHORT}）' : '冠军桌固定夹具') +
   (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
@@ -1543,7 +1604,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 F2 滚动夹具' +
+    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 ${B_SHORT} ${CHAMP_SHORT}' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
@@ -5579,11 +5640,11 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
          *   而那正是这条 clause 什么都没判的形状（gate-audit R8）⇒ 另数 oldCalc，要求它 > 0。 */
         if (isFinite(fOld)) { oldCalc++; if (Math.abs(fOld - Fv(d)) < 1e-9) oldSame++; }
       }
-      T('主尺（C·R = F2 滚动夹具综合分）：白名单逐枚落地 ‖ Fv 等于手算 C·R ‖ 与旧 C 族不是同一串数',
+      T('主尺（' + XFAM() + ' = ${B_SHORT}综合分）：白名单逐枚落地 ‖ Fv 等于手算 C·R ‖ 与旧 C 族不是同一串数',
         have === N && samp.length > 0 && newSame === samp.length && oldCalc > 0 && oldSame < oldCalc,
         'C·R 至少一格有值 ' + have + '/' + N + ' 枚 ‖ 抽样 ' + samp.length + ' 枚：合 C·R ' + newSame +
         ' ‖ 旧 C 算得出 ' + oldCalc + ' 枚其中合 Fv ' + oldSame +
-        '（桌形=' + (L ? 'long' : 'multi') + ' ‖ 族=' + st.XP + st.XSUF + '）');
+        '（桌形=' + (L ? 'long' : 'multi') + ' ‖ 族=' + XFAM() + '）');
     } catch (E) {
       T('主尺（C·R）：这条判据自己跑挂了（不许静默少一条）', false, String(E && E.message || E).slice(0, 120));
     }

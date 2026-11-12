@@ -1,0 +1,10 @@
+import { existsSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+console.log('cwd:', process.cwd());
+console.log('A 老seg(MSB16, 昨夜写):', existsSync('docs/artifacts/MSB16-R1S1355910883-seg1.bak'));
+console.log('B 老final(night-adapt):', existsSync('docs/artifacts/night-adapt/MSB16-R1S1355910883.js'));
+writeFileSync('docs/artifacts/z-visprobe-self.bak', 'x');
+console.log('C 自写即时:', existsSync('docs/artifacts/z-visprobe-self.bak'));
+const r = spawnSync(process.execPath, ['-e', "require('fs').writeFileSync('docs/artifacts/z-visprobe-child.bak','x')"]);
+console.log('child exit:', r.status);
+console.log('D 子进程写:', existsSync('docs/artifacts/z-visprobe-child.bak'));
