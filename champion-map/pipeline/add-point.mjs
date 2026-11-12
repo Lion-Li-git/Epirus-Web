@@ -68,8 +68,8 @@ const parentWid = String(meta.hotstartFrom || '').trim();
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
 const cand = parentWid ? wid2id.get(parentWid) : '';
 const parentId = cand && dispIds.has(cand) ? cand : '';   /* 只连图上存在的父；否则页面会报“父边指向不存在的枚” */
-const parentSrc = parentWid ? (parentId ? 'seedpack-wid' : 'unknown-wid') : '';
-const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || '');
+const parentSrc = parentWid ? (parentId ? 'seedpack-wid' : 'unknown-wid') : 'root';
+const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unknown');
 const pointWid = widOf(packText);
 const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || now), metaSeed, nameSeed: '',
   parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };

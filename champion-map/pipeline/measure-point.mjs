@@ -25,6 +25,8 @@ const PACK = resolve(arg('pack', ''));
 const ID = String(arg('id', '')).trim();
 const VER = String(arg('ver', '2.0')).trim();
 const ROUNDS = String(arg('rounds', '12'));
+const FAM = String(arg('fam', '')).trim();
+const FAMLAB = String(arg('fam-label', '')).trim();
 if (!PACK || !ID) { console.error('⛔ 需要 --pack= 和 --id='); process.exit(2); }
 if (!existsSync(PACK)) { console.error('⛔ pack 不在：' + PACK); process.exit(2); }
 const ST = join(HERE, 'staging');
@@ -157,6 +159,8 @@ if (NO_ADD) { console.log('--no-add：停在 ' + join(ST, ID + '-readings.tsv'))
 const addArgs = [join(HERE, 'pipeline/add-point.mjs'), '--id=' + ID, '--pack=' + PACK, '--ver=' + VER,
   '--readings=' + join(ST, ID + '-readings.tsv'), '--display=' + dispFile, '--batch=measure-' + ID];
 if (projFile) addArgs.push('--projections=' + projFile);
+if (FAM) addArgs.push('--fam=' + FAM);
+if (FAMLAB) addArgs.push('--fam-label=' + FAMLAB);
 if (BAKE) addArgs.push('--bake');
 const out = execFileSync('node', addArgs, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 console.log(out.trim().split('\n').slice(-6).join('\n'));

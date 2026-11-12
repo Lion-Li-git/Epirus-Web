@@ -112,5 +112,6 @@ MSB2-R1S773345716	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能
 MSB15R-HITMIX	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T19:38:42.934Z	2057836694		MSB13-R1S791820660	MSB13-R1S791820660	MSB13-R1S791820660	bf4e24a51fc51fc6	seedpack-wid	product
 MSB15-SOUPB	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T17:39:18.178Z	74063325		MSB12-beadplan-R1S666728707	MSB12-beadplan-R1S666728707	soup-15b（MSB12-beadplan + MSB8-charge + MSB11-R1）	67ec47e522c3769f	soup	product
 MSB15-LASER-R3	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T18:01:43.298Z	1859130085		MSB13-R1S791820660	MSB13-R1S791820660	MSB13-R1S791820660	eb263a8c47aa71cd	seedpack-wid	product
-MSB15R-GD4RAT	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T23:19:53.143Z	1155875730				9eed8d7e18604c06	ba7a47c028912c5d	unknown-wid	product
+MSB15R-GD4RAT	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T23:19:53.143Z	1155875730				GD4-RATION	ba7a47c028912c5d	demoted	product
 MSB15-soupb-R1S190353054	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T17:09:42.834Z	190353054		fb03cf9d468ee778	fb03cf9d468ee778	fb03cf9d468ee778	493aa4b0355b19f4	unknown-wid	product
+GD4-RATION	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-12T04:50:05.763Z	unknown					9eed8d7e18604c06	root	product
