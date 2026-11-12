@@ -81,12 +81,14 @@ if (cpi === undefined) { console.error('⛔ ' + ct.name + ' 没有 path 列 ⇒ 
  *   现在读表里那一列，并且**筛掉几枚就印几枚** —— 名单少一批不能是无声的。*/
 console.log('[map-table] ' + tableStamp(ct));
 const all = ct.rows.map(c => ({ id: c[ci], path: c[cpi] }));
-let list = all.filter(e => e.path && existsSync(join(ROOT, e.path)));
-const drop = all.filter(e => !e.path || !existsSync(join(ROOT, e.path))).map(e => e.id || '(空 path)');
-if (drop.length) console.error('⛔ ' + drop.length + ' 枚在名单里但文件不存在（前 10：' + drop.slice(0, 10).join(' ') + '）');
-if (drop.length > all.length * 0.02) process.exit(2);
 const only = String(arg('ids', '')).split(',').map(s => s.trim()).filter(Boolean);
-if (only.length) list = list.filter(e => only.indexOf(e.id) >= 0);
+let list = all.filter(e => e.path && existsSync(join(ROOT, e.path)));
+let drop = all.filter(e => !e.path || !existsSync(join(ROOT, e.path))).map(e => e.id || '(空 path)');
+/* --ids 是“只量这几枚”的缩小口径：旧表里别的枚路径漂移不该把新点体检一起挡死。
+ *   全量口径仍按 2% 阈值硬拒；点名口径只点名被点到的缺失枚。 */
+if (only.length) { drop = drop.filter((id) => only.indexOf(id) >= 0); list = list.filter((e) => only.indexOf(e.id) >= 0); }
+if (drop.length) console.error('⛔ ' + drop.length + ' 枚在名单里但文件不存在（前 10：' + drop.slice(0, 10).join(' ') + '）');
+if (drop.length && (only.length ? drop.length : drop.length > all.length * 0.02)) process.exit(2);
 if (LIMIT > 0) list = list.slice(0, LIMIT);
 
 const OUTP = /^[A-Za-z]:[\\\/]/.test(OUTARG) || OUTARG.startsWith('/') ? OUTARG : join(ROOT, OUTARG);

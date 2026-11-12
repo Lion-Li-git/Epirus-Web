@@ -559,6 +559,7 @@ const DATA = rows.map(r => ({
   /* §E487 融合粒有**两个父**：第一父走 pof（正常血统边），第二父走 pof2，画成另一种颜色的线。
    *   来源是 tools/soup-pack.mjs 写进包 meta 的实录（每粒来源的 wid），由 lineage.mjs 反查成图上的节点。*/
   pof2: LIN[r.id] ? (LIN[r.id].parentOf2 || '') : '', psrc2: LIN[r.id] ? (LIN[r.id].parentSrc2 || '') : '',
+  pof3: LIN[r.id] ? (LIN[r.id].parentOf3 || '') : '', psrc3: LIN[r.id] ? (LIN[r.id].parentSrc3 || '') : '',
   ok: OKM && (r.id in OKM) ? (OKM[r.id].ok ? 1 : 0) : null,
   gl: OKM && (r.id in OKM) && isFinite(OKM[r.id].g2) ? OKM[r.id].g2 : null,
   pv: r.id in PROM ? (PROM[r.id].pass ? 1 : 0) : null, pb: r.id in PROM ? PROM[r.id].b : '',
@@ -807,7 +808,7 @@ var NOPTS = 0;   /* §E451 只给页内自检用的"只画底、不画点"开关
                   *   出厂恒为 0；判据用完必须还原，否则下一帧就没有点了。 */
 var NCHAIN = 0;   /* §E378 这一帧画了几条**接替边**（页脚与页内自检都读它，不许各自数一份）*/
 var NSOUP = 0;    /* §E487/§E490 这一帧画了几条**融合父边**（第一父 + 第二父都算，同色 ⇒ 同一个数；页脚与自检读它）*/
-var NSOUP1 = 0, NSOUP2 = 0;   /* §E490 拆成两根边各自计数：第一父那条走的是"血统边循环里认 psrc=soup"的分支，
+var NSOUP1 = 0, NSOUP2 = 0, NSOUP3 = 0;   /* §E490 拆成三根边各自计数：第一父那条走的是"血统边循环里认 psrc=soup"的分支，
                                *   第二父那条走的是专门的循环 ⇒ 两条分开数才判得出"谁没同色"（见页内那条腿）*/
 var LASTFAMS = [];   /* §E448 上一帧谱系图的行表（fams 原样）—— 页内那条"家族 0 排最上面"在窗口把整行切没时读这个 */
 (function () { for (var i = 0; i < N; i++) TSBY[P[i].id] = P[i].ts || ''; })();
@@ -2549,7 +2550,7 @@ function drawTree(fr) {
    *     ELOG=0 是页内那两条判据自己用的对照组（固定 alpha），不是给用户的开关。 */
   var EA0 = 0.30, ED0 = 25, EMIN = 0.03, EGRID = Math.max(10, Math.round(22 * devicePixelRatio));
   var NINF = 0   /* §DS②：路径推断来源的父边条数（与槽位接替/倒挂同型）*/
-var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 0;
+var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSOUP3 = 0; NSELF = 0;
   EDGR = { n: 0, segs: 0, amin: 1, amax: 0, hub: null, hubn: 0, probe: [], inked: 0 };
   if (st.edges !== 'off') {
     var EL = [];
@@ -2609,6 +2610,14 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
       EL.push([q2a, q2b, [(q2a[0] + q2b[0]) / 2, (q2a[1] + q2b[1]) / 2 - rowH * 0.5 * TKY],
         0.62, 3, d2.id, v2a, v2b,
         v2a && v2b ? [(v2a[0] + v2b[0]) / 2, (v2a[1] + v2b[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
+    /* 三粒融合的第三父边（kind=4，同红、实线；用户 11-12：三包融合就画三条线） */
+    for (i = 0; i < N; i++) { var d3 = P[i]; if (!d3.pof3 || !pos[d3.id] || !pos[d3.pof3]) continue;
+      if (st.edges === 'hash') continue;
+      var q3a = pos[d3.pof3], q3b = pos[d3.id], v3a = pap[d3.pof3], v3b = pap[d3.id];
+      NSOUP++; NSOUP3++;
+      EL.push([q3a, q3b, [(q3a[0] + q3b[0]) / 2, (q3a[1] + q3b[1]) / 2 - rowH * 0.5 * TKY],
+        0.62, 4, d3.id, v3a, v3b,
+        v3a && v3b ? [(v3a[0] + v3b[0]) / 2, (v3a[1] + v3b[1]) / 2 - rowH0 * 0.5 * TKY] : null]); }
     NEDG = EL.length; EDGR.n = NEDG;
     /* 网格尺寸按**纸面**范围算：纸面 = 未经 PS 投影的那一层（X() 与行高都在 device px 上），
      *   所以范围就是 w×h，格子仍是 22 CSS px 一档 —— 只是原点不跟着平移走。 */
@@ -2642,7 +2651,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
        *   上一版把整条边取一个均值 ⇒ 一条长线只要蹭到扇根那一格，整条被拉到地板（用户 10-08 11:0x：
        *   「这一版密集处确实好了，但是单根线看不见了」）。均值这件事在"根密尾疏"的边上必然冤枉尾段。
        *   渐变仍是**一次落笔** ⇒ 不会有 §E467a 那种分桶断口；密处压到地板、疏处回到全 alpha。 */
-      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = kd === 3 ? '248,81,73' : (kd === 1 ? '104,168,214' : '120,200,255');
+      var ST5 = [0, 0.25, 0.5, 0.75, 1], AL5 = [], col3 = (kd === 3 || kd === 4) ? '248,81,73' : (kd === 1 ? '104,168,214' : '120,200,255');
       var PA2 = EL[e2][6] || A2, PB2 = EL[e2][7] || B2, PC2 = EL[e2][8] || C2;
       for (var s2 = 0; s2 < 5; s2++) {
         var t0 = ST5[s2], i0 = 1 - t0;
@@ -2663,7 +2672,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
        *   ⇒ 拿虚线去量它，量到的是**虚线自己的间隔**，不是 §E467a 那种"边被切成不同 alpha 的段"的病。
        *   为什么以前没红：步长 = 边数 / 24，边数一变，被抽中的那 24 条就换一批（10-09 加进 63 枚代表之后
        *   抽到一条 'arm' 级虚线 B5-10-71 就当场红）。**改的是采样范围，不是阈值。** */
-      if (EPROBE && (!kd || kd === 3) && e2 % EPROBE === 0 && EDGR.probe.length < PROBE_MAX) { var pp = [];
+      if (EPROBE && (!kd || kd === 3 || kd === 4) && e2 % EPROBE === 0 && EDGR.probe.length < PROBE_MAX) { var pp = [];
         for (var u = 0; u <= 39; u++) { var tu = u / 39, iu = 1 - tu;
           var ux = iu * iu * A2[0] + 2 * iu * tu * C2[0] + tu * tu * B2[0];
           var uy = iu * iu * A2[1] + 2 * iu * tu * C2[1] + tu * tu * B2[1];
@@ -2678,7 +2687,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
        *   §E487 融合的第二父边（kd=3，紫）**走实线**：它是一条真血统（这枚确实是那两枚的平均），
        *   只是"不是热启动" —— 用颜色分辨就够了，再加虚线会让人读成"这条更不可信"。 */
       GT.save();
-      if (kd && kd !== 3) GT.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);   /* §DS②：只留一种虚线 */
+      if (kd && kd !== 3 && kd !== 4) GT.setLineDash([4 * devicePixelRatio, 4 * devicePixelRatio]);   /* §DS②：只留一种虚线 */
       /* §E673 新法律：**一条线一个静态 alpha**（沿程不渐变 ⇒ 你点的"一根长线不同位置亮度不同"从根上去掉；
        *   密不透的差别交给累加之后的那张对数表按**像素**处理，而不是按"这条线蹭到了哪一格"处理）*/
       GT.strokeStyle = ELOG_ON ? ('rgba(' + col3 + ',' + AL5[0].toFixed(3) + ')') : gr;
@@ -2751,7 +2760,7 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSELF = 
     /* 自父边被挡掉的条数（用户 11-05 指认"有个点的父垂直向上什么都不指"）：为 0 就整段不出现，不许承诺图上没有的东西 */
     (NSELF ? ' ‖ 自环已剔除 ' + NSELF + ' 条（父解析成它自己，不是父边）' : '') +
     /* §E487：融合粒的第二父走紫色实线 —— 它是"两枚的权重平均"里的那一条，不是热启动 */
-    (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 两粒的权重平均 ‖ 两条红边各自连一个父，不是热启动）' : '') +
+    (NSOUP ? ' ‖ 红线 = 融合父边 ' + NSOUP + ' 条（这枚 = 多粒的权重平均；第一/第二/第三父各自连一个父，不是热启动）' : '') +
     /* §E442：RUNNER-BASE 那批边现在**画得出来了**（收到时间轴最左那颗灰菱形），所以这句话从原来的"这条边上不画"
        改成说清它连的是什么。'hash'/'off' 两档不画 ⇒ 计数为 0 就整段不出现，不许承诺图上没有的东西。 */
     (NRBASE ? ' ‖ 另有 ' + NRBASE + ' 枚的父指针解析不到图上任何一枚（见页内那条血统边判据）' : '') +
@@ -5811,29 +5820,32 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var SNAPM3 = { mode: st.mode, edges: st.edges, flo: st.flo, fhi: st.fhi, batch: st.batch, elev: st.elev };
     var ID3 = {}, IX3 = {}; for (var q3 = 0; q3 < N; q3++) { ID3[P[q3].id] = 1; IX3[P[q3].id] = q3; }
     var S2 = P.filter(function (d) { return d.pof2; });
+    var S3 = P.filter(function (d) { return d.pof3; });
     var S1 = P.filter(function (d) { return d.psrc === 'soup' && d.pof; });
     var DG3 = S2.filter(function (d) { return !ID3[d.pof2]; });
     var BAD3 = S2.filter(function (d) { return d.pof2 === d.id || d.pof2 === d.pof; });
     var BK3 = S2.filter(function (d) { var pt = TSBY[d.pof2]; return pt && d.ts && pt > d.ts; });
+    var DG3C = S3.filter(function (d) { return !ID3[d.pof3]; });
+    var BAD3C = S3.filter(function (d) { return d.pof3 === d.id || d.pof3 === d.pof || d.pof3 === d.pof2; });
+    var BK3C = S3.filter(function (d) { var pt = TSBY[d.pof3]; return pt && d.ts && pt > d.ts; });
     /* 批次放开到 'all' + 窗口放满：这条比的是"边画没画全"，不该被批次切走样本（§E449 同一件事）*/
     st.mode = 'tree'; st.elev = 0; st.flo = 0; st.fhi = 1; st.batch = 'all'; recomputeVIS();
-    st.edges = 'all'; draw(); var sAll = NSOUP, s1 = NSOUP1, s2 = NSOUP2;
+    st.edges = 'all'; draw(); var sAll = NSOUP, s1 = NSOUP1, s2 = NSOUP2, s3 = NSOUP3;
     var want1 = S1.filter(function (d) { return ID3[d.pof] && VIS[IX3[d.id]] && VIS[IX3[d.pof]]; }).length;
     var want2 = S2.filter(function (d) { return ID3[d.pof2] && VIS[IX3[d.id]] && VIS[IX3[d.pof2]]; }).length;
-    var want = want1 + want2;
+    var want3 = S3.filter(function (d) { return ID3[d.pof3] && VIS[IX3[d.id]] && VIS[IX3[d.pof3]]; }).length;
+    var want = want1 + want2 + want3;
     st.edges = 'hash'; draw(); var sHash = NSOUP;
     st.edges = 'off'; draw(); var sOff = NSOUP;
-    T('融合粒的第二父不许指向空气、不许是本枚自己或与第一父同枚、不许时间倒挂（§E487）',
-      DG3.length === 0 && BAD3.length === 0 && BK3.length === 0,
-      S2.length + ' 枚带第二父 ‖ 指向没有的枚 ' + DG3.length + (DG3.length ? '：' + DG3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
-        ' ‖ 同枚/自边 ' + BAD3.length + (BAD3.length ? '：' + BAD3.slice(0, 3).map(function (d) { return d.id + '→' + d.pof2; }).join(' ‖ ') : '') +
-        ' ‖ 倒挂 ' + BK3.length + (BK3.length ? '：' + BK3.slice(0, 3).map(function (d) { return d.id + '（父 ' + TSBY[d.pof2] + ' > 本枚 ' + d.ts + '）'; }).join(' ‖ ') : ''));
-    T('融合边：红线必须真画出来，且这一帧画的条数 = 数据里该画的条数（第一父 + 第二父两条都算 ‖ 画少 = 边静默没了）',
-      sAll > 0 && sAll === want, '红边 ' + sAll + ' 条 ‖ 该画 ' + want + ' 条（第一父 ' + want1 + ' + 第二父 ' + want2 + ' ‖ 带第二父 ' + S2.length + ' 枚）');
-    T('融合的两根父边必须**同色**（§E490 ‖ 第一父不许走回淡蓝血统色：那会被读成"一枚热启动 + 一条补充"，而两条是同一种关系）',
-      s1 === want1 && s2 === want2 && sAll === s1 + s2,
-      '第一父红边 ' + s1 + ' / 该画 ' + want1 + ' ‖ 第二父红边 ' + s2 + ' / 该画 ' + want2 + ' ‖ 合计 ' + sAll +
-      '（若第一父掉成 0 = 那条分支又改回普通蓝边了）');
+    T('融合粒的第二/第三父不许指向空气、不许是本枚自己或与已有父同枚、不许时间倒挂（§E487）',
+      DG3.length === 0 && BAD3.length === 0 && BK3.length === 0 && DG3C.length === 0 && BAD3C.length === 0 && BK3C.length === 0,
+      S2.length + ' 枚带第二父 ‖ ' + S3.length + ' 枚带第三父 ‖ 指向没有的枚 ' + (DG3.length + DG3C.length) +
+        ' ‖ 同枚/自边 ' + (BAD3.length + BAD3C.length) + ' ‖ 倒挂 ' + (BK3.length + BK3C.length));
+    T('融合边：红线必须真画出来，且这一帧画的条数 = 数据里该画的条数（第一父 + 第二父 + 第三父都算 ‖ 画少 = 边静默没了）',
+      sAll > 0 && sAll === want, '红边 ' + sAll + ' 条 ‖ 该画 ' + want + ' 条（第一父 ' + want1 + ' + 第二父 ' + want2 + ' + 第三父 ' + want3 + '）');
+    T('融合的父边必须**同色**（§E490 ‖ 第一父不许走回淡蓝血统色：那会被读成"一枚热启动 + 一条补充"，而它们是同一种关系）',
+      s1 === want1 && s2 === want2 && s3 === want3 && sAll === s1 + s2 + s3,
+      '第一父红边 ' + s1 + ' / 该画 ' + want1 + ' ‖ 第二父红边 ' + s2 + ' / 该画 ' + want2 + ' ‖ 第三父红边 ' + s3 + ' / 该画 ' + want3 + ' ‖ 合计 ' + sAll);
     T('融合边在「只实录哈希」与「关掉连线」两档必须一条不画（融合父不是热启动来路）',
       sHash === 0 && sOff === 0, '全开 ' + sAll + ' ‖ 只实录 ' + sHash + ' ‖ 关掉 ' + sOff);
     st.mode = SNAPM3.mode; st.edges = SNAPM3.edges; st.elev = SNAPM3.elev; st.batch = SNAPM3.batch;
