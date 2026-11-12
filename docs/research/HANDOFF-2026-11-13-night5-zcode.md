@@ -12,14 +12,11 @@
 
 ## 晚班主任务（按优先级）
 
-1. **Δε 全量批**：`node scratch/zcode-1113-deps/eps0-pilot.mjs --n=9999 --concurrency=4`（≈926 枚 × 2 桌形 × ~40s，
-   并发 4-6 路约 3-4h；18 核可开更高）。产物 = `scratch/zcode-1113-deps/exam4-F2-eps0-1113.tsv(-long)` 会**被覆盖**
-   ⇒ 先 `git mv`/备份 pilot 两份（或改输出名 `eps0-pilot` 里的文件名常量），再跑全量。
-   跑完：`node scratch/zcode-1113-deps/eps0-ingest.mjs` → `node champion-map/rebuild-map.mjs` → 全图 Δε 点亮。
-   ⚠ ingest 幂等（键查重）；rulers 行已建（b-f2-eps0-1113，axis X）。
-2. **MSB18 收尾评估**（我这边在跑，可能已完）：`scratch/night-adapt2/msbatch2-MSB18-summary.json`；
-   起点 GD6b-TILT（三线 mastery ✔），D191 端到端验收 = 看 `pack-aliases.tsv` 尾部有没有 MSB18 臂**自动**登记的行
-   （tool=train-3p）——有 ⇒ 根因修复实证，今晚起不再人工补账。
+1. **Δε 全量批 = 本班已做完**（912 枚 × 2 桌形零失败，ingest +7104 行，页面已重烘）——你接手时全图应已点亮。
+   若页面显示异常，按此链路自查：`eps0-ingest.mjs`（幂等）→ `build-view` → `rebuild-map.mjs`。
+   分布与"现役 T8-s114 探索脆（−0.066，第 3 百分位）"的读数见 STATUS-night4 §三。
+2. **MSB18 = 本班已完**：C 0.0094→0.0853，但 mastery 复验环被洗掉（两线保住）——"GA 用 C 换语义"再度实锤。
+   D191 端到端 ✔（6 条别名自动登记，meta 16/16）。晚班：GD6a/GD6b/MSB18 三枚 12 线体测（promote-champion --dry）定进池位。
 3. **GD6 系进池评估**：GD6a/GD6b 按 12 线体检（`tools/promote-champion.mjs --dry`），过线才谈 promote；
    GD6b 是首个"环+大雷+电磁炮"三线同保产物。
 4. **技能上限·环境矩阵研究**（用户 11-13 指令）：雏形在 `scratch/zcode-1111-single-skill/env-matrix.mjs`

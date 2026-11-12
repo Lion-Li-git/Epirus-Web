@@ -1,0 +1,40 @@
+rebuild-map: run
+—— ① exam 批次戳（0.1s）——
+B 夹具 = MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1
+覆盖：A 925/926 ‖ Bs 836/926 ‖ Bl 838/926 ‖ unknown 0 ‖ 旧B夹具 0 ‖ C不符 0
+✅ exam 批次戳检查通过（只读，不写盘）
+—— ② build-view 编译 coords-view（0.2s）——
+coords-view: 931 行 × 162 列 ⇒ D:\code\Epirus-Web\champion-map\data\build\coords-view.tsv ‖ 无 display 模板 0
+对照 D:\code\Epirus-Web\champion-map\archive\2026-11-11-legacy-data\coords-gen3-1105.tsv：matched 926 ‖ max_abs_diff 0 ‖ mismatch 0
+current A/B = a-v2-page-1109 / b-f2-page-1111 ‖ projections 未参与换尺
+—— ③ build-trends 趋势页（0.6s）——
+已写 champion-map/trends.html：74.6 KB
+—— ④ viewer 烘 index.html（0.2s）——
+内联脚本解析自证 ✅ 6208 行 JS 能被引擎收下
+模板转义自证 ✅ 代码/字符串里没有会被模板字面量吃掉反斜杠的写法（白名单：双反斜杠 / 反斜杠$ / 续行；注释不计）
+已写 D:\code\Epirus-Web\champion-map\index.html（2132 KB，自包含、无外部依赖）
+—— ④ shot 页内自检（4.8s）——
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：98 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 98/0 自检
+EXIT=0
+warning: in the working copy of 'champion-map/data/readings/current.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/pack-aliases.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/research/STATUS-2026-11-13-night4-zcode.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/zcode-1113-deps/exam4-F2-eps0-1113.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/zcode-1113-deps/exam4-F2-eps0-long-1113.tsv', LF will be replaced by CRLF the next time Git touches it
+--auto 判据（改动 11 个路径）：
+  ship   1 个 ‖ champion-map/pack-aliases.tsv
+  meta   10 个 ‖ champion-map/data/readings/current.tsv champion-map/index.html docs/research/STATUS-2026-11-13-night4-zcode.md scratch/zcode-1113-deps/exam4-F2-eps0-1113.tsv …
+--auto ⇒ np 跑 --group=ship；⚠ 分组那一遍**不是认证**
+▶ 起跑 np/ship …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+门禁：np/ship 52/52（158.5s） · spec 64/64（0.3s） · smoke OK（10.3s） · battle OK（30.6s） · map OK（5.1s）（同一棵树 2026-11-13 06:18 本机时刻‖ §E335 分组 ship：**不是整轮认证**）
+✔ 结论：**5 道全绿** ‖ 但 np 只跑了 `--group=ship` 那一组 ⇒ 这一遍**不许当认证引用**（认证 = 不带 --group 的整轮）。
+GATE_EXIT=0

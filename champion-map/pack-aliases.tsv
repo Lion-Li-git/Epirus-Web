@@ -489,3 +489,9 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-12T18:18:02.654Z	3d41fadb3492da08	docs/artifacts/MSB17-R1S413727588-band1.bak	docs/artifacts/night-adapt/MSB17-R1S413727588.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
 2026-11-12T19:07:17.461Z	d56b468bc5cb7eca	scratch/zcode-1113-deps/guardtest/a.js	scratch/zcode-1113-deps/guardtest/b.js	guardtest	test dup
 2026-11-12T19:07:17.463Z	d56b468bc5cb7eca	scratch/zcode-1113-deps/guardtest/a.js	scratch/zcode-1113-deps/guardtest/c.js	guardtest	已登记的复制：test declared copy
+2026-11-12T19:46:24.494Z	872aea6df505ff7e	docs/artifacts/MSB18-R1S1616219090-band2.bak	docs/artifacts/night-adapt/MSB18-R1S1616219090.js	train-3p	未复制：同一粒权重已有真身
+2026-11-12T20:06:23.775Z	fc71bcb716f8659d	docs/artifacts/MSB18-R1S826788378-band1.bak	docs/artifacts/MSB18-R1S826788378-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-12T20:06:23.806Z	ac711fc1968b3bbc	docs/artifacts/MSB18-R1S826788378-band4.bak	docs/artifacts/night-adapt/MSB18-R1S826788378.js	train-3p	未复制：同一粒权重已有真身
+2026-11-12T20:54:44.287Z	05db3eeb2ea5fa4f	docs/artifacts/MSB18-R2S616577427-band2.bak	docs/artifacts/night-adapt/MSB18-R2S616577427.js	train-3p	未复制：同一粒权重已有真身
+2026-11-12T20:59:25.685Z	ffacc9febfc7735b	docs/artifacts/MSB18-R2S1283350993-band1.bak	docs/artifacts/MSB18-R2S1283350993-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-12T20:59:25.708Z	e4ba5eeeb04daf4e	docs/artifacts/MSB18-R2S1283350993-band2.bak	docs/artifacts/night-adapt/MSB18-R2S1283350993.js	train-3p	未复制：同一粒权重已有真身
