@@ -564,7 +564,7 @@ if (Object.keys(ARMID).length) console.log('§E554 臂批次表读到 ' + Object
   Object.keys(ARMID).length + ' 枚（不在图上的 ' + nArmMiss + ' 枚是库里对照件，本来就没登记）⇒ 按 knobs+父 拆臂家族');
 for (const r of ROWS) { if (SLOTID[r.id] || FUSID[r.id] || ARMID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,
-  t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
+  t0: tsSorted(rs)[0] || '', t1: tsSorted(rs).slice(-1)[0] || '' }))
   .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
 console.log('方法/目标配置等价类 = ' + groups.length + ' 个（成员数中位 ' +
   groups.map(g => g.rs.length).sort((a, b) => a - b)[groups.length >> 1] + '，最大 ' +
@@ -572,6 +572,7 @@ console.log('方法/目标配置等价类 = ' + groups.length + ' 个（成员�
 /* 类太多就没法上色：按"成员数 ≥ 6 才独立成家，其余并进『零散实验』"收成可画的规模。*/
 const BIG = groups.filter(g => g.rs.length >= 6), SMALL = groups.filter(g => g.rs.length < 6);
 console.log('成员 ≥6 的类 ' + BIG.length + ' 个（覆盖 ' + BIG.reduce((s, g) => s + g.rs.length, 0) + ' 枚）‖ 并进零散的 ' + SMALL.length + ' 类 / ' + SMALL.reduce((s, g) => s + g.rs.length, 0) + ' 枚');
+function tsSorted(rs) { return rs.map((r) => r.ts).filter(Boolean).sort(); }
 let i = 0; const FAM = {};
 let defs = BIG.map(g => { i++; return { n: i, g, label: '' }; });
 if (SMALL.length) defs.push({ n: i + 1, small: 1, g: { sig: null, rs: SMALL.flatMap(s => s.rs) }, label: '零散实验（<6 枚的类合并）' });
@@ -617,7 +618,7 @@ if (FUS.length) {
     const s = 'env:' + m.knobs + '#parent=' + m.seedpack;
     if (!byArm.has(s)) byArm.set(s, []); byArm.get(s).push(r); }
   const ag = [...byArm.entries()].map(([s, rs]) => ({ s, rs,
-    t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }))
+    t0: tsSorted(rs)[0] || '', t1: tsSorted(rs).slice(-1)[0] || '' }))
     /* 排序键是 **t0**，不是枚数：这张图"上→下即时间推进"是既有的读法，而页内自检那条"家族行序"腿就是钉这条的
      *   （第一版按枚数排 ⇒ guardSpam 那行(52 枚)排在狙击池那行(42 枚)下面，而它的训出时刻更早 ⇒ 当场红一条序违规）。
      *   同 t0 再按枚数多的在上， purely 为了让同一天的几条线有个稳定次序。 */
@@ -633,7 +634,7 @@ if (FUS.length) {
   const all = big.slice();
   if (small.length) { const rs = small.flatMap(g => g.rs);
     all.push({ s: '零散#' + small.map(g => g.s.split('#parent=')[1] || '').join(','), rs, merged: small.length,
-      t0: rs.map(x => x.ts).sort()[0] || '', t1: rs.map(x => x.ts).sort().slice(-1)[0] || '' }); }
+      t0: tsSorted(rs)[0] || '', t1: tsSorted(rs).slice(-1)[0] || '' }); }
   all.sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
   for (const g of all) {
     const d = { n: ++an, small: g.merged ? 2 : 0, g: { sig: g.merged ? null : g.s, rs: g.rs, t0: g.t0, t1: g.t1 },
@@ -667,7 +668,7 @@ function defOf(anchor, why) {
     + '   先看此刻原始聚类长什么样：node champion-map/lineage.mjs --dumpdefs'); process.exit(2); }
   return d;
 }
-function touch(d) { d.g.t0 = d.g.rs.map(r => r.ts).sort()[0] || ''; d.g.t1 = d.g.rs.map(r => r.ts).sort().slice(-1)[0] || ''; }
+function touch(d) { const a = tsSorted(d.g.rs); d.g.t0 = a[0] || ''; d.g.t1 = a.slice(-1)[0] || ''; }
 /* 点名把若干枚搬成**单独一行**（与 §E490 摘融合、§E466 摘旧槽位冠军同一套路，只是主语换成一份 id 名单）。 */
 function carve(ids, label) {
   const rs = [];
@@ -680,7 +681,7 @@ function carve(ids, label) {
   }
   for (const d of defs) touch(d);
   defs = defs.filter(d => d.g.rs.length);
-  const t0 = rs.map(r => r.ts).sort()[0] || '', t1 = rs.map(r => r.ts).sort().slice(-1)[0] || '';
+  const t0 = tsSorted(rs)[0] || '', t1 = tsSorted(rs).slice(-1)[0] || '';
   const d = { n: -1, g: { sig: 'named:' + label, rs: rs, t0: t0, t1: t1 },
     label: label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(t0).slice(5, 10) + '→' + String(t1).slice(5, 10) };
   defs.push(d); for (const r of rs) FAM[r.id] = d;
