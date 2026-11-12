@@ -73,13 +73,13 @@ function row(o) {
     snipe: rate(o, SK.SNIPE), defense: def / o.games, holo: rate(o, SK.HOLO), proto: rate(o, SK.PROTO), shift: rate(o, SK.SHIFT),
     guard: rate(o, SK.GUARD), reflect: rate(o, SK.REFLECT), bigT: rate(o, SK.BIG_T),
     miniT: rate(o, SK.MINI_T), gun: rate(o, SK.GUN), railgun: rate(o, SK.RAILGUN),
-    charge: rate(o, SK.CHARGE), ring: rate(o, SK.RING), ji: rate(o, SK.JI),
+    charge: rate(o, SK.CHARGE), ring: rate(o, SK.RING), laserEye: rate(o, SK.LASER_EYE), curse: rate(o, SK.CURSE), ji: rate(o, SK.JI),
     atkShare: o.acts ? atk / o.acts : 0, defShare: o.acts ? def / o.acts : 0,
     rounds: o.rounds / o.games,
   };
 }
 const COLS = ['id', 'eps', 'games', 'acts', 'snipe', 'defense', 'defShare', 'holo', 'proto', 'shift', 'guard', 'reflect', 'bigT', 'miniT',
-  'gun', 'railgun', 'charge', 'ring', 'ji', 'atkShare', 'rounds'];
+  'gun', 'railgun', 'charge', 'ring', 'laserEye', 'curse', 'ji', 'atkShare', 'rounds'];
 
 /* ---------- 自检：三格手算得出的 ---------- */
 if (process.argv.includes('--self-test')) {

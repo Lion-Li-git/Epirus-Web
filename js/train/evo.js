@@ -2200,7 +2200,7 @@ let WALL_GAMES = 3;
     return economyReward();
   }
   function economyReward() {
-    return { targetOverride: ECO_T, capOverride: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
+    return { targetOverride: ECO_T, capOverride: ECO_C, target: ECO_T, cap: ECO_C, divW: DIV_W, divK: DIV_K, divRoleW: DIV_ROLE_W, divCatW: DIV_ROLE_W, K_role: K_ROLE,
       fitGW: FIT_G_W, fitGF: FIT_G_FLOOR, beadSeed: BEAD_SEED, beadSeedKind: BEAD_SEED_KIND,
       subBeadKind: SUB_BEAD_KIND,   // v1.8.37 夜班续：D77 往返要求 ECON_REWARD_KEYS 每个键都"设得进、读得回"
       beadBoomW: BEAD_BOOM_W,       // 同上（按珠种拆开的那半笔珠奖励）

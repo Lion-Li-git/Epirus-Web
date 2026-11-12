@@ -924,7 +924,11 @@ const DEPLOY_REC = {};
     ['EPIRUS_MIX2_EVERY', 'setMix2Every', 'mix2Every'],   /*（ZCode · 11-06 夜）同代混桌：每第 K 局 2 人桌（DS 待办 2）；记录器自动落 requested/effective */
     ['EPIRUS_COURSE_EVERY', 'setCourseEvery', 'courseEvery'],   /*（ZCode · 11-06 夜）课程席：每第 K 代注一席脚本对手（D-08 机制解） */
     ['EPIRUS_MIXHP_EVERY', 'setMixHpEvery', 'mixHpEvery'],   /*（ZCode · 11-06 深夜）桌形混合：每第 K 局换对偶桌（3血适应） */
-    ['EPIRUS_HPSEED', 'setHpSeed', 'hpSeedOn']];   /*（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（p 比例局全席对称 HP=min(2,modeHp-1)，课程局照常进 fit） */
+    ['EPIRUS_HPSEED', 'setHpSeed', 'hpSeedOn'],   /*（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（p 比例局全席对称 HP=min(2,modeHp-1)，课程局照常进 fit） */
+    /* 11-12 修接线：聚能环强探档与其它部署档同表下达；此前只列在 SELF_ENV_KEYS，
+     *   实际只有 train-worker 消费 ⇒ 产线臂静默无效（R5 的“无效实验”根因）。 */
+    ['EPIRUS_RING_FORCE_EPS', 'setRingForceEps', 'ringForceEps'],
+    ['EPIRUS_RING_FORCE_UNTIL', 'setRingForceUntil', 'ringForceUntil']];
   const unset = [];
   for (const [envName, setter, getter] of KN) {
     const raw = process.env[envName];
@@ -1608,7 +1612,9 @@ if (PACK_OPP) {
      *   发局处按引擎自己的人数限制报错 ⇒ 用 v7 包席时训练桌必须 N≤5（本批固定 N=5）。 */
     const poParams = (poJson.v === 7 || (poJson.a && poJson.v == null))
       ? Float64Array.from(poJson.a)
-      : P.unpack(poJson, true);
+      /* 11-12 修接线：3P 包必须用**原生** EpirusPolicy2.unpack(o, window)，不能用 P.unpack；
+       *   arch2 安装后 P 是当前架构（L.n=5225），旧 gen 的 .bak（如 DSTR4 obs3b 7993）会被长度守卫拒成 null。 */
+      : (sb.window.EpirusPolicy2 ? sb.window.EpirusPolicy2.unpack(poJson, sb.window) : P.unpack(poJson));
     if (!poParams || !poParams.length) throw new Error('解包失败');
     OPPS.push({ name: 'pack:' + PACK_OPP.split(/[\\/]/).pop().replace(/\.[^.]+$/, ''), sel: T.policyChooserN(poParams, 0.15) });
     console.log('[pack-opp] 包席上桌：' + PACK_OPP + '（params ' + poParams.length + ' ‖ OPPS → ' + OPPS.length + ' 个）');
