@@ -482,6 +482,24 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
       rmSync(fx, { recursive: true, force: true });
     }
   }
+
+  /* ⑫ 用户 11-12：新点只进地图、不进谱系图 ⇒ 每个 display 点都必须在谱系表里有行。
+   *   谱系表有两份：v7 主表 data/page/lineage.tsv + 2.0 sidecar data/page/lineage-g3.tsv。
+   *   这不是页面生成器能替调用方补的：add-point 只写 registry/display，家族/父边是人工判定；
+   *   所以这里钉**覆盖**，漏一枚就红，并点名缺的是谁。 */
+  {
+    const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+    const DH = rd('champion-map/data/display.tsv'), did = DH[0].split('\t').indexOf('id');
+    const disp = DH.slice(1).map((l) => l.split('\t')[did]).filter(Boolean);
+    const lin = new Set();
+    for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
+      const R = rd(f), id = R[0].split('\t').indexOf('id'), fam = R[0].split('\t').indexOf('fam'), lab = R[0].split('\t').indexOf('famLabel');
+      for (const l of R.slice(1)) { const c = l.split('\t'); if (c[id] && c[fam] !== '' && c[lab]) lin.add(c[id]); }
+    }
+    const miss = disp.filter((id) => !lin.has(id));
+    eq(miss.length, 0, '⑫ display 有 ' + disp.length + ' 枚，谱系表覆盖 ' + lin.size + ' 枚；缺 ' + miss.length + ' 枚：' + miss.slice(0, 8).join(',') +
+      ' ⇒ 这些点只会出现在地图，不会出现在谱系图（跑 lineage/补 lineage-g3 后再重烘）');
+  }
 });
 }
 
