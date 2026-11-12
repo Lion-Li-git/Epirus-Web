@@ -1,0 +1,8 @@
+   跑上槽体检（≈2.5 分钟）：node tools/promote-champion.mjs docs/artifacts/night-adapt/GD6a-TILT-3p.bak --dry → docs/artifacts/promote-GD6a-TILT.txt
+== 加入冠军池 ==
+   id=GD6a-TILT · wid=440ca578ed5384d0 · tier=soft · 点名
+   上槽体检：block（F 被集火还手率 12.0% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕） ‖ 人席否决：没量过（批表里没这枚）
+
+⛔ 拒绝入池（硬闸，点名也不放行）：
+   · 包文件不在 git 里 ⇒ CI 与干净克隆看不见这枚 ⇒ 先跑：git add -f docs/artifacts/night-adapt/GD6a-TILT-3p.bak
+EXIT=2

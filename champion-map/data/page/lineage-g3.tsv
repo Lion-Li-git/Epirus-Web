@@ -115,3 +115,6 @@ MSB15-LASER-R3	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distil
 MSB15R-GD4RAT	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T23:19:53.143Z	1155875730		GD4-RATION	GD4-RATION	GD4-RATION	ba7a47c028912c5d	seedpack-wid	product				
 MSB15-soupb-R1S190353054	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T17:09:42.834Z	190353054		fb03cf9d468ee778	fb03cf9d468ee778	fb03cf9d468ee778	493aa4b0355b19f4	unknown-wid	product				
 GD4-RATION	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-11T22:38:54.808Z	unknown					9eed8d7e18604c06	root	product				
+GD6a-TILT	21	自动新点 2026-11-12	2026-11-12T18:56:04.234Z	20261031					440ca578ed5384d0	root	product				
+GD6b-TILT	22	自动新点 2026-11-12	2026-11-12T18:56:15.413Z	20261031					c9f9445217230402	root	product				
+MSB18-R1S826788378-seg2	23	自动新点 2026-11-12	2026-11-12T19:26:58.888Z	unknown		GD6b-TILT	GD6b-TILT	GD6b-TILT	063bf6f23e7b5cc2	seedpack-wid	product				

@@ -1,0 +1,16 @@
+id	path	acts	distinct	defShare	ji	sword	guard	reflect	gun	charge	bigT	snipe	proto	mine	railgun	drain	ring	bagua
+KDG-B-Q-s13	docs/artifacts/night-adapt/KDG-B-Q-s13.js	5534	7	19.8	53.56	16.12	12.13	7.68	6.13	2.82	0.58	0.05	0.00	0.00	0.49	0.00	0.00	0.00
+MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	3633	8	28.8	45.69	1.13	0.83	26.64	12.39	0.00	0.00	11.04	1.32	0.52	0.00	0.00	0.00	0.08
+MSB11-R2S306293884	docs/artifacts/night-adapt/MSB11-R2S306293884.js	3426	7	35.2	38.21	2.28	3.12	31.52	19.44	0.00	0.00	4.35	0.58	0.00	0.00	0.00	0.00	0.09
+MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	3261	6	23.4	47.16	4.66	1.93	21.47	16.62	0.00	0.00	7.15	0.28	0.00	0.00	0.00	0.00	0.03
+MSB15R-hit-mix-R1S2057836694	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	4546	7	47.1	32.84	1.01	1.19	43.16	12.71	0.00	0.00	6.14	2.73	0.00	0.00	0.00	0.00	0.00
+STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	5993	5	0.0	64.61	10.56	0.00	0.00	1.05	13.32	0.20	0.00	0.00	0.00	10.26	0.00	0.00	0.00
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	4294	6	2.4	65.30	15.58	2.45	0.14	7.80	5.82	0.26	0.00	0.00	0.00	2.63	0.00	0.00	0.00
+DDEF-s13	docs/artifacts/2p0-pool/DDEF-s13.bak	6450	6	10.7	62.68	0.00	0.00	0.00	0.00	12.70	1.04	0.00	10.74	0.00	11.97	0.62	0.00	0.00
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak	4013	7	1.4	73.29	10.52	1.42	0.30	3.79	4.78	2.42	0.00	0.00	0.00	3.24	0.00	0.00	0.00
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	4277	7	2.2	71.50	8.58	2.22	0.37	2.62	6.87	2.08	0.00	0.00	0.00	5.38	0.00	0.02	0.00
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	4035	6	0.0	70.21	11.20	0.45	0.17	8.50	4.76	1.31	0.00	0.00	0.00	3.17	0.00	0.07	0.00
+EFFG-s41	docs/artifacts/2p0-pool/EFFG-s41.bak	3432	6	0.0	53.99	8.74	0.00	0.00	0.00	1.95	8.30	0.00	0.00	0.00	1.22	0.00	25.79	0.00
+EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	3590	7	0.0	55.88	9.97	0.00	0.00	0.53	2.73	6.91	0.00	0.00	0.00	2.51	0.00	21.48	0.00
+KD-G2	docs/artifacts/night-adapt/KD-G2.bak	4924	9	24.3	47.77	8.77	15.31	3.98	16.75	0.67	0.51	0.73	0.00	0.00	0.24	0.00	0.00	5.04
+WSEL9-200	docs/artifacts/night-adapt/WSEL9-200.js	5651	9	28.8	43.97	7.91	8.58	2.90	13.08	2.97	0.00	0.74	0.00	0.00	2.42	0.00	0.00	17.32

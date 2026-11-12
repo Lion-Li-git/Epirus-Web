@@ -7,3 +7,6 @@ measure-MSB15-SOUPB	a-v2-page-1109	A	-	-	measure-MSB15-SOUPB	MSB15-SOUPB-reading
 measure-MSB15-LASER-R3	a-v2-page-1109	A	-	-	measure-MSB15-LASER-R3	MSB15-LASER-R3-readings.tsv	16	2026-11-12T04:21:15.151Z	add-point
 measure-MSB15R-GD4RAT	a-v2-page-1109	A	-	-	measure-MSB15R-GD4RAT	MSB15R-GD4RAT-readings.tsv	16	2026-11-12T04:22:36.246Z	add-point
 measure-GD4-RATION	a-v2-page-1109	A	-	-	measure-GD4-RATION	GD4-RATION-readings.tsv	16	2026-11-12T04:50:05.763Z	add-point
+measure-GD6a-TILT	a-v2-page-1109	A	-	-	measure-GD6a-TILT	GD6a-TILT-readings.tsv	16	2026-11-12T23:23:08.054Z	add-point
+measure-GD6b-TILT	a-v2-page-1109	A	-	-	measure-GD6b-TILT	GD6b-TILT-readings.tsv	16	2026-11-12T23:26:32.041Z	add-point
+measure-MSB18-R1S826788378-seg2	a-v2-page-1109	A	-	-	measure-MSB18-R1S826788378-seg2	MSB18-R1S826788378-seg2-readings.tsv	16	2026-11-12T23:29:40.638Z	add-point

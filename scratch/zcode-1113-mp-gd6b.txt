@@ -1,0 +1,40 @@
+[measure] a-multi：node tools/exam-4n-full.mjs --out=staging/GD6b-TILT-a-multi.tsv --extra=staging/GD6b-TILT-extra.tsv --only=staging/GD6b-TILT-only.txt --rounds=100 --jobs=1 --dose=page --mode=multi --exam=A
+[measure] a-long：node tools/exam-4n-full.mjs --out=staging/GD6b-TILT-a-long.tsv --extra=staging/GD6b-TILT-extra.tsv --only=staging/GD6b-TILT-only.txt --rounds=100 --jobs=1 --dose=page --mode=long --exam=A
+[measure] b-multi：node tools/exam-4n-full.mjs --out=staging/GD6b-TILT-b-multi.tsv --extra=staging/GD6b-TILT-extra.tsv --only=staging/GD6b-TILT-only.txt --rounds=100 --jobs=1 --dose=page --mode=multi --exam=B --champ=MSB11-R2S306293884,MSB10-R1S1149480262,MSB8-charge-R1S1861674281,Q-s47 --champn=1
+[measure] b-long：node tools/exam-4n-full.mjs --out=staging/GD6b-TILT-b-long.tsv --extra=staging/GD6b-TILT-extra.tsv --only=staging/GD6b-TILT-only.txt --rounds=100 --jobs=1 --dose=page --mode=long --exam=B --champ=MSB11-R2S306293884,MSB10-R1S1149480262,MSB8-charge-R1S1861674281,Q-s47 --champn=1
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/GD6b-TILT-extra.tsv --ids=GD6b-TILT --out=staging/GD6b-TILT-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+--only ⇒ 名单 826 → 1 枚
+四格考卷批量：名单 1 枚 ‖ rounds=100 seed=77000 mode=multi jobs=1
+完成 1 / 失败 0 ‖ 用时 0.3 分钟（jobs=1）⇒ D:\code\Epirus-Web\champion-map\staging\GD6b-TILT-a-multi.tsv
+已按 id 排序规范化（1 行）
+—— a-multi ——
+
+--only ⇒ 名单 826 → 1 枚
+四格考卷批量：名单 1 枚 ‖ rounds=100 seed=77000 mode=long jobs=1
+完成 1 / 失败 0 ‖ 用时 0.6 分钟（jobs=1）⇒ D:\code\Epirus-Web\champion-map\staging\GD6b-TILT-a-long.tsv
+已按 id 排序规范化（1 行）
+—— a-long ——
+
+--only ⇒ 名单 826 → 1 枚
+四格考卷批量：名单 1 枚 ‖ rounds=100 seed=77000 mode=multi jobs=1
+完成 1 / 失败 0 ‖ 用时 0.4 分钟（jobs=1）⇒ D:\code\Epirus-Web\champion-map\staging\GD6b-TILT-b-multi.tsv
+已按 id 排序规范化（1 行）
+—— b-multi ——
+
+--only ⇒ 名单 826 → 1 枚
+四格考卷批量：名单 1 枚 ‖ rounds=100 seed=77000 mode=long jobs=1
+完成 1 / 失败 0 ‖ 用时 0.7 分钟（jobs=1）⇒ D:\code\Epirus-Web\champion-map\staging\GD6b-TILT-b-long.tsv
+已按 id 排序规范化（1 行）
+—— b-long ——
+
+—— ruler ——
+  1/1 ‖ 42.65s/枚 ‖ 已用 43s ‖ 预计还需 0.0 分 ‖ 最新 GD6b-TILT H=29.1 S=1.29
+完成 1 枚，用时 43s ⇒ D:\code\Epirus-Web\champion-map\staging\GD6b-TILT-ruler.tsv
+readings 16 条 ‖ display GD6b-TILT-display.tsv
+build: exam-view 933 行 ‖ coords-view 933 行，无 display 0
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：98 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 98/0 自检
+✅ add-point 完成：GD6b-TILT
+EXIT=0

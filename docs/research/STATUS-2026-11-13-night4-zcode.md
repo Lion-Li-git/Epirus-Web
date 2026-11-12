@@ -131,6 +131,30 @@
   ring/bigT/railgun/charge 道频 ‖ 池成员包（如 MSB14）独占 gun/sword/snipe/reflect 道 ‖ toolkit 独占防族道。
   teacher2keys 机制本班已落地并回归验证（字节不变），加 teacher3..N = 机械活。
 
+## 三B、新冠军进图 + 进池 + 重排难度（2026-11-13 晨用户指令）
+
+> 背景：GD6a 三线 mastery ✔ 且 12 线只缺 1 条 ⇒ 用户裁「有新的好冠军了…进图以及进池重新排难度」。
+
+- **进图（✔ 三枚全上）**：`measure-point --rounds=100 --bake` 全流程（A/B × 两桌形四张 exam4 + ruler-measure + feas + proj + add-point）——
+  GD6a-TILT / GD6b-TILT / MSB18-R1S826788378-seg2，registry 932 行。途中两笔修：① GD6 两枚的 ts 被记成注册时刻
+  ⇒ 与子代 MSB18（带真实训出时刻）时间倒挂——校正为真实训出时刻（18:56 UTC）后 98/0；② eps0 三行追写时数组
+  toString 变逗号行——清掉重写。
+- **三点的门槛账（v2 标准）**：GD6a C·R短 85.1 分位/长 93.2 ‖ Δε −0.021 小负 ✔ ‖ 12 线 11/12（缺场A 还手 15.4%长/12.0%短）；
+  GD6b C·R短 39.5 分位、Δε −0.032、12 线缺 5 条（兑现塌缩）；MSB18 C·R短 71.2/长 203 分位级、Δε −0.016、12 线缺 3 条
+  （广度 G<3 ×2 + 还手 + G5 防席 34%/39%）。
+- **进池（✔ GD6a 一枚；GD6b/MSB18 留图不进）**：GD6a 按既有 **invited/block 语义**进 soft（10-21 裁定 A 同族：
+  block 成员掺 soft 换技能覆盖，越过原话如实进 note；`pool-add --invite --run-promote` 正路落账）；
+  GD6b（C 弱 + 兑现塌缩）与 MSB18（G4/G5 行为闸）不进——"好冠军"的成色按门槛说话，不是按新。
+- **重排难度（✔）**：两带按 C·R短 分位重切，断档取 96.0/91.5——**hard 7 枚**（HITMIX 99.6 ‖ MSB11-R2 99.0 ‖
+  MSB14 98.4 ‖ **WSEL9 98.2 升 hard** ‖ KDG-B 98.1 ‖ MSB11-R1 96.9 ‖ STR-B 96.0）‖ **soft 9 枚**（KD-G2 91.5 …
+  EFFG-s41 37.9 + GD6a）。两带 ≥4 席 ✔。
+- **池级技能覆盖进展（用户问"进展到哪一步"）**：对 11-09 基线重跑 `card-usage`（15 成员 × 60 局镜像，确定性尺）：
+  **池级并集 13/30 → 14/30**（池 20→15 枚是质量换的）；用卡 ≥9 = 2/15（KD-G2、WSEL9）‖ 三件全开 = 2/15（同两枚）；
+  防御总占比 10~35% 带内 6/15（MSB15R 47.1% 超上限=反射墙画像；soft 一批 <10%=单招进攻画像）；
+  **并集还缺 16 张卡**：tank shift jinshield armor holo miniT laserEye transfer taunt curse firestorm purify cannon unite dualGun mirror
+  ——与"没学会技能"（mastery 视角：miniT/过载炮从未 ✔，激光眼只在 GD4-LASER 单枚）互为表里：**缺口在状态/反制与甲族
+  （taunt/curse/transfer/purify/holo/unite/mirror/jinshield/armor）+ 火系（tank/firestorm）+ 双特化（miniT/cannon/laserEye）**。
+
 ## 四、门禁账
 
 - R66 批：np 172/172 ‖ spec 64/64 ‖ smoke/battle/map OK（`scratch/zcode-1113-gate-r66.txt`）。

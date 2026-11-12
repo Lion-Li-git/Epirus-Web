@@ -930,3 +930,6 @@ MSB15-SOUPB	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15-soupb-R2S7406332
 MSB15-LASER-R3	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15-laser-R3S1859130085.js	2.0			new	2026-11-12T04:21:15.151Z	eaae715d3eebb5315a6ffe780d00ffea6472a260763a5955f53cb5da8aaa0dd7	active
 MSB15R-GD4RAT	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15R-gd4rat-R1S1155875730.js	2.0			new	2026-11-12T04:22:36.246Z	d31dd2e54baf37373f77a97ba041d6d520179969f35871cc4d5d4d7002f8bae9	active
 GD4-RATION	D:\code\Epirus-Web\scratch\arms\GD4-RATION.bak	2.0	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）	2026-11-12T04:50:05.763Z	31ef20a600bc2fc39880b3e15e68ac3dcd9d25e7564508c9b4d7bd88c435fa6b	active
+GD6a-TILT	D:\code\Epirus-Web\scratch\arms\GD6a-TILT-3p.bak	2.0	21	自动新点 2026-11-12	自动新点 2026-11-12	2026-11-12T23:23:08.054Z	cc4d735779029d169a044dedb271cae8dbf9a5d515c1907efb76cb65875baa56	active
+GD6b-TILT	D:\code\Epirus-Web\scratch\arms\GD6b-TILT-3p.bak	2.0	22	自动新点 2026-11-12	自动新点 2026-11-12	2026-11-12T23:26:32.041Z	9bc37fd5b332520b5906be316c32b6c951d8e9ccf3634b7d203039af7b697813	active
+MSB18-R1S826788378-seg2	D:\code\Epirus-Web\docs\artifacts\MSB18-R1S826788378-seg2.bak	2.0	23	自动新点 2026-11-12	自动新点 2026-11-12	2026-11-12T23:29:40.638Z	78de26d3f6e820ec7dd7be30aa653334fb333812812297f9e02baf6474c161a4	active

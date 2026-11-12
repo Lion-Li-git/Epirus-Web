@@ -167,3 +167,4 @@ MSB15-SOUPB	block	behavior-gate
 MSB15R-GD4RAT	block	field-a,breadth-multi			
 GD4-RATION	block	no-meta			
 MSB15-LASER-R3	block	field-a,behavior-gate,behavior-gate,behavior-gate			
+GD6a-TILT	block	F 被集火还手率 12.0% < 20%（被 4 席猛攻时不还手）——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕（2026-11-13 promote --dry，原文 docs/artifacts/promote-GD6a-TILT.txt）			
