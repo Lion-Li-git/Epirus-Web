@@ -1,0 +1,98 @@
+{
+ "tool": "supfit-gd",
+ "tag": "_regr-after",
+ "parent": "scratch/arms/OB3S-C2-s7.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 10,
+ "groups": 60,
+ "trainG": 45,
+ "testG": 15,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "chain",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 60,
+  "moved": 0,
+  "gone": 0,
+  "keys": 60,
+  "rare": 0,
+  "byKey": {
+   "ji": 38,
+   "charge": 11,
+   "railgun": 11
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 45,
+    "teacherAgree": 0.8666666666666667,
+    "teacherLl": -0.2510338236554435,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.3333333333333333,
+  "startLl": -2.8660787432145938,
+  "agree": 0.8666666666666667,
+  "ll": -0.2510338236554435,
+  "wAgree": 0.9251559251559252,
+  "nTest": 15,
+  "nTrain": 45,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "railgun",
+    "n": 3,
+    "hit": 3
+   },
+   {
+    "key": "ji",
+    "n": 10,
+    "hit": 8
+   },
+   {
+    "key": "charge",
+    "n": 2,
+    "hit": 2
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs3b",
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/OB3S-C2-s7.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

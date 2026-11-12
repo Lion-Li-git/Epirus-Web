@@ -1,0 +1,106 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD9b-DUAL",
+ "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 777,
+  "moved": 23,
+  "gone": 0,
+  "keys": 800,
+  "rare": 4892,
+  "byKey": {
+   "ji": 222,
+   "charge": 60,
+   "railgun": 57,
+   "reflect": 2,
+   "ring": 391,
+   "gun": 5,
+   "bigT": 50,
+   "proto": 2,
+   "shift": 2,
+   "curse": 2,
+   "guard": 3,
+   "armor": 3,
+   "jinshield": 1
+  },
+  "t1Groups": 3985,
+  "t2Groups": 1707
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 1,
+    "teacherLl": -0.14855475591968814,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0,
+  "startLl": -3.1116615775835283,
+  "agree": 1,
+  "ll": -0.14855475591968814,
+  "wAgree": 1,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ring",
+    "n": 179,
+    "hit": 179
+   },
+   {
+    "key": "bigT",
+    "n": 21,
+    "hit": 21
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

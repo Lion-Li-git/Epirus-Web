@@ -115,6 +115,14 @@
   ⇒ **晚班路线定形：双教师轮替采集**（toolkit 管行为广度+还手示范 ‖ ration 管靶向三线）——supfit-gd 需要一个小扩展
   （采集轮之间换教师），改动面小、价值直接。
 
+- **双教师轮替（机制 ✔ / 朴素语义 ✘，supfit-gd 已扩展）**：`--teacher2=<名> --teacher2frac=<f>` 落地
+  （教师链提成 `buildTeacherPick(name)` 一份实现两处用；回归腿 teacher=chain 冒烟 md5 **逐位相同**
+  3958aa3f…＝主路径字节不变）。GD9（frac 0.5）/GD9b（frac 0.3）：机制全对（t1/t2 精确份额、15/13 键混合、
+  留出 top-1 99-100%），**但行为全零**（环/大雷/电磁炮 0/局——考卷满分实战不动，正是工具头注警告的那个陷阱）。
+  ⇒ **病根 = 两教师的标签混在同一键层竞争**（toolkit 的防御键稀释 ration 的攻击键，部署 argmax 塌回保守）。
+  **精化设计（晚班）**：teacher2 持有**不相交键子集**（如 toolkit 只教防/反族键、ration 独占攻击键——键级掩码，
+  与 keySplit 架构同族），不是组级混采样。
+
 ## 四、门禁账
 
 - R66 批：np 172/172 ‖ spec 64/64 ‖ smoke/battle/map OK（`scratch/zcode-1113-gate-r66.txt`）。

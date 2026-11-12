@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -184,26 +184,8 @@ const rationPick = (state, pid, cs) => {
 /* DS 11-02 晚（用户「克隆旧包做起点」）：`--teacher=pack:<path>` —— 把任意 **v7 包**当教师。
  *   机制与 `toolkit` 同：v7 chooser 出键 → `keyToCand` 映射回候选（珠种按 keyToCand 的规则）。
  *   arch2 的 choose/forward 有长度守卫（5689 ≠ 2.0 的 L.n ⇒ 交回 v7 实现）⇒ 在 2.0 进程里安全。 */
-const PACK_TEACHER = TEACHER.indexOf('pack:') === 0 ? TEACHER.slice(5) : null;
-let packPick = null;
-if (PACK_TEACHER) {
-  const ptParams = Float64Array.from(loadChamp(W0, PACK_TEACHER, '.'));
-  /* DS 21:42：教师温度 0.15 → 0.05（与 `breadth.mjs` 同口径）。0.15 下 V7L 的防御族概率被压到 ~0，
-   *   800 组标签里 0 条防御 ⇒ 蒸馏把宽度蒸没；同一枚包在 temp 0.05 的量具里 defender 占 9%。 */
-  /* DS 21:46：与 `scratch/breadth.mjs` 完全同形（temp 0.05, eps 0, epsK 5, epsMode 'soft'）。
-   *   只传 (params,temp) 时 v7 走的是另一条默认 eps 路径 ⇒ 防御族概率被压到 0（800 组 0 条）。 */
-  const ptChooser = T.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
-  packPick = (state, pid, cs, legalIn) => {
-    /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。
-     * ⚑ DS 21:40：优先用调用方递进来的**引擎原始 legal**（含 v7 chooser 需要的全部字段）；
-     *   之前一律从 cs 重建 ⇒ 防御族被系统性丢掉（11-03 实测：V7L-s13 教师 800 组标签里 0 条防御）。 */
-    const legal = (legalIn && legalIn.length >= 2) ? legalIn : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
-    const got = ptChooser(state, pid, legal);
-    const mp = keyToCand(cs, got && (got.key || got)) || null;
-    if (!mp && process.env.SUPFIT_DBG && (globalThis.__dbgN = (globalThis.__dbgN || 0) + 1) <= 8) console.error('[dbg] teacher=' + (got && got.key) + ' cs=' + cs.map((c) => c.key).join(','));
-    return mp;
-  };
-}
+/* v2.0.7（11-13）：pack: 分支与教师链一起搬进 buildTeacherPick(name)（双教师轮替要构第二份 picker；
+ *   一份实现两处用——原来这里只服务主教师，链里的 PACK_TEACHER/packPick 全部内化）。 */
 const v7Pick = (state, pid, cs) => {
   let bi = -1, bv = -Infinity;
   for (let i = 0; i < cs.length; i++) {
@@ -463,41 +445,66 @@ const ration6Pick = (state, pid, cs) => {
   }
   return pickChain(state, pid, cs, R);
 };
-const _pickRaw = PACK_TEACHER
+function buildTeacherPick(name) {
+  /* v2.0.7（11-13 · 双教师轮替）：教师链提成为函数——一份实现，主教师与 `--teacher2` 各构一份 picker。
+   *   不传 teacher2 时第二份为 null ⇒ 主路径逐字节不变（回归腿：teacher=chain 冒烟 md5 对表）。 */
+  const isPack = name.indexOf('pack:') === 0;
+  let packPick = null;
+  if (isPack) {
+    const ptParams = Float64Array.from(loadChamp(W0, name.slice(5), '.'));
+    /* DS 21:42：教师温度 0.15 → 0.05（与 `breadth.mjs` 同口径）。0.15 下 V7L 的防御族概率被压到 ~0，
+     *   800 组标签里 0 条防御 ⇒ 蒸馏把宽度蒸没；同一枚包在 temp 0.05 的量具里 defender 占 9%。 */
+    /* DS 21:46：与 `scratch/breadth.mjs` 完全同形（temp 0.05, eps 0, epsK 5, epsMode 'soft'）。
+     *   只传 (params,temp) 时 v7 走的是另一条默认 eps 路径 ⇒ 防御族概率被压到 0（800 组 0 条）。 */
+    const ptChooser = T.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
+    packPick = (state, pid, cs, legalIn) => {
+      /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。
+       * ⚑ DS 21:40：优先用调用方递进来的**引擎原始 legal**（含 v7 chooser 需要的全部字段）；
+       *   之前一律从 cs 重建 ⇒ 防御族被系统性丢掉（11-03 实测：V7L-s13 教师 800 组标签里 0 条防御）。 */
+      const legal = (legalIn && legalIn.length >= 2) ? legalIn : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
+      const got = ptChooser(state, pid, legal);
+      const mp = keyToCand(cs, got && (got.key || got)) || null;
+      if (!mp && process.env.SUPFIT_DBG && (globalThis.__dbgN = (globalThis.__dbgN || 0) + 1) <= 8) console.error('[dbg] teacher=' + (got && got.key) + ' cs=' + cs.map((c) => c.key).join(','));
+      return mp;
+    };
+  }
+  return isPack
   ? (state, pid, cs, legal) => packPick(state, pid, cs, legal) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'v7mix'
+  : name === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'toolkit'
+  : name === 'toolkit'
     ? (state, pid, cs, legal) => keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-    : TEACHER === 'minit'
+    : name === 'minit'
     ? (state, pid, cs) => miniTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'chainmix'
+  : name === 'chainmix'
     ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'allround'
+  : name === 'allround'
     ? (state, pid, cs) => allRoundPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration'
+  : name === 'ration'
     ? (state, pid, cs) => rationPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration2'
+  : name === 'ration2'
     ? (state, pid, cs) => ration2Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration3'
+  : name === 'ration3'
     ? (state, pid, cs) => ration3Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration4'
+  : name === 'ration4'
     ? (state, pid, cs) => ration4Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration5'
+  : name === 'ration5'
     ? (state, pid, cs) => ration5Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ration6'
+  : name === 'ration6'
     ? (state, pid, cs) => ration6Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ringchain'
+  : name === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'ring'
+  : name === 'ring'
     ? (state, pid, cs) => pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 环优先：代 3 上环的提供率只有 2.8% ⇒ 先让教师自己肯开环 */
-  : TEACHER === 'bigt'
+  : name === 'bigt'
     ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
-  : TEACHER === 'lasereye'
+  : name === 'lasereye'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
-  : TEACHER === 'oracleDef'
+  : name === 'oracleDef'
     ? (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+}
+const _pickRaw = buildTeacherPick(TEACHER);
 /* ⚑ DS · 11-03：`EPIRUS_TEACHER_GATE=<model.json>` —— 在教师输出上加"残血×高威胁才防"的门控
  *   （模型 = scratch/fit-gate.mjs 的 logistic；13 维公开特征；hp<=EPIRUS_TEACHER_GATE_HP 且 p>=EPIRUS_TEACHER_GATE_T）。
  *   默认关 ⇒ 教师逐字不变。 */
@@ -534,7 +541,8 @@ if (_SELF_PACK) {
   };
 }
 const teacherPick = (state, pid, cs, legal) => {
-  const a = (_selfPick ? (_selfPick(state, pid, cs) || _pickRaw(state, pid, cs, legal)) : _pickRaw(state, pid, cs, legal));
+  const raw = (_useT2 && _pickRaw2) ? _pickRaw2 : _pickRaw;
+  const a = (_selfPick ? (_selfPick(state, pid, cs) || raw(state, pid, cs, legal)) : raw(state, pid, cs, legal));
   if (!_GATE_MODEL) return a;
   const me = state.p[pid];
   if (!me || me.hp > _GATE_HP) return a;
@@ -544,7 +552,18 @@ const teacherPick = (state, pid, cs, legal) => {
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
 const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
-if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && !PACK_TEACHER) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + '（收到 ' + TEACHER + '）'); process.exit(2); }
+if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
+/* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
+ *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
+ *   但不打 bigT/环 ⇒ 单教师各有天花板，轮替各取所长。teacher2 缺省 ⇒ 路径逐字节不变。 */
+const TEACHER2 = String(arg('teacher2', ''));
+const TEACHER2_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher2frac', 0.5)) || 0.5));
+if (TEACHER2) {
+  if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
+  if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
+}
+const _pickRaw2 = TEACHER2 ? buildTeacherPick(TEACHER2) : null;
+let _useT2 = false;
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
@@ -562,8 +581,14 @@ const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
+  let gN = 0;   /* 组级计数：teacher2 轮替的 Bresnham 游标 */
   const record = (state, pid, legal) => {
     lastG = null;
+    /* 双教师轮替（组级，精确 frac 份额；teacher2 缺省 ⇒ 恒 false ⇒ 主路径逐字节不变） */
+    const prev = Math.floor(gN * TEACHER2_FRAC), cur = Math.floor((gN + 1) * TEACHER2_FRAC);
+    _useT2 = !!(_pickRaw2 && cur > prev);
+    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
+    gN++;
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
     if (cs.length < 2) return;
@@ -840,6 +865,7 @@ const FIRE_KEYS = [R.SK.RAILGUN, R.SK.BIG_T, R.SK.LASER_EYE];
   const ks = Object.keys(LABEL.byKey);
   const nonJi = ks.filter((k) => k !== R.SK.JI);
   const hist = ks.map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + LABEL.byKey[k]).sort((a, b) => b.split('=')[1] - a.split('=')[1]).join(' ‖ ');
+  if (TEACHER2) console.log('  ⚑ 组级教师轮替：t1=' + (LABEL.t1Groups || 0) + '（' + TEACHER + '）‖ t2=' + (LABEL.t2Groups || 0) + '（' + TEACHER2 + '，frac ' + TEACHER2_FRAC + '）');
   console.log('  ⚑ 教师标签的种类：共 ' + ks.length + ' 键（非ジ ' + nonJi.length + ' 类）‖ ' + hist);
   const rare = nonJi.length ? nonJi.reduce((a, k) => (LABEL.byKey[k] < LABEL.byKey[a] ? k : a), nonJi[0]) : null;
   console.log('  ⚑ 最稀有的非ジ标签 = ' + (rare ? (R.byKey[rare] && R.byKey[rare].name || rare) + ' ' + LABEL.byKey[rare] + '/' + LABEL.keys +
