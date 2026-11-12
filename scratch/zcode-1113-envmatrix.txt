@@ -1,0 +1,5 @@
+GD6a-TILT.bak                      并集 4 种  [bigT,charge,railgun,ring]  ‖ sem=4 scm=4 f2m=4 fam=4 wam=4 agm=4 seL=4 scL=4 f2L=4 faL=4 waL=4 agL=4
+GD6b-TILT.bak                      并集 4 种  [bigT,charge,railgun,ring]  ‖ sem=2 scm=2 f2m=2 fam=4 wam=4 agm=2 seL=4 scL=3 f2L=2 faL=4 waL=4 agL=4
+MSB18-R1S826788378-seg2.bak        并集 3 种  [bigT,charge,railgun]  ‖ sem=1 scm=3 f2m=3 fam=3 wam=3 agm=3 seL=1 scL=3 f2L=1 faL=3 waL=3 agL=3
+落盘 env-matrix-cells.tsv / env-matrix-union.tsv ‖ 3 包
+EXIT=0

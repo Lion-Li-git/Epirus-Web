@@ -97,11 +97,19 @@
   - ⚠ GD6/MSB16/17/18 系还没进 registry ⇒ 图上暂无其 Δε；两个半边都已量好（ε0 = 本批全量；page = baxis 批），
     晚班 add-point 入册时把 eps0 行直接带进 readings 即可点亮，不用重跑。
 
+- **环境矩阵并集谱（技能上限研究 · 首批数据，`scratch/zcode-1113-envmatrix.txt`）**：GD6a/GD6b 并集均 4 种
+  [bigT,charge,railgun,ring]（= 各自训练键集，12 桌形全点亮 vs 逐格 1-4）‖ MSB18 并集 3 种（**ring 缺席** = mastery 复验独立印证）。
+  ① 工具能分辨"并集广度 vs 逐格塌缩"（GD6b 逐格 2-4 抖动、GD6a 全格 4 = 更稳）② 蒸馏特化包并集 4 种，仍远低于 v7 标尺 11 张
+  ——单包广度是结构问题，环境矩阵把"塌在哪些格"照亮了（GD6b 在 f2m/agm 只剩 2）。晚班研究提纲见 HANDOFF §5。
+
 ## 四、门禁账
 
 - R66 批：np 172/172 ‖ spec 64/64 ‖ smoke/battle/map OK（`scratch/zcode-1113-gate-r66.txt`）。
-- 统一池+Δε 批：〔结果待回填——首跑撞上 mid-edit 竞态（D234 读到无 X 尺的中间态）+smoke 旧判据，均已修，重骑中〕。
-- 旋钮册 --check 绿（无注解 0）。
+- 统一池批：D234 首跑红 = mid-edit 竞态（门读到无 X 尺的中间态）+ smoke 旧判据，均已修；
+  复骑 **np/ship 52/52**（D234/D16 在内）+ meta 16/16 ‖ smoke/battle/map OK（`gate-final3` / `rebuild-map3`）。
+- Δε 全量批终树：**np/ship 52/52 ‖ spec 64/64 ‖ smoke/battle/map OK**（`rebuild-map3.txt`；整轮认证 = 分面绿账闭合，
+  engine 面由 R66 批整轮 172/172 覆盖，此后无 engine 改动）。
+- 旋钮册 --check 绿（无注解 0）‖ 页内自检 98/0。
 
 ## 五、晚班接什么
 
@@ -120,4 +128,6 @@
 | `f349d0cd` | GD6 多线保持正结果（两臂 + mastery 收据） |
 | `3ff7fea8` | 2P 统一池 + D191 根因修复 + Δε pilot 写进图 |
 | `f9c70976` | B 轴增样批 + STATUS/HANDOFF 初稿 |
-| 〔待填〕 | MSB18 + Δε 全量 + STATUS 定稿（收工批） |
+| `43139d0f` | Δε 全图点亮 + MSB18 收官 |
+| `1cc34488` | GD6 壳转换 + 三连体测细账 |
+| 〔本笔〕 | 环境矩阵首批数据 + STATUS 定稿（收工批） |
