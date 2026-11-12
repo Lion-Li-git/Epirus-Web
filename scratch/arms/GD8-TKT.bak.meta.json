@@ -1,0 +1,160 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD8-TKT",
+ "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "toolkit",
+ "keySplit": 1,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 551,
+  "moved": 249,
+  "gone": 0,
+  "keys": 800,
+  "rare": 0,
+  "byKey": {
+   "ji": 401,
+   "charge": 88,
+   "railgun": 86,
+   "reflect": 26,
+   "gun": 31,
+   "guard": 48,
+   "armor": 19,
+   "bagua": 28,
+   "proto": 20,
+   "jinshield": 16,
+   "curse": 19,
+   "shift": 11,
+   "holo": 6,
+   "transfer": 1
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.31,
+    "teacherLl": -2.323261355517879,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.31,
+  "startLl": -2.306268054710699,
+  "agree": 0.31,
+  "ll": -2.323261355517879,
+  "wAgree": 0.3381450679510356,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "guard",
+    "n": 16,
+    "hit": 1
+   },
+   {
+    "key": "bagua",
+    "n": 11,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 8,
+    "hit": 8
+   },
+   {
+    "key": "ji",
+    "n": 87,
+    "hit": 12
+   },
+   {
+    "key": "armor",
+    "n": 4,
+    "hit": 0
+   },
+   {
+    "key": "charge#elec",
+    "n": 18,
+    "hit": 17
+   },
+   {
+    "key": "railgun",
+    "n": 18,
+    "hit": 18
+   },
+   {
+    "key": "curse",
+    "n": 4,
+    "hit": 0
+   },
+   {
+    "key": "holo",
+    "n": 3,
+    "hit": 3
+   },
+   {
+    "key": "proto",
+    "n": 5,
+    "hit": 3
+   },
+   {
+    "key": "gun",
+    "n": 15,
+    "hit": 0
+   },
+   {
+    "key": "shift",
+    "n": 3,
+    "hit": 0
+   },
+   {
+    "key": "jinshield",
+    "n": 8,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}
