@@ -2,3 +2,7 @@ batch_id	ruler_id	axis	fixture	champ	run	source	rows	created	note
 a-1109	a-v2-page-1109	A	v2-scripts(28 seats)	-	1109	exam4-page-1109.tsv	926	2026-11-11	backfill
 b-f2-1111	b-f2-page-1111	B	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	1111	exam4-F2-page-1111.tsv	926	2026-11-11	backfill
 h5-1109	h5-page-1109	H5	legacy	-	1109	coords.tsv(frozen)	926	2026-11-11	frozen reference
+measure-MSB15R-HITMIX	a-v2-page-1109	A	-	-	measure-MSB15R-HITMIX	MSB15R-HITMIX-readings.tsv	16	2026-11-12T04:18:24.826Z	add-point
+measure-MSB15-SOUPB	a-v2-page-1109	A	-	-	measure-MSB15-SOUPB	MSB15-SOUPB-readings.tsv	16	2026-11-12T04:19:40.948Z	add-point
+measure-MSB15-LASER-R3	a-v2-page-1109	A	-	-	measure-MSB15-LASER-R3	MSB15-LASER-R3-readings.tsv	16	2026-11-12T04:21:15.151Z	add-point
+measure-MSB15R-GD4RAT	a-v2-page-1109	A	-	-	measure-MSB15R-GD4RAT	MSB15R-GD4RAT-readings.tsv	16	2026-11-12T04:22:36.246Z	add-point

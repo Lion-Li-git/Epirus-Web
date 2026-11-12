@@ -125,7 +125,7 @@ if (!SKIP_FEAS) {
 /* 投影：把新点并入 projcols 副本，跑 proj-tsne；旧点坐标会整体重排，但只写 staging 副本。 */
 if (!SKIP_PROJ) {
   const pIn = join(ST, ID + '-proj-input.tsv');
-  const pj = readTable(join(HERE, 'coords-projcols.tsv'));
+  const pj = readTable(join(HERE, 'data/display.tsv'));
   writeTable(pIn, { header: pj.header, rows: pj.rows.concat([D]) }, { backup: false });
   execFileSync('node', [join(HERE, 'proj-tsne.mjs'), '--in=' + pIn], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
   const PT = readTable(pIn); const pr = PT.rows.find((x) => x[PT.ix.id] === ID);

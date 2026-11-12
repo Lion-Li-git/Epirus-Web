@@ -925,3 +925,7 @@ S916-R1S1704335642					1		1
 MSB2-R2S103437527					0	G 1.52 < 3（短程有效技能数只有 1.52，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕	0	G 1.42 < 3（短程有效技能数只有 1.42，线 3） ——【会用的招不止两三种】不成立〔原机器名：广〕	
 ADAPT-DEF-O5-s916					1		1		
 MSB2-R1S773345716					1		1		
+MSB15R-HITMIX									add-point
+MSB15-SOUPB									add-point
+MSB15-LASER-R3									add-point
+MSB15R-GD4RAT									add-point
