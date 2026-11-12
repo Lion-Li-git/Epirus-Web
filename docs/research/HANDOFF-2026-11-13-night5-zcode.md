@@ -17,8 +17,10 @@
    分布与"现役 T8-s114 探索脆（−0.066，第 3 百分位）"的读数见 STATUS-night4 §三。
 2. **MSB18 = 本班已完**：C 0.0094→0.0853，但 mastery 复验环被洗掉（两线保住）——"GA 用 C 换语义"再度实锤。
    D191 端到端 ✔（6 条别名自动登记，meta 16/16）。晚班：GD6a/GD6b/MSB18 三枚 12 线体测（promote-champion --dry）定进池位。
-3. **GD6 系进池评估**：GD6a/GD6b 按 12 线体检（`tools/promote-champion.mjs --dry`），过线才谈 promote；
-   GD6b 是首个"环+大雷+电磁炮"三线同保产物。
+3. **GD6 系进池评估 = 体测已跑，卡在壳上**：promote --dry 响亮失败（`EPIRUS_CHAMPION_3P_META` 找不到——
+   proto2 容器形状）⇒ **晚班第一件事 = 壳转换**（`training/proto2/convert-obs3c.mjs` 同类先例）再 promote --dry；
+   GD6b 是首个"环+大雷+电磁炮"三线同保产物（B 轴 F2 -0.035~+0.145，明显高于 GA 线）。MSB18 已体测 = 三条阻断
+   （广度 G<3 ×2 桌形 ‖ 场A 还手 11%<20% ‖ G5 防席夺冠 34%/39%>25%）⇒ 研究点不进池，广度补课是它的路。
 4. **技能上限·环境矩阵研究**（用户 11-13 指令）：雏形在 `scratch/zcode-1111-single-skill/env-matrix.mjs`
    （7 桌形 × multi/long × 逐卡出手占比）。可扩桌形（2P 统一池桌形/长程/经济桌）+ 对 GD6/MSB18 产物跑并集谱。
 5. **B 轴观察账**：`scratch/zcode-1113-deps/baxis-{F2,F3k2}-1113.tsv`（5 新产物 × 双夹具）已落，
