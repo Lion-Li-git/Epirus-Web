@@ -1391,7 +1391,23 @@ function alphaOf(d) { var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
 /* §E463 图上那 16 枚旧槽位冠军的 id 是 SLOT-<8位权重哈希>，用户 10-08：「太长了也让人看不明白，你把标签改成对应版本号」
  *   ⇒ 有版本号（sv，从引入它的那条提交标题认回，见构建侧 verOf）就标版本号，没有仍回落到 id —— 不许编一个。
  *   悬停与选中卡上仍然给全 id + 哈希，身份这件事不能因为好读就丢掉。*/
-function labOf(d) { return (d && d.sv && String(d.id).indexOf('SLOT-') === 0) ? d.sv : (d ? d.id : ''); }
+/* 短显示名：**只改图上标签，不改 id / 表键 / 父边 / 池**。
+ *   MSB 的尾部 S<seed> 是 RNG seed，不是身份；图上一长串数字会盖住点。
+ *   MSB6-R2 有两粒同缩写，显式加 a/b；新点未登记时退回“去掉尾部 S数字”。 */
+const SHORTNAME = {
+  'MSB11-R2S306293884': 'MSB11-R2', 'MSB10-R1S1149480262': 'MSB10-R1',
+  'MSB8-charge-R1S1861674281': 'MSB8-charge', 'MSB8-bagua-R1S88974978': 'MSB8-bagua',
+  'MSB6-R2S501866988': 'MSB6-R2a', 'MSB6-R2S297540638': 'MSB6-R2b',
+  'MSB9-R2S443656264': 'MSB9-R2', 'MSB12-beadplan-R1S666728707': 'MSB12-beadplan',
+  'MSB12-seqboom-R1S1308870894': 'MSB12-seqboom', 'MSB2-R1S1494663071': 'MSB2-R1',
+  'MSB13-R1S791820660': 'MSB13', 'MSB14-railgun-R1S175656469': 'MSB14-railgun',
+  'MSB11-R1S130778313': 'MSB11-R1', 'MSB6-R1S1628871127': 'MSB6-R1',
+  'MSB2-R2S103437527': 'MSB2-R2',
+  'MSB15R-HITMIX': 'HITMIX', 'MSB15-SOUPB': 'SOUPB',
+  'MSB15-LASER-R3': 'LASER-R3', 'MSB15R-GD4RAT': 'GD4RAT'
+};
+function shortOf(id) { const s = String(id || ''); return SHORTNAME[s] || s.replace(/-?S[0-9]+$/, ''); }
+function labOf(d) { return (d && d.sv && String(d.id).indexOf('SLOT-') === 0) ? d.sv : (d ? shortOf(d.id) : ''); }
 function famLab(d) { return FAMLAB[d.fam] || ''; }
 /* E397 DS（用户 10-08：一大堆调整数字被截掉在这里也看不清楚，尤其家族 5 / 22 这种超长标签）：
  *   上游那条 recipe 是**一长串「名 a→b」**，其中大多数是「-→v」（从默认打开）或「v→-」（关掉回默认）。
