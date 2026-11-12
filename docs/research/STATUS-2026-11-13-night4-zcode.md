@@ -123,6 +123,14 @@
   **精化设计（晚班）**：teacher2 持有**不相交键子集**（如 toolkit 只教防/反族键、ration 独占攻击键——键级掩码，
   与 keySplit 架构同族），不是组级混采样。
 
+- **GD10b（frac 0.15）与 GD11（教师=pack:MSB14 R14 线产物）双双负结果 ⇒ 教师假设空间探完**：
+  ① 15% 的 toolkit 份额仍毁火线（行为全零）——状态级策略分歧是定性的，不是稀释量问题；
+  ② R14 包虽"保住 bigT"（mastery 口径）但采集状态下标签全是 狙击/反弹/枪（bigT/环 0 标签）——
+  "池成员过五道地板"≠"它的 policy 在采集态演示火线"。⇒ **没有任何现成教师同时演示"火线+还手"**。
+- **终局设计（晚班，机制已就绪）**：`--teacher2Keys` 推广到 **N 教师不相交键道**——ration 独占
+  ring/bigT/railgun/charge 道频 ‖ 池成员包（如 MSB14）独占 gun/sword/snipe/reflect 道 ‖ toolkit 独占防族道。
+  teacher2keys 机制本班已落地并回归验证（字节不变），加 teacher3..N = 机械活。
+
 ## 四、门禁账
 
 - R66 批：np 172/172 ‖ spec 64/64 ‖ smoke/battle/map OK（`scratch/zcode-1113-gate-r66.txt`）。

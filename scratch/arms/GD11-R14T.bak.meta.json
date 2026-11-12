@@ -1,0 +1,111 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD11-R14T",
+ "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 400,
+ "trainG": 300,
+ "testG": 100,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "pack:docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 324,
+  "moved": 76,
+  "gone": 0,
+  "keys": 400,
+  "rare": 392562,
+  "byKey": {
+   "ji": 218,
+   "reflect": 69,
+   "snipe": 77,
+   "gun": 24,
+   "sword": 12
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 300,
+    "teacherAgree": 0.63,
+    "teacherLl": -0.5799618912640522,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.57,
+  "startLl": -1.9706168253060399,
+  "agree": 0.63,
+  "ll": -0.5799618912640522,
+  "wAgree": 0.8221070400474134,
+  "nTest": 100,
+  "nTrain": 300,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 48,
+    "hit": 31
+   },
+   {
+    "key": "snipe",
+    "n": 12,
+    "hit": 3
+   },
+   {
+    "key": "reflect",
+    "n": 24,
+    "hit": 13
+   },
+   {
+    "key": "sword",
+    "n": 6,
+    "hit": 6
+   },
+   {
+    "key": "gun",
+    "n": 10,
+    "hit": 10
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

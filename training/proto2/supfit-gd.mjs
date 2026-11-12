@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -541,7 +541,13 @@ if (_SELF_PACK) {
   };
 }
 const teacherPick = (state, pid, cs, legal) => {
-  const raw = (_useT2 && _pickRaw2) ? _pickRaw2 : _pickRaw;
+  let raw = _pickRaw;
+  if (_useT2 && _pickRaw2) {
+    const t2 = _pickRaw2(state, pid, cs, legal);
+    /* 键级不相交：teacher2 只在 T2KEYS 道内出标签，越道回落主教师（道未设 = GD9 语义，全收） */
+    if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
+    else LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1;
+  }
   const a = (_selfPick ? (_selfPick(state, pid, cs) || raw(state, pid, cs, legal)) : raw(state, pid, cs, legal));
   if (!_GATE_MODEL) return a;
   const me = state.p[pid];
@@ -558,6 +564,10 @@ if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { cons
  *   但不打 bigT/环 ⇒ 单教师各有天花板，轮替各取所长。teacher2 缺省 ⇒ 路径逐字节不变。 */
 const TEACHER2 = String(arg('teacher2', ''));
 const TEACHER2_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher2frac', 0.5)) || 0.5));
+/* `--teacher2Keys=k1,k2,…`（11-13 深夜）：**键级不相交**——teacher2 只在它的键道内出标签，
+ *   越道（选中键不在名单）回落主教师。GD9/GD9b 的教训：两教师标签在同一键层竞争 ⇒ 部署 argmax 塌回保守
+ *   （考卷 99%、行为全零）。缺省（不给旗标）= 不设道（teacher2 的每个标签都算，GD9 语义）。 */
+const T2KEYS = new Set(String(arg('teacher2keys', '')).split(',').filter(Boolean));
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
@@ -865,7 +875,9 @@ const FIRE_KEYS = [R.SK.RAILGUN, R.SK.BIG_T, R.SK.LASER_EYE];
   const ks = Object.keys(LABEL.byKey);
   const nonJi = ks.filter((k) => k !== R.SK.JI);
   const hist = ks.map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + LABEL.byKey[k]).sort((a, b) => b.split('=')[1] - a.split('=')[1]).join(' ‖ ');
-  if (TEACHER2) console.log('  ⚑ 组级教师轮替：t1=' + (LABEL.t1Groups || 0) + '（' + TEACHER + '）‖ t2=' + (LABEL.t2Groups || 0) + '（' + TEACHER2 + '，frac ' + TEACHER2_FRAC + '）');
+  if (TEACHER2) console.log('  ⚑ 组级教师轮替：t1=' + (LABEL.t1Groups || 0) + '（' + TEACHER + '）‖ t2=' + (LABEL.t2Groups || 0) + '（' + TEACHER2 + '，frac ' + TEACHER2_FRAC +
+    ' ‖ t2 命中键道 ' + (LABEL.t2Hits || 0) + ' ‖ 越道回落 t1 ' + (LABEL.t2Fallback || 0) +
+    (T2KEYS.size ? ' ‖ t2 键道 = ' + [...T2KEYS].join('/') : '') + '）');
   console.log('  ⚑ 教师标签的种类：共 ' + ks.length + ' 键（非ジ ' + nonJi.length + ' 类）‖ ' + hist);
   const rare = nonJi.length ? nonJi.reduce((a, k) => (LABEL.byKey[k] < LABEL.byKey[a] ? k : a), nonJi[0]) : null;
   console.log('  ⚑ 最稀有的非ジ标签 = ' + (rare ? (R.byKey[rare] && R.byKey[rare].name || rare) + ' ' + LABEL.byKey[rare] + '/' + LABEL.keys +
