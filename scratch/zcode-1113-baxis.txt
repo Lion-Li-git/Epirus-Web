@@ -1,0 +1,25 @@
+[1/20] ✔ MSB16-R1S1355910883 F2 multi  x2=-0.4046 x5=-0.2179
+[2/20] ✔ MSB16-R1S1355910883 F2 long  x2=-0.3308 x5=-0.2268
+[3/20] ✔ MSB16-R1S1355910883 F3k2 multi  x2=-0.6415 x5=-0.2393
+[4/20] ✔ MSB16-R1S1355910883 F3k2 long  x2=-0.7485 x5=-0.2482
+[5/20] ✔ MSB17-R1S1454169188 F2 multi  x2=-0.7331 x5=-0.0839
+[6/20] ✔ MSB17-R1S1454169188 F3k2 multi  x2=-0.7500 x5=-0.2054
+[7/20] ✔ MSB17-R1S1454169188 F2 long  x2=-0.8285 x5=-0.0536
+[8/20] ✔ MSB16T-R1S1616219090-seg1 F2 multi  x2=-0.3600 x5=-0.2304
+[9/20] ✔ MSB17-R1S1454169188 F3k2 long  x2=-0.8600 x5=-0.2071
+[10/20] ✔ MSB16T-R1S1616219090-seg1 F2 long  x2=-0.3177 x5=-0.2214
+[11/20] ✔ MSB16T-R1S1616219090-seg1 F3k2 multi  x2=-0.5185 x5=-0.2339
+[12/20] ✔ GD6a-TILT F2 multi  x2=-0.0569 x5=0.0607
+[13/20] ✔ MSB16T-R1S1616219090-seg1 F3k2 long  x2=-0.6731 x5=-0.2464
+[14/20] ✔ GD6a-TILT F3k2 multi  x2=0.5254 x5=-0.0179
+[15/20] ✔ GD6a-TILT F2 long  x2=0.1008 x5=0.1357
+[16/20] ✔ GD6b-TILT F2 multi  x2=-0.0654 x5=-0.0536
+[17/20] ✔ GD6a-TILT F3k2 long  x2=0.6523 x5=0.0179
+[18/20] ✔ GD6b-TILT F3k2 multi  x2=0.5208 x5=-0.0625
+[19/20] ✔ GD6b-TILT F2 long  x2=0.1169 x5=-0.0161
+✔ 写 scratch/zcode-1113-deps/baxis-F2-1113.tsv（10 行）
+✔ 写 scratch/zcode-1113-deps/baxis-F3k2-1113.tsv（9 行）
+[20/20] ✔ GD6b-TILT F3k2 long  x2=0.6238 x5=-0.0768
+✔ 写 scratch/zcode-1113-deps/baxis-F2-1113.tsv（10 行）
+✔ 写 scratch/zcode-1113-deps/baxis-F3k2-1113.tsv（10 行）
+EXIT=0
