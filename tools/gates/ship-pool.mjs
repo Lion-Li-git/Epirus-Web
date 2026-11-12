@@ -491,10 +491,10 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
     const DH = rd('champion-map/data/display.tsv'), did = DH[0].split('\t').indexOf('id');
     const disp = DH.slice(1).map((l) => l.split('\t')[did]).filter(Boolean);
-    const lin = new Set(), famTs = new Map();
+    const lin = new Set(), famTs = new Map(), newBad = [];
     for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
       const R = rd(f), id = R[0].split('\t').indexOf('id'), fam = R[0].split('\t').indexOf('fam'), lab = R[0].split('\t').indexOf('famLabel'), ts = R[0].split('\t').indexOf('ts');
-      for (const l of R.slice(1)) { const c = l.split('\t'); if (c[id] && c[fam] !== '' && c[lab]) { lin.add(c[id]); const F = famTs.get(c[fam]) || { n: 0, t: 0 }; F.n++; if (c[ts]) F.t++; famTs.set(c[fam], F); } }
+      for (const l of R.slice(1)) { const c = l.split('\t'); if (c[id] && c[fam] !== '' && c[lab]) { lin.add(c[id]); const F = famTs.get(c[fam]) || { n: 0, t: 0 }; F.n++; if (c[ts]) F.t++; famTs.set(c[fam], F); if (Number(c[fam]) >= 20) { const wi = R[0].split('\t').indexOf('wid'), ms = R[0].split('\t').indexOf('metaSeed'), ps = R[0].split('\t').indexOf('parentSrc'); const bad = []; if (!c[ts]) bad.push('ts'); if (!c[wi]) bad.push('wid'); if (!c[ms]) bad.push('metaSeed'); if (!c[ps]) bad.push('parentSrc'); if (bad.length) newBad.push(c[id] + '缺' + bad.join('/')); } } }
     }
     const miss = disp.filter((id) => !lin.has(id));
     eq(miss.length, 0, '⑫ display 有 ' + disp.length + ' 枚，谱系表覆盖 ' + lin.size + ' 枚；缺 ' + miss.length + ' 枚：' + miss.slice(0, 8).join(',') +
@@ -502,6 +502,8 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     const emptyFams = [...famTs].filter(([, v]) => v.n > 0 && v.t === 0).map(([f, v]) => f + '(n=' + v.n + ')');
     eq(emptyFams.length, 0, '⑫b 有 ' + emptyFams.length + ' 个家族的所有行 ts 为空：' + emptyFams.join(',') +
       ' ⇒ 这一行画不出来（家族 20 第一次就是这么空的），必须给至少一枚非空训练时刻');
+    eq(newBad.length, 0, '⑫c 新家族（fam>=20）的行必须带全 ts/wid/metaSeed/parentSrc：' + newBad.slice(0, 8).join(' ‖ ') +
+      ' ⇒ 自动进图只写 id/fam/ts 会得到“有行但数据全空”');
   }
 });
 }

@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
 import { loadRulers } from './rulers.mjs';
 import { buildView, buildCoordsView } from './build-view.mjs';
+import { widOf } from '../pack-id.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DRY = process.argv.includes('--dry');
@@ -24,9 +25,9 @@ const DATA = resolve(arg('data', 'champion-map/data'));
 const PACK = resolve(arg('pack', ''));
 const ID = String(arg('id', '')).trim();
 const VER = String(arg('ver', '2.0')).trim();
-const FAM = String(arg('fam', '')).trim();
-const FAMLAB = String(arg('fam-label', '')).trim();
-const LINEAGE = String(arg('lineage', 'new')).trim();
+let FAM = String(arg('fam', '')).trim();
+let FAMLAB = String(arg('fam-label', '')).trim();
+let LINEAGE = String(arg('lineage', 'new')).trim();
 const RD = arg('readings', '') ? resolve(arg('readings', '')) : '';
 const DISP = arg('display', '') ? resolve(arg('display', '')) : '';
 const PJ = arg('projections', '') ? resolve(arg('projections', '')) : '';
@@ -46,6 +47,33 @@ if (BATCH && batches.rows.some((r) => r[batches.ix.batch_id] === BATCH)) { conso
 const rd = readTable(join(DATA, 'readings/current.tsv'));
 const display = readTable(join(DATA, 'display.tsv'));
 if (reg.rows.some((r) => r[reg.ix.pack_id] === ID)) { console.error('⛔ registry 已有 ' + ID); process.exit(2); }
+
+/* 自动谱系行（11-12 用户：新点不能只进地图；id/fam/ts/wid/seed/parent 一次写全）。
+ *   fam 未给：沿用同名 --lineage 标签，找不到就新开一个号（max+1）；父边从 pack meta.hotstartFrom
+ *   的 wid 反查既有 lineage 的宽表；查不到时保留原 wid 并标 unknown-wid（不假装有父）。 */
+const packText = readFileSync(PACK, 'utf8');
+const now = new Date().toISOString();
+let meta = {};
+{ const mm = /window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\});/.exec(packText);
+  if (mm) { try { meta = JSON.parse(mm[1]); } catch (e) { meta = {}; } } }
+const linMain = readTable(join(DATA, 'page/lineage.tsv'));
+const linG3 = readTable(join(DATA, 'page/lineage-g3.tsv'));
+const wid2id = new Map();
+for (const t of [linMain, linG3]) { const iw = t.ix.wid, ii = t.ix.id; if (iw === undefined) continue;
+  for (const r of t.rows) { if (r[iw] && r[ii]) wid2id.set(r[iw], r[ii]); } }
+if (!FAM) { let mx = 0; for (const t of [linMain, linG3]) for (const r of t.rows) { const n = Number(r[t.ix.fam]); if (Number.isFinite(n) && n > mx) mx = n; }
+  FAM = String(mx + 1); FAMLAB = FAMLAB || (LINEAGE !== 'new' ? LINEAGE : '自动新点 ' + now.slice(0, 10)); }
+if (LINEAGE === 'new') LINEAGE = FAMLAB || '自动新点';
+const parentWid = String(meta.hotstartFrom || '').trim();
+const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
+const cand = parentWid ? wid2id.get(parentWid) : '';
+const parentId = cand && dispIds.has(cand) ? cand : '';   /* 只连图上存在的父；否则页面会报“父边指向不存在的枚” */
+const parentSrc = parentWid ? (parentId ? 'seedpack-wid' : 'unknown-wid') : '';
+const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || '');
+const pointWid = widOf(packText);
+const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || now), metaSeed, nameSeed: '',
+  parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };
+const ltab = VER === '2.0' ? linG3 : linMain;
 for (const c of ['ruler_id', 'cell', 'horizon', 'value', 'n']) if (readTable(RD).ix[c] === undefined) { console.error('⛔ readings 缺列 ' + c); process.exit(2); }
 const RT = readTable(RD);
 const rulerById = new Map(rulers.rows.map((r) => [r[rulers.ix.ruler_id], r]));
@@ -70,12 +98,17 @@ if (DISP) {
   for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5', 'F', 'rank']) if (display.ix[c] !== undefined) dispRow[display.ix[c]] = '';
 }
 const sha = createHash('sha256').update(readFileSync(PACK)).digest('hex');
-const now = new Date().toISOString();
 const newReg = [ID, PACK, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'];
 const bid = BATCH || ('add-' + ID + '-' + now.slice(0, 10).replace(/-/g, ''));
 const newBatch = [bid, rd.rows.length ? rd.rows[0][rd.ix.ruler_id] : 'a-v2-page-1109', 'A', FIXTURE, '-', bid, basename(RD), String(RT.rows.length), now, 'add-point'];
 console.log('add-point: ' + ID + ' ‖ pack ' + basename(PACK) + ' ‖ readings ' + newReadings.length + ' ‖ display ' + (dispRow ? '有' : '无') + ' ‖ batch ' + bid);
+if (dispRow && display.ix.lineage !== undefined && (!dispRow[display.ix.lineage] || dispRow[display.ix.lineage] === 'new')) dispRow[display.ix.lineage] = LINEAGE;
 if (DRY) { console.log('--dry：未写文件'); process.exit(0); }
+if (!ltab.rows.some((r) => r[ltab.ix.id] === ID)) {
+  const row = new Array(ltab.header.length).fill('');
+  for (const [k, v] of Object.entries(lrow)) if (ltab.ix[k] !== undefined) row[ltab.ix[k]] = v;
+  writeTable(join(DATA, VER === '2.0' ? 'page/lineage-g3.tsv' : 'page/lineage.tsv'), { header: ltab.header, rows: ltab.rows.concat([row]), backup: false });
+}
 
 const wt = (file, table, rows) => writeTable(join(DATA, file), { header: table.header, rows }, { backup: false });
 wt('registry.tsv', reg, reg.rows.concat([newReg]));
