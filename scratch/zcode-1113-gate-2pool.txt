@@ -1,0 +1,44 @@
+warning: in the working copy of 'CHANGELOG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/POOL-CONTRACT.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'js/ui/ui.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/arms/supfit-gd1.bak.meta.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/build-pool-bundle.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'training/TRAINING-KNOBS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'training/train-3p.mjs', LF will be replaced by CRLF the next time Git touches it
+--auto 判据（改动 13 个路径）：
+  engine 1 个 ‖ index.html
+  probe  3 个 ‖ js/bundled-champion-pool-2p.js tools/build-pool-bundle.mjs tools/probe-diff-ladder.mjs
+  ui     1 个 ‖ js/ui/ui.js
+  ship   1 个 ‖ tools/gates/ship-pool.mjs
+  meta   7 个 ‖ CHANGELOG.md docs/POOL-CONTRACT.md scratch/arms/supfit-gd1.bak.meta.json training/TRAINING-KNOBS.md …
+--auto ⇒ np 跑 **整轮**（engine 面 ⇒ 不分组）；⚠ 分组那一遍**不是认证**
+▶ 起跑 np …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+⛔ np 红（exit=1）· 完整输出：docs/artifacts/gate-fail-np.txt
+   失败的门（共 1 条）：
+   ✘ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话  → ⑩c build-view 编译必须成功：⛔ axis X 的 current 尺有 0 条（必须恰好 1 条） got=2 want=0
+   ⚑ 池成员 15 枚 {"hard":6,"soft":9} ‖ 体检没量过的自动成员 0 枚 ‖ 人席没量过的 15 枚（**没测 ≠ 过关**）
+  ✘ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话  → ⑩c build-view 编译必须成功：⛔ axis X 的 current 尺有 0 条（必须恰好 1 条） got=2 want=0
+§E335 分组在册 ✅ 172 条门全部归组（171 个键）
+
+N人测试：通过 171 / 172
+
+⚠ unit-broken 的 JSON **损坏**：broken 缺起始引号 ⇒ 本工具已按「只补引号」修复后继续。（调用者不是线上槽文件 ⇒ 这是测试夹具或中间产物，不是生产缺陷；两个真线上槽由门 D168 的 ③ 腿直接读并核过。）
+
+⛔ smoke 红（exit=1）· 完整输出：docs/artifacts/gate-fail-smoke.txt
+PASS 下拉里没有"同一个脚本占两格"（被阶梯认领的风格不许再以"风格"重复出现）
+  ladder rows = ["lv:sparring:champ:池·","lv:regular:champ:池·","lv:hard:champ:池·"]
+  ladder 2人 = {"list":["lv:sparring","lv:regular","lv:hard","st:reflectmix","st:breakdef","st:mix","st:aggro","st:combocounter","st:toolkit"],"pack2":"池·","tier":"lv:regular"}  5人 = {"list":["lv:sparring","lv:regular","lv:hard","st:reflectmix","st:breakdef","st:mix","st:aggro","st:combocounter","st:toolkit"],"pack2":"池·","tier":"lv:regular"}
+
+JS errors: (none)
+SUMMARY: SMOKE FAILED
+
+
+门禁：np 171/172（314.2s） · spec 64/64（0.3s） · smoke 无判词（10.1s） · battle OK（35.9s） · map OK（5.0s）
+⛔ 结论：**不是全绿** —— np/smoke 红
+EXIT=7

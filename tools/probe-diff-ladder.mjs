@@ -196,11 +196,11 @@ const LADDER_NOTED = {};
 if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
 if (USE_POOL) {
   if (!PD || typeof PD.compose !== 'function') { console.error('⛔ js/pool-draw.js 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
-  const PT = join(ROOT, N > 2 ? 'champion-map/data/page/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
-  /* §E609：`--n=2 --pool=1` 以前**根本走不到这里**（下面那句装配判定写死 N>2）⇒ 2 人桌的三档从来没有一条池装配读数。
-   *   补上之后按人数选表：2 人桌用的是 2P 原生那份（`pool-members-2p.tsv`，§E599 的裁定），不是把 3P 池搬过去。 */
+  /* 2026-11-13 用户裁定「2p 直接切到统一池」：两桌同源 ⇒ 2 人桌也读主表（旧 2P 原生表转任训练对手名册）。 */
+  const PT = join(ROOT, 'champion-map/data/page/pool-members.tsv');
+  /* §E609：`--n=2 --pool=1` 以前**根本走不到这里**（下面那句装配判定写死 N>2）⇒ 2 人桌的三档从来没有一条池装配读数。 */
   if (!existsSync(PT)) { console.error('⛔ 池真源表不在：' + PT + '（先跑 tools/pool-add.mjs）'); process.exit(2); }
-  console.log('# 池真源表 = ' + (N > 2 ? 'champion-map/pool-members.tsv（多人桌）' : 'champion-map/pool-members-2p.tsv（2 人桌，§E599 那份原生池）'));
+  console.log('# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）');
   const PL = readFileSync(PT, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
   const ph = Object.fromEntries(PL[0].split('\t').map((x, i) => [x, i]));
   /* §E609 解包：多人包的全局名是 `EPIRUS_CHAMPION_3P`，2P 原生那份是 `EPIRUS_CHAMPION`（`loadChampParams` 只认前者
@@ -220,7 +220,7 @@ if (USE_POOL) {
     MEMBER_P[c[ph.id]] = p;
     (POOL_BY_TIER[tier] = POOL_BY_TIER[tier] || []).push({ id: c[ph.id], wid: c[ph.wid], tier: tier });
   }
-  console.log('# 装配 = **池形态**（逐席不同枚，真源 ' + (N > 2 ? 'champion-map/pool-members.tsv' : 'champion-map/pool-members-2p.tsv') + '）：' +
+  console.log('# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：' +
     Object.keys(POOL_BY_TIER).map(t => t + ' ' + POOL_BY_TIER[t].length + ' 枚').join(' ‖ '));
   /* §E595 `--banddef="A:id1,id2;B:id3,..."`：**不落盘**地量一种分带。
    *   ⚠ 分隔符是 `:` 不是 `=`（这句 10-15 才订正 —— 原来这里写的是 `A=id1,id2`，而本文件的 `flag()` 是 `split('=')[1]`，

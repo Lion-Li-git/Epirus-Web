@@ -558,9 +558,13 @@ const DATA = rows.map(r => ({
   /* F2 滚动夹具族（11-11 转正 · 新尺新列族）：P·R = B 轴单侧读数，C·R = (P + P·R)/2 = 现在的显示主尺。
    *   这一族**自带计数列 m·R**（X4T 的"有格"判定读它，不再借 n 族 —— 借别的尺的分母就是 R8 那条"算不出当算过"）。
    *   ⚠ 名单必须显式：DATA 是白名单，表里有列不等于 d 上有字段，漏一个 = 那一格静默变未测。 */
+  /* X 族（2026-11-13 · Δε ε=0 半边）：值 X<c>R(L) + 计数 n<c>R(L) —— viewer DE4（Δε 标签）的查找键；
+   *   没量过的点落 null ⇒ DE4 如实印"未测"，不借旧族的数顶上（同族配对原则）。 */
   ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
     'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
-    'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
+    'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL',
+    'X2R', 'X3R', 'X5R', 'X8R', 'X2RL', 'X3RL', 'X5RL', 'X8RL',
+    'n2R', 'n3R', 'n5R', 'n8R', 'n2RL', 'n3RL', 'n5RL', 'n8RL']
     .map(k => [k, (r[k] === '' || r[k] === undefined) ? null : +r[k]])),
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
@@ -1042,10 +1046,13 @@ var INC = (function () {
     C5: mean(function (d) { return d.C5; }), C8: mean(function (d) { return d.C8; }),
     C2L: mean(function (d) { return d.C2L; }), C3L: mean(function (d) { return d.C3L; }),
     C5L: mean(function (d) { return d.C5L; }), C8L: mean(function (d) { return d.C8L; }),
-    /* 伪行也要带 F2 那一族（11-11 主尺切 C·R：Fv(INC) 读的是 C·R 列；漏了 = 锚点在默认尺下变 NaN） */
+    /* 伪行也要带 F2 那一族（11-11 主尺切 C·R：Fv(INC) 读的是 C·R 列；漏了 = 锚点在默认尺下变 NaN）
+     *   11-13 追加 X 族同理（DE4 在伪行上也要能算，锚点 Δε 标签不许因缺列静默未测）。 */
     ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
       'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
-      'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
+      'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL',
+      'X2R', 'X3R', 'X5R', 'X8R', 'X2RL', 'X3RL', 'X5RL', 'X8RL',
+      'n2R', 'n3R', 'n5R', 'n8R', 'n2RL', 'n3RL', 'n5RL', 'n8RL']
       .map(function (k) { return [k, mean(function (d) { return d[k]; })]; })),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     pt: ANCH_TIER, ts: '', lin: false };

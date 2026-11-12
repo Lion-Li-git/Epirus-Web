@@ -3,3 +3,4 @@ a-v2-page-1109	A	v2 脚本桌（page dose）	current	excess	v2-scripts(28 seats)
 b-f2-page-1111	B	F2 冠军夹具（page dose）	current	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-1111		B 轴现行；固定 F2 夹具
 c-cr	C	C=(A+B)/2	current	excess	-	-	(A+B)/2	派生，不存 readings
 h5-page-1109	H5	旧 H5 页面卷	frozen	percent	legacy	h5-1109		frozen reference；流水线不写
+b-f2-eps0-1113	X	F2 冠军夹具（exam dose ε=0 贪心）	current	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-eps0-1113		Δε ε=0 半边（11-13 用户令「Δε 全没了…测试写进去」；页面剂量半边 = b-f2-page-1111，同夹具同 seed 同 plan ⇒ 差值只剩剂量）；viewer DE4 消费 X<c>R(L) 列

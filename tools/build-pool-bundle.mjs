@@ -31,6 +31,9 @@ const ROOT = join(HERE, '..');
 const arg = (k, d) => { const a = process.argv.find(x => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 /* §E599（2P 池 · 用户 10-12「2p 每次只要一个对手就行了，池子不需要很大」）：
  *   加 `--table=` 与 `--key=` ⇒ 同一个构建器能出**第二份池**（2P），产物 `js/bundled-champion-pool-2p.js`。
+ *   ⚠ **2026-11-13 用户裁定「2p 直接切到统一池」：2P 那份 bundle 退役删除**（页面两桌读同一份主池），
+ *   这条参数化能力保留给将来的多池需求，别再拿它重建 2P bundle（旧 v7 名册 = champion-map/pool-members-2p.tsv，
+ *   现在只任 2P 训练对手名册，由 `EPIRUS_POOL_OPPS_TABLE` 消费，不进页面）。
  *   为什么必须参数化而不是抄一份：本仓为"同一条口径抄两遍"栽过多次（本文件头 ①②③ 三条都是那次教训）。
  *   ⚠ 2P 包的外壳是 `EPIRUS_CHAMPION`（3P 池成员是 `EPIRUS_CHAMPION_3P`）⇒ `--key=` 不是装饰，
  *     传错会**响亮**红在"解不出权重数组"上，不会静默出空池。 */

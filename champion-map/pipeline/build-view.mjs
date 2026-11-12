@@ -20,7 +20,13 @@ const BCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) BCOLS.push(h[0] === 'short' ? 'P' + c + 'R' : 'P' + c + 'RL');
 const CCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) CCOLS.push(h[0] === 'short' ? 'C' + c + 'R' : 'C' + c + 'RL');
-const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS);
+/* X 族（2026-11-13 · Δε ε=0 半边）：值列 X<c>R(L) + 计数列 n<c>R(L)。viewer 的 X4P(d,L,'X') 找的就是
+ *   'X'+n+XSUF+L 值 + 'n'+n+XSUF+L 计数（champion-map/viewer.mjs:1181）——这族没量过 ⇒ 全图 Δε 一直印"未测"。 */
+const XCOLS = [];
+for (const h of HORIZONS) for (const c of CELLS) XCOLS.push(h[0] === 'short' ? 'X' + c + 'R' : 'X' + c + 'RL');
+const XNCOLS = [];
+for (const h of HORIZONS) for (const c of CELLS) XNCOLS.push(h[0] === 'short' ? 'n' + c + 'R' : 'n' + c + 'RL');
+const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS, XCOLS, XNCOLS);
 
 function toNum(v) { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return isFinite(n) ? n : null; }
 function put(row, ix, v) { if (v === null) return; row[ix] = String(v); }
@@ -34,6 +40,7 @@ export function buildView(opts) {
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
+  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（11-13 起在册；没有该尺行会响亮报错——不许静默缺族） */
   for (const c of ['pack_id', 'ruler_id', 'cell', 'horizon', 'value']) if (rd.ix[c] === undefined) throw new Error('readings 缺列 ' + c);
   const vals = new Map();
   for (const r of rd.rows) {
@@ -55,10 +62,13 @@ export function buildView(opts) {
       const suf = h[1];
       const av = v[A + '|' + c + '|' + h[0]];
       const bv = v[B + '|' + c + '|' + h[0]];
+      const xv = v[X + '|' + c + '|' + h[0]];
       const ai = HEAD.indexOf('P' + c + suf), bi = HEAD.indexOf('P' + c + 'R' + suf), ci = HEAD.indexOf('C' + c + 'R' + suf);
+      const xi = HEAD.indexOf('X' + c + 'R' + suf), xni = HEAD.indexOf('n' + c + 'R' + suf);
       if (av !== null && av !== undefined) { row[ai] = String(av); any = true; }
       if (bv !== null && bv !== undefined) { row[bi] = String(bv); any = true; }
       if (av !== null && av !== undefined && bv !== null && bv !== undefined) { row[ci] = String((av + bv) / 2); all++; }
+      if (xv !== null && xv !== undefined) { row[xi] = String(xv); any = true; }
     }
     if (!any) missing.push(pid);
     out.push(row);
@@ -80,6 +90,8 @@ export function buildView(opts) {
       if (!cr) { missCmp++; continue; }
       seen.add(pid);
       for (let i = 1; i < HEAD.length; i++) {
+        /* X 族（X*c*R/n*c*R）是 11-13 才有的列，gen3 参照表里没有 ⇒ 跳过（不是静默降级：两边共有的列一个不少） */
+        if (ct.ix[HEAD[i]] === undefined) continue;
         const a = toNum(r[i]), b = toNum(cr[ct.ix[HEAD[i]]]);
         if (a === null && b === null) continue;
         if (a === null || b === null) { mism++; continue; }
@@ -133,6 +145,7 @@ export function buildCoordsView(opts) {
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
+  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（值 X<c>R(L) + 计数 n<c>R(L)，viewer DE4 的查找键） */
   const head = tpl.header.slice();
   const ix = Object.fromEntries(head.map((h, i) => [h, i]));
   const by = (t, idCol) => new Map(t.rows.map((r) => [r[t.ix[idCol]], r]));
@@ -168,9 +181,11 @@ export function buildCoordsView(opts) {
     for (const hz of HORIZONS) for (const cell of CELLS) {
       const suf = hz[1], hor = hz[0];
       const av = get(pid, A, cell, hor), bv = get(pid, B, cell, hor);
+      const xv = get(pid, X, cell, hor);
       if (av !== undefined) { set(row, 'P' + cell + suf, av); set(row, 'n' + cell + suf, getN(pid, A, cell, hor)); }
       if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, B, cell, hor)); }
       if (av !== undefined && bv !== undefined) set(row, 'C' + cell + 'R' + suf, (Number(av) + Number(bv)) / 2);
+      if (xv !== undefined) { set(row, 'X' + cell + 'R' + suf, xv); set(row, 'n' + cell + 'R' + suf, getN(pid, X, cell, hor)); }
     }
     rows.push(row);
   }

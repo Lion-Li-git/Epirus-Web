@@ -173,8 +173,7 @@
 <script src="js/ui/rules-panel.js?v=mwdwd7m9"></script>
 <!-- 冠军池：成员权重表，defer（不挡首屏；第一次 AI 决策前必然已执行）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
 <script defer src="js/bundled-champion-pool.js?v=mwdwd7m9"></script>
-<!-- 2P 池：2P 原生包。真源 champion-map/pool-members-2p.tsv，同一支 build-pool-bundle.mjs 生成（--table=/--key=EPIRUS_CHAMPION --global=EPIRUS_CHAMPION_POOL_2P --srcKey=EPIRUS_CHAMPION_3P --out=js/bundled-champion-pool-2p.js -->
-<script defer src="js/bundled-champion-pool-2p.js?v=mwdwd7m9"></script>
+<!-- 2026-11-13 用户裁定「2p 直接切到统一池」：旧 2P 池 bundle（bundled-champion-pool-2p.js）退役删除——两桌读同一份 js/bundled-champion-pool.js；旧 v7 包（pool-members-2p.tsv 名册）转任 2P 训练对手，不再上页面桌 -->
 <!-- v1.8.45（11-06 晨，用户报"刚进入时 3P 未加载静默回退"）：ui.js 也改 defer，且**排在两份池 bundle 之后** ——
      defer 脚本按文档序执行、全部先于 DOMContentLoaded ⇒ 事件绑定发生时池必然已就位，
      "首屏点击赶在 3MB 池 bundle 解析完之前"的竞态窗口从结构上关死（旧窗口内开局 = 池静默回退成单包）。

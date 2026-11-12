@@ -389,16 +389,17 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
         '% 不在 50%±2% ⇒ 加权没落地（整表均匀抽会得到 ' + (100 * all3.filter(m => m.tier === 'soft').length / all3.length).toFixed(1) + '%）');
       ok(/hard 50% ‖ soft 50%/.test(bandsTxt), '⑬c `compose` 必须把生效带比印出来（页面标签要抄这一句）‖ 实测 bands=' + (bandsTxt || '(空)'));
     }
-    const P2 = 'champion-map/pool-members-2p.tsv';
+    /* ⑬b 2P 桌同源校验（2026-11-13 用户裁定「2p 直接切到统一池」）：2P 画桌现在读**同一份主表**，
+     *   旧 `champion-map/pool-members-2p.tsv` 已退役成训练对手名册（不再喂页面）⇒ 这条改钉主表的
+     *   rosterFor 形状（与 ⑬a 同源，双读为的是 2P 路径也在同一把抽法上被钉住）。 */
+    const P2 = 'champion-map/data/page/pool-members.tsv';
     if (existsSync(P2) && mixT.length) {
       const L2 = readFileSync(P2, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
       const h2 = L2[0].split('\t'), i2 = h2.indexOf('tier'), id2 = h2.indexOf('id');
       const m2 = L2.slice(1).map(l => l.split('\t')).filter(r => r[id2]).map(r => ({ id: r[id2], wid: r[id2], tier: r[i2] }));
       const R2 = Q.rosterFor(m2, mixT[0]);
-      /* §E677（用户 2026-10-21 裁 C3 ⇒ 2P 也拆成两带）：这条原来把状态写死成"2P 还没拆带 ⇒ 必须走退路"，
-       *   于是**改口径**与**静默换抽法**两种事都红在同一句话上 —— 读它的人分不出是哪种。
-       *   现在判的是**一致性**：表里有 `mid`（没拆带）⇒ 必须走退路且**说出 note**；表里没有 `mid`（已拆带）
-       *   ⇒ 必须给加权（`bandW` 非空）且成员覆盖整表。两种形状下"静默降级"都仍然红。 */
+      /* §E677（用户 2026-10-21 裁 C3 ⇒ 拆成两带）：判**一致性**——表里有 `mid`（没拆带）⇒ 必须走退路且**说出 note**；
+       *   表里没有 `mid`（已拆带）⇒ 必须给加权（`bandW` 非空）且成员覆盖整表。两种形状下"静默降级"都仍然红。 */
       const hasMid2 = m2.some(r => r.tier === 'mid');
       if (hasMid2) {
         ok(!R2.bandW && !!R2.note && R2.members.length > 0,

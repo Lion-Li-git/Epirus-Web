@@ -487,3 +487,5 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-12T18:18:02.654Z	847b8ea043afa036	docs/artifacts/MSB17-R1S1454169188-band3.bak	docs/artifacts/MSB17-R1S1454169188-band6.bak	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
 2026-11-12T18:18:02.654Z	7b10958bed239bcf	docs/artifacts/MSB17-R1S1454169188-band4.bak	docs/artifacts/night-adapt/MSB17-R1S1454169188.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
 2026-11-12T18:18:02.654Z	3d41fadb3492da08	docs/artifacts/MSB17-R1S413727588-band1.bak	docs/artifacts/night-adapt/MSB17-R1S413727588.js	train-3p	band 夹具/臂副本同批落盘未登记（v2.0.7 收工补账）
+2026-11-12T19:07:17.461Z	d56b468bc5cb7eca	scratch/zcode-1113-deps/guardtest/a.js	scratch/zcode-1113-deps/guardtest/b.js	guardtest	test dup
+2026-11-12T19:07:17.463Z	d56b468bc5cb7eca	scratch/zcode-1113-deps/guardtest/a.js	scratch/zcode-1113-deps/guardtest/c.js	guardtest	已登记的复制：test declared copy

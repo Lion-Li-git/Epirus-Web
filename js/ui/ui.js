@@ -186,7 +186,7 @@
     (function () {
       const t0 = tierOf(B.diff);
       if (!t0 || !t0.pool) return;
-      const pst = POOLS[n > 2 ? 'p3' : 'p2'].st.status;
+      const pst = POOLS.p3.st.status;
       if (pst === 'ok' || !pst || pst === 'init') return;
       log('⚠ 冠军池还没就绪（' + (pst === 'not-yet' ? 'bundle 还没执行到，脚本顺序问题' : pst === 'no-bundle' ? 'bundle 未加载/形状不对' : pst) +
         '）⇒ **本局对手是回退装配**（' + B.oppInfo + '）。池就绪后新开一局即恢复池装配。');
@@ -474,10 +474,10 @@
    * ⚠ 抽签实现不在本文件重写 —— 走 `js/pool-draw.js` 那一份（门 `D234` 与量具 `tools/probe-pool.mjs` 用的是同一份）。 */
   /** 降级分三种原因，**必须分开说**（浏览器实机跑出来的第一条就是这句：默认档"普通"没配成员时，
    *  旧文案会写"bundle 缺失或该档池空"，而 bundle 其实加载得好好的 ⇒ 把"还没配"说成了"坏了"）。 */
-  function poolOffReasonOf(k, tier) {
+  function poolOffReasonOf(k, tier, two) {
     const slot = POOLS[k], S = slot.st;
     loadPoolOf(k);
-    const back = k === 'p2' ? '退回单包（那一枚 2P 冠军）' : aiSeatWord() + '同一枚（内置槽）';
+    const back = two ? '退回单包（那一枚 2P 冠军）' : aiSeatWord() + '同一枚（内置槽）';
     if (S.status === 'no-bundle') return slot.name + ' bundle 未加载 ⇒ ' + back;
     /* §E621：走到这里说明"这一次还没拿到全局"（bundle 的 defer 脚本还没执行），**不是**坏了；
      *   单独一句是为了下次有人读到它不会又去查 bundle 在不在（我这晚就是这么绕了一圈的）。 */
@@ -487,16 +487,14 @@
     if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配' + slot.name + '成员 ⇒ ' + back + '，**不是故障**';
     return null;
   }
-  function poolOffReason(tier) { return poolOffReasonOf('p3', tier); }
-  function poolOffReason2(tier) { return poolOffReasonOf('p2', tier); }
-  /* §E599（10-12）：池层**两份**（多人 3P 与 2P 各一份），而逻辑**只写一遍** —— 抄第二份是本仓栽得最多的一种错。
-   *   2P 池 = **2P 原生**包（`js/bundled-champion-pool-2p.js`，真源 `champion-map/pool-members-2p.tsv`）；
-   *   用户 10-12 裁定：2P 每局只要一个对手 ⇒ 成员不必多；**种类 <5 的不要**。
-   *   ⚠ 老注释里"`n<=2` 完全走老路"的理由（§E286：3P 包在 1v1 上是分布外）**对 2P 原生包不成立** ⇒
-   *     2P 走的是另一份池，不是把 3P 池搬到 2 人桌。 */
+  function poolOffReason(tier, two) { return poolOffReasonOf('p3', tier, two); }
+  /* §E599（10-12）：池层曾按桌数**两份**（多人 3P 与 2P 各一份），逻辑只写一遍。
+   *   **2026-11-13 用户裁定「2p 直接切到统一池」：2P 槽退役，两桌读同一份池**（`EPIRUS_CHAMPION_POOL`）——
+   *   §E286"3P 包在 1v1 是分布外"的旧顾虑被 2.0 包的 2P 能力实测取代（2P 桌从未同步主池的账也一并清掉）；
+   *   旧 2P 原生包（`champion-map/pool-members-2p.tsv` 那批 v7）**不再上页面桌**，转任 2P 训练对手名册
+   *   （`EPIRUS_POOL_OPPS_TABLE` 指它）。这一段历史裁定（2P 每局只要一个对手、种类 <5 的不要）只约束过旧池，随槽一起退。 */
   const POOLS = {
     p3: { g: 'EPIRUS_CHAMPION_POOL', st: { members: null, params: {}, bad: [], status: 'init' }, name: '池' },
-    p2: { g: 'EPIRUS_CHAMPION_POOL_2P', st: { members: null, params: {}, bad: [], status: 'init' }, name: '2P 池' },
   };
   const POOL = POOLS.p3.st;                      /* 旧引用（`POOL.bad` 等）继续指向 3P 那一份 */
   function loadPoolOf(k, force) {
@@ -507,7 +505,7 @@
       /* §E621 修法 B（用户 10-15 裁定：「按 b 修好 2p 冠军池的问题」）：**"这一次还没拿到全局"不是"bundle 坏了"**。
        *   原来这里把 `S.members` 落成 `[]` 再记 `status='no-bundle'`，而上面那句 `members !== null` 就 return
        *   ⇒ 首屏那一次"还没有"被**永久缓存**：`ui.js` 是同步脚本、两份 pool bundle 是 `defer`（defer 永远在解析完之后执行），
-       *   而默认人数 = 2 ⇒ 任何回显路径都会在这里先摸一次 p2 ⇒ **2 人桌的池自 §E599 起从未生效过**（日志 DONE-14 / 待裁 #28）。
+       *   而默认人数 = 2 ⇒ 任何回显路径都会在这里先摸一次池（§E599 时代是 p2 槽，11-13 统一池后是 p3 同一份）⇒ **2 人桌的池自 §E599 起从未生效过**（日志 DONE-14 / 待裁 #28）。
        *   现在：保持 `members = null`（下一次调用再试），状态单独记 `'not-yet'`，原因句与真·无 bundle 分开说（契约 §4：不许静默，也不许把"还没"说成"坏了"——
        *   这句正是上面那条注释早就警告过的同一件事，这次是它自己的另一半被踩中）。 */
       /* 两种"拿不到"要分开说，否则这句又变成第二个假原因：文档还在解析 ⇒ 真是脚本顺序问题（还会再来一次）；
@@ -536,7 +534,6 @@
     return S.members;
   }
   function loadPool(force) { return loadPoolOf('p3', force); }
-  function loadPool2(force) { return loadPoolOf('p2', force); }
   /* §E600-B（用户 10-13 裁定：「把启发式随机脚本塞到弱池子里面」）：掺几席、掺谁由 `bots.js` 的
    *   `DIFF_TIERS[].scriptMix` 说话，而**推导只有一处** —— `js/pool-draw.js` 的 `scriptSeats`。
    *   页面与量具（`tools/probe-pool.mjs`）都调它，否则量的是"我以为产品会怎么掺"（规矩 134 那一族）。
@@ -551,10 +548,10 @@
   function poolDrawFor(state, tier, n) {
     const D = window.EpirusPoolDraw;
     if (!D || !tier || !tier.pool) return null;
-    const k = (n > 2) ? 'p3' : 'p2';                       /* §E599：2P 走 2P 原生池那一份（不是把 3P 池搬过去） */
+    /* 2026-11-13 用户裁定「2p 直接切到统一池」：两桌读同一份池（旧 §E599 分桌池已退，见 POOLS 注）。 */
     /* §E609：这一档该拿哪份名单、要不要按带加权 —— **推导只有一份**（`pool-draw.js` 的 `rosterFor`），
      *   页面不许自己判"mid 空了就换 mix"（那就是量具与产品两份实现，规矩 134 那一族）。 */
-    const R = D.rosterFor(loadPoolOf(k), tier);
+    const R = D.rosterFor(loadPoolOf('p3'), tier);
     const members = R.members;
     if (!members.length) return null;
     const aiSeats = Math.max(1, n - 1);                   /* 2P ⇒ 1 席 */
@@ -584,10 +581,9 @@
       return { params: null, scriptPick: sst.pick, scriptName: sst.name, from: 'script:' + m.id,
         poolDraw: draw, seatId: m.id, poolNote: draw.mixNote || null };
     }
-    const P2 = plan.two ? POOLS.p2.st : POOL;
-    const p = m && P2.params[m.id];
+    const p = m && POOL.params[m.id];
     if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
-    return { params: p, from: (plan.two ? 'pool2:' : 'pool:') + m.id, poolDraw: draw, seatId: m.id,
+    return { params: p, from: 'pool:' + m.id, poolDraw: draw, seatId: m.id,
       poolNote: (draw.allSame && !plan.two) ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ ' + aiSeatWord() + '全同（降级，已明说）' : null };
   }
   /** 池到底生不生效，**只这一处判**（v1.6.63 内的一次修正，未另起版本号）。
@@ -604,7 +600,7 @@
     const draw = poolDrawFor(state, tier, n);
     if (!draw || !draw.seats.length) {
       return { on: false, local: false, two: two, draw: null,
-        why: (two ? poolOffReason2(tier) : poolOffReason(tier)) || '池未生效（原因未归类）⇒ 退回单包' };
+        why: poolOffReason(tier, two) || '池未生效（原因未归类）⇒ 退回单包' };
     }
     return { on: true, local: false, two: two, why: null, draw: draw };
   }
@@ -735,8 +731,8 @@
       const plan = poolPlan(B.state, tier, B.players || 2);
       const d = plan.draw;
       if (plan.on && d && d.seats.length) {
-        const S = plan.two ? POOLS.p2.st : POOL;
-        const nm = plan.two ? '2P池' : '池';
+        const S = POOL;
+        const nm = '池';
         /* §E609 这一行必须说得出"本档实际从哪些带抽"：mix 生效时还写 `mid(0 枚)` 就是骗人，
          *   而走退路（这张表没拆带）时不写出来就是静默降级（契约 §4）。推导仍只有一份：`rosterFor`。 */
         const RD = (window.EpirusPoolDraw && window.EpirusPoolDraw.rosterFor) ? window.EpirusPoolDraw.rosterFor(S.members, tier) : null;
@@ -766,7 +762,7 @@
     const poolOff = tier.pool
       ? (cf.from === 'local'
         ? '（池未生效：本机导入优先 ⇒ ' + ((B.players || 2) > 2 ? aiSeatWord() + '用你这枚' : '对手用你这枚') + '）'
-        : '（' + (((B.players || 2) > 2) ? poolOffReason(tier) : poolOffReason2(tier)) + '）') : '';
+        : '（' + poolOffReason(tier, !((B.players || 2) > 2)) + '）') : '';
     return {
       source: packLabel + ' 冠军（' + from + '）· ' + tier.name + tierEpsLabel(tier) + poolOff,
       champ: true, from: cf.from, tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode, ramp: !!tier.ramp

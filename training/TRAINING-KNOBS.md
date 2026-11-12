@@ -148,9 +148,9 @@
 | `EPIRUS_PAIRED` | train-3p | Y | — | 在用 |  |
 | `EPIRUS_PASSIVE_FIELD` | — | — | — | 已删除（台账在册） |  |
 | `EPIRUS_PASSIVE_OPPS` | train-3p | Y | — | 在用 | DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变） |
-| `EPIRUS_POOL_OPPS` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外） |
-| `EPIRUS_POOL_OPPS_TABLE` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外） |
-| `EPIRUS_POOL_OPPS_TIER` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；11-07 ZCode：表路径可指（2P 产线 = pool-members-2p.tsv，3P 成员在 1v1 是分布外） |
+| `EPIRUS_POOL_OPPS` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；表路径可指名册——11-13 统一池裁定后 pool-members-2p.tsv 是**2P 训练对手名册**（旧 v7 包当 2P 陪练），不再喂页面 |
+| `EPIRUS_POOL_OPPS_TABLE` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；表路径可指名册——11-13 统一池裁定后 pool-members-2p.tsv 是**2P 训练对手名册**（旧 v7 包当 2P 陪练），不再喂页面 |
+| `EPIRUS_POOL_OPPS_TIER` | train-3p | Y | — | 在用 | v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；表路径可指名册——11-13 统一池裁定后 pool-members-2p.tsv 是**2P 训练对手名册**（旧 v7 包当 2P 陪练），不再喂页面 |
 | `EPIRUS_POPSTAT` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
 | `EPIRUS_POPSTAT_K` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
 | `EPIRUS_POPSTAT_OUT` | train-3p | Y | — | 在用 | #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变） |
