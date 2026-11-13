@@ -1276,18 +1276,21 @@
       case 'cancel': return { cls: 'ev gold', html: '⚔ 双方攻击相抵，均无效' };
       case 'clash': return { cls: 'ev gold', html: '⚔ 高优先级攻击阻止了对方攻击' };
       case 'thunderRing': return { cls: 'ev gold', html: '🌩 双方互放小雷成环 —— 两雷皆无效果' };
-      case 'rod': return e.mode === 'A'
-        ? { cls: 'ev gold', html: '☂ ' + nm(e.pids[0]) + ' 的避雷针：所有雷系技能无效，施术者反噬 1 电并获得其能量' }
-        : { cls: 'ev blue', html: '☂ ' + nm(e.pids[0]) + ' 架起避雷针（3 回合内免雷一次）' };
+      case 'rod': {
+        const who = (e.pids || []).map(nm).join('、');
+        return e.mode === 'A'
+          ? { cls: 'ev gold', html: '☂ ' + who + ' 的避雷针：所有雷系技能无效，施术者反噬 1 电' + ((e.pids && e.pids.length > 1) ? '并均分其能量' : '并获得其能量') }
+          : { cls: 'ev blue', html: '☂ ' + who + ' 架起避雷针（3 回合内免雷一次）' };
+      }
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
       /* v1.5.253：不再硬编码"受 2 点电伤" —— 是否真打中要按同回合的连带伤害事件反推（见 `bigTChainText`）。 */
       case 'bigTChain': return bigTChainText(e, roundEvents);
-      case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】→ ' + nm(e.to) };
-      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制' };
+      case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】' + (e.to != null ? '→ ' + nm(e.to) : '') };
+      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + (e.cycle ? '互相镜面成环，本次反射无效' : (e.key === 'firestorm' ? '自己没有有效符咒，镜面天火无效' : (nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制'))) };
       /* N14 v1.5.16：非伤害类技能 = 效果落在自己身上 + 对 t2 空指（指向保留、本身无效果） */
-      case 'mirrorCopySelf': return { cls: 'ev', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】用在自己身上（空指 → ' + nm(e.to) + '）' };
+      case 'mirrorCopySelf': return { cls: 'ev', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】' + (e.key === 'armor' && e.to != null ? ('用在自己身上并使 ' + nm(e.to) + ' 附带火弱点') : ('用在自己身上（空指 → ' + nm(e.to) + '）')) };
       case 'revive': return { cls: 'ev gold', html: '👻 ' + nm(e.pid) + ' 回魂复活！本回合无限能量' };
       case 'vampire': return { cls: 'ev pur', html: '🧛 ' + nm(e.pid) + ' 觉醒【吸血鬼公爵】：摄魂自愈 2、受光伤 +1' };
       case 'purify': return { cls: 'ev heal', html: '🧼 ' + nm(e.pid) + ' 净化：清除 ' + e.curses + ' 枚符咒与负面状态' };

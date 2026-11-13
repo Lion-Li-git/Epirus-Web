@@ -104,7 +104,7 @@
   function holo2Proto() { return H2P; }
 
   function catOf(key) { return key ? (CAT3[R.byKey[key].cat] + 1) / 4 : 0; }
-  function priOf(key) { return key ? (R.byKey[key].pri || 3) / 5 : 0; }
+  function priOf(key) { return key ? (R.byKey[key].pri != null ? R.byKey[key].pri : 3) / 5 : 0; }
   function idxOf(key) { return key ? R.skills.findIndex(function (s) { return s.key === key; }) / R.skills.length : 0; }
   function cdCount(p) { return Object.keys(p.cooldown).filter(function (k) { return p.cooldown[k] > 0; }).length; }
 

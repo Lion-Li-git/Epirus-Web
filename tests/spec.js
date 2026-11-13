@@ -1127,6 +1127,105 @@
     eq(bagLose.p[1].hp, 2, '八卦阵判定败过载炮照常落伤');
   });
 
+  t('R67 地雷声明 pri3 / 结算 pri0：当回合被攻击触发不可逆，净化只能清未触发的地雷', function () {
+    // ① 无论谁先结算，同回合埋雷且被激光剑命中 → 必触发地雷并反伤剑手（pri0 结算）
+    let st = game('standard'); setEp(st, 5, 5);
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.MINE, {});
+    S.attemptAction(st, 1, R.SK.SWORD, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].hp, 2, '剑扣1血，当回合地雷不应炸自己');
+    eq(st.p[1].hp, 2, '同回合地雷在 pri3 武装，被激光剑触发后于 pri0 引爆');
+    eq(st.p[0].mineArmed, false, '触发后地雷卸载');
+
+    // ② 枪 pri2 击中上一回合武装的持雷者，即便后者本回合用了净化 pri1，地雷已被踩中仍于 pri0 引爆
+    st = game('standard'); setEp(st, 9, 9);
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, SK.MINE, SK.JI);
+    ok(st.p[0].mineArmed, '上回合地雷武装中');
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.PURIFY, {});
+    S.attemptAction(st, 1, R.SK.GUN, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.actions[0].outcome, 'ok', '净化成功出招');
+    eq(st.p[0].hp, 2, '净化前枪已命中地雷者');
+    eq(st.p[1].hp, 2, '已踩中锁存的地雷不被后续 pri1 净化撤回，pri0 仍引爆');
+
+    // ③ 狙击枪豁免地雷，因此同回合净化 pri1 可正常清掉未被触发的地雷
+    st = game('standard'); setEp(st, 9, 9);
+    st.p[0].hp = 3; st.p[1].hp = 3;
+    play(st, SK.MINE, SK.JI);
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.PURIFY, {});
+    S.attemptAction(st, 1, R.SK.SNIPE, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.actions[0].outcome, 'ok', '净化成功出招');
+    eq(st.p[1].hp, 3, '狙击不触发地雷 ⇒ 净化正常清掉未触发地雷');
+    eq(st.p[0].mineArmed, false, '未触发地雷被净化清除');
+  });
+
+  t('R68 回合结束死亡判定 + 天火 pri3 先于净化 pri1 但净化仍可回血救命', function () {
+    // ① 枪手被同回合更高优先级的激光剑打到 <=0 HP，只要未被作废，他的枪仍在 pri2 打出
+    let st = S.createState('multi', seqRng([0.9]), 3);
+    for (const p of st.p) { p.hp = 3; p.ep = 5; }
+    st.p[1].hp = 1; // 1 HP 枪手
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.SWORD, { target: 1 }); // pri3 对 P1
+    S.attemptAction(st, 1, R.SK.GUN, { target: 2 });   // pri2 对 P2（与 P0 不互指，不交锋）
+    S.attemptAction(st, 2, R.SK.MINE, {});             // P2 埋雷验证枪确实打出并触发地雷
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].hp, -1, 'P1 先挨剑 1→0，再因自己打出的枪引爆 P2 地雷被波及 0→-1，回合末阵亡');
+    eq(st.p[2].hp, 2, 'P1 虽然在 pri3 被打成 0HP，未作废的枪仍在 pri2 命中 P2 并于 pri0 触发地雷');
+
+    // ② 天火 pri3 先伤，净化 pri1 清除 2+ 枚符咒仍能回血救回 1HP 受害者
+    st = game('standard'); setEp(st, 5, 5);
+    st.p[0].hp = 3;
+    st.p[1].hp = 1;
+    st.p[1].stickers = [{ owner: 0, age: 1 }, { owner: 2, age: 1 }]; // P0 只引爆 1 枚(-1→0HP)，P1 共有2枚净化+1→1HP！
+    play(st, SK.FIRESTORM, SK.PURIFY);
+    eq(st.p[1].hp, 1, '天火(-1→0HP)先伤，净化(+1→1HP)回血把人救活，不判定死亡');
+    eq(st.p[1].stickers.length, 0, '天火不删符咒，随后净化正常清除全部符咒');
+    ok(!st.over, '救活后对局继续');
+  });
+
+  t('R69 过载炮第3发只有真正命中才清空目标能量（被转移时不清）', function () {
+    const st = S.createState('multi', seqRng([0.9]), 3);
+    for (const p of st.p) { p.hp = 5; p.ep = 6; }
+    st.p[0].cannonCount = 2; // 本发是第 3 发
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.CANNON, { target: 1 });
+    S.attemptAction(st, 1, R.SK.TRANSFER, { target: 2 }); // P1 将过载炮转移给 P2（转移费 2）
+    S.attemptAction(st, 2, R.SK.JI, {});
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[2].hp, 4, '伤害转移给 P2');
+    eq(st.p[1].ep, 4, 'P1 的过载炮被转移未命中本人，剩余能量不被清空（6 - 转移费 2 = 4）');
+  });
+
+  t('R70 多避雷针均分能量回馈（防浮点误差）', function () {
+    // ① 2 避雷针 + 大雷(5) => 每人 5 - 4(避雷针费) + 2.5 = 3.5
+    let st = S.createState('multi', seqRng([0.9]), 3);
+    for (const p of st.p) { p.hp = 5; p.ep = 5; }
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.ROD, {});
+    S.attemptAction(st, 1, R.SK.ROD, {});
+    S.attemptAction(st, 2, R.SK.BIG_T, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].ep, 3.5, '5 - 4 + 2.5 = 3.5');
+    eq(st.p[1].ep, 3.5, '5 - 4 + 2.5 = 3.5');
+
+    // ② 3 避雷针 + 小雷(2) => round2(2/3) = 0.67，每人 5 - 4 + 0.67 = 1.67，无浮点尾数
+    st = S.createState('multi', seqRng([0.9]), 4);
+    for (const p of st.p) { p.hp = 5; p.ep = 5; }
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.ROD, {});
+    S.attemptAction(st, 1, R.SK.ROD, {});
+    S.attemptAction(st, 2, R.SK.ROD, {});
+    S.attemptAction(st, 3, R.SK.MINI_T, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].ep, 1.67, '5 - 4 + 0.67 = 1.67（无长浮点误差）');
+  });
+
   /* ============ 输出 ============ */
   const pass = results.filter(r => r.ok).length;
   const html = '<div class="sum">通过 ' + pass + ' / ' + results.length + '</div><ol>' +

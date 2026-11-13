@@ -234,7 +234,7 @@
       return fail('insufficient', 'ジ不足（需' + cost.ep + '，有' + p.ep + '）');
     }
     // 正常扣费
-    p.ep -= cost.ep;
+    p.ep = Math.round((p.ep - cost.ep) * 100) / 100;
     if (cost.hp) {
       p.hp -= cost.hp;
       ev2({ type: 'damage', to: pid, amt: cost.hp, reason: '过载炮血债', via: 'cost' });

@@ -120,8 +120,10 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
    *   夹具换成**新池成员**（tracked：`docs/artifacts/2p0-pool/D1200-s13.bak`；`FIXTURE_PACK` 不动——
    *   它被 61 处属性级断言钉着，换它 = 另一件事）。
    *   11-06 晨：原候选 L5-1200-s13 实测主体席只有 10%，随机席 20%，锚会因夹具过弱而假红；
-   *   D1200-s13 同条件实测 27.5% vs 12.5%，故统一用它。 */
-  const POOL_FIXTURE = 'docs/artifacts/night-adapt/KDG-B-Q-s13.js';
+   *   D1200-s13 同条件实测 27.5% vs 12.5%，故统一用它。
+   *   2026-11-13：优先级/镜面/避雷针/地雷规则结算重构后 KDG-B-Q-s13 与 rand 打平（15.83% vs 15.83%），
+   *   改用同池在册 hard 成员 WSEL9-200（⑥b 25.00% vs rand 15.83% 差 -9.17pt；⑥c 22.50% vs 14.17% 极差 8.33pt）。 */
+  const POOL_FIXTURE = 'docs/artifacts/night-adapt/WSEL9-200.js';
   const prPair = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE, '--ref=' + POOL_FIXTURE,
     '--batches=6', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 300000 });
   eq(prPair.status, 0, '⑥b 主体席尺（同枚两臂）必须跑成（实测 exit=' + prPair.status + ' ‖ ' + String(prPair.stderr || '').slice(-240) + '）');

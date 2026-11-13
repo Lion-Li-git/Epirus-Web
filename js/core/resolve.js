@@ -11,6 +11,16 @@
   const SK = R.SK;
 
   const ev = function (state, e) { state.events.push(e); };
+  const round2 = function (x) { return Math.round(x * 100) / 100; };
+  function skillPri(key) {
+    const d = key && R.byKey[key];
+    return (d && d.pri != null) ? d.pri : 3;
+  }
+  function isAliveInRound(state, pid) {
+    if (!state.p[pid]) return false;
+    if (state._roundAlive) return !!state._roundAlive[pid];
+    return state.p[pid].hp > 0;
+  }
 
   function actionOf(state, pid) {
     const a = state.actions[pid];
@@ -24,15 +34,22 @@
     if (acted && !acted.voided) {
       acted.voided = true;
       /* 用户裁定 2026-10-16：**被作废的技能不许留下副作用**。
-       * 目前唯一在**生产侧**就写状态的技能是藤甲（:1129 贴火弱），而作废可能落在它之后（激光眼与藤甲同层、
-       *   按 turnOrder 轮换）⇒ 这里把那次行动留下的火弱**回滚成贴之前的值**（快照存在行动对象上）。
-       * 其余副作用都判在**消费侧**：金刚盾的反击 / 防御·反弹·八卦阵的格挡走 `guardOf`→`actionOf`，
-       *   全息盾走 `holoShieldFrom` 里的 `actionOf`（那一处自己写着「必须走 actionOf，不能直读
-       *   state.actions[i]」）⇒ 作废后自然不生效。这一处是唯一的例外。 */
-      if (acted.key === SK.ARMOR && acted.fireWeakPrev) {
+       * 生产侧写出状态（藤甲火弱 / 镜面复制盾 / 镜面转移）在被作废时一并回滚/清理。 */
+      if (acted.fireWeakPrev) {
         const fp = acted.fireWeakPrev, victim = state.p[fp.pid];
-        if (victim) { victim.fireWeakNow = fp.now; victim.fireWeakNext = fp.next; }
+        let otherArmor = false;
+        for (let j = 0; j < playerCount(state); j++) {
+          if (j === pid) continue;
+          const ja = effectiveAction(state, j);
+          if (ja && ja.key === SK.ARMOR && effTarget(state, ja) === fp.pid) { otherArmor = true; break; }
+        }
+        if (victim && !otherArmor) { victim.fireWeakNow = fp.now; victim.fireWeakNext = fp.next; }
       }
+      if (state.p[pid]) {
+        state.p[pid].copiedGuard = null;
+        state.p[pid]._copiedTransfer = null;
+      }
+      if (state._mirrorResolved) delete state._mirrorResolved[pid];
       /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：事件里补**被作废的是哪张卡**（`voids`）。
        * 为什么必须落在 `setVoid` 这一处而不是各调用点：这里是全仓**唯一**发 `voided` 的地方
        *   （miniT / 激光眼 / 成环 / 避雷针 / 狙击被干扰 都走它），分开写必然漏。
@@ -85,7 +102,7 @@
   function playerCount(state) { return state.p.length; }
   function aliveOpps(state, pid) {
     const out = [];
-    for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) out.push(i);
+    for (let i = 0; i < state.p.length; i++) if (i !== pid && isAliveInRound(state, i)) out.push(i);
     return out;
   }
   /* v1.5.54（L7 第四次）：**无显式目标时的默认作用者不许是固定索引**。
@@ -171,12 +188,14 @@
       }
       p.baguaExtra = !!p.guardNext; p.guardNext = false; // R21
       p.copiedGuard = null;                              // N14 v1.5.17：复制来的架势只活本回合
+      p._copiedTransfer = null; p._mineLocked = null;
       /* 火弱只活一个回合（R22/N18）：Next 在 startTurn 被消费成 Now，两处都在回合末清空。
        * 原训练侧实验开关 `EPIRUS_FIREWEAK_PERSIST`（"Next 不清除、每回合重新武装"）已于
        * v1.5.157 **删除**：它在浏览器与所有 vm 沙箱里都没有 `process` ⇒ 恒 false ⇒ 是**死键**
        * （用户 09-22 裁定"删掉"）。删除**行为零变化**，但构成一次**指纹换代**（证明见 CHANGELOG v1.5.157）。 */
       p.fireWeakNow = !!p.fireWeakNext; p.fireWeakNext = false; // R22
     }
+    state._mirrorResolved = {};
     checkOver(state);
   }
 
@@ -210,8 +229,8 @@
     if (!a || a.key !== SK.MIRROR) return null;
     const opps = aliveOpps(state, m);
     let t1 = a.target, t2 = a.target2;
-    if (t1 == null || t1 === m || !state.p[t1] || state.p[t1].hp <= 0) t1 = saltPick(state, opps, 1);   // v1.5.54: 同 oppOf
-    if (t2 == null || t2 === m || t2 === t1 || !state.p[t2] || state.p[t2].hp <= 0) {
+    if (t1 == null || t1 === m || !isAliveInRound(state, t1)) t1 = saltPick(state, opps, 1);   // v1.5.54: 同 oppOf
+    if (t2 == null || t2 === m || t2 === t1 || !isAliveInRound(state, t2)) {
       t2 = null;
       const rest = [];
       for (const o of opps) if (o !== t1) rest.push(o);
@@ -220,13 +239,45 @@
     return { t1, t2 };
   }
 
-  /* 镜面反射"复制到使用者自己身上"的那个技能 key = t1 本回合的技能。
-   * t1 没有行动 / 已被作废 → null（这是**唯一**合法的"无可复制"）。 */
+  /* 顺着 t1 镜面链走到最终被复制的非镜面技能（支持镜面复制镜面；成环/作废/隐藏消耗则 null）。 */
+  function resolveMirrorChain(state, m, usedByHidden) {
+    const a = actionOf(state, m);
+    if (!a || a.key !== SK.MIRROR) return null;
+    if (usedByHidden && usedByHidden[m]) return { hidden: true };
+    const rf = mirrorRefs(state, m);
+    if (!rf || rf.t1 == null || rf.t2 == null) return null;
+    const seen = {};
+    seen[m] = true;
+    let cur = rf.t1;
+    const maxSteps = playerCount(state) + 1;
+    for (let step = 0; step < maxSteps; step++) {
+      if (usedByHidden && usedByHidden[cur]) return null;
+      const ca = actionOf(state, cur);
+      if (!ca) return null;
+      if (ca.key !== SK.MIRROR) return { basePid: cur, action: ca, t1: rf.t1, t2: rf.t2 };
+      if (seen[cur]) return { cycleInvalid: true, t1: rf.t1, t2: rf.t2 };
+      seen[cur] = true;
+      const crf = mirrorRefs(state, cur);
+      if (!crf || crf.t1 == null || crf.t2 == null) return null;
+      cur = crf.t1;
+    }
+    return { cycleInvalid: true, t1: rf.t1, t2: rf.t2 };
+  }
+
+  /* 镜面反射"复制到使用者自己身上"的那个技能 key = 沿镜面链解析得到的最终技能 key。 */
   function mirrorSelfKey(state, m) {
-    const refs = mirrorRefs(state, m);
-    if (!refs || refs.t1 == null) return null;
-    const ta = actionOf(state, refs.t1);
-    return ta ? ta.key : null;
+    const ch = resolveMirrorChain(state, m, state._mirrorHidden || null);
+    return (ch && ch.action) ? ch.action.key : null;
+  }
+
+  function transferDestOf(state, pid) {
+    const ta = actionOf(state, pid);
+    if (!ta) return null;
+    let dest = null;
+    if (ta.key === SK.TRANSFER) dest = targetOf(state, pid);
+    else if (ta.key === SK.MIRROR && state.p[pid] && state.p[pid]._copiedTransfer != null) dest = state.p[pid]._copiedTransfer;
+    if (dest != null && dest !== pid && isAliveInRound(state, dest)) return dest;
+    return null;
   }
 
   function guardOf(state, pid) {
@@ -235,13 +286,9 @@
       const gk = guardKindOfKey(a.key);
       if (gk) return { kind: gk };
     }
-    /* N14 **v1.5.17（用户二次裁定，推翻 v1.5.16 的"声明即生效"）**：复制来的架势
-     * **只从镜面反射真正结算那一刻起生效**。理由（用户原话）：大雷(pri4) 优先于镜面反射(pri3)
-     * ⇒ 目标若用镜面反射，会先被大雷**无效化**，"反弹并没有被复制成功"
-     * ⇒ 用户例子里 a 就该挨那 2 点电伤。所以这里读的是 `applyMirrorSelf` 在 ④b
-     * 真结算时写下的 `copiedGuard`（它保护得到随后结算的 ⑤ 枪 / ⑥ 狙击，但保护不到先前的大雷）。 */
+    /* N14 复制来的架势：只从镜面反射真正进入防御落位起生效；若随后被作废则立即失效。 */
     const cg = state.p[pid].copiedGuard;
-    if (cg) {
+    if (cg && (!state.actions[pid] || !state.actions[pid].voided)) {
       const gk2 = copiedGuardKind(cg);
       if (gk2) return { kind: gk2, copied: true };
     }
@@ -279,7 +326,7 @@
         for (const it of list) {
           if (it.source == null || it.source === to) continue;        // 无来源（天火…）⇒ 只计入总数、不反
           const src = it.source;
-          if (!state.p[src] || state.p[src].hp <= 0) continue;
+          if (!state.p[src] || !isAliveInRound(state, src)) continue;
           ev(state, { type: 'reflect', to: to, from: src, amt: it.amt, via: it.via, by: 'proto' });
           deliverDamage(state, { amt: it.amt, type: it.type, source: to, reflected: true, noMine: true },
             src, { reason: '原型制御·转移' });
@@ -309,7 +356,7 @@
   function rawDamage(state, to, amt, reason, via, opts) {
     opts = opts || {};
     const p = state.p[to];
-    if (p.hp <= 0) return false;
+    if (!isAliveInRound(state, to)) return false;
     let hit = amt;
     // 藤甲火弱：一切火焰伤害+1（坦克/天火/地雷等，R22）
     if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) {
@@ -329,7 +376,7 @@
       for (const other of once) {
         const op = state.p[other];
         if (op && op.chains) op.chains = op.chains.filter(function (x) { return x !== to; });
-        if (op && op.hp > 0) {
+        if (op && isAliveInRound(state, other)) {
           op.hp -= hit;
           ev(state, { type: 'damage', to: other, amt: hit, reason: '铁索连环', via: 'chain', fromChain: true, source: (opts.source != null ? opts.source : null) });
         }
@@ -368,7 +415,7 @@
    *   · **铁索**：直击路径维持 rawDamage 默认（R45 爆头共享 / 天火现状）；转走 = 被击方没实际吃到 ⇒ 不从它共享。 */
   function extraHitLand(state, to, amt, reason, via, opts) {
     opts = opts || {};
-    if (state.p[to].hp <= 0) return;
+    if (!isAliveInRound(state, to)) return;
     if (opts.respectProto) {
       const pg = guardOf(state, to);
       if (pg && pg.kind === 'proto') {
@@ -382,15 +429,12 @@
   /* 转移查检查 + 落地：受害者声明了转移伤害且有有效目标 ⇒ 转给目标；否则原地落地。 */
   function extraHitWithTransfer(state, victim, amt, reason, via, opts) {
     opts = opts || {};
-    if (state.p[victim].hp <= 0) return;
-    const tAct = actionOf(state, victim);
-    if (tAct && tAct.key === SK.TRANSFER) {
-      const dest = targetOf(state, victim);
-      if (dest != null && dest !== victim && state.p[dest].hp > 0) {
-        ev(state, { type: 'transfer', to: victim, from: (opts.from != null ? opts.from : null), dest, amt, via });
-        extraHitLand(state, dest, amt, reason, via, opts);
-        return;
-      }
+    if (!isAliveInRound(state, victim)) return;
+    const dest = transferDestOf(state, victim);
+    if (dest != null) {
+      ev(state, { type: 'transfer', to: victim, from: (opts.from != null ? opts.from : null), dest, amt, via });
+      extraHitLand(state, dest, amt, reason, via, opts);
+      return;
     }
     extraHitLand(state, victim, amt, reason, via, opts);
   }
@@ -418,16 +462,13 @@
    * 把伤害转走的挨打者**没有实际吃到**这波，因而**不再**作为间接触发者入列（返回落点供上层收集）。 */
   function mineHit(state, to, mineFrom, transferable) {
     const p = state.p[to];
-    if (p.hp <= 0) return null;
+    if (!isAliveInRound(state, to)) return null;
     let hitTo = to;
     if (transferable) {
-      const ta = state.actions[to];
-      if (ta && ta.key === SK.TRANSFER && !ta.voided) {
-        const dest = targetOf(state, to);
-        if (dest != null && dest !== to && state.p[dest].hp > 0) {
-          ev(state, { type: 'transfer', to, from: mineFrom, dest, amt: 1, via: 'mine' });
-          hitTo = dest;
-        }
+      const dest = transferDestOf(state, to);
+      if (dest != null) {
+        ev(state, { type: 'transfer', to, from: mineFrom, dest, amt: 1, via: 'mine' });
+        hitTo = dest;
       }
     }
     const q = state.p[hitTo];
@@ -453,29 +494,32 @@
   function mineResolveAll(state) {
     const N = playerCount(state);
     const direct = [];
+    const directPids = {};
     for (let i = 0; i < N; i++) {
-      if (!state.p[i]._minePending) continue;
-      state.p[i]._minePending = false;
-      /* v2.0.6（**用户裁定 2026-11-08**）：雷主死亡不丢雷。N20① 文义的触发条件只有
-       *   "非狙击枪攻击**且伤害落到他身上**"，从来没有"雷主存活"这一条；"存活"限定的是
-       *   被波及的那一侧（"全场其他存活角色各受 1"）。旧实现在这里私加 `hp > 0`，
-       *   踩雷那一下恰好打死雷主时整颗雷**静默作废**（实机 11-08 对局实报：results/2.0
-       *   的 27回合局 r17：埋雷同回合被枪×2 打死，雷没响）。 */
-      if (state.p[i].mineArmed) direct.push(i);
+      const pi = state.p[i];
+      if (!pi._minePending) continue;
+      const locked = pi._mineLocked;
+      pi._minePending = false;
+      pi._mineLocked = null;
+      /* 若在 pri 3/2 已被非狙击打中并锁存触发（_mineLocked），即便后续 pri 1 净化也无法撤回已踩响的地雷。 */
+      if (pi.mineArmed || locked) {
+        direct.push({ pid: i, transferable: locked ? locked.transferable : (pi.mineRound !== state.round) });
+        directPids[i] = true;
+      }
     }
     if (!direct.length) return;
     const indirect = [];
-    for (const v of direct) {
-      const transferable = state.p[v].mineRound !== state.round;   // N6：埋雷当回合即炸 ⇒ 不可转移
+    for (const entry of direct) {
+      const v = entry.pid;
+      const transferable = entry.transferable;   // N6：埋雷当回合即炸 ⇒ 不可转移
       state.p[v].mineArmed = false; state.p[v].mineTurns = 0;   // v1.5.109 R59：触发即失效（含计时清零）
       ev(state, { type: 'mine', from: v, kind: 'direct' });
       for (let i = 0; i < N; i++) {
-        if (i === v || state.p[i].hp <= 0) continue;
+        if (i === v || !isAliveInRound(state, i)) continue;
         const struck = mineHit(state, i, v, transferable);
         const s = struck == null ? i : struck;           // 转走了 ⇒ 判定对象是真正吃到这跳的人
-        /* v2.0.6（同一裁定）：被雷波**炸死**的雷主同样链爆 —— N20② 间接触发的文义里也没有存活条件，
-         *   旧实现的 `hp > 0` 让"连环雷"在第二跳就哑火。 */
-        if (state.p[s].mineArmed && direct.indexOf(s) < 0 && indirect.indexOf(s) < 0)
+        /* v2.0.6（同一裁定）：被雷波**炸死**的雷主同样链爆 —— N20② 间接触发的文义里也没有存活条件。 */
+        if (state.p[s].mineArmed && !directPids[s] && indirect.indexOf(s) < 0)
           indirect.push(s);
       }
     }
@@ -484,7 +528,7 @@
     for (const i of indirect) { state.p[i].mineArmed = false; state.p[i].mineTurns = 0; }   // v1.5.109 R59
     ev(state, { type: 'mine', from: indirect.slice(), kind: 'indirect' });
     for (let i = 0; i < N; i++) {
-      if (indirect.indexOf(i) >= 0 || state.p[i].hp <= 0) continue;
+      if (indirect.indexOf(i) >= 0 || !isAliveInRound(state, i)) continue;
       mineHit(state, i, indirect[0], indirectTransferable);
     }
   }
@@ -498,21 +542,14 @@
   function deliverDamage(state, dmg, to, ctx) {
     ctx = ctx || {};
     const target = state.p[to];
-    if (target.hp <= 0) return { result: 'miss' };
+    if (!isAliveInRound(state, to)) return { result: 'miss' };
     const pierce = dmg.pierce || {};
     const via = dmg.via;
 
     // ---- 转移伤害拦截（坦克不可转移）----
-    /* v1.5.136（用户实机报的 bug ①）：转移的**正确语义**是"把本回合所受的可转移伤害，转给
-     * 转移者自己指定的那一个人"——而旧实现写成了"弹回攻击者"（`deliverDamage(..., src)`）。
-     * 两者只在"转移者恰好指着攻击者"时偶然一致（R23 的老用例正是这种巧合，所以自测一直没抓到）。
-     * 现在取转移动作的**指定目标** `targetOf(state, to)`；没有指定目标（目标已死/未指）⇒ 转移不生效，
-     * 伤害照旧落在转移者身上（原版无"落空消失"的说法）。地雷走 `source==null` 分支，天然不进这里
-     * （= 用户口径"地雷优先级 0 不可转移"；buff 雷的可转移性待用户二次裁定，见 RESEARCH-LOG §23）。 */
-    const tAct = actionOf(state, to);
-    if (!dmg.bypassGuards && !pierce.transfer && !dmg.redirected && tAct && tAct.key === SK.TRANSFER) {
-      const dest = targetOf(state, to);           // 转移者指定的那个人
-      if (dest != null && dest !== to && state.p[dest].hp > 0) {
+    if (!dmg.bypassGuards && !pierce.transfer && !dmg.redirected) {
+      const dest = transferDestOf(state, to);
+      if (dest != null) {
         ev(state, { type: 'transfer', to, from: dmg.source, dest, amt: dmg.amt, via });
         const redir = Object.assign({}, dmg, { redirected: true, noMine: true });
         deliverDamage(state, redir, dest, { reason: ctx.reason });
@@ -575,7 +612,7 @@
         if (!pierce.defense) {
           if (judge(state)) {
             const src = dmg.source;
-            if (src != null && src !== to && state.p[src].hp > 0) {
+            if (src != null && src !== to && isAliveInRound(state, src)) {
               state.p[src].hp -= 1;
               ev(state, { type: 'damage', to: src, amt: 1, reason: '金刚盾反击', via: 'counter' });
             }
@@ -594,16 +631,28 @@
     if (!dmg.noMine && !dmg.fromChain && !dmg.reflected && dmg.source != null && dmg.source !== to) {
       if (via !== SK.SNIPE && MINE_TRIGGER.indexOf(via) >= 0 && target.mineArmed) {
         state.p[to]._minePending = true;   // N20: defer; resolved after all damage, direct-first
+        state.p[to]._mineLocked = { transferable: target.mineRound !== state.round };
       }
     }
     return { result: 'land', amt };
+  }
+
+  function effectiveAction(state, pid) {
+    const a = actionOf(state, pid);
+    if (!a) return null;
+    if (a.key !== SK.MIRROR) {
+      return { pid, key: a.key, target: targetOf(state, pid), target2: a.target2, opt: a.opt, phase: a.phase, isMirror: false, act: a };
+    }
+    const mr = state._mirrorResolved && state._mirrorResolved[pid];
+    if (!mr || !mr.key) return null;
+    return { pid, key: mr.key, target: mr.target, target2: null, opt: a.opt, phase: mr.phase, isMirror: true, from: mr.t1, act: a, baseAct: mr.baseAct };
   }
 
   /* 攻击相抵/阻止（优先级原则 R3）：同优先级攻击抵消，高优先级攻击阻止低优先级攻击 */
   function clashPass(state) {
     /* N2 修正：快照结算，避免“先判定的对子把后判定的行动作废”带来的顺序依赖 */
     const snapK = [], snapT = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); snapK[i] = a ? a.key : null; snapT[i] = a ? targetOf(state, i) : null; }
+    for (const i of turnOrder(state)) { const ea = effectiveAction(state, i); snapK[i] = ea ? ea.key : null; snapT[i] = ea ? ea.target : null; }
     const atkIdx = [];
     for (const i of turnOrder(state)) {
       if (snapK[i] && R.ATK_EFFECT.indexOf(snapK[i]) >= 0) atkIdx.push(i);
@@ -618,9 +667,8 @@
         if (!a || !b) continue;
         if (a === SK.DRAIN && b === SK.DRAIN) continue; // 互勾触发铁索，不抵消
         // N4：**只有互为目标**的攻击才会交锋（2 人时天然成立）。
-        // 两家同时打第三人 ≠ 互为目标，不应相抵/阻止。
         if (snapT[ia] !== ib || snapT[ib] !== ia) continue;
-        const pa = R.byKey[a].pri || 3, pb = R.byKey[b].pri || 3;
+        const pa = skillPri(a), pb = skillPri(b);
         if (pa === pb) {
           ev(state, { type: 'cancel', pids: [ia, ib], round: state.round });
           pending.push([ia, '相抵'], [ib, '相抵']);
@@ -637,24 +685,6 @@
   }
 
   /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
-  /* 镜面反射可复制的"伤害效果"：返回 null = **非伤害类** ⇒ 效果落在使用者自己身上 + 对 t2 空指
-   * （v1.5.16 用户裁定：没有"无可复制"这件事，见 applyMirrorSelf 与 docs/RULES-NP.md N14）。 */
-  function copyEffect(key) {
-    const def = R.byKey[key];
-    if (!def) return null;
-    // 双枪走数据表（以前硬编码 amt:1，使 rules.js 的 dmg 字段失效 →
-    // 调它的平衡会静默无效）。via 仍按枪口径（可被反弹/地雷）。
-    if (key === SK.DUAL_GUN) return {
-      amt: (def.dmg && def.dmg.amt) || 1, type: (def.dmg && def.dmg.type) || R.DMG.NORMAL,
-      pierce: def.pierce || {}, via: SK.GUN   // ⚠️ via 必须是 SK.GUN：MINE_TRIGGER/REFLECTABLE 都按枪口径查表，
-      //    v1.3.19 误写成 SK.DUAL_GUN -> 双枪第一枪不触发地雷、也不被反弹（真 bug，N20b 抓出来）
-    };
-    if (key === SK.LASER_EYE) return { amt: 1, type: R.DMG.LIGHT, pierce: {}, via: SK.LASER_EYE };
-    if (key === SK.CANNON) return { amt: 1, type: R.DMG.NORMAL, pierce: { defense: true, reflect: true }, via: SK.CANNON };
-    if (def.dmg && def.dmg.amt) return { amt: def.dmg.amt, type: def.dmg.type, pierce: def.pierce || {}, via: key };
-    return null;
-  }
-
   /* 有向图是否存在环（反复横跳触发判定） */
   function hasCycle(edges) {
     const adj = {};
@@ -674,57 +704,138 @@
     return found;
   }
 
-  /* N14 **v1.5.17 用户三次澄清**：「复制来的防御 / 反弹之类**可以**挡得住同优先级里它本来就能挡的
-   * 激光剑或坦克 —— **同优先级的时候防御类先出现**。」
-   * ⇒ 复制来的**防御架势**必须在 ④（默认优先级 3 的攻击）之前落位；其余自效果（ep / 珠 / 雷 / 净化）
-   *   仍留在 ④b 的 `applyMirrorSelf` 里结算。
-   * 与"大雷 pri4 先结算"不冲突：大雷（③）与小雷（②）都早于这里，目标若已被它们作废，
-   * `actionOf(state, m)` 就是 null ⇒ 这里直接跳过 ⇒ 复制不会发生（那正是用户二次裁定的意思）。 */
-  function mirrorGuardPass(state) {
-    for (let m = 0; m < playerCount(state); m++) {
-      const a = actionOf(state, m);
-      if (!a || a.key !== SK.MIRROR) continue;          // 已被 ② 小雷 / ③ 大雷 作废的就不算
-      const refs = mirrorRefs(state, m);
-      if (!refs || refs.t1 == null || refs.t2 == null) continue;
-      const ta = actionOf(state, refs.t1);
-      if (!ta) continue;
-      const gk = copiedGuardKind(ta.key);
-      if (!gk) continue;                                 // 复制的不是防御族 ⇒ 没有"防御类先出现"这回事
-      const me = state.p[m];
-      me.copiedGuard = ta.key;
-      if (ta.key === SK.SHIFT) me.guardNext = true;      // R21：无极变速第二回合
-      ev(state, { type: 'guardSet', pid: m, key: ta.key, copied: true, early: true });
+  /* 判断玩家是否还持有尚未过期且由自己贴出的符咒（镜面复制天火用） */
+  function hasOwnLiveSticker(state, owner) {
+    for (let v = 0; v < playerCount(state); v++) {
+      if (v === owner) continue;
+      const holder = state.p[v];
+      if (!holder || !isAliveInRound(state, v)) continue;
+      for (const st of holder.stickers) {
+        if (st.owner === owner && st.age <= 3) return true;
+      }
+    }
+    return false;
+  }
+
+  /* 行动最终落点目标（镜面走 t2，其余非自指技能走 oppOf） */
+  function effTarget(state, ea) {
+    if (!ea) return null;
+    if (ea.isMirror) return ea.target;
+    return oppOf(state, ea.pid);
+  }
+
+  /* 小雷统一结算（真实 pri5 与镜面复制小雷共用核心路径） */
+  function runMiniTRing(state, entries) {
+    const mapByCaster = {};
+    for (const ent of entries) mapByCaster[ent.caster] = ent;
+    const ringSeen = {};
+    for (const ent of entries) {
+      const start = ent.caster;
+      if (ringSeen[start]) continue;
+      const pos = {}, path = [];
+      let cur = start, ring = null;
+      while (cur != null && !ringSeen[cur] && mapByCaster[cur]) {
+        if (cur in pos) { ring = path.slice(pos[cur]); break; }
+        pos[cur] = path.length; path.push(cur);
+        cur = mapByCaster[cur].target;
+      }
+      if (ring) {
+        ev(state, { type: 'thunderRing', pids: ring.slice() });
+        for (const r of ring) { ringSeen[r] = true; setVoid(state, r, '互雷成环'); }
+      }
+    }
+  }
+  function runMiniTHit(state, ent) {
+    const c = ent.caster, t = ent.target;
+    if (!actionOf(state, c) || t == null) return false;
+    if (ent.isMirror) ev(state, { type: 'mirror', pid: c, from: ent.t1, to: t, key: SK.MINI_T });
+    const ta = effectiveAction(state, t) || actionOf(state, t);
+    if (state.p[t].rodGuard > 0) {
+      state.p[t].rodGuard = 0; // 一次免雷后守卫结束 R31
+      setVoid(state, c, '避雷针');
+      ev(state, { type: 'rodBlock', pid: t, by: SK.MINI_T });
+      return false;
+    }
+    if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
+      ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
+      return true;
+    }
+    setVoid(state, t, SK.MINI_T, c);   // v1.5.37：带施法者 pid（奖励可归因）
+    ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
+    return true;
+  }
+
+  /* 大雷统一结算（真实 pri4 与镜面复制大雷共用，按入口快照消除先后顺序偏置） */
+  function runBigTBatch(state, entries) {
+    if (!entries.length) return;
+    const snapK = [], snapT = [];
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      const a = actionOf(state, i);
+      snapK[i] = ea ? ea.key : (a ? a.key : null);
+      snapT[i] = ea ? ea.target : (a ? targetOf(state, i) : null);
+    }
+    for (const ent of entries) {
+      const c = ent.caster, t = ent.target;
+      if (!snapK[c] || t == null) continue;
+      if (ent.isMirror) ev(state, { type: 'mirror', pid: c, from: ent.t1, to: t, key: SK.BIG_T });
+      const bothBig = !!(snapK[t] === SK.BIG_T && snapT[t] === c);
+      if (state.p[t].rodGuard > 0) {
+        state.p[t].rodGuard = 0;
+        setVoid(state, c, '避雷针');
+        ev(state, { type: 'rodBlock', pid: t, by: SK.BIG_T });
+        continue;
+      }
+      const ta = snapK[t] ? { key: snapK[t] } : null;
+      if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0 && ta.key !== SK.MINI_T) {
+        setVoid(state, t, SK.BIG_T, c);
+      }
+      const guardKind = (guardOf(state, t) || {}).kind;
+      const res = deliverDamage(state, {
+        amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
+      }, t, { reason: ent.isMirror ? '镜面反射·真正的落雷' : '真正的落雷' });
+      const tTgt = snapT[t];
+      for (const q of turnOrder(state)) {
+        if (q === c || q === t || !isAliveInRound(state, q)) continue;
+        const qa = snapK[q] ? { key: snapK[q] } : null;
+        const qTargetsT = snapK[q] != null && snapT[q] === t;
+        const tTargetsQ = !!ta && tTgt === q;
+        if (!qTargetsT && !tTargetsQ) continue;
+        const qUsed = snapK[q];
+        const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
+        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
+        ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
+        let qHit = q;
+        if (qIsDef) {
+          const qTgt = snapT[q];
+          if (qTgt == null || qTgt === q || !isAliveInRound(state, qTgt)) continue;
+          qHit = qTgt;
+        }
+        const qres = deliverDamage(state, {
+          amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
+        }, qHit, { reason: '真正的落雷·连带' });
+        if (qres.result === 'land' || qres.result === 'blocked') {
+          const qGuard = (guardOf(state, q) || {}).kind;
+          if (qres.result === 'land' || qGuard === 'proto') bigTBan(state, q, qUsed);
+        }
+      }
+      const banApplies = res.result === 'land' || guardKind === 'proto';
+      if (banApplies) bigTBan(state, t, ta ? ta.key : null);
     }
   }
 
-  /* N14 **v1.5.18（用户裁定采纳第三方复核 §6 的 R2；实现结论是"无需改代码"）** ——
-   * 原提议：把"复制到避雷针"那一支从 ④b **提前到 ② 之前**，好让复制的避雷针能挡本回合在飞的雷。
-   *
-   * **实测结论：这个改动是空操作**，因为 ① 层的语义是"**当回合有任何雷系技能 ⇒ 它们全部无效**"
-   * （见上面 `resolveActions` 的 ① 段，`R.LIGHTNING` 全场扫描 + `setVoid`）——
-   * 而"镜面反射能复制到避雷针"的**前提**就是 t1 本回合确实用了避雷针 ⇒ ① **必然**已经把那回合
-   * 所有雷系技能废掉了 ⇒ 复制来的窗口在本回合没有东西可挡。
-   * 也就是说：用户要的**结果**（"a 不该吃到那个大雷"）本来就成立，只是机制来自 t1 的真避雷针，
-   * 而不是复制体自己的窗口。
-   *
-   * 因此**不留这段提前落位**：它是可证明的死代码，而"有实现、有测试、无入口"正是审计 §3-2 点名的
-   * 最危险形态；本项目 §14.7 的教训也是"为了让某个例子成立去改结算语义是危险动作"。
-   * 改成把事实**钉成守门**（`np-test D31`）：① 的全局无效化必须仍然覆盖"复制避雷针"这一局；
-   * 若将来有人把 ① 收窄成"只无效化指向避雷针使用者的雷"，D31 会立刻红、逼他重新回答这个问题。
-   *
-   * 顺带修掉的**真实**偏差：免雷窗口（R31 情形B）原先挡不住【电磁炮】—— 见 ④ 的 `case SK.RAILGUN`
-   * 与 `np-test D31` 场景二。 */
-
-  function mirrorPass(state) {
+  /* 隐藏镜面交互（N16 聚光炮 / N15 反复横跳），返回消耗于隐藏技的镜面集合 */
+  function collectHiddenMirrors(state) {
+    const usedByHidden = {};
     const mirrors = [];
-    for (let i = 0; i < playerCount(state); i++) {
+    for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (a && a.key === SK.MIRROR) mirrors.push(i);
     }
-    if (!mirrors.length) return;
+    if (!mirrors.length) return usedByHidden;
     const info = {};
     for (const m of mirrors) {
-      const rf = mirrorRefs(state, m);              // 单点真源（含 t1/t2 兜底钳制）
+      const rf = mirrorRefs(state, m);
       info[m] = rf || { t1: null, t2: null };
       if (!rf || rf.t1 == null || rf.t2 == null) setVoid(state, m, '镜面反射无目标');
     }
@@ -733,12 +844,14 @@
     for (let x = 0; x < mirrors.length; x++) {
       for (let y = x + 1; y < mirrors.length; y++) {
         const A = mirrors[x], B = mirrors[y];
+        if ((state._mirrorResolved && (state._mirrorResolved[A] || state._mirrorResolved[B]))) continue;
         const iA = info[A], iB = info[B];
         if (!iA || !iB || iA.t1 == null || iB.t1 == null || iA.t2 == null) continue;
         if (iA.t1 === B && iB.t1 === A && iA.t2 === iB.t2) {
           ev(state, { type: 'hidden', name: '聚光炮', pid: A, to: iA.t2 });
           rawDamage(state, iA.t2, 1, '聚光炮', 'focusCannon', { type: R.DMG.FIRELIGHT });
           usedEdge[A] = true; usedEdge[B] = true;
+          usedByHidden[A] = true; usedByHidden[B] = true;
         }
       }
     }
@@ -753,81 +866,20 @@
     if (edges.length >= 2 && hasCycle(edges)) {
       ev(state, { type: 'hidden', name: '反复横跳', pids: freeUsers.slice() });
       for (const u of freeUsers) rawDamage(state, u, 1, '反复横跳', 'hop', { type: R.DMG.FIRELIGHT });
-    }
-    // ---- N14 复制 ----
-    for (const m of mirrors) {
-      const a = actionOf(state, m);
-      if (!a) continue;
-      const it = info[m];
-      if (!it || it.t1 == null || it.t2 == null) continue;
-      const ta = actionOf(state, it.t1);
-      if (!ta) { ev(state, { type: 'mirrorNoEffect', pid: m, from: it.t1 }); continue; }
-      const eff = copyEffect(ta.key);
-      if (eff) {
-        ev(state, { type: 'mirror', pid: m, from: it.t1, to: it.t2, key: ta.key });
-        deliverDamage(state, {
-          amt: eff.amt, type: eff.type, source: m, via: eff.via, pierce: eff.pierce || {}
-        }, it.t2, { reason: '镜面反射·' + R.byKey[ta.key].name });
-      } else {
-        /* v1.5.16（用户裁定）：**没有"无可复制"** —— 所有技能都能复制。非伤害类技能的效果
-         * 落在**使用者自己身上**（"相当于自己也摆了那个架势 / 也蓄了能 / 也架了雷"），
-         * 同时对 t2 只留一个**空指**：指向保留、本身不产生效果，但它**参与大雷连带判定**
-         * （已在 ③ 的快照里用 snapT2 接上）。 */
-        ev(state, { type: 'mirrorCopySelf', pid: m, from: it.t1, to: it.t2, key: ta.key });
-        applyMirrorSelf(state, m, ta);
+      for (const u of freeUsers) {
+        const ch = resolveMirrorChain(state, u, usedByHidden);
+        if (!ch || ch.cycleInvalid || !ch.action) usedByHidden[u] = true;
       }
     }
+    return usedByHidden;
   }
 
-  /* N14：把复制到的"非伤害类"技能的自效果施加到镜面反射使用者自己身上。
-   * ⚠ 这张 switch 必须与 `resolveActions` ④ 的自效果保持同步 —— 技能表里新增一个"有自效果"的
-   *   技能时，要么它可复制伤害（`copyEffect` 非空），要么在这里补一行。`np-test D23` 用
-   *   `R.MIRROR_SELF` 对全部技能做**穷举守门**（漏一个就红，不留静默的"复制了等于没复制"）。 */
-  function applyMirrorSelf(state, m, ta) {
-    const me = state.p[m];
-    switch (ta.key) {
-      case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: m, delta: 1 }); break;
-      case SK.CHARGE: {
-        /* 珠类型取**使用者自己**的选择（镜面反射那张卡的 opt.bead），**不读 t1 的 opt**：
-         * t1 蓄的哪种珠是隐藏信息（v1.5.15 刚修掉的信息泄漏）⇒ 读它等于给复制者开天眼。 */
-        const ma = actionOf(state, m);
-        const kind = (ma && ma.opt && ma.opt.bead) || 'elec';
-        me[kind] = 1; me.beadNew = kind;
-        ev(state, { type: 'bead', pid: m, kind, delta: 1 });
-        break;
-      }
-      case SK.RING: {
-        me.ringStreak += 1;                                   // 与 attemptAction 同口径：出招即计次
-        const g = me.ringStreak >= 3 ? 3 : me.ringStreak;      // R10：第1次+1 / 第2次+2 / 第3次起+3
-        me.ep += g; ev(state, { type: 'ep', pid: m, delta: g });
-        break;
-      }
-      case SK.MINE: armMine(state, me, m); break;
-      /* 避雷针：得到免雷窗口（同 R31 情形B，一次性：免掉一次雷后窗口结束）。
-       * ⚠️ v1.5.18：**不需要**把它提前到 ② 之前 —— 复制成立的**前提**是 t1 本回合真的用了避雷针，
-       * 而 ① 层"当回合有雷系 ⇒ 全部无效"已经把本回合的雷清空了 ⇒ 复制来的窗口本回合无物可挡。
-       * 论证与守门见 `mirrorPass` 上方的长注释与 `np-test D31`。 */
-      case SK.ROD: me.rodGuard = 4; ev(state, { type: 'rod', pids: [m], mode: 'B' }); break;
-      case SK.PURIFY: purgeSelf(state, me, m); break;
-      default: {
-        /* 防御族（含复制全息屏障 = 原型制御式自保架势）。
-         * 架势**不在这里才生效**：`guardOf` 通过 effectiveKeyOf() 直接读"复制内容"，
-         * 所以它在声明的那一刻就已生效（这正是用户例子里 a 能靠复制来的反弹挡住同回合大雷的原因）。
-         * 这里的 ev 只用于日志/页面；`guardNext` 那行是 R21 无极变速的第二回合八卦阵。
-         * 藤甲的"贴在对手身上使其火弱"属对外效果 ⇒ 按 N14 不复制（空指不产生效果）。 */
-        const gk = copiedGuardKind(ta.key);
-        if (gk && !me.copiedGuard) {
-          /* 防御族通常已经在 ④ 之前的 `mirrorGuardPass` 落位（"同优先级防御类先出现"）；
-           * 这里只兜底（t1 的行动后来才成立的边角情形），也避免重复发 guardSet 事件。
-           * v1.5.17：架势**在结算时落到状态上**（`guardOf` 读 `copiedGuard`），所以它挡得住
-           * 随后结算的 ⑤ 枪 / ⑥ 狙击 与同优先级的 ④ 攻击，挡不住先前结算的小雷 / 大雷。 */
-          me.copiedGuard = ta.key;
-          if (ta.key === SK.SHIFT) me.guardNext = true;
-          ev(state, { type: 'guardSet', pid: m, key: ta.key, copied: true });
-        }
-        break;
-      }
-    }
+  /* 给防御架势施加镜面/真实藤甲的火弱（同时记录回滚快照，被激光眼作废可撤回） */
+  function applyArmorFireWeak(state, act, t) {
+    const you = state.p[t];
+    if (!you) return;
+    act.fireWeakPrev = { pid: t, now: !!you.fireWeakNow, next: !!you.fireWeakNext };
+    you.fireWeakNext = true; you.fireWeakNow = true;
   }
 
   /* ---------- 回合中结算 ---------- */
@@ -835,7 +887,15 @@
 
   function resolveActions(state) {
     roundTaunts.length = 0;
-    // ====== ① 避雷针 R31 ======
+    state._roundAlive = [];
+    for (let i = 0; i < playerCount(state); i++) {
+      const p = state.p[i], a = state.actions[i];
+      state._roundAlive[i] = !!(p && (p.hp > 0 || (a && a.outcome === 'ok')));
+    }
+    state._mirrorResolved = {};
+    state._mirrorHidden = {};
+
+    // ====== ① 避雷针 R31（当回合多避雷针均分能量回馈，防浮点取两位小数） ======
     const rodUsers = [];
     for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
     if (rodUsers.length) {
@@ -843,66 +903,49 @@
       for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
       if (lightning.length) {
         ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning });
+        let totalCost = 0;
         for (const l of lightning) {
           setVoid(state, l, '避雷针');
           rawDamage(state, l, 1, '避雷针反噬', 'rod', { chain: false, noMine: true });
-          const cost = R.byKey[state.actions[l].key].cost || 0;
-          for (const r of rodUsers) state.p[r].ep += cost;
+          totalCost += (R.byKey[state.actions[l].key].cost || 0);
         }
+        const share = round2(totalCost / rodUsers.length);
+        if (share > 0) for (const r of rodUsers) state.p[r].ep = round2(state.p[r].ep + share);
       } else {
         ev(state, { type: 'rod', pids: rodUsers, mode: 'B' });
         for (const r of rodUsers) state.p[r].rodGuard = 4; // 命中回合 endTurn 会递减，基4=窗口3回合
       }
     }
 
-    // ====== ② 小雷 pri5 R27 ======
-    const mini = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.MINI_T) mini.push(i); }
-    /* v1.5.138（指向盲审计）：原文「如果雷击之枪连接成环状，则不会有任何效果」**不限两两** ——
-     * 旧实现只认 A↔B 互指，三人环 A→B→C→A 检不出，退化成按座位逐边作废、先手独赢。
-     * 现在先在 miniT 指向图上游走找环（每人至多一条出边 ⇒ 顺指针走、回到本次路径上的点即环），
-     * 环上成员整体作废（"不会有任何效果"，含免雷/被免疫分支都不走），每环发一条 thunderRing；
-     * **非环链**仍按下方旧路逐边结算（原文"多个连接从最开始的进行结算"——setVoid 后
-     * `actionOf` 即 null，被作废者的出边自然不再触发，先手序就是"从最开始"）。 */
-    const ringSeen = {};
-    for (const start of mini) {
-      if (ringSeen[start]) continue;
-      const pos = {}, path = [];
-      let cur = start, ring = null;
-      while (cur != null && !ringSeen[cur]) {
-        if (cur in pos) { ring = path.slice(pos[cur]); break; }
-        pos[cur] = path.length; path.push(cur);
-        const nx = targetOf(state, cur);
-        const na = nx == null ? null : actionOf(state, nx);
-        cur = (na && na.key === SK.MINI_T) ? nx : null;
-      }
-      if (ring) {
-        ev(state, { type: 'thunderRing', pids: ring.slice() });
-        for (const r of ring) { ringSeen[r] = true; setVoid(state, r, '互雷成环'); }
-      }
+    // ====== ②a 真实小雷 pri5 R27 ======
+    const miniEntries = [];
+    for (const i of turnOrder(state)) {
+      const a = actionOf(state, i);
+      if (a && a.key === SK.MINI_T) miniEntries.push({ caster: i, target: targetOf(state, i), isMirror: false });
     }
-    for (const c of mini) {
-      if (!actionOf(state, c)) continue;                 // 已被更早规则作废（含上面的成环）
-      const t = targetOf(state, c);
-      if (t == null) continue;
-      const ta = actionOf(state, t);
-      if (state.p[t].rodGuard > 0) {
-        state.p[t].rodGuard = 0; // 一次免雷后守卫结束 R31
-        setVoid(state, c, '避雷针');
-        ev(state, { type: 'rodBlock', pid: t, by: SK.MINI_T });
-      } else if (ta && R.MINI_T_IMMUNE.indexOf(ta.key) >= 0) {
-        ev(state, { type: 'voidImmune', pid: t, by: SK.MINI_T, key: ta.key });
-      } else {
-        setVoid(state, t, SK.MINI_T, c);   // v1.5.37：带施法者 pid（奖励可归因）
-        ev(state, { type: 'voidedBy', pid: t, by: SK.MINI_T });
-      }
+    runMiniTRing(state, miniEntries);
+    for (const ent of miniEntries) runMiniTHit(state, ent);
+
+    // ====== ②b 镜面复制小雷 pri5（若自身与来源皆未被真实小雷作废，按小雷口径执行） ======
+    const mirMiniEntries = [];
+    for (const m of turnOrder(state)) {
+      const a = actionOf(state, m);
+      if (!a || a.key !== SK.MIRROR) continue;
+      const ch = resolveMirrorChain(state, m, null);
+      if (!ch || !ch.action || ch.action.key !== SK.MINI_T) continue;
+      state._mirrorResolved[m] = { key: SK.MINI_T, target: ch.t2, t1: ch.t1, baseAct: ch.action, phase: ch.action.phase };
+      mirMiniEntries.push({ caster: m, target: ch.t2, t1: ch.t1, isMirror: true });
     }
-    // N17 合二为一：>=2 人同时对同一目标用小雷 → 目标额外 1 点电伤
+    if (mirMiniEntries.length) {
+      runMiniTRing(state, mirMiniEntries);
+      for (const ent of mirMiniEntries) runMiniTHit(state, ent);
+    }
+
+    // ====== ②c N17 合二为一（统计真实与镜面小雷的全部有效命中目标） ======
     const miniByTarget = {};
-    for (const c of mini) {
-      if (!actionOf(state, c)) continue;
-      const t = targetOf(state, c);
-      if (t != null) (miniByTarget[t] = miniByTarget[t] || []).push(c);
+    for (const ent of miniEntries.concat(mirMiniEntries)) {
+      if (!actionOf(state, ent.caster) || ent.target == null) continue;
+      (miniByTarget[ent.target] = miniByTarget[ent.target] || []).push(ent.caster);
     }
     for (const tk in miniByTarget) {
       if (miniByTarget[tk].length >= 2) {
@@ -911,223 +954,221 @@
       }
     }
 
-    // ====== ③ 大雷 pri4 R28/R29 ======
-    const bigs = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.BIG_T) bigs.push(i); }
-    /* N2 修正（同优先级同时结算）：层入口对全场行动拍快照，层内一律按快照判断。
-     * 否则先结算的大雷会把后者作废 → 低 pid 在三方同时放大雷时系统性免伤
-     * （实测 P0→P1/P1→P2/P2→P0 结果 HP 3/1/1）。落地仍按实际结算。
-     * v1.5.17 撤回 v1.5.16 在这里加的 snapT2（"空指参与连带"）：按用户二次裁定，
-     * 大雷先结算 ⇒ 目标若用镜面反射会被无效化 ⇒ 那个"空指"根本不会产生 ⇒ 不该参与连带。 */
-    const snapK = [], snapT = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); snapK[i] = a ? a.key : null; snapT[i] = a ? targetOf(state, i) : null; }
-    for (const c of bigs) {
-      if (!snapK[c]) continue;
-      const t = snapT[c];
-      if (t == null) continue;
-      const bothBig = !!(snapK[t] === SK.BIG_T && snapT[t] === c); // 互轰
-      if (state.p[t].rodGuard > 0) {
-        state.p[t].rodGuard = 0;
-        setVoid(state, c, '避雷针');
-        ev(state, { type: 'rodBlock', pid: t, by: SK.BIG_T });
-        continue;
-      }
-      const ta = snapK[t] ? { key: snapK[t] } : null;
-      /* 效果2：非防御类技能一律无效化；双大雷互轰时各自保留。
-       * v1.5.17（用户二次裁定）：镜面反射**不算防御族** ⇒ 被大雷打中时和别的非防御技能一样被废掉，
-       * 复制随之不会发生（v1.5.16 曾按"有效技能"豁免它，那是错的）。 */
-      if (!bothBig && ta && R.GUARD_FAMILY.indexOf(ta.key) < 0 && ta.key !== SK.MINI_T) {
-        setVoid(state, t, SK.BIG_T, c);   // v1.5.37：同上
-      }
-      // 记录目标当面架势（用于 R23'：原型制御挡电但不免疫禁用）
-      const guardKind = (guardOf(state, t) || {}).kind;
-      /* N22（用户裁定）：**所有防御类都能格挡大雷**；而大雷属"反弹可格挡但不触发反弹"——
-       * 实现方式：去掉 pierce.reflect（那是"反弹整个失效"），靠 BIG_T 不在 REFLECTABLE 里
-       * 使反弹只格挡、不反击。pierce.transfer 表示大雷伤害不可被转移。 */
-      const res = deliverDamage(state, {
-        amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
-      }, t, { reason: '真正的落雷' });
-      // N6 连带伤害（**用户裁定 N22：各受 2 点**）：与目标 T 产生交互的第三方各受 2 点电伤；
-      //   其中「对 T 使用技能」者额外被无效化（对 T 的那个技能）；施法者自身不参与。
-      //   2 人时第三方不存在 → 行为不变（回归安全）。
-      const tTgt = snapT[t];
-      for (const q of turnOrder(state)) {
-        if (q === c || q === t || state.p[q].hp <= 0) continue;
-        const qa = snapK[q] ? { key: snapK[q] } : null;
-        const qTargetsT = snapK[q] != null && snapT[q] === t;
-        const tTargetsQ = !!ta && tTgt === q;
-        if (!qTargetsT && !tTargetsQ) continue;
-        /* N22：防御族不失效（它们能格挡大雷）；小雷 pri5 已先结算也不失效。 */
-        const qUsed = snapK[q];
-        const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
-        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
-        ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
-        /* N22：防御者本人不吃伤害；但其防御技能**有作用目标**时（金刚盾/藤甲），
-         * 传导伤害落到那个作用目标身上。无目标的自守防御则完全挡住。 */
-        let qHit = q;
-        if (qIsDef) {
-          const qTgt = snapT[q];
-          if (qTgt == null || qTgt === q || state.p[qTgt].hp <= 0) continue;
-          qHit = qTgt;
-        }
-        const qres = deliverDamage(state, {
-          amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
-        }, qHit, { reason: '真正的落雷·连带' });
-        if (qres.result === 'land' || qres.result === 'blocked') {
-          const qGuard = (guardOf(state, q) || {}).kind;
-          if (qres.result === 'land' || qGuard === 'proto') bigTBan(state, q, qUsed);
-        }
-      }
-      // R23'：只要大雷成功结算（命中 或 目标用原型制御抵挡），3 回合禁用即生效
-      /* v2.0.1：删掉恒假的 `guardKind === 'hologram'`（`guardOf` 从不返回这个值 ——
-       * 全息屏障走的是 `kind:'proto'` + `viaHolo:true`，所以"挡下即禁用"早已被 proto 那一半覆盖）。 */
-      const banApplies = res.result === 'land' || guardKind === 'proto';
-      if (banApplies) {
-        // R29 修正：只禁用"目标本回合正在使用的那个技能"（不是全部技能）
-        const used = ta ? ta.key : null;
-        bigTBan(state, t, used);
-      }
-    }
-
-    // ====== N20 过载炮反制（必须在 clashPass 之前）======
-    /* 过载炮 pri=3 高于 枪 pri=2，若先走 clashPass，炮会把枪作废，
-     * 反制就永远轮不到。用户设计：**任何攻击类技能都能抵消过载炮**，
-     * 所以反制必须提到相抵之前。 */
+    // ====== ③a 真实大雷 pri4 R28/R29 ======
+    const bigEntries = [];
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
-      if (!a || a.key !== SK.CANNON) continue;
-      const t = targetOf(state, i);
+      if (a && a.key === SK.BIG_T) bigEntries.push({ caster: i, target: targetOf(state, i), isMirror: false });
+    }
+    runBigTBatch(state, bigEntries);
+
+    // ====== ③b 镜面复制大雷 pri4（自身与来源未被前面小雷/大雷作废时，按大雷规则作废/禁用/传导） ======
+    const mirBigEntries = [];
+    for (const m of turnOrder(state)) {
+      const a = actionOf(state, m);
+      if (!a || a.key !== SK.MIRROR || state._mirrorResolved[m]) continue;
+      const ch = resolveMirrorChain(state, m, null);
+      if (!ch || !ch.action || ch.action.key !== SK.BIG_T) continue;
+      state._mirrorResolved[m] = { key: SK.BIG_T, target: ch.t2, t1: ch.t1, baseAct: ch.action, phase: ch.action.phase };
+      mirBigEntries.push({ caster: m, target: ch.t2, t1: ch.t1, isMirror: true });
+    }
+    runBigTBatch(state, mirBigEntries);
+
+    // ====== ④a 镜面链与隐藏镜面（N14/N15/N16）+ 过载炮反制（N20）+ 攻击相抵（clashPass） ======
+    const usedByHidden = collectHiddenMirrors(state);
+    state._mirrorHidden = usedByHidden;
+    for (const m of turnOrder(state)) {
+      const a = actionOf(state, m);
+      if (!a || a.key !== SK.MIRROR) continue;
+      if (state._mirrorResolved[m] || usedByHidden[m]) continue;
+      const rf = mirrorRefs(state, m);
+      const ch = resolveMirrorChain(state, m, usedByHidden);
+      if (!ch || ch.cycleInvalid || !ch.action) {
+        ev(state, { type: 'mirrorNoEffect', pid: m, from: rf ? rf.t1 : null, cycle: !!(ch && ch.cycleInvalid) });
+        continue;
+      }
+      if (ch.action.key === SK.FIRESTORM && !hasOwnLiveSticker(state, m)) {
+        ev(state, { type: 'mirrorNoEffect', pid: m, from: ch.t1, key: SK.FIRESTORM });
+        continue;
+      }
+      state._mirrorResolved[m] = {
+        key: ch.action.key, target: ch.t2, t1: ch.t1, baseAct: ch.action, phase: ch.action.phase
+      };
+    }
+
+    // N20 过载炮反制（必须在 clashPass 之前；含镜面复制出的过载炮与攻击反制）
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.CANNON) continue;
+      const t = ea.target;
       if (t == null) continue;
-      const tb = actionOf(state, t);
-      /* v1.5.138（指向盲审计 · 同 N4"只有互为目标才交锋"铁律）：反制者的攻击必须**指回炮手**才抵消。
-       * 旧实现只看"被炮者出了任意攻击卡"⇒ 3P 里 A炮B、B枪C（B 根本没理 A）也会白废 A 的炮。
-       * 2P 恒等（B 只有 A 可打）⇒ 一直没露馅。本块留在 clashPass 之前：原文"可与**任何**攻击性
-       * 技能抵消"含低优先级反制（如大雷），这是它独立于相抵规则存在的原因，不许合并。 */
-      if (tb && R.ATK_EFFECT.indexOf(tb.key) >= 0 && targetOf(state, t) === i) {
+      const eb = effectiveAction(state, t);
+      if (eb && R.ATK_EFFECT.indexOf(eb.key) >= 0 && eb.target === i) {
         setVoid(state, i, '过载炮被攻击抵消');
-        ev(state, { type: 'cannonCountered', pid: i, by: t, key: tb.key });
+        ev(state, { type: 'cannonCountered', pid: i, by: t, key: eb.key });
       }
     }
 
-    // ====== 攻击相抵/阻止（跨层统一）======
     clashPass(state);
 
-    // ====== ④ 之前：镜面反射复制来的**防御架势**（v1.5.17 用户三次澄清：同优先级里防御类先出现）======
-    mirrorGuardPass(state);
-
-    // ====== ④ 默认优先级 3 ======
-    /* v1.5.106（**用户裁定** 2026-09-18）：**资源型（`cat === ENERGY` ⇒ ジ / 蓄能 / 聚能环）在本层内先结算**，
-     * 过载炮随后 ⇒ 过载炮第 3 次的「清空目标ジ」能吃到目标**本回合刚生的收入**。
-     * 病（第十一轮复核 §10-4 实测）：本层原先一律按 `turnOrder` 的座位轮换序 ⇒ **同一发炮效果差 3 ジ**
-     * （炮手 0 号先手 ⇒ 只吃到 6；炮手 3 号后手 ⇒ 目标 9 ジ 全没）⇒ "谁先手"成了**座位红利**。
-     * 口径**从声明推导**（`R.byKey[key].cat`）—— 不许写卡名清单（D81/D72 的教训）。
-     * ⚠️ 两组**各自**仍按 `turnOrder`（座位轮换）⇒ 反座位偏置的随机化只在**跨组**顺序上被固定、
-     * 组内仍然轮换（两个资源型同时出手时仍会换先后）。 */
-    const ord3 = (function () {
-      const inc = [], oth = [];
-      for (const i of turnOrder(state)) {
-        const a0 = actionOf(state, i);
-        const isEnergy = !!(a0 && R.byKey[a0.key] && R.byKey[a0.key].cat === R.CAT.ENERGY);
-        (isEnergy ? inc : oth).push(i);
+    // ====== ④b pri3 声明前哨：防御架势 / 避雷针窗口 / 埋雷武装 / 转移声明 ======
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      if (!ea) continue;
+      const me = state.p[i];
+      if (!ea.isMirror) {
+        switch (ea.key) {
+          case SK.SHIFT: me.guardNext = true; /* fallthrough */
+          case SK.GUARD: case SK.REFLECT: case SK.BAGUA:
+          case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO: {
+            if (ea.key === SK.ARMOR) {
+              const t = oppOf(state, i);
+              if (t != null) applyArmorFireWeak(state, ea.act, t);
+            }
+            ev(state, { type: 'guardSet', pid: i, key: ea.key });
+            break;
+          }
+          case SK.HOLO: {
+            const t = oppOf(state, i);
+            if (t != null) ev(state, { type: 'holoSet', pid: i, target: t });
+            break;
+          }
+          case SK.MINE: armMine(state, me, i); break;
+          default: break;
+        }
+      } else {
+        if (copiedGuardKind(ea.key)) {
+          me.copiedGuard = ea.key;
+          if (ea.key === SK.SHIFT) me.guardNext = true;
+          if (ea.key === SK.ARMOR && ea.target != null) applyArmorFireWeak(state, ea.act, ea.target);
+          ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: ea.key });
+          ev(state, { type: 'guardSet', pid: i, key: ea.key, copied: true, early: true });
+        } else if (ea.key === SK.MINE) {
+          ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: SK.MINE });
+          armMine(state, me, i);
+        } else if (ea.key === SK.ROD) {
+          ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: SK.ROD });
+          me.rodGuard = 4;
+          ev(state, { type: 'rod', pids: [i], mode: 'B' });
+        } else if (ea.key === SK.TRANSFER) {
+          me._copiedTransfer = ea.target;
+          ev(state, { type: 'mirror', pid: i, from: ea.from, to: ea.target, key: SK.TRANSFER });
+        }
       }
-      return inc.concat(oth);
-    })();
-    for (const i of ord3) {
-      const a = actionOf(state, i);
-      if (!a || (R.byKey[a.key].pri || 3) !== 3) continue;
-      /* v1.5.37：**撤销 v1.5.34 的 holo 特例**。复核 §2-1 证明它与引擎语义冲突：
-       * `holoShieldFrom` 明写"自己给自己套不算"（这张卡本来就只能给别人），
-       * 而我那版"无目标=自己"在声明阶段就被 `targetOf()` 退成"第一个存活对手"，
-       * 且候选集里的"自己"成了幻影选项（被选中 35/330 次，喂错归因）。
-       * ⇒ 恢复引擎原语义（`oppOf`；无目标本次不出），改为在**候选枚举**侧删掉幻影。 */
-      const t = oppOf(state, i);
+    }
+
+    // ====== ④c pri3 回能与激光眼破防/破全息/破转移（全部在 pri3 伤害之前完成，消除座位顺序依赖） ======
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      if (!ea || !R.byKey[ea.key] || R.byKey[ea.key].cat !== R.CAT.ENERGY) continue;
+      const me = state.p[i];
+      if (ea.isMirror) ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: ea.key });
+      if (ea.key === SK.JI) {
+        me.ep = round2(me.ep + 1);
+        ev(state, { type: 'ep', pid: i, delta: 1 });
+      } else if (ea.key === SK.CHARGE) {
+        const kind = (ea.opt && ea.opt.bead) || 'elec';
+        me[kind] = 1; me.beadNew = kind;
+        ev(state, { type: 'bead', pid: i, kind, delta: 1 });
+      } else if (ea.key === SK.RING) {
+        if (ea.isMirror) me.ringStreak += 1;
+        const g = me.ringStreak >= 3 ? 3 : me.ringStreak;
+        me.ep = round2(me.ep + g);
+        ev(state, { type: 'ep', pid: i, delta: g });
+      }
+    }
+
+    // 激光眼破防快照：所有激光眼同时判目标是否有防御/复制防/全息/转移可破；仅空放时在 ④d 造成 1 光伤
+    const laserConsumed = {};
+    const laserVoids = [];
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.LASER_EYE) continue;
+      const t = effTarget(state, ea);
       if (t == null) continue;
-      const me = state.p[i], you = state.p[t];
-      switch (a.key) {
-        case SK.JI: me.ep += 1; ev(state, { type: 'ep', pid: i, delta: 1 }); break;
-        case SK.CHARGE: {
-          const kind = (a.opt && a.opt.bead) || 'elec';
-          me[kind] = 1; me.beadNew = kind;   // R9'：同回合重复蓄能只刷新不叠加
-          ev(state, { type: 'bead', pid: i, kind, delta: 1 }); break;
-        }
-        case SK.RING: {
-          const g = me.ringStreak >= 3 ? 3 : me.ringStreak; // attempt 时已 +1
-          me.ep += g; ev(state, { type: 'ep', pid: i, delta: g }); break;
-        }
-        case SK.MINE: armMine(state, me, i); break;
+      const tb = effectiveAction(state, t);
+      const hf = holoShieldFrom(state, t);
+      if (tb && tb.key === SK.TRANSFER) {
+        laserVoids.push({ pid: t, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
+        laserConsumed[i] = true;
+      } else if (tb && (R.GUARD_FAMILY.indexOf(tb.key) >= 0 || (tb.isMirror && copiedGuardKind(tb.key)))) {
+        laserVoids.push({ pid: t, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
+        laserConsumed[i] = true;
+      } else if (hf != null) {
+        laserVoids.push({ pid: hf, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
+        laserConsumed[i] = true;
+      }
+    }
+    for (const lv of laserVoids) {
+      if (lv.srcMirror) ev(state, { type: 'mirror', pid: lv.byPid, from: lv.from, to: lv.to, key: SK.LASER_EYE });
+      setVoid(state, lv.pid, SK.LASER_EYE, lv.byPid);
+    }
+
+    // ====== ④d pri3 攻击 / 特殊动作（真实与镜面统一执行） ======
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      if (!ea || skillPri(ea.key) !== 3) continue;
+      if (ea.key === SK.LASER_EYE && laserConsumed[i]) continue;
+      if (R.byKey[ea.key] && (R.byKey[ea.key].cat === R.CAT.ENERGY || R.byKey[ea.key].cat === R.CAT.DEF)) continue;
+      if (ea.key === SK.HOLO || ea.key === SK.MINE || ea.key === SK.ROD) continue;
+      const t = effTarget(state, ea);
+      if (t == null && ea.key !== SK.FIRESTORM) continue;
+      const me = state.p[i], you = t != null ? state.p[t] : null;
+      if (ea.isMirror) ev(state, { type: 'mirror', pid: i, from: ea.from, to: t, key: ea.key });
+      const rsnPfx = ea.isMirror ? '镜面反射·' : '';
+
+      switch (ea.key) {
         case SK.DRAIN: {
-          const res = deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.DRAIN }, t, { reason: '摄魂指法' });
+          const res = deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.DRAIN }, t, { reason: rsnPfx + '摄魂指法' });
           if (res.result === 'land') {
-            const heal = me.vampire ? 2 : 1;                 // R47
+            const heal = me.vampire ? 2 : 1;
             me.hp += heal; me.vampHeal += heal;
             if (!me.vampire && me.vampHeal >= 3) { me.vampire = true; ev(state, { type: 'vampire', pid: i }); }
             ev(state, { type: 'heal', pid: i, amt: heal, reason: '摄魂' });
           }
           break;
         }
-        case SK.DUAL_GUN: {                    // N3 双枪射手：对两个目标各一枪（走数据表，可被反弹/地雷）
-          const t2 = (a.target2 != null && state.p[a.target2] && state.p[a.target2].hp > 0) ? a.target2 : null;
+        case SK.DUAL_GUN: {
           const dgDef = R.byKey[SK.DUAL_GUN];
           const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.GUN, pierce: dgDef.pierce || {} };
-          deliverDamage(state, Object.assign({}, dgDmg), t, { reason: '双枪射手' });
-          if (t2 != null && t2 !== t) {
-            /* v1.4.7 修正：第二发原写死 amt:1 / NORMAL / 不带 pierce，与上面"走数据表"的注释矛盾 ——
-             * 改 byKey.dualGun.dmg.amt 只会影响第一发（第十轮复核 §6-2 用内存改表验证：
-             * 事件从 1:1/2:1 变成 1:2/2:1）。调平衡"半静默无效"正是 v1.3.19 那一类。
-             * 双枪 = "对两个角色同时使用枪" ⇒ 两发必须完全同源，故直接复用 dgDmg。 */
-            deliverDamage(state, Object.assign({}, dgDmg), t2, { reason: '双枪射手' });
+          deliverDamage(state, Object.assign({}, dgDmg), t, { reason: rsnPfx + '双枪射手' });
+          if (!ea.isMirror) {
+            const t2 = (ea.target2 != null && isAliveInRound(state, ea.target2)) ? ea.target2 : null;
+            if (t2 != null && t2 !== t) deliverDamage(state, Object.assign({}, dgDmg), t2, { reason: '双枪射手' });
           }
           break;
         }
         case SK.SWORD:
         case SK.TANK: {
-          const def = R.byKey[a.key];
-          deliverDamage(state, {
-            amt: def.dmg.amt, type: def.dmg.type, source: i, via: a.key, pierce: def.pierce
-          }, t, { reason: def.name });
+          const def = R.byKey[ea.key];
+          deliverDamage(state, { amt: def.dmg.amt, type: def.dmg.type, source: i, via: ea.key, pierce: def.pierce }, t, { reason: rsnPfx + def.name });
           break;
         }
         case SK.RAILGUN: {
-          /* v1.5.18 修（第三方复核 R2 顺带查出的真实偏差）：电磁炮在 `R.LIGHTNING` 里
-           * （避雷针回馈 / 大雷传导口径都读那个集合），但它的投递**从来不查 `rodGuard`**
-           * ⇒ 避雷针的"三回合免雷窗口"对电磁炮无效（只有"当回合情形 A 的全场无效"能挡它）。
-           * 与 ② 小雷 / ③ 大雷 同口径：有窗口 ⇒ 消耗掉、无效化攻击者、打不中。 */
           if (state.p[t] && state.p[t].rodGuard > 0) {
             state.p[t].rodGuard = 0;
             setVoid(state, i, '避雷针');
             ev(state, { type: 'rodBlock', pid: t, by: SK.RAILGUN });
             break;
           }
-          deliverDamage(state, { amt: 2, type: R.DMG.ELECTRIC, source: i, via: SK.RAILGUN, pierce: R.byKey[SK.RAILGUN].pierce }, t, { reason: '电磁炮' });
+          deliverDamage(state, { amt: 2, type: R.DMG.ELECTRIC, source: i, via: SK.RAILGUN, pierce: R.byKey[SK.RAILGUN].pierce }, t, { reason: rsnPfx + '电磁炮' });
           break;
         }
-        case SK.LASER_EYE: {
-          const ta = actionOf(state, t);
-          /* v1.8.29：两条无效化都补第 4 参 `byPid = i`（施法者席）——与 miniT（:847）同口径。
-           * 不传的话"我用激光眼破了谁的防"在事件层不可归因，奖励只能记在别人头上。 */
-          if (ta && ta.key === SK.TRANSFER) {
-            setVoid(state, t, SK.LASER_EYE, i); // 无效化转移伤害
-          } else if (ta && R.GUARD_FAMILY.indexOf(ta.key) >= 0) {
-            /* N23（用户裁定 2026-09-11）：原实现要求**两个**激光眼才能破原型制御/全息，
-             * 用户认为"单个激光眼还打不破原型制御有点拉了" ⇒ 改为**单发即失效整个防御族**。
-             * 防御类专用反制因此回到与其它防御技**同费(2 ジ)**、单发生效。 */
-            setVoid(state, t, SK.LASER_EYE, i);
-          } else {
-            deliverDamage(state, { amt: 1, type: R.DMG.LIGHT, source: i, via: SK.LASER_EYE }, t, { reason: '激光眼' });
-          }
+        case SK.LASER_EYE:
+          deliverDamage(state, { amt: 1, type: R.DMG.LIGHT, source: i, via: SK.LASER_EYE }, t, { reason: rsnPfx + '激光眼' });
           break;
-        }
         case SK.CANNON: {
-          const phase = a.phase || 1;
-          // 反制已在 clashPass 之前处理；到这里说明对手没回击 → 打穿防御/反弹落 1 伤
-          deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.CANNON, pierce: { defense: true, reflect: true } }, t, { reason: '过载炮(第' + phase + '次)' });
-          if (phase >= 3) { const lost = you.ep; you.ep = 0; ev(state, { type: 'ep', pid: t, delta: -lost, reason: '过载炮' }); }
+          const phase = ea.phase || 1;
+          const res = deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.CANNON, pierce: { defense: true, reflect: true } }, t, { reason: rsnPfx + '过载炮(第' + phase + '次)' });
+          if (phase >= 3 && res.result === 'land') {
+            const lost = you.ep;
+            you.ep = 0;
+            ev(state, { type: 'ep', pid: t, delta: -lost, reason: '过载炮' });
+          }
           break;
         }
         case SK.CURSE: {
           const g = guardOf(state, t);
-          /* v1.5.138：原文"可以被**防御类**技能阻挡"，GUARD_FAMILY 含八卦阵（无极变速在 guardOf
-           * 里同 kind 'bagua'）——旧清单漏了它 ⇒ 贴贴穿八卦阵。 */
           const blockKinds = ['guard', 'reflect', 'proto', 'jinshield', 'armor', 'bagua'];
           if (g && blockKinds.indexOf(g.kind) >= 0) {
             ev(state, { type: 'curseBlock', pid: t, by: g.kind });
@@ -1138,29 +1179,14 @@
           break;
         }
         case SK.FIRESTORM: {
-          /* v1.5.107（**用户报的 UI bug 的真正根因**）：天火**不需要选目标** ——
-           * README「使三回合内你贴出的符咒引爆，每个符咒造成 1 点火焰伤害」；
-           * `RULES-2P.md:240`「引爆你贴出且停留≤3 个你的回合的**所有**符咒：**每个目标**每枚符咒受 1 火伤害」；
-           * `RULES-NP.md:322` 把天火列进「**仅空指**（效果本身都是状态附加）」。
-           * 原实现只打 `you = state.p[t]`（**那一个选中的目标**），而卡面又声明 `target: 'enemy'`
-           * ⇒ UI 会弹目标选择、AI 会对每个对手各造一个候选 ⇒ 三处同错。
-           * 改法：**全场遍历**，对每个存活角色身上 `owner === i && age <= 3` 的符咒各造成 1 火伤；
-           * **原型制御按每个受害者各自判定**（R36：只有原型制御挡天火）；符咒引爆后仍存在（不删）。
-           * ⚠️ **不要**给它加 `source`（v1.5.107 首版我加过，被用户当场纠正）：天火是**无目标**技能 ⇒
-           * 它的引爆伤害是**无目标伤害**，**不参与大雷连带传导**（连带判定的输入是"这回合对 T 产生了交互的人"，
-           * 见本文件 :748-773 的 N6/N22）。`source:null` 是**规则语义**，不是遗漏。
-           * （副作用记录在案：`source==null` 同时是"终局收缩"的哨兵口径 —— 那是 `tools/audit-lib.mjs`
-           * 的量具问题，**要在量具侧收紧**，不许反过来改规则。） */
           let n = 0;
           for (let v = 0; v < playerCount(state); v++) {
             if (v === i) continue;
             const holder = state.p[v];
-            if (!holder || holder.hp <= 0) continue;
+            if (!holder || !isAliveInRound(state, v)) continue;
             for (const st of holder.stickers.slice()) {
               if (st.owner === i && st.age <= 3) {
                 n++;
-                /* R63（2026-11-06）：这份火伤可被持有者当场声明的【转移伤害】转走（单跳）；
-                 * 落点的原型制御照挡（无来源 ⇒ 计入待反总数但不反，与原直击分支逐字同款）。 */
                 extraHitWithTransfer(state, v, 1, '天火', 'firestorm', { type: R.DMG.FIRE, respectProto: true, from: i });
               }
             }
@@ -1170,134 +1196,84 @@
         }
         case SK.TAUNT: {
           you.tauntPending = true;
-          /* v1.5.138（指向盲审计 · 用户实机报）：原文「必须**对使用者**使用攻击类技能」——旧实现
-           * 只把目标置一个布尔义务，回合末判"用了任意攻击卡"就算合规 ⇒ N 人局里被挑者打第三人
-           * 也能白嫖（2 人局唯一的对手就是挑主，恒等，所以一直没露馅）。现在把施法者记进名单。 */
           if (you.tauntByPending.indexOf(i) < 0) you.tauntByPending.push(i);
           roundTaunts.push({ caster: i, target: t });
           ev(state, { type: 'taunt', pid: i, target: t });
           break;
         }
-        case SK.SHIFT: me.guardNext = true; /* fallthrough 记录架势 */
-        case SK.GUARD: case SK.REFLECT: case SK.BAGUA:
-        case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO:
-          /* v1.5.108（**用户裁定 2026-09-18** = R58）：藤甲改成"**本回合贴上 → 下回合结束才消失**"的 buff
-           * ⇒ **同时点亮 Now 与 Next**：
-           *   · `fireWeakNow`  ⇒ **本回合**就吃火伤 +1（原实现只给 Next ⇒ 当回合白贴）；
-           *   · `fireWeakNext` ⇒ 回合开始被提升为 Now（本文件 :125）⇒ **下回合**继续 +1；
-           *   · 到期由既有机制自然完成：回合末清 `fireWeakNow`（:1151），而 Next 在回合开始就已消费
-           *     ⇒ **第三回合起失效**。
-           * 依据（旧文）：`RULES-2P.md:159` R22"仅在下回合内有效" —— 那是把藤甲当纯预置 debuff 的写法，
-           * 用户认为它应当**多覆盖一回合**（贴上就被利用）。
-           * ⚠️ 诚实边界：本层是**顺序结算**，同回合内**先于**藤甲结算的火伤吃不到这次 +1（R56 同款边界）。 */
-          if (a.key === SK.ARMOR) {
-            /* 用户裁定 2026-10-16：**被作废的藤甲不许挂上火弱**。
-             * 火弱是在这里（**生产侧**）就写下的，而作废可能落在这一步**之后** —— 激光眼与藤甲同层、按
-             *   `turnOrder` 轮换 ⇒ 只在这一行判 `a.voided` 不够（那时还没被作废）。所以把「贴之前是什么」
-             *   快照在**这次行动**上，由 `setVoid` 回滚。 */
-            /* ⚠ `you` 是**目标**不是施放者（本文件 :994 的 `you = state.p[t]`）—— 藤甲是
-             *   `target: 'enemy'`（rules.js:59「贴在对手身上」）⇒ 火弱**落在被贴的那个人身上**，
-             *   所以快照必须连**目标席位**一起记，回滚时才知道该还原谁。 */
-            a.fireWeakPrev = { pid: t, now: !!you.fireWeakNow, next: !!you.fireWeakNext };
-            you.fireWeakNext = true; you.fireWeakNow = true;
-          }
-          ev(state, { type: 'guardSet', pid: i, key: a.key });
-          break;
-        case SK.HOLO:
-          /* v1.5.4：屏障是套在**目标**身上的（不是施放者自己的架势）⇒ 记一条独立事件，
-           * 免得日志/页面把它读成"施放者摆了个架势"（那正是修正前的语义）。 */
-          ev(state, { type: 'holoSet', pid: i, target: t });
-          break;
         default: break;
       }
     }
 
-    // ====== ④b 镜面反射 / 反复横跳 / 聚光炮（N14/N15/N16）======
-    mirrorPass(state);
-
-    // 互勾 → 铁索连环（在抵消检查中被豁免，双方均已结算）
+    // 互勾 → 铁索连环（含镜面复制出的摄魂互勾）
     for (const i of turnOrder(state)) {
-      const a = actionOf(state, i);
-      if (!a || a.key !== SK.DRAIN) continue;
-      const t = targetOf(state, i);
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.DRAIN) continue;
+      const t = effTarget(state, ea);
       if (t == null) continue;
-      const tb = actionOf(state, t);
-      if (tb && tb.key === SK.DRAIN && targetOf(state, t) === i) {
+      const eb = effectiveAction(state, t);
+      if (eb && eb.key === SK.DRAIN && effTarget(state, eb) === i) {
         state.p[i].chains = [t]; state.p[t].chains = [i];
         if (i < t) ev(state, { type: 'hidden', name: '铁索连环' });
       }
     }
 
-    // ====== ⑤ 枪 pri2（相抵已由 clashPass 处理）======
+    // ====== ⑤ 枪 pri2（真实与镜面复制出的枪一起打出） ======
     for (const i of turnOrder(state)) {
-      const a = actionOf(state, i);
-      if (a && a.key === SK.GUN) {
-        const tg = targetOf(state, i);
-        if (tg != null) deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, tg, { reason: '枪' });
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.GUN) continue;
+      const tg = ea.isMirror ? ea.target : targetOf(state, i);
+      if (tg != null) {
+        if (ea.isMirror) ev(state, { type: 'mirror', pid: i, from: ea.from, to: tg, key: SK.GUN });
+        deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.GUN }, tg, { reason: ea.isMirror ? '镜面反射·枪' : '枪' });
       }
     }
 
-    // ====== ⑥ 狙击 pri1（干扰则无效，否则爆头判定）======
-    /* v1.5.13 修 bug（用户对局记录第 16 回合发现）：**"狙击被干扰"的判定口径错了**。
-     * 旧实现只看"**目标**这回合用了什么技能"：
-     *     const ta = actionOf(state, t);
-     *     if (ta && (ATK_EFFECT.indexOf(ta.key)>=0 || ta.key===SK.TRANSFER)) 无效;
-     * 它**不看那技能打谁** ⇒ 多人局里目标用枪打第三个人，也会把狙击手的枪废掉。
-     * 原始 README 特殊 2 的原话是「若被作用者或其余玩家对**该玩家**使用其它带攻击效果技能则狙击无效」
-     * （"该玩家" = 狙击手本人），特殊 3 的爆头条件同样写"被作用者的技能对**攻击者**没有影响"。
-     * 2 人局看不出差别：只有两个人 ⇒ 目标的枪必然指向狙击手，旧实现恰好等价（所以 spec R13/57 一直绿）。
-     * 现在改成与规则一致：**只有当狙击手本人被别人的攻击类技能指向时才无效**。 */
-    const aimedAt = function (st, who) {           // 谁这一回合用攻击类技能指向了 who？
+    // ====== ⑥a 狙击 pri1（真实与镜面复制皆按狙击时机干扰/爆头） ======
+    const aimedAt = function (st, who) {
       for (const j of turnOrder(st)) {
         if (j === who) continue;
-        const ja = actionOf(st, j);
-        if (!ja) continue;
-        /* v1.5.137（用户裁定 09-20 深夜）：**转移伤害不能干扰狙击**——原文的干扰集合是
-         * "带攻击效果技能"（激光眼/剑/枪/坦…都在 ATK_EFFECT 里），而转移本身不造成攻击效果：
-         * 它顶多把**已经落下来的**狙击伤害转走（那是转移的正常作用，不是"干扰"）。
-         * v1.5.13 收窄的是"必须指向狙击手"，但把旧的 `|| ta.key===SK.TRANSFER` 一并照抄了进来 ——
-         * 用户实机（results/93 多局见"狙击被干扰"）复跑确认这一条不属于裁定范围。
-         * 爆头口径不变：被击方把狙击**转给狙击手本人**仍算"对攻击者有影响"（下面 affect 保留）。 */
-        if (R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
-        if (targetOf(st, j) === who) return j;
+        const ja = effectiveAction(st, j);
+        if (!ja || R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
+        const jt = ja.isMirror ? ja.target : targetOf(st, j);
+        if (jt === who) return j;
       }
       return null;
     };
     for (const i of turnOrder(state)) {
-      const a = actionOf(state, i);
-      if (!a || a.key !== SK.SNIPE) continue;
-      const t = targetOf(state, i);
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.SNIPE) continue;
+      const t = ea.isMirror ? ea.target : targetOf(state, i);
       if (t == null) continue;
       if (aimedAt(state, i) != null) { setVoid(state, i, '狙击被干扰'); continue; }
+      if (ea.isMirror) ev(state, { type: 'mirror', pid: i, from: ea.from, to: t, key: SK.SNIPE });
       const res = deliverDamage(state, {
         amt: 1, type: R.DMG.NORMAL, source: i, via: SK.SNIPE, pierce: R.byKey[SK.SNIPE].pierce
-      }, t, { reason: '狙击枪' });
+      }, t, { reason: ea.isMirror ? '镜面反射·狙击枪' : '狙击枪' });
       if (res.result === 'land') {
-        /* 爆头：**被击方**的技能对狙击手没有影响才可判定（原始特殊 3）—— 注意这里只看被击方本人，
-         * 与上面的"被干扰"（任何人都能干扰）是两个不同口径。 */
-        const ta = actionOf(state, t);
-        const affect = !!ta && (ta.key === SK.TRANSFER || R.ATK_EFFECT.indexOf(ta.key) >= 0) && targetOf(state, t) === i;
+        const ta = effectiveAction(state, t);
+        const tTgt = ta ? (ta.isMirror ? ta.target : targetOf(state, t)) : null;
+        const affect = !!ta && (ta.key === SK.TRANSFER || R.ATK_EFFECT.indexOf(ta.key) >= 0) && tTgt === i;
         if (!affect && judge3(state)) {
-          /* R63（2026-11-06 用户裁定）：爆头这 1 点属可转移伤害 ⇒ 被击方当场声明的【转移伤害】可把它转走（单跳）。
-           * 落点绕开架势（爆头本来就是额外伤害，与直击口径一致）；没转走时照旧 rawDamage 默认共享（R45 不动），
-           * 转走了 = 被击方没实际吃到 ⇒ 不从它共享（extraHitLand 落点身上的铁索照常）。
-           * ⚠ 可达性边界（诚实记录，见 RULES-2P R63）：完整狙击路径里"活转移+有效目标"会先把主弹转走
-           *   （res !== 'land' ⇒ 爆头本就不掷）⇒ 本分支在实战里只剩极窄边角可达；规则性质以 spec 直测 helper 钉住。 */
           extraHitWithTransfer(state, t, 1, '爆头', 'headshot', { from: i });
           ev(state, { type: 'headshot', pid: i, to: t });
         }
       }
     }
 
-    // ====== ⑥b 净化 pri1（清除自身状态与符咒；v1.5.110 R60：清单扩到**全部持续状态**）======
+    // ====== ⑥b 净化 pri1（天火先于净化出伤；被 pri3/pri2 直接触发的地雷不受净化撤回，其余未引爆地雷与持续状态一并清除，符咒回血可救命） ======
     for (const i of turnOrder(state)) {
-      const a = actionOf(state, i);
-      if (!a || a.key !== SK.PURIFY) continue;
-      purgeSelf(state, state.p[i], i);   // 唯一写入点（见 purgeSelf 的注释）
+      const ea = effectiveAction(state, i);
+      if (!ea || ea.key !== SK.PURIFY) continue;
+      if (ea.isMirror) ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: SK.PURIFY });
+      purgeSelf(state, state.p[i], i);
     }
 
-    mineResolveAll(state);   // N20：所有伤害结算完，统一按「直接优先」结地雷
-    protoReflectAll(state);  // v1.5.117：然后裁决原型制御的"≥3 各自转移"（要看完全部可挡伤害才算）
+    // ====== ⑦ 地雷引爆与原型制御结算 pri0 ======
+    mineResolveAll(state);
+    protoReflectAll(state);
+    state._roundAlive = null;
+    state._mirrorHidden = null;
   }
 
   /* ---------- 回合结束 ---------- */
@@ -1387,8 +1363,11 @@
         /* 挑主全员阵亡 ⇒ 义务物理不可履行 ⇒ 免罚（与"转移指定目标阵亡⇒转移落空"同族原则；
          * 2 人局里挑主阵亡=对手没了=本局通常已在结算胜利，行为不变）。 */
         const impossible = p.tauntBy.every(function (c) { return state.p[c].hp <= 0; });
-        const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(a.key) >= 0
-          && p.tauntBy.indexOf(a.target) >= 0);
+        const mr = (a && a.key === SK.MIRROR && state._mirrorResolved) ? state._mirrorResolved[i] : null;
+        const effKey = mr ? mr.key : (a && a.key);
+        const effTgt = mr ? mr.target : (a && a.target);
+        const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(effKey) >= 0
+          && p.tauntBy.indexOf(effTgt) >= 0);
         if (!ok) { p.hp -= 1; ev(state, { type: 'damage', to: i, amt: 1, reason: '挑衅违约', via: 'taunt' }); }
         p.tauntActive = false; p.tauntBy = [];
         ev(state, { type: 'tauntCheck', pid: i, ok });
@@ -1410,11 +1389,16 @@
       const expired = before - p.stickers.length;
       if (expired > 0) ev(state, { type: 'curseExpire', pid: i, n: expired });
     }
-    // 隐藏技能触发（回魂/梦魇，以回合末死亡为准）R48/R50
+    // 隐藏技能触发（回魂/梦魇，两遍结算以保证互挑同死时不依赖座位顺序）R48/R50
+    const curseDead = [];
     for (const tc of roundTaunts) {
       const c = state.p[tc.caster], t = state.p[tc.target];
       if (c.hp <= 0 && !c.reviveNext && !c.infiniteEnergy) { c.reviveNext = true; ev(state, { type: 'hidden', name: '回魂', pid: tc.caster }); }
-      if (t.hp <= 0 && !t.infiniteEnergy) { t.reviveNext = false; c.nightmare = true; ev(state, { type: 'hidden', name: '梦魇', pid: tc.caster }); }
+      if (t.hp <= 0 && !t.infiniteEnergy) curseDead.push(tc);
+    }
+    for (const tc of curseDead) {
+      const c = state.p[tc.caster], t = state.p[tc.target];
+      t.reviveNext = false; c.nightmare = true; ev(state, { type: 'hidden', name: '梦魇', pid: tc.caster });
     }
     // 铁索解除（一方确认死亡且无回魂）R46
     for (let i = 0; i < playerCount(state); i++) {

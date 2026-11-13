@@ -155,8 +155,9 @@ t('N14 镜面反射：复制目标的伤害技能打输出对象', function () {
   ok(st.events.some(function (e) { return e.type === 'mirror'; }), 'mirror 事件');
 });
 
-t('N14b 镜面反射：复制双枪只算一枪；镜面本身不可复制', function () {
-  const st = S.createState('multi', { next: mulberry32(32) }, 4);
+t('N14b 镜面反射：复制双枪只算一枪；镜面链可传递复制，无隐藏技的互相复制无效', function () {
+  // ① 双枪只算一枪
+  let st = S.createState('multi', { next: mulberry32(32) }, 4);
   for (const p of st.p) p.ep = 5;
   X.startTurn(st);
   S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
@@ -167,6 +168,30 @@ t('N14b 镜面反射：复制双枪只算一枪；镜面本身不可复制', fun
   eq(st.p[2].hp, 2, '复制双枪只算 1 伤');
   eq(st.p[0].hp, 2, '双枪打 P0');
   eq(st.p[3].hp, 2, '双枪打 P3');
+
+  // ② 镜面链传递复制：P0→P1(镜面)→P2(枪) ⇒ P0 沿链复制枪并击中 P3
+  st = S.createState('multi', { next: mulberry32(32) }, 4);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 3 });
+  S.attemptAction(st, 1, R.SK.MIRROR, { target: 2, target2: 3 });
+  S.attemptAction(st, 2, R.SK.GUN, { target: 3 });
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.p[3].hp, 0, 'P0 链式镜面与 P1、P2 三枪齐发命中 P3');
+
+  // ③ 无隐藏技的互相复制（例如 4P 互镜但输出指向不同人）：双方均无效
+  st = S.createState('multi', { next: mulberry32(32) }, 4);
+  for (const p of st.p) p.ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 1, R.SK.MIRROR, { target: 0, target2: 3 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(st.events.filter(function (e) { return e.type === 'mirrorNoEffect'; }).length, 2, '互指但非聚光炮/反复横跳 ⇒ 各自无效');
+  eq(st.p[2].hp, 3, 'P2 未受伤');
+  eq(st.p[3].hp, 3, 'P3 未受伤');
 });
 
 t('N15 反复横跳：镜面边成环 → 所有使用者受 1 点光&火', function () {
@@ -942,15 +967,15 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
   eq(cnt(st, 'mirrorCopySelf'), 0, 't1 被作废时不该复制任何东西');
   eq(st.p[0].hp, 2, '没拿到架势 ⇒ 枪照常命中');
 
-  /* ⑥ 穷举守门：技能表里**每一个**技能都必须被显式归类（新增技能必须决定它怎么被复制，
-   *    否则会出现"复制了等于没复制"这种静默漏洞 —— 本项目的第四次同类事故就是这个形状）。 */
+  /* ⑥ 穷举守门：技能表里**每一个**技能都必须被显式归类（新增技能必须决定它怎么被复制）。
+   *    注意：与复制技能按同一规则结算，含高/低优先级与对外非伤技能，唯一例外是无隐藏技互镜/空符天火无效。 */
   const DMG_COPY = [R.SK.GUN, R.SK.SWORD, R.SK.TANK, R.SK.SNIPE, R.SK.DRAIN, R.SK.RAILGUN,
     R.SK.BIG_T, R.SK.CANNON, R.SK.LASER_EYE, R.SK.DUAL_GUN];
-  const AIR_ONLY = [R.SK.MINI_T, R.SK.TRANSFER, R.SK.CURSE, R.SK.FIRESTORM, R.SK.TAUNT, R.SK.MIRROR];
+  const OTHER_COPY = [R.SK.MINI_T, R.SK.TRANSFER, R.SK.CURSE, R.SK.FIRESTORM, R.SK.TAUNT, R.SK.MIRROR];
   const cls = {};
   for (const k of DMG_COPY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'dmg'; }
   for (const k of R.MIRROR_SELF) { ok(!cls[k], '分类重复：' + k); cls[k] = 'self'; }
-  for (const k of AIR_ONLY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'air'; }
+  for (const k of OTHER_COPY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'other'; }
   const all = R.skills.map(function (s) { return s.key; });
   const unclassified = all.filter(function (k) { return !cls[k]; });
   eq(unclassified.length, 0, '有技能没归类（新增技能必须决定怎么复制）：' + JSON.stringify(unclassified));
@@ -985,6 +1010,130 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
   const uiSrc = readFileSync('js/ui/ui.js', 'utf8');
   ok(/case 'mirrorCopySelf'/.test(uiSrc), 'ui.js 必须渲染 mirrorCopySelf 事件');
   ok(/case 'mirrorNoEffect'/.test(uiSrc), 'ui.js 必须仍渲染 mirrorNoEffect（t1 被作废那条）');
+
+  /* ⑨ 镜面反射按复制技能完整结算：
+   *   - 复制大雷（未先被真实雷作废）：按大雷规则无效化非防目标并禁用；
+   *   - 复制枪：pri2 结算（互指会被 pri3 剑阻止，同 pri2 枪相抵，不互指时同枪齐出）；
+   *   - 复制贴贴/挑衅/藤甲：可正常作用在 t2；复制天火时无己方有效符咒则无效，有己方符咒则引爆；
+   *   - 激光眼可打破镜面复制盾（回滚镜面藤甲火弱）与全息盾（消除座位顺序偏置）。 */
+  {
+    // ⑨a 复制大雷无效化目标非防御技能并触发禁用
+    const s = S.createState('multi', { next: mulberry32(41) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.BIG_T, { target: 0 });
+    // 注意：真实大雷必须打 P1 无关的人或别的目标，否则 P0 直接被真实大雷打断！这里让 P1 大雷打 P2 无用? 设 4 人：P1 大雷打 P3，P0 镜面(1->2)，P2 出激光剑打 P0
+    // 上面 P1 打 P0 会先作废 P0，改 4 人局：
+  }
+  {
+    const s = S.createState('multi', { next: mulberry32(41) }, 4);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.BIG_T, { target: 3 });
+    S.attemptAction(s, 2, R.SK.SWORD, { target: 0 }); // P2 的剑会被 P0 复制来的大雷(pri4)先废掉！
+    S.attemptAction(s, 3, R.SK.JI, {});
+    X.resolveActions(s); X.endTurn(s);
+    ok(s.actions[2].voided, '镜面复制大雷应在 pri4 先行作废 P2 的剑');
+    eq(s.p[2].hp, 3, 'P2 受复制大雷 2 电伤');
+    eq(s.p[0].hp, 5, 'P2 的剑已被大雷废掉，P0 满血');
+    ok((s.p[2].cooldown[R.SK.SWORD] || 0) > 0, 'P2 的剑被复制大雷禁用 3 回合');
+  }
+  {
+    // ⑨b 复制枪在 pri2：P0(剑→P1) vs P1(镜面→枪→P0) 互指 ⇒ pri3 阻止 pri2
+    const s = S.createState('multi', { next: mulberry32(42) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.SWORD, { target: 1 });
+    S.attemptAction(s, 1, R.SK.MIRROR, { target: 2, target2: 0 });
+    S.attemptAction(s, 2, R.SK.GUN, { target: 0 });
+    X.resolveActions(s); X.endTurn(s);
+    ok(s.actions[1].voided, '镜面复制枪为 pri2，互指 pri3 激光剑时应被高优先级阻止');
+    eq(s.p[0].hp, 4, '仅 P2 的枪命中 P0，P1 复制的枪被作废未打出');
+  }
+  {
+    // ⑨c 镜面复制贴贴/挑衅/藤甲作用于 t2；天火无自符咒无效、有自符咒引爆
+    let s = S.createState('multi', { next: mulberry32(43) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.CURSE, { target: 0 });
+    S.attemptAction(s, 2, R.SK.JI, {});
+    X.resolveActions(s); X.endTurn(s);
+    eq(s.p[2].stickers.filter(function (x) { return x.owner === 0; }).length, 1, '镜面贴贴应给 t2 贴上己方符咒');
+
+    s = S.createState('multi', { next: mulberry32(44) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.TAUNT, { target: 0 });
+    S.attemptAction(s, 2, R.SK.JI, {});
+    X.resolveActions(s); X.endTurn(s);
+    ok(s.p[2].tauntActive && s.p[2].tauntBy.indexOf(0) >= 0, '镜面挑衅应在回合后让 t2 对镜面施法者履行挑衅义务');
+
+    s = S.createState('multi', { next: mulberry32(45) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.ARMOR, { target: 0 });
+    S.attemptAction(s, 2, R.SK.JI, {});
+    X.resolveActions(s);
+    ok(s.p[2].fireWeakNow && s.p[2].fireWeakNext, '镜面藤甲应给 t2 附上火弱');
+
+    // 天火：P1 贴过符咒所以天火能出，但 P0 无己方符咒 ⇒ 镜面无效
+    s = S.createState('multi', { next: mulberry32(46) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    s.p[2].stickers = [{ owner: 1, age: 0 }]; // 仅 P1 贴的，P0 没有
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.FIRESTORM, {});
+    S.attemptAction(s, 2, R.SK.JI, {});
+    X.resolveActions(s);
+    eq(s.actions[1].outcome, 'ok', 'P1 天火成功出招');
+    ok(s.events.some(function (e) { return e.type === 'mirrorNoEffect' && e.pid === 0 && e.key === R.SK.FIRESTORM; }), '镜面复制天火但己方无有效符咒 ⇒ 算无效');
+    eq(s.p[2].hp, 4, '仅 P1 自己的天火命中 P2，P0 镜面无额外伤害');
+    // 有己方符咒 ⇒ P0 与 P1 各自引爆自己的那枚
+    s = S.createState('multi', { next: mulberry32(47) }, 3);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; }
+    s.p[2].stickers = [{ owner: 0, age: 0 }, { owner: 1, age: 0 }];
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(s, 1, R.SK.FIRESTORM, {});
+    S.attemptAction(s, 2, R.SK.JI, {});
+    X.resolveActions(s);
+    eq(s.actions[1].outcome, 'ok', 'P1 天火成功出招');
+    eq(s.p[2].hp, 3, 'P1 引爆自己的 1 枚 + P0 镜面天火引爆自己的 1 枚 = 共 2 伤');
+  }
+  {
+    // ⑨d 激光眼破镜面复制盾（回滚镜面藤甲火弱）& 破全息盾，且先于 pri3 攻击（消除座位偏置）
+    let s = S.createState('multi', { next: mulberry32(48) }, 4);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; q.boom = 1; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.TANK, { target: 2 });      // 0号位先坦克打 P2（旧顺序若 P3 后手破藤甲会打不到）
+    S.attemptAction(s, 1, R.SK.ARMOR, { target: 0 });     // P1 给 P0 挂火弱（不是 P3）
+    S.attemptAction(s, 2, R.SK.MIRROR, { target: 1, target2: 3 }); // P2 复制 P1 藤甲并指向 P3
+    S.attemptAction(s, 3, R.SK.LASER_EYE, { target: 2 }); // 3号位激光眼破 P2 的镜面藤甲
+    X.resolveActions(s); X.endTurn(s);
+    eq(s.actions[3].outcome, 'ok', '激光眼成功出招');
+    ok(s.actions[2].voided, '激光眼应作废 P2 镜面复制出的藤甲');
+    ok(!s.p[3].fireWeakNow && !s.p[3].fireWeakNext, '被激光眼破掉的镜面藤甲不得在 P3 留下火弱');
+    ok(s.p[0].fireWeakNext, 'P1 自身未被破的藤甲仍应给 P0 保留火弱');
+    eq(s.p[2].hp, 4, '先破防后攻击：0号位的坦克应在破防后命中 P2 造成 1 伤（不再被反弹）');
+    eq(s.p[0].hp, 5, 'P0 不被复制藤甲反弹');
+
+    // 激光眼破全息屏障（同样先于 pri3 攻击）
+    s = S.createState('multi', { next: mulberry32(49) }, 4);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; q.boom = 1; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.SWORD, { target: 2 });     // 0号位剑打 P2
+    S.attemptAction(s, 1, R.SK.HOLO, { target: 2 });      // P1 给 P2 套全息盾
+    S.attemptAction(s, 2, R.SK.JI, {});
+    S.attemptAction(s, 3, R.SK.LASER_EYE, { target: 2 }); // P3 激光眼打 P2，破掉 P1 的全息盾
+    X.resolveActions(s); X.endTurn(s);
+    ok(s.actions[1].voided, '激光眼应作废挂在 P2 身上的全息盾施法者 P1');
+    eq(s.p[2].hp, 4, '全息盾被破后 0 号位的剑命中 P2 造成 1 伤');
+  }
 });
 
 t('D29 "只有指纹在响"的规则数据必须有**行为**断言（判定 p / 爆头 3 轮 / 小雷豁免名单 / 费用 / 雷系集合）', function () {
