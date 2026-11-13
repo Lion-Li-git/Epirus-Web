@@ -160,3 +160,4 @@ champion-map/eps313-agg.tsv
 champion-map/data/build/
 # 新点测量中间产物（measure-point 的 exam4/ruler/readings/display）
 champion-map/staging/
+champion-map/data/page/*.bak-*
