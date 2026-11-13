@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -211,6 +211,50 @@ const laserPick = (state, pid, cs) => {
   const guard = hits.find((x) => { const o = state.p[x.target]; return o && GUARD_FAMILY.indexOf(o.lastSkill) >= 0; });
   if (guard) return guard;
   return pickKey(cs, R.SK.CHARGE, 'boom');
+};
+/* ===== 夜6班 · 11-14：三个新脚本教师（用户点名的技能线；A 轴配合剧本的蒸馏侧移植）=====
+ * 盘点（GD8/GD4-LASER 标签账）：激光眼有现成教师（脚本 lasereye + GD4-LASER 包 115 标签）；
+ *   **贴贴天火序列/过载炮/转移没有教师**（toolkit 只贴不引——R62 时代「贴而不引」病灶的同源）。
+ *   A 轴配合剧本（firedetonator/tauntank/coop-probe）是唯一在演示这些序列的行为 ⇒ 移植成教师。 */
+/* **贴贴天火序列**：设计目标 = 引爆率最大化（mastery 天火线门槛 = 引爆率≥75%，可>100%——符咒引爆后仍存）。
+ *   有活符就反复引爆（R64 门保证可发动；连发 2ジ 段把同一批符吃满），没活符才贴新的。
+ *   ⚑ 贴符选靶（GD16 全量实测抓修）：引擎默认 kill-priority 把符贴到**濒死者**身上 ⇒ 人死符废 ⇒
+ *   全量 800 组 firestorm 标签塌到 8/181（4.4%）。改贴**血最厚的活敌**（宿主活得久 ⇒ 符活得久 ⇒ 引爆循环成立）。
+ *   ⚑ 贴符剂量（GD16b mastery 抓修）：无剂量时引爆分支**绑架整个行为**（1522 贴/365 引，引爆率 24%，
+ *   火线全洗——GD5「叠高层挤掉经济线」的单教师版）。贴符对齐 ration 的短程配额（剑 2/枪 3 同族）：
+ *   每局贴 ≤3 符（2~3 个宿主），贴完转入引爆循环（firestorm 不设限 = 收益段）⇒ 引爆率上去、火线拿回梯度。 */
+const DET_CURSE_DOSE = 3;
+const detonatePick = (state, pid, cs) => {
+  const fs = cs.find((c) => c.key === R.SK.FIRESTORM && c.affordable !== false);
+  if (fs) return fs;
+  let stuck = 0;
+  for (const e of (state.events || [])) {
+    if (e.type === 'action' && e.pid === pid && e.key === R.SK.CURSE) stuck++;
+  }
+  if (stuck >= DET_CURSE_DOSE) return null;
+  let best = null, bestHp = -1;
+  for (const c of cs) {
+    if (c.key !== R.SK.CURSE || c.affordable === false) continue;
+    const o = state.p[c.target];
+    const hp = o && o.hp > 0 ? o.hp : -1;
+    if (hp > bestHp) { bestHp = hp; best = c; }
+  }
+  return best;
+};
+/* **过载炮**（R66：穿防御与反弹；φ3 清空目标全部ジ）：有ジ就打，目标交引擎默认（kill-priority）。 */
+const cannonPick = (state, pid, cs) => cs.find((c) => c.key === R.SK.CANNON && c.affordable !== false) || null;
+/* **转移伤害**（花 2ジ 把将挨的打转给 ep≥2 的对手 = 原路奉还；与 A 轴挑衅坦克的分级防御同口径）。
+ *   教师只演示转移那一手，其余局面回落链。 */
+const transferPick = (state, pid, cs) => {
+  const tr = cs.find((c) => c.key === R.SK.TRANSFER && c.affordable !== false);
+  if (!tr) return null;
+  const me = state.p[pid];
+  for (let i = 0; i < (state.p || []).length; i++) {
+    const o = state.p[i];
+    if (!o || i === pid || (o.hp || 0) <= 0) continue;
+    if ((o.ep || 0) >= 2 && me && (me.ep || 0) >= 2) return tr;
+  }
+  return null;
 };
 /* 长程×短程权衡教师（ZCode · 11-01，PREREG-2026-11-01-LONGSHORT）：ration 的长程配给骨架原样保留，
  *   在链兜底之前插两格**短程剂量**（剑 2/局、枪 3/局，目标=血最低活敌）。贵线有上限、短程有配额、
@@ -500,6 +544,18 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'lasereye'
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
+  : name === 'detonate'
+    ? (state, pid, cs) => detonatePick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把引爆段拖回攒钱 */
+  : name === 'rationdet'
+    ? (state, pid, cs) => rationPick(state, pid, cs) || detonatePick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+    /* 夜6班 · 11-14：**复合教师**（火线剂量 + 空闲时贴/引爆）——修「键道教师蹭不到主教师轨迹」的状态分布病：
+     *   纯 detonate 键道在 ration 轨迹里 firestorm=0（ration 不贴符 ⇒ 集合态无活符）；把贴/引爆接进 ration
+     *   自己的轨迹（空闲拍贴符 → 后续态有活符 → firestorm 可发动 → 引爆循环长在同一条轨迹里），
+     *   火线标签照旧（ration 骨架优先）。GD5「叠加蒸馏洗键层」不适用：这是单教师单轨迹，不是两次蒸馏。 */
+  : name === 'cannon'
+    ? (state, pid, cs) => cannonPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'transfer'
+    ? (state, pid, cs) => transferPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'oracleDef'
     ? (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
@@ -542,7 +598,17 @@ if (_SELF_PACK) {
 }
 const teacherPick = (state, pid, cs, legal) => {
   let raw = _pickRaw;
-  if (_useT2 && _pickRaw2) {
+  /* N 教师键道派发（夜6班）：优先级 t4 > t3 > t2（份额小时同时越界者让位；组级归属在 collectInto 里定），
+   *   各教师只在自己的键道内出标签，越道回落主教师（道必设——teacher3/4 的响亮闸）。 */
+  if (_useT4 && _pickRaw4) {
+    const t = _pickRaw4(state, pid, cs, legal);
+    if (t && T4KEYS.has(t.key)) { LABEL.t4Hits = (LABEL.t4Hits || 0) + 1; raw = () => t; }
+    else LABEL.t4Fallback = (LABEL.t4Fallback || 0) + 1;
+  } else if (_useT3 && _pickRaw3) {
+    const t = _pickRaw3(state, pid, cs, legal);
+    if (t && T3KEYS.has(t.key)) { LABEL.t3Hits = (LABEL.t3Hits || 0) + 1; raw = () => t; }
+    else LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1;
+  } else if (_useT2 && _pickRaw2) {
     const t2 = _pickRaw2(state, pid, cs, legal);
     /* 键级不相交：teacher2 只在 T2KEYS 道内出标签，越道回落主教师（道未设 = GD9 语义，全收） */
     if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
@@ -557,7 +623,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
@@ -568,12 +634,34 @@ const TEACHER2_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher2frac', 0
  *   越道（选中键不在名单）回落主教师。GD9/GD9b 的教训：两教师标签在同一键层竞争 ⇒ 部署 argmax 塌回保守
  *   （考卷 99%、行为全零）。缺省（不给旗标）= 不设道（teacher2 的每个标签都算，GD9 语义）。 */
 const T2KEYS = new Set(String(arg('teacher2keys', '')).split(',').filter(Boolean));
+/* 夜6班 · 11-14：teacher3/4（N 不相交键道的终局形态——GD5「叠加蒸馏洗键层」否证了串行叠加，
+ *   13 班交接的原案：并行不相交键道才是多技能单包的正路）。份额互相独立，键道必须互异。 */
+const TEACHER3 = String(arg('teacher3', ''));
+const TEACHER3_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher3frac', 0.15)) || 0.15));
+const T3KEYS = new Set(String(arg('teacher3keys', '')).split(',').filter(Boolean));
+const TEACHER4 = String(arg('teacher4', ''));
+const TEACHER4_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher4frac', 0.1)) || 0.1));
+const T4KEYS = new Set(String(arg('teacher4keys', '')).split(',').filter(Boolean));
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
 }
+if (TEACHER3) {
+  if (TEACHER_KNOWN.indexOf(TEACHER3) < 0 && TEACHER3.indexOf('pack:') !== 0) { console.error('⛔ --teacher3 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER3 + '）'); process.exit(2); }
+  const clash = [TEACHER, TEACHER2].filter((x) => x === TEACHER3);
+  if (clash.length) { console.error('⛔ --teacher3=' + TEACHER3 + ' 与既有教师重名 ⇒ 轮替无意义'); process.exit(2); }
+  if (!T3KEYS.size) { console.error('⛔ --teacher3 必须配 --teacher3keys（N 键道方案的纪律：并行必须不相交，GD9 全收语义只许 teacher2 缺省道时用）'); process.exit(2); }
+}
+if (TEACHER4) {
+  if (TEACHER_KNOWN.indexOf(TEACHER4) < 0 && TEACHER4.indexOf('pack:') !== 0) { console.error('⛔ --teacher4 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER4 + '）'); process.exit(2); }
+  const clash = [TEACHER, TEACHER2, TEACHER3].filter((x) => x === TEACHER4);
+  if (clash.length) { console.error('⛔ --teacher4=' + TEACHER4 + ' 与既有教师重名 ⇒ 轮替无意义'); process.exit(2); }
+  if (!T4KEYS.size) { console.error('⛔ --teacher4 必须配 --teacher4keys'); process.exit(2); }
+}
 const _pickRaw2 = TEACHER2 ? buildTeacherPick(TEACHER2) : null;
-let _useT2 = false;
+const _pickRaw3 = TEACHER3 ? buildTeacherPick(TEACHER3) : null;
+const _pickRaw4 = TEACHER4 ? buildTeacherPick(TEACHER4) : null;
+let _useT2 = false, _useT3 = false, _useT4 = false;
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
@@ -591,13 +679,21 @@ const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
-  let gN = 0;   /* 组级计数：teacher2 轮替的 Bresnham 游标 */
+  let gN = 0;   /* 组级计数：N 教师轮替的 Bresnham 游标 */
   const record = (state, pid, legal) => {
     lastG = null;
-    /* 双教师轮替（组级，精确 frac 份额；teacher2 缺省 ⇒ 恒 false ⇒ 主路径逐字节不变） */
-    const prev = Math.floor(gN * TEACHER2_FRAC), cur = Math.floor((gN + 1) * TEACHER2_FRAC);
-    _useT2 = !!(_pickRaw2 && cur > prev);
-    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
+    /* N 教师轮替（组级边界穿越法，夜6班从双教师推广）：各教师按自己的 frac 独立检测穿越，
+     *   同时穿越时高号优先（t4>t3>t2）——份额小 ⇒ 冲突罕见，实现份额记在 LABEL.tNGroups 里对账。
+     *   teacher2/3/4 全缺省 ⇒ 恒 t1 ⇒ 主路径逐字节不变。 */
+    const prev2 = Math.floor(gN * TEACHER2_FRAC), cur2 = Math.floor((gN + 1) * TEACHER2_FRAC);
+    const prev3 = Math.floor(gN * TEACHER3_FRAC), cur3 = Math.floor((gN + 1) * TEACHER3_FRAC);
+    const prev4 = Math.floor(gN * TEACHER4_FRAC), cur4 = Math.floor((gN + 1) * TEACHER4_FRAC);
+    _useT4 = !!(_pickRaw4 && cur4 > prev4);
+    _useT3 = !_useT4 && !!(_pickRaw3 && cur3 > prev3);
+    _useT2 = !_useT4 && !_useT3 && !!(_pickRaw2 && cur2 > prev2);
+    if (_pickRaw4) { if (_useT4) LABEL.t4Groups = (LABEL.t4Groups || 0) + 1; }
+    if (_pickRaw3) { if (_useT3) LABEL.t3Groups = (LABEL.t3Groups || 0) + 1; }
+    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (!_pickRaw3 && !_pickRaw4) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
     gN++;
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];

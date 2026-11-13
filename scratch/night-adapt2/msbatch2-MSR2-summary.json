@@ -1,0 +1,46 @@
+{
+ "base": 31,
+ "start": "scratch/arms/GD6a-TILT.bak",
+ "rounds": 1,
+ "branches": 2,
+ "gens": 100,
+ "margin": 0.03,
+ "final": "docs/artifacts/MSR2-R1S1443659016-seg2.bak",
+ "history": [
+  {
+   "round": 1,
+   "champion": "docs/artifacts/MSR2-R1S1443659016-seg2.bak",
+   "champMean": 0.084645,
+   "pool": [
+    {
+     "label": "S1443659016",
+     "pack": "docs/artifacts/MSR2-R1S1443659016-seg2.bak",
+     "mean": 0.084645,
+     "min": -0.1139
+    },
+    {
+     "label": "S1795180446",
+     "pack": "docs/artifacts/MSR2-R1S1795180446-seg2.bak",
+     "mean": 0.050145,
+     "min": -0.1408
+    },
+    {
+     "label": "冠军",
+     "pack": "scratch/arms/GD6a-TILT.bak",
+     "mean": 0.02356,
+     "min": -0.1527
+    },
+    {
+     "label": "冠军",
+     "pack": "scratch/arms/GD6a-TILT.bak",
+     "mean": 0.02356,
+     "min": -0.1527
+    }
+   ],
+   "nextParents": [
+    "docs/artifacts/MSR2-R1S1443659016-seg2.bak",
+    "docs/artifacts/MSR2-R1S1795180446-seg2.bak"
+   ]
+  }
+ ]
+}

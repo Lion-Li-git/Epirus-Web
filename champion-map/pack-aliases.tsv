@@ -495,3 +495,9 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-12T20:54:44.287Z	05db3eeb2ea5fa4f	docs/artifacts/MSB18-R2S616577427-band2.bak	docs/artifacts/night-adapt/MSB18-R2S616577427.js	train-3p	未复制：同一粒权重已有真身
 2026-11-12T20:59:25.685Z	ffacc9febfc7735b	docs/artifacts/MSB18-R2S1283350993-band1.bak	docs/artifacts/MSB18-R2S1283350993-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
 2026-11-12T20:59:25.708Z	e4ba5eeeb04daf4e	docs/artifacts/MSB18-R2S1283350993-band2.bak	docs/artifacts/night-adapt/MSB18-R2S1283350993.js	train-3p	未复制：同一粒权重已有真身
+2026-11-13T21:33:56.293Z	f98a9bc511ae4480	docs/artifacts/MSR1-R1S1871506250-band1.bak	docs/artifacts/night-adapt/MSR1-R1S1871506250.js	train-3p	未复制：同一粒权重已有真身
+2026-11-13T21:45:10.043Z	649120eecc7e7853	docs/artifacts/MSR1-R1S1849942881-band1.bak	docs/artifacts/MSR1-R1S1849942881-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-13T21:45:10.063Z	a9d6e0868bf290c1	docs/artifacts/MSR1-R1S1849942881-band2.bak	docs/artifacts/night-adapt/MSR1-R1S1849942881.js	train-3p	未复制：同一粒权重已有真身
+2026-11-13T22:10:55.556Z	223bb8b8000cbe54	docs/artifacts/MSR2-R1S1795180446-seg2.bak	docs/artifacts/MSR2-R1S1795180446-band2.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 2 席）
+2026-11-13T22:10:55.579Z	2e12ffcc180439b5	docs/artifacts/MSR2-R1S1795180446-band1.bak	docs/artifacts/night-adapt/MSR2-R1S1795180446.js	train-3p	未复制：同一粒权重已有真身
+2026-11-13T22:12:45.998Z	847e8994de26c2aa	docs/artifacts/MSR2-R1S1443659016-band4.bak	docs/artifacts/night-adapt/MSR2-R1S1443659016.js	train-3p	未复制：同一粒权重已有真身
