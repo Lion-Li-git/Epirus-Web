@@ -987,7 +987,7 @@ function SUBSETP_NOW() { return PROJCOLS ? (st.batch !== 'all' ? 1 : 0) : SUBSET
 var NA_IN_SUBSET = ['批次过滤：切一批要少点', '冠军序列：声称上过槽', '倒挂假边必须被修掉', '父边来路必须标全',
   '强度窗口：两端顶到色端', '强度窗口：分界被切掉', '标签：常驻名单', '点大小：上过线那一档', '命中：标签中心不许命中',
   '那 584 枚共父', '池层：真源表每一枚都在图上', '池层：环数', '融合边：红线必须真画出来', '家族配色要',
-  '壳：带宽滑轨', '壳：带宽真的改场', '连线开关：全开', '沿一条边走一圈', '空地上的单根线', '平移/缩放/旋转一条线的 alpha',
+  '壳：带宽滑轨', '壳：带宽真的改场', '壳：版本（all/1.8/2.0）', '连线开关：全开', '沿一条边走一圈', '空地上的单根线', '平移/缩放/旋转一条线的 alpha',
   '工具栏剩下的都能点', '谱系图：旧包没有 lineage 行'];
 st.sel = null; st.cmp = []; st.side = false;
 /* ===== §E596 分界的锚从"某一枚包"换成"最强那一批的均值"（用户 10-12：「演化图里还标着现役，应该把这些都去掉或者改成最强一批的平均值」）=====
@@ -1673,14 +1673,16 @@ var BASEP = -1;
  *   ⚠ 线落在参照之下必须自己说：滑杆下限 0.15 比参照低是**故意的**（等值面是水平，不是下限），
  *   但低于参照时圈进来的就是"低于平均的一片"，标签要讲出来，不能让人以为还在挑最好的那坨。 */
 var POTK = '', POTREF = -1;
-function potRef() { var k = FKEY();   /* Fv 的全部自由度（尺/T/权重/桌形）⇒ 键必须都带上（§E617 同一条规矩）*/
+function potRef() { var k = FKEY() + '@' + visSig3();   /* Fv 的全部自由度（尺/T/权重/桌形）与当前可见集 ⇒ 键必须都带上（§E617 同一条规矩）*/
   if (POTK === k) return POTREF; POTK = k;
-  var fr = fRange(), span = (fr[1] - fr[0]) || 1, s = 0, n = 0;
-  for (var i = 0; i < N; i++) { var v = (Fv(P[i]) - fr[0]) / span; if (isFinite(v)) { s += v; n++; } }
+  var lo = Infinity, hi = -Infinity, i, v;
+  for (i = 0; i < N; i++) { if (!VIS[i]) continue; v = Fv(P[i]); if (isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+  var fr = isFinite(lo) ? [lo, hi] : fRange(), span = (fr[1] - fr[0]) || 1, s = 0, n = 0;
+  for (i = 0; i < N; i++) { if (!VIS[i]) continue; v = (Fv(P[i]) - fr[0]) / span; if (isFinite(v)) { s += v; n++; } }
   POTREF = n ? s / n : 0.5; return POTREF; }
 function THRLBL(v) { ringTally(); var t = (v === undefined || !isFinite(v)) ? st.isoT : v, pc = Math.round(t * 100);
   if (st.isoField === 'pot') { var pr = potRef() * 100;
-    return pc + '%（等值面 = 归一化势 ‖ 参照：全库平均势 ' + pr.toFixed(1) + '%' + (pc < pr ? ' ‖ ⚠ 线在均值之下 ⇒ 圈的是低于平均的一片，不是势最高那坨' : '') + '）'; }
+    return pc + '%（等值面 = 归一化势 ‖ 参照：' + (NVIS === N ? '全库平均势 ' : '当前平均势 ') + pr.toFixed(1) + '%' + (pc < pr ? ' ‖ ⚠ 线在均值之下 ⇒ 圈的是低于平均的一片，不是势最高那坨' : '') + '）'; }
   var br = BASEP * 100;
   return pc + '%（等值面 = 局部过线占比 ‖ 参照：全库过线率 ' + br.toFixed(1) + '% · ' + RSUBNAME() + (pc < br ? ' ‖ 线在过线率之下 ⇒ 壳不再等于"过线富集"' : '') + '）'; }
 /* §E608 带宽旋钮的标签要说**生效值**而不是滑块的刻度：c 同时缩核宽、退 M0、退密度门，三个数都得看得见才知道现在这只壳是谁。 */
@@ -3035,8 +3037,17 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   c=1 ⇒ 下面每一处都逐项回到今天的式子（这条是硬要求，页内自检有一条钉它）。
    *   传进来是 undefined 的旧调用（没有）一律当 1。*/
   var BW = (bw === undefined || !isFinite(bw)) ? 1 : Math.max(0.02, Math.min(1, bw));
-  var i, j, k, a = [], b = [], c = [];
-  for (i = 0; i < N; i++) { a.push(P[i].ax); b.push(P[i].by); c.push(P[i].cz); }
+  /* 只让当下可见的那批点（VIS[i]，受版本 all/1.8/2.0 与 F 窗口约束）进空间网格、核评估与读数统计 */
+  var i, j, k, pts = [], a = [], b = [], c = [];
+  for (i = 0; i < N; i++) {
+    if (!VIS[i]) continue;
+    pts.push(i); a.push(P[i].ax); b.push(P[i].by); c.push(P[i].cz);
+  }
+  var M = pts.length;
+  if (!M) {
+    return { quads: [], dims: [8, 8, 8], sig: sig, thr: thr, gn: GN, field: field, bw: BW, tab: st.ftab, vis: visSig3(),
+      nCell: 0, nDrop: 0, cov: 0, ins: 0, covL: 0, insL: 0, insCell: 0, bad: 0, miss: 0, p0: 0.15, base: 0.15, nOk: 0, maxF: 0 };
+  }
   var loA = Math.min.apply(null, a), hiA = Math.max.apply(null, a);
   var loB = Math.min.apply(null, b), hiB = Math.max.apply(null, b);
   var loC = Math.min.apply(null, c), hiC = Math.max.apply(null, c);
@@ -3054,8 +3065,8 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   原来每个格点要拼 27 个字符串键做哈希查找（128 格 ⇒ 2.1M × 27 = 5600 万次拼接），真机实测单次重建 1175ms，
    *   这是主因之一。数学**逐字不变**：仍是同 27 个桶、同一个 exp 核、同一点序与累加顺序（⇒ 结果应当逐字节相同）。 */
   var nbc = nb[0] * nb[1] * nb[2];
-  var cellStart = new Int32Array(nbc + 1), cellItem = new Int32Array(N), bidx = new Int32Array(N);
-  for (i = 0; i < N; i++) {
+  var cellStart = new Int32Array(nbc + 1), cellItem = new Int32Array(M), bidx = new Int32Array(M);
+  for (i = 0; i < M; i++) {
     var b0 = Math.floor((a[i] - loA) / BK), b1 = Math.floor((b[i] - loB) / BK), b2 = Math.floor((c[i] - loC) / BK);
     if (b0 < 0) b0 = 0; else if (b0 >= nb[0]) b0 = nb[0] - 1;
     if (b1 < 0) b1 = 0; else if (b1 >= nb[1]) b1 = nb[1] - 1;
@@ -3064,13 +3075,17 @@ function isoBuild(sig, thr, GN, field, bw) {
   }
   for (i = 0; i < nbc; i++) cellStart[i + 1] += cellStart[i];
   var _cf = new Int32Array(nbc);
-  for (i = 0; i < N; i++) { cellItem[cellStart[bidx[i]] + _cf[bidx[i]]++] = i; }
+  for (i = 0; i < M; i++) { cellItem[cellStart[bidx[i]] + _cf[bidx[i]]++] = i; }
   /* ⚠ 必须在下面 VF 预计算**之前**求值：vAt 是函数声明（提升 ⇒ 那行调得动），而它 'pot' 那支读 fr2
    *   —— fr2 若还留在 VF 之后，var 提升只声明不赋值 ⇒ 切到「势」场整页抛 TypeError。
    *   'ok' 那支不读 fr2 ⇒ 只有势场死，这就是它躲过页内自检的原因。 */
-  var fr2 = fRange(), fspan = (fr2[1] - fr2[0]) || 1;
-  var VF = new Float64Array(N);
-  for (i = 0; i < N; i++) VF[i] = vAt(i);   /* 内层不再重复调 vAt 闭包 */
+  var fr2 = (function () {
+    var flo2 = Infinity, fhi2 = -Infinity;
+    for (var ii = 0; ii < M; ii++) { var vv = Fv(P[pts[ii]]); if (isFinite(vv)) { if (vv < flo2) flo2 = vv; if (vv > fhi2) fhi2 = vv; } }
+    return isFinite(flo2) ? [flo2, fhi2] : fRange();
+  })(), fspan = (fr2[1] - fr2[0]) || 1;
+  var VF = new Float64Array(M);
+  for (i = 0; i < M; i++) VF[i] = vAt(i);   /* 内层不再重复调 vAt 闭包 */
   var F = new Float32Array(dims[0] * dims[1] * dims[2]);
   var s2 = 2 * sig * sig * BW * BW;   /* §E608 高斯核的宽度 = σ_k²（σ_k = BW·σ），支撑 R 已经跟着缩 ⇒ 两者必须一起缩 */
   /* §E312 场 = **往全局先验收缩的局部比值**。旧写法是裸比值 num/den ⇒
@@ -3088,14 +3103,14 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   势场阈值 67% ⇒ 壳内 122 枚、纯度 28%，而**留一还有 21%**（底率 15.7%）⇒ 全场唯一"过了留一复核还站得住"的壳。
    *   ⚠ §E314 换尺后这一组数全部重扫过（旧势场是 64% / 68 枚 / 31% / 23%）—— 场的定义一动，默认值就必须重定。*/
   /* 没判定的枚一律 NaN ⇒ 不进核、不进分母（旧写法 null 会被 isFinite 放进来当 0，是个静默偏置）*/
-  function vAt(m) { if (field === 'pot') return (Fv(P[m]) - fr2[0]) / fspan;
-    var r = RSUBJ(P[m]);   /* §E677 过线场吃**当前主语**那把闸（切到长程桌，壳圈的就是全腿长程过线的那批）*/
+  function vAt(m) { var pm = P[pts[m]]; if (field === 'pot') return (Fv(pm) - fr2[0]) / fspan;
+    var r = RSUBJ(pm);   /* §E677 过线场吃**当前主语**那把闸（切到长程桌，壳圈的就是全腿长程过线的那批）*/
     return r === 1 ? 1 : (r === 0 ? 0 : NaN); }
   var nOk = 0, sumV = 0, nV = 0, nHas = 0;
-  for (i = 0; i < N; i++) { var v0 = vAt(i); var r0 = RSUBJ(P[i]);
+  for (i = 0; i < M; i++) { var v0 = VF[i]; var r0 = RSUBJ(P[pts[i]]);
     if (r0 === 1 || r0 === 0) { nHas++; if (r0 === 1) nOk++; }
     if (isFinite(v0)) { nV++; sumV += v0; } }
-  /* base = 全库过线率，**与场无关**：壳内纯度要跟它比才知道壳是不是白画的。
+  /* base = 当前可见集过线率，**与场无关**：壳内纯度要跟它比才知道壳是不是白画的。
    *   'pot' 场的 p0 是"平均势"（59%），拿它当"底率"印出去会把人带沟里（截图第一版就印成 59%）。*/
   var p0 = nV ? sumV / nV : 0.15, base = nHas ? nOk / nHas : 0.15, M0 = DM0 * BW, maxF = 0;
   /* §E608：M0 是"往 0 收缩"的那剂药（E401），它治的是**稀疏区一两个点就把比值抬到 1** 的长假壳。
@@ -3130,8 +3145,8 @@ function isoBuild(sig, thr, GN, field, bw) {
     var ess = den * den / (den2 || 1e-9);
     return (ess * (num / den)) / (ess + M0);   /* E401：向 0 收缩（没证据 = 0），不再向底率收缩 */
   }
-  /* 预扫（只 917 次，便宜）：每枚自己那儿的核质量 ⇒ 取中位数当 dref 的基准 */
-  var _d = []; for (i = 0; i < N; i++) { at(a[i], b[i], c[i], i); if (ATDEN > 0) _d.push(ATDEN); }
+  /* 预扫（只扫可见集）：每枚自己那儿的核质量 ⇒ 取中位数当 dref 的基准 */
+  var _d = []; for (i = 0; i < M; i++) { at(a[i], b[i], c[i], i); if (ATDEN > 0) _d.push(ATDEN); }
   _d.sort(function (x, y) { return x - y; }); DMED = _d.length ? _d[_d.length >> 1] : 1;
   var DREF = 0.6 * DMED * DGATE;
   /* §E608（千问 10-15 ‖ DS 交接件 §3.1）**画壳与印读数从此只过这一个函数**：
@@ -3153,19 +3168,20 @@ function isoBuild(sig, thr, GN, field, bw) {
    *   留一 = "它不是靠自己被圈进来"的读数。iso-sweep.mjs 实测这两列能差一倍（25% 档 56/109 ‖ 26/100）
    *   ⇒ 只报含自己那列，就是拿点的自我照亮冒充"局部真的富集过线枚"。*/
   var cov = 0, ins = 0, covL = 0, insL = 0;
-  for (i = 0; i < N; i++) { var vi = vAt(i); if (!isFinite(vi)) continue;
-    if (gfield(a[i], b[i], c[i], -1) >= thr) { ins++; if (RSUBJ(P[i]) === 1) cov++; }
-    if (gfield(a[i], b[i], c[i], i) >= thr) { insL++; if (RSUBJ(P[i]) === 1) covL++; } }
+  for (i = 0; i < M; i++) { var vi = VF[i]; if (!isFinite(vi)) continue;
+    var rPt = RSUBJ(P[pts[i]]);
+    if (gfield(a[i], b[i], c[i], -1) >= thr) { ins++; if (rPt === 1) cov++; }
+    if (gfield(a[i], b[i], c[i], i) >= thr) { insL++; if (rPt === 1) covL++; } }
   /* §E608（DS 交接件 §1.6 第 4 条）：**两个错分开印**。原来只有"壳内 N 枚 / 里面几枚真过线"，
    *   而用户抱怨的两件事（过线密集区里的未过线点被包住、未过线密集区里的过线点不画）各是这两个数之一，
-   *   不印出来就没法说"这只壳错了几个"，只能靠眼睛。漏画的分母 = nOk（全库有判定里过线那批）。*/
+   *   不印出来就没法说"这只壳错了几个"，只能靠眼睛。漏画的分母 = nOk（当前可见有判定里过线那批）。*/
   var badIn = ins - cov, missOut = nOk - cov;
   /* §E608 同场的**可判据版本**：上面那个循环是解析地在点的坐标上重算场，而壳是画在 F 这张网格上的。
    *   两者都是"同一个 gfield"才会数到同一批点 ⇒ 顺手按**最近格**在 F 上再数一遍（insCell）。
    *   它不是要取代解析读数（解析那列才是"含自己 / 留一"两口径的口径），而是给页内自检留一根有牙的腿：
    *   谁把读数改回不走门的 at()，ins 会朝 insCell 下面掉一大截（DS 实测差 ~30%），当场红。*/
   var insCell = 0;
-  for (i = 0; i < N; i++) { var vc = vAt(i); if (!isFinite(vc)) continue;
+  for (i = 0; i < M; i++) { var vc = VF[i]; if (!isFinite(vc)) continue;
     var _i = Math.round((a[i] - loA) / dA), _j = Math.round((b[i] - loB) / dB), _k = Math.round((c[i] - loC) / dC);
     if (_i < 0) _i = 0; else if (_i >= dims[0]) _i = dims[0] - 1;
     if (_j < 0) _j = 0; else if (_j >= dims[1]) _j = dims[1] - 1;
@@ -3233,8 +3249,8 @@ function isoBuild(sig, thr, GN, field, bw) {
       quads.push(o);
     }
   }
-  return { quads: quads, dims: dims, sig: sig, thr: thr, gn: GN, field: field, bw: BW, tab: st.ftab, nCell: F.length, nDrop: ndrop,
-    cov: cov, ins: ins, covL: covL, insL: insL, insCell: insCell, bad: badIn, miss: missOut, bw: BW, p0: p0, base: base, nOk: nOk, maxF: maxF };
+  return { quads: quads, dims: dims, sig: sig, thr: thr, gn: GN, field: field, bw: BW, tab: st.ftab, vis: visSig3(), nCell: F.length, nDrop: ndrop,
+    cov: cov, ins: ins, covL: covL, insL: insL, insCell: insCell, bad: badIn, miss: missOut, p0: p0, base: base, nOk: nOk, maxF: maxF };
 }
 /* σ = 第 6 近邻距离的中位，**按显示度量**（三轴各自换算成同一屏幕单位之后）⇒ 曲面在屏幕上是圆的。
  *   用数据单位算就是 §E296 那个病的三维版：三轴比例尺不同 ⇒ 球被拉成椭球。
@@ -3245,12 +3261,21 @@ var ISO = null;
  *   而它**每帧**都被 isoEnsure() 调一次 ⇒ 一帧白烧 ~1.2 秒（GL 三段计时全 0、ISOBUILDS 只有 7 ⇒ 与此吻合）。
  *   它只依赖装载时算好的静态显示坐标（P[i].ax/by/cz）⇒ **本该只算一次**，这里加会话级 memo。 */
 var SIGCNT = 0, SIGVAL = 0;
-/* 11-13：三维壳的坐标轴不是常量 —— 同一页可以换三套行为轴（三个图各自渲染）。
- *   旧缓存只拿 N + 首尾坐标做戳：三套轴若首尾碰巧接近，isoSigma / ISO 就会把上一张图的壳回吐给下一张
- *   （表现正是「三个图用同一个过线曲面 / 势曲面」）。这里用全点坐标哈希做轴签名，进所有相关缓存键。 */
+/* 11-13：三维壳必须跟着**当前图可见点集 VIS** 与行为轴一起变化：
+ *   版本 all / 1.8 / 2.0（或 F 窗口过滤）点数不同，原来 isoSigma/axisSig/isoBuild/isoEnsure 都扫全库 0..N-1，
+ *   导致 all / 1.8 / 2.0 三张图共用同一只过线曲面与势曲面。现在 visSig3 与 axisSig 都只按 VIS[i] 计算并进入所有缓存键。 */
+function visSig3() {
+  var h = 2166136261;
+  for (var i = 0; i < N; i++) {
+    if (!VIS[i]) continue;
+    h ^= i | 0; h = Math.imul(h, 16777619);
+  }
+  return NVIS + '|' + st.batch + '|' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3) + '|' + (h >>> 0).toString(16);
+}
 function axisSig() {
   var h = 2166136261;
   for (var i = 0; i < N; i++) {
+    if (!VIS[i]) continue;
     var x = +P[i].ax, y = +P[i].by, z = +P[i].cz;
     h ^= (isFinite(x) ? Math.round(x * 1e6) : -1) | 0; h = Math.imul(h, 16777619);
     h ^= (isFinite(y) ? Math.round(y * 1e6) : -1) | 0; h = Math.imul(h, 16777619);
@@ -3259,13 +3284,19 @@ function axisSig() {
   return (h >>> 0).toString(16);
 }
 function isoSigma() {
-  var _stamp = N + '|' + axisSig() + '|' + (P[0] ? P[0].ax : 0) + '|' + (P[N - 1] ? P[N - 1].cz : 0);
+  var vs = visSig3(), axs = axisSig();
+  var _stamp = N + '|' + vs + '|' + axs;
   if (SIGVAL && SIGCNT === _stamp) return SIGVAL;
+  var pts = [], i, j;
+  for (i = 0; i < N; i++) if (VIS[i]) pts.push(i);
+  var M = pts.length;
+  if (M < 2) { SIGCNT = _stamp; SIGVAL = 1; return SIGVAL; }
   var nn = [];
-  for (var i = 0; i < N; i++) {
-    var heap = [];
-    for (var j = 0; j < N; j++) { if (j === i) continue;
-      var dx = P[i].ax - P[j].ax, dy = P[i].by - P[j].by, dz = P[i].cz - P[j].cz;
+  for (i = 0; i < M; i++) {
+    var pi = pts[i], heap = [];
+    for (j = 0; j < M; j++) { if (j === i) continue;
+      var pj = pts[j];
+      var dx = P[pi].ax - P[pj].ax, dy = P[pi].by - P[pj].by, dz = P[pi].cz - P[pj].cz;
       var dd = Math.sqrt(dx * dx + dy * dy + dz * dz);
       if (heap.length < 6) { heap.push(dd); heap.sort(function (a, b) { return a - b; }); }
       else if (dd < heap[5]) { heap[5] = dd; heap.sort(function (a, b) { return a - b; }); } }
@@ -3276,24 +3307,24 @@ function isoSigma() {
 }
 function isoEnsure() {
   var _tS = performance.now();
-  var sg = isoSigma(), axs = axisSig();
+  var vs = visSig3(), sg = isoSigma(), axs = axisSig();
   SIGMS = performance.now() - _tS;   /* E422：算签名花了多少 */
   /* §E619 第六个条件必须是**桌形**：场值走 Fv（vAt 里 field 是 pot 的那一支），而 Fv 现在有两个自由度（T 与 ftab）。
    *   原来只比 sig/thr/gn/field/bw ⇒ 换桌形时这五项全相等 ⇒ 直接回吐旧场，**底图一动不动**。
    *   用户 10-16 傍晚的现象就是这条："切换桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"。
    *   （与今早那三处缓存键同一族病：凡缓存"由 Fv 导出的量"，键要带上 Fv 的每一个自由度。） */
   /* 11-07：FKEY（尺/T/权重/桌形）也是场值的自由度——拖权重滑杆而底图纹丝不动就是这条键漏维（用户点名） */
-  if (ISO && ISO.sig === sg && ISO.axs === axs && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab && ISO.fk === FKEY()) return ISO;
+  if (ISO && ISO.sig === sg && ISO.axs === axs && ISO.vis === vs && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab && ISO.fk === FKEY()) return ISO;
   /* E423 DS：**指名道姓**记录这次为什么重建**（空闲时四个条件 sig/thr/gn/field 都该稳定）。
    *   §E608：带宽是**第五个**条件 —— 不进缓存键的话，滑块一动而壳纹丝不动（"改了没生效"那一族，
    *   与 §E464 那座只搭一半的桥同形：代码写了、路是空的，而页面自己看起来一切正常）。
    *   顺带把 SIGMS/BUILDMS 在该帧重建时才是当帧值；读数那边每帧清零，避免拿陈旧值判读。 */
   MISSWHY = ISO ? ((ISO.sig === sg ? '' : 'sig') + (ISO.thr === st.isoT ? '' : '|thr') +
     (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') +
-    (ISO.tab === st.ftab ? '' : '|tab') + (ISO.axs === axs ? '' : '|axs') + (ISO.fk === FKEY() ? '' : '|fk') || 'all-equal?') : 'noISO';
+    (ISO.tab === st.ftab ? '' : '|tab') + (ISO.axs === axs ? '' : '|axs') + (ISO.vis === vs ? '' : '|vis') + (ISO.fk === FKEY() ? '' : '|fk') || 'all-equal?') : 'noISO';
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
-  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.axs = axs; ISO.fk = FKEY(); ISO.ms = performance.now() - t0;
+  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.axs = axs; ISO.vis = vs; ISO.fk = FKEY(); ISO.ms = performance.now() - t0;
   BUILDMS = ISO.ms;   /* E422：真重建花了多少 */
   return ISO;
 }
@@ -3341,7 +3372,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
        *   要等动了壳参数才重画"就是这个（动壳参数会改 thr/gn/field 里某一项，键才终于变）。
        *   quads.length 挡不住这种 stale：换主语常常面数一样，不一样的只是里面是哪几枚。 */
       var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
-        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field, m.bw, m.tab, m.axs].join('|');
+        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field, m.bw, m.tab, m.axs, m.vis].join('|');
       if (_sig !== GLSIG) {
       GLSIG = _sig;
       var _tG = performance.now();
@@ -3889,6 +3920,7 @@ document.getElementById('batch').addEventListener('change', function () {
   st.batch = k;
   if (PROJCOLS && typeof setProj === 'function') setProj(k);
   recomputeVIS();
+  if (st.iso) syncIso();
   buildFamBar(); paintSide(); req(); });
 /* ===== 单页化：换投影 = 换可见点的 x2/y2 + 作废地图侧几何缓存 + 相机复位 =====
  * 顺序照桌形切换那条路（§E623/§E617 家族）：坐标空间变了 ⇒
@@ -5893,6 +5925,46 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     recomputeVIS(); syncIso(); draw(); paintWin();
     T('壳标签与环主语自洽：换场换到该场自己那一格 ‖ 参照按场各给各的（势场档不许印过线率）‖ 换桌形环计数=独立数出来的 ‖ 拖滑杆标签跟着生效值',
       bad.length === 0, bad.join(' ‖ ') || det.join(' ‖ '));
+  })();
+  (function () {
+    var SV = { mode: st.mode, iso: st.iso, batch: st.batch, field: st.isoField, isoT: st.isoT, flo: st.flo, fhi: st.fhi };
+    var badV = [], detV = [];
+    try {
+      st.mode = '3db'; st.iso = 1; st.flo = 0; st.fhi = 1;
+      for (var fi = 0; fi < 2; fi++) {
+        var fKind = fi ? 'pot' : 'ok';
+        st.isoField = fKind;
+        st.isoT = (fKind === 'pot' ? st.isoTpot : st.isoTok);
+        var res = {}, bCnt = {};
+        var bList = ['all', '1.8', '2.0'];
+        for (var bi = 0; bi < bList.length; bi++) {
+          st.batch = bList[bi]; recomputeVIS(); draw();
+          res[bList[bi]] = isoEnsure();
+          bCnt[bList[bi]] = ISOBUILDS;
+        }
+        var rA = res.all, r1 = res['1.8'], r2 = res['2.0'];
+        if (!(bCnt['1.8'] > bCnt.all && bCnt['2.0'] > bCnt['1.8'])) {
+          badV.push(fKind + ' 切换 all→1.8→2.0 未触发重建（ISOBUILDS=' + bCnt.all + '/' + bCnt['1.8'] + '/' + bCnt['2.0'] + '）');
+        }
+        if (rA === r1 || r1 === r2 || rA === r2) {
+          badV.push(fKind + ' 返回了同一份 ISO 缓存对象');
+        }
+        if (rA.vis === r1.vis || r1.vis === r2.vis || rA.vis === r2.vis) {
+          badV.push(fKind + ' vis 签名未随版本变化');
+        }
+        if (r2.quads.length === rA.quads.length && r2.ins === rA.ins && Math.abs(r2.maxF - rA.maxF) < 1e-6) {
+          badV.push(fKind + ' 2.0 与 all 曲面读数完全重合');
+        }
+        detV.push(fKind + '[all=' + rA.quads.length + '片/' + rA.ins + '枚 ‖ 1.8=' + r1.quads.length + '片/' + r1.ins + '枚 ‖ 2.0=' + r2.quads.length + '片/' + r2.ins + '枚]');
+      }
+    } catch (E) {
+      badV.push('这条腿自己抛了：' + String(E && E.message || E).slice(0, 90));
+    }
+    st.mode = SV.mode; st.iso = SV.iso; st.batch = SV.batch; st.isoField = SV.field;
+    st.isoT = SV.isoT; st.flo = SV.flo; st.fhi = SV.fhi;
+    recomputeVIS(); syncIso(); draw(); paintWin();
+    T('壳：版本（all/1.8/2.0）必须各自建出不同的过线曲面与势曲面',
+      badV.length === 0, badV.join(' ‖ ') || detV.join(' ‖ '));
   })();
   /* ===== §E373 连线开关（用户："给一个连线开关不然可能会太多挡住了"）=====
    *   两件套：① 帧计数器（这一帧真走了几条边的绘制）② 像素差（关掉之后画面**真的**少了东西）。
