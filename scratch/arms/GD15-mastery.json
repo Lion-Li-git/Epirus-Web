@@ -1,0 +1,204 @@
+{
+ "meta": {
+  "tool": "skill-mastery",
+  "table": "long",
+  "n": [
+   3,
+   5
+  ],
+  "games": 40,
+  "temp": 0.15,
+  "arena2": "v2",
+  "prereg": "PREREG-2026-10-30-LONGSKILL-zcode.md"
+ },
+ "packs": [
+  {
+   "label": "scratch/arms/GD15-TKT-only.bak",
+   "spec": "scratch/arms/GD15-TKT-only.bak",
+   "fp": "arena2.v2|pool=cc652985/20|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random|highN=1|regen=0|stratified=0",
+   "bead": {
+    "games": 20,
+    "charges": 0,
+    "chargesPerGame": 0,
+    "gained": 0,
+    "spent": 0,
+    "spentElec": 0,
+    "spentBoom": 0,
+    "expired": 0,
+    "wasteRate": 0,
+    "spentRate": 0,
+    "roundsPerGame": 104,
+    "bySeat": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "cells": [
+    {
+     "n": 3,
+     "table": "long",
+     "games": 40,
+     "rounds": 2993,
+     "win": 5,
+     "clean": 5,
+     "okUses": {
+      "reflect": 1602,
+      "guard": 261,
+      "bagua": 844,
+      "ji": 79,
+      "armor": 10,
+      "gun": 13,
+      "curse": 20,
+      "holo": 7,
+      "jinshield": 10,
+      "shift": 10,
+      "proto": 2
+     },
+     "attempts": {
+      "reflect": 1602,
+      "guard": 261,
+      "bagua": 844,
+      "ji": 79,
+      "armor": 10,
+      "gun": 16,
+      "curse": 20,
+      "holo": 7,
+      "jinshield": 10,
+      "shift": 10,
+      "proto": 2
+     },
+     "ringRuns": [],
+     "chains": {
+      "ring": 0,
+      "cannon": 0,
+      "cannonEpMax": 0
+     },
+     "sem": {
+      "laserEyeHit": 0,
+      "laserEyeN": 0,
+      "miniTHit": 0,
+      "miniTN": 0
+     },
+     "obs": {
+      "proto": 2,
+      "transfer": 0,
+      "transferHit": 0,
+      "transferAmt": 0,
+      "holo": 7,
+      "protoHeat": 0,
+      "protoLead": 1,
+      "protoLow": 0,
+      "tHeat": 0,
+      "tLead": 0,
+      "tLow": 0,
+      "holoTargets": {
+       "p2": 4,
+       "p1": 2,
+       "p0": 1
+      }
+     }
+    },
+    {
+     "n": 5,
+     "table": "long",
+     "games": 40,
+     "rounds": 3024,
+     "win": 7,
+     "clean": 6,
+     "okUses": {
+      "reflect": 1635,
+      "bagua": 785,
+      "guard": 253,
+      "ji": 71,
+      "holo": 11,
+      "curse": 22,
+      "jinshield": 8,
+      "armor": 15,
+      "gun": 4,
+      "shift": 1
+     },
+     "attempts": {
+      "reflect": 1635,
+      "bagua": 789,
+      "guard": 253,
+      "ji": 71,
+      "holo": 11,
+      "curse": 22,
+      "jinshield": 8,
+      "armor": 15,
+      "gun": 7,
+      "shift": 1
+     },
+     "ringRuns": [],
+     "chains": {
+      "ring": 0,
+      "cannon": 0,
+      "cannonEpMax": 0
+     },
+     "sem": {
+      "laserEyeHit": 0,
+      "laserEyeN": 0,
+      "miniTHit": 0,
+      "miniTN": 0
+     },
+     "obs": {
+      "proto": 0,
+      "transfer": 0,
+      "transferHit": 0,
+      "transferAmt": 0,
+      "holo": 11,
+      "protoHeat": 0,
+      "protoLead": 0,
+      "protoLow": 0,
+      "tHeat": 0,
+      "tLead": 0,
+      "tLow": 0,
+      "holoTargets": {
+       "p2": 4,
+       "p1": 2,
+       "p3": 2,
+       "p4": 3
+      }
+     }
+    }
+   ],
+   "verdict": {
+    "ring": {
+     "pass": false,
+     "actual": "0 段三连",
+     "line": "批内≥1"
+    },
+    "bigT": {
+     "pass": false,
+     "actual": "0.0%/局",
+     "line": "0.2/局（各格）"
+    },
+    "railgun": {
+     "pass": false,
+     "actual": "0.0%/局，浪费 0.0%",
+     "line": "0.35/局（各格） ∧ 珠浪费<50%"
+    },
+    "laserEye": {
+     "pass": false,
+     "actual": "0.0%/局，打防席 0/0",
+     "line": "0.2/局（各格） ∧ 打防席≥1/2"
+    },
+    "miniT": {
+     "pass": false,
+     "unreadable": true,
+     "actual": "0.0%/局，语义**读不出**（这格一次 miniT 都没出手 ⇒ 分母 0，不是 0%）",
+     "line": "0.2/局（各格） ∧ 打 [ep≥2 ∧ 最近 4 回合蓄过珠] 的席≥1/2",
+     "semEra": "predictive-2026-10-31"
+    },
+    "cannon": {
+     "pass": false,
+     "actual": "0.0%/局（对 ep 顶 0 段）",
+     "line": "0.1/局（各格，第3下打ep顶）"
+    }
+   }
+  }
+ ]
+}

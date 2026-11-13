@@ -1,0 +1,149 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD14c-T2K-cap",
+ "parent": "scratch/arms/GD6a-TILT.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 628,
+  "moved": 172,
+  "gone": 0,
+  "keys": 800,
+  "rare": 1492,
+  "byKey": {
+   "ji": 203,
+   "ring": 249,
+   "charge": 47,
+   "railgun": 43,
+   "proto": 33,
+   "bigT": 71,
+   "bagua": 17,
+   "shift": 30,
+   "reflect": 10,
+   "jinshield": 25,
+   "guard": 36,
+   "holo": 17,
+   "armor": 19
+  },
+  "t1Groups": 1146,
+  "t2Groups": 1146,
+  "t2Fallback": 2893,
+  "t2Hits": 545,
+  "t2Kept": 187
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.6,
+    "teacherLl": -2.644532880419018,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.435,
+  "startLl": -19.91090538111794,
+  "agree": 0.6,
+  "ll": -2.644532880419018,
+  "wAgree": 0.26122456018908286,
+  "nTest": 200,
+  "nTrain": 600,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ring",
+    "n": 90,
+    "hit": 84
+   },
+   {
+    "key": "bigT",
+    "n": 27,
+    "hit": 27
+   },
+   {
+    "key": "holo",
+    "n": 7,
+    "hit": 0
+   },
+   {
+    "key": "guard",
+    "n": 12,
+    "hit": 0
+   },
+   {
+    "key": "shift",
+    "n": 16,
+    "hit": 4
+   },
+   {
+    "key": "bagua",
+    "n": 7,
+    "hit": 0
+   },
+   {
+    "key": "proto",
+    "n": 17,
+    "hit": 1
+   },
+   {
+    "key": "jinshield",
+    "n": 10,
+    "hit": 0
+   },
+   {
+    "key": "armor",
+    "n": 11,
+    "hit": 2
+   },
+   {
+    "key": "reflect",
+    "n": 3,
+    "hit": 2
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD6a-TILT.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}
