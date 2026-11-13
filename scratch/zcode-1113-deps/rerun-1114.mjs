@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-/* 全库重测 · 引擎纪元 120fca4d（ZCode · 11-14 夜6班，用户令「重新一次性跑一下全库的数据跟上新规则」）
+/* 全库重测 · 引擎纪元 120fca4d + 新轴（ZCode · 11-14 夜6班，用户令「先调整好轴再跑重测，不然就是白跑」）
  *
- * 背景：3a32e551 结算规则修复（地雷/镜面/避雷针/回合末死亡/净化救命…）⇒ 指纹 668081a2 → 120fca4d，
- *   地图三根 current 尺（A 脚本桌 a-v2-page-1109 ‖ B 冠军夹具 b-f2-page-1111 ‖ X Δε b-f2-eps0-1113）
- *   的读数全是旧引擎纪元。本驱动把 registry 全部在盘包 × {B page ‖ B exam(Δε 半边) ‖ A page} ×
- *   {multi,long} 重测一遍；ingest 时换 current 指针（换尺只追加 readings + 改指针，rulers.mjs 契约）。
- *   seed/rounds 与旧批一致（100/77000）⇒ 跨纪元读数可配对，差值里只剩「引擎代」一个变量。
- *   ⚠ C=(A+B)/2 在 A/B 两根都换新后重算（attach-cmean-r），不许混纪元。
+ * 背景：① 3a32e551 结算规则修复 ⇒ 指纹 668081a2 → 120fca4d，地图三根 current 尺全是旧引擎纪元；
+ *   ② 11-14 用户令换轴：A 轴 = 原 28 席脚本轮**保留** + 配合剧本局追加（--coop=v3，exam-coop.mjs，
+ *      用户点名两典型：藤甲+坦克天火集火 ‖ 给攒大招的角色套盾）；B 轴 = 风格互补五夹具 F5
+ *      （MSB11-R2 蓄爆锚 ‖ MSB14 枪炮反击 ‖ WSEL9-200 广度 ‖ MSB15R-HITMIX 反墙 ‖ GD6a-TILT 蒸馏三线）
+ *      替换旧 F2（三 charge 一杂 = 风格太偏，11-11 夜班判「B 轴风格倾向太明显」）。
+ * 本驱动把 registry 全部在盘包 × {B page ‖ B exam(Δε 半边) ‖ A page+coop} × {multi,long} 重测；
+ *   ingest 时换 current 指针（换尺只追加 readings + 改指针，rulers.mjs 契约）。
+ *   seed/rounds 与旧批一致（100/77000）⇒ 跨纪元读数可配对，差值里只剩「引擎代+轴代」。
+ *   ⚠ C=(A+B)/2 在 A/B 两根都换新后由 build-view 重算（不混纪元）。
  *
  * 用法：node scratch/zcode-1113-deps/rerun-1114.mjs [--concurrency=6] [--pass=Bpage|Bexam|Apage]
  *   产物（断点续跑：重跑自动跳过已完成的 id|mode）：
- *     exam4-F2-page-1114.tsv / -long    → 新 B 尺 b-f2-page-1114
- *     exam4-F2-eps0-1114.tsv / -long    → 新 X 尺 b-f2-eps0-1114（Δε 配对半边）
- *     exam4-A-page-1114.tsv / -long     → 新 A 尺 a-v2-page-1114
+ *     exam4-F5-page-1114.tsv / -long   → 新 B 尺 b-f5-page-1114（夹具 F5）
+ *     exam4-F5-eps0-1114.tsv / -long   → 新 X 尺 b-f5-eps0-1114（Δε 配对半边，同 F5）
+ *     exam4-A-coop-1114.tsv / -long    → 新 A 尺 a-v2coop-page-1114（原轮 + coop 追加局）
  */
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
@@ -20,14 +23,14 @@ import { execFile } from 'node:child_process';
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const CONC = Math.max(1, Number(arg('concurrency', 6)) || 6);
 const ONLY = String(arg('pass', '')).toUpperCase();
-const F2 = 'MSB11-R2S306293884,MSB10-R1S1149480262,MSB8-charge-R1S1861674281,Q-s47';
+const F5 = 'MSB11-R2S306293884,MSB14-railgun-R1S175656469,WSEL9-200,MSB15R-HITMIX,GD6a-TILT';
 const OUTDIR = 'scratch/zcode-1113-deps';
 const HEAD = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
 
 const PASSES = [
-  { key: 'Bpage', base: 'exam4-F2-page-1114',   exam: 'B', dose: 'page', champ: F2,  line: '[冠军4N-B]' },
-  { key: 'Bexam', base: 'exam4-F2-eps0-1114',   exam: 'B', dose: 'exam', champ: F2,  line: '[冠军4N-B]' },
-  { key: 'Apage', base: 'exam4-A-page-1114',    exam: 'A', dose: 'page', champ: null, line: '[冠军4N]' },
+  { key: 'Bpage', base: 'exam4-F5-page-1114',  exam: 'B', dose: 'page', champ: F5, line: '[冠军4N-B]' },
+  { key: 'Bexam', base: 'exam4-F5-eps0-1114',  exam: 'B', dose: 'exam', champ: F5, line: '[冠军4N-B]' },
+  { key: 'Apage', base: 'exam4-A-coop-1114',   exam: 'A', dose: 'page', champ: null, coop: true, line: '[冠军4N]' },
 ].filter((p) => !ONLY || p.key.toUpperCase() === ONLY);
 if (!PASSES.length) { console.error('⛔ --pass 只认 Bpage/Bexam/Apage'); process.exit(2); }
 
@@ -64,6 +67,7 @@ function runPass(pass, done) {
       const job = jobs[cursor++];
       const args = ['tools/exam-4n.mjs', '100', '77000', job.path, '--exam=' + pass.exam, '--dose=' + pass.dose];
       if (pass.champ) args.push('--champ=' + pass.champ);
+      if (pass.coop) args.push('--coop=v3');
       if (job.mode === 'long') args.push('--mode=long');
       const attempt = (n) => execFile(process.execPath, args, { maxBuffer: 1 << 24 }, (err, stdout, stderr) => {
         if (err || !(stdout || '').includes(pass.line)) {

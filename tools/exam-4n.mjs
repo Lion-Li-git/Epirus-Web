@@ -34,6 +34,7 @@ import { createHash } from 'node:crypto';
 import { planN, planN3 } from './exam-pool.mjs';
 import { makeAsChooser } from './bot-chooser-lib.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
+import { planCoop, coopSlots, makeRoleChooser } from './exam-coop.mjs';
 
 const ARGV = process.argv.slice(2).filter((a) => !/^--/.test(a));
 const FLAG = {};
@@ -41,7 +42,13 @@ for (const a of process.argv.slice(2)) {
   const m = /^--([a-z0-9-]+)=?(.*)$/i.exec(a);
   if (m) FLAG[m[1]] = m[2] === '' ? '1' : m[2];
 }
-rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool', 'plan'], 'exam-4n');
+rejectUnknownFlags(process.argv.slice(2), ['mode', 'onlyn', 'dose', 'eps-tier', 'champ', 'champn', 'exam', 'expool', 'plan', 'coop'], 'exam-4n');
+/* --coop=v3：A 轴追加配合剧本局（夜6班 2026-11-14，用户令「配合脚本只能是 A 轴的一部分，原本的脚本轮保留」）。
+ * rotation 局逐字不动；每格 n≥3 追加 COOP_G 局整队剧本（n=2 无配合）。换尺语义：带 --coop 的批 = 新尺。 */
+const COOP = String(FLAG.coop || '');
+const COOP_G = 40;
+if (COOP && COOP !== 'v3') { console.error('⛔ --coop 只认 v3（在册剧本集），收到 `' + COOP + '`'); process.exit(2); }
+if (COOP) console.error('[coop] 剧本集 v3（5 本：集火围殴/藤甲+坦克天火集火/给攒大招的套盾/挑衅坦克阵/反弹八卦墙）‖ 每格追加 ' + COOP_G + ' 局（n≥3）');
 const R = Number(ARGV[0] || 6);
 if (!(Number.isInteger(R) && R >= 1)) { console.error('⛔ rounds 必须是正整数，收到 `' + ARGV[0] + '`'); process.exit(2); }
 const SEED = Number(ARGV[1] || 77000);
@@ -82,6 +89,10 @@ const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'd
   'MSB11-R2S306293884': 'docs/artifacts/night-adapt/MSB11-R2S306293884.js', 'MSB9-R2S1112532101': 'docs/artifacts/night-adapt/MSB9-R2S1112532101.js',
   /* 11-12 F3k2：B 轴换尺候选把 MSB13 放进来（C 尺换代链冠军；原表漏登记 ⇒ --champ 直接拒跑） */
   'MSB13-R1S791820660': 'docs/artifacts/night-adapt/MSB13-R1S791820660.js',
+  /* 11-14 夜6班：B 轴新夹具候选（风格互补五枚之二；registry 在册路径，见 PLAN-2026-11-14-night6） */
+  'MSB15R-HITMIX': 'docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js',
+  'GD6a-TILT': 'scratch/arms/GD6a-TILT-3p.bak',
+  'MSB14-railgun-R1S175656469': 'docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js',
   'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
@@ -162,7 +173,32 @@ for (const n of NS) {
     if (rank === 1) { first++; seatFirst[seat]++; }
     seatGames[seat]++;
   }
-  const G = plan.length;
+  /* 配合剧本局（--coop=v3 ‖ 只对 A 轴 ‖ n≥3）：rotation 逐字保留，此处**追加** COOP_G 局整队剧本 */
+  let coopN = 0;
+  if (COOP && champN === 0 && n >= 3) {
+    const lineups = planCoop(COOP_G, SEED ^ Math.imul(n, 7919) ^ 0x51C0);
+    for (let g = 0; g < lineups.length; g++) {
+      const j2 = plan.length + g;
+      const seat = j2 % n;
+      const teamPids = [];
+      for (let pid = 0; pid < n; pid++) if (pid !== seat) teamPids.push(pid);
+      const slots = coopSlots(lineups[g], teamPids, g);
+      const choosers = [];
+      let ti = 0;
+      for (let pid = 0; pid < n; pid++) {
+        if (pid === seat) { choosers.push(SUBJ); continue; }
+        const s = slots[ti++];
+        choosers.push(asChooser(s.kind === 'fn' ? FN[s.name] : makeRoleChooser(s.role, { team: teamPids, foes: [seat] })));
+      }
+      const gseed = SEED + n * 1000003 + j2 * 977;
+      const r = T.oneGameN(choosers, gseed, n, MODE ? { mode: MODE } : undefined);
+      const rank = T.rankOf(r.state, seat, gseed);
+      if (rank === 1) { first++; seatFirst[seat]++; }
+      seatGames[seat]++;
+      coopN++;
+    }
+  }
+  const G = plan.length + coopN;
   const h = first / G * 100;
   const x = (first / G - 1 / n) / (1 - 1 / n);
   out[n] = { h: h.toFixed(2), x: x.toFixed(4), G, first, seatFirst, seatGames };
@@ -179,7 +215,8 @@ function emit(prefix, o) {
     ' pool=' + POOL_STAMP + ' K=' + POOL.length +
     /* 11-10（千问）：同一张池可以配两种抽席规则、也可以配带不带冠军席 ⇒ **只钉池的那枚戳不足以判"是不是同一把尺"**
      *   （v3 分层卷与 v2 老规则同池 ⇒ 戳逐字相同）。把会换尺的另两维一并印出来，批量器与表都能按它筛。 */
-    ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
+    ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0') +
+    ' coop=' + (COOP ? 'v3x' + COOP_G : 'off'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }
 if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));
