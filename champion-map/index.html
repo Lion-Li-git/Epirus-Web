@@ -1374,7 +1374,13 @@ function buildBitmap(key, visSigNow) {
     if (i === 0) __covAcc.aCorner = a;
     if (i === __covAcc.midIdx) __covAcc.aMid = a;
     nPainted++;
-    if (BND9 && (Fav < BND9.lo - 1e-9 || Fav > BND9.hi + 1e-9)) nOob++;
+    /* 11-13 修复：2f8adf55/0fa3bda2 将 BND9.lo/hi 改为 p02/p98 分位用于色带中段缩放，真范围留在 rawLo/rawHi；
+     *   IDW 加权平均只可能在可见点真范围 [rawLo, rawHi] 之内 ⇒ 越界判定必须对照 rawLo/rawHi。 */
+    if (BND9) {
+      var bLo9 = (BND9.rawLo !== undefined) ? BND9.rawLo : BND9.lo;
+      var bHi9 = (BND9.rawHi !== undefined) ? BND9.rawHi : BND9.hi;
+      if (Fav < bLo9 - 1e-9 || Fav > bHi9 + 1e-9) nOob++;
+    }
     var o = i * 4;
     dta[o] = Math.round(bR + (rgb[0] - bR) * a);
     dta[o + 1] = Math.round(bG + (rgb[1] - bG) * a);
