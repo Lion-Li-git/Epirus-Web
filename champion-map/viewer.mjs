@@ -1335,7 +1335,12 @@ function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
  *     「颜色：切批次不许挪分位」—— 那条钉的正是"批次不参与定标"，而现在的口径是批次参与（它就是"摘出去"）。 */
 function colBand() { var b = splitSets().vis, n = b.length;
   if (n < 2) return null;
-  return { lo: b[0], hi: b[n - 1], med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
+  /* 11-13：色带两端用 p02/p98，不用 min/max —— GD4-RATION 这类单点长尾（C2R -0.814）
+   *   会把整条色带压到一小段（用户原话「颜色又被压缩了」）。几何/名次/端点判据仍用真实值，
+   *   只有颜色映射做 2% 截尾；n<20 时样本太少，退回真实 min/max。 */
+  var k = n >= 20 ? Math.floor((n - 1) * 0.02) : 0;
+  var j = n >= 20 ? Math.ceil((n - 1) * 0.98) : n - 1;
+  return { lo: b[k], hi: b[j], rawLo: b[0], rawHi: b[n - 1], med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
 function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
   if (!isFinite(F)) return 0.5;   /* v1.8.27：没读数不参与色标（色带那一档由 colOf 直接给未测灰，这里只防 NaN 走进 ramp） */
   var t = F <= bd.med ? (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * 0.5
@@ -3640,7 +3645,7 @@ function paintLegend(fr) {
   if (st.color === 'F') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = ('针 = 最强一批（池 hard 带）均值（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
         + (CB.mode === 'win' ? '窗内两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差）'
-          : '当前这批点的两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
+          : '当前这批点的 p02–p98 线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
     lg.appendChild(sm); }
   /* §E590 池层图例：**常驻一行**（不塞进 LEG_NOTE —— 那本账是"按当前着色口径的说明"，而池环在任何口径下都画）。
    *   三色环 = 这枚在冠军池的哪一档；枚数直接从真源表数，不抄死（改了池忘了改图例就是又一处"记账说门在、门不在"）。 */
@@ -4597,7 +4602,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* 「颜色：切批次不许挪分位」这一条**删掉了**（用户 10-07：「需要重构的时候就把没用的门禁删了」+ 新口径
    *   「不渲染的点直接从图中摘出去，不影响范围内点的渲染」）—— 它钉的正是"批次不参与定标"，
    *   与新口径正面冲突，留着只会替一个已经作废的读法作证。换成钉新口径的那三条（下面这条）。 */
-  T('颜色定标按**当下画出来的那批点**：最蓝 = 其中 F 最小 ‖ 灰 = 其中位 ‖ 最红 = 其中 F 最大（±0.02）',
+  T('颜色定标按**当下画出来的那批点**：最蓝 = 其中 F 的 p02 ‖ 灰 = 其中位 ‖ 最红 = 其中 F 的 p98（±0.02；两端各截 2% 长尾）',
     (function () { var bd = colBand(); if (!bd) return false;
       return Math.abs(fCol(bd.lo)) <= 0.02 && Math.abs(fCol(bd.med) - 0.5) <= 0.02 && Math.abs(fCol(bd.hi) - 1) <= 0.02
         && bd.n > 1 && bd.n <= nWin() && bd.n <= NVIS; })(),
@@ -4675,10 +4680,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   用户 10-07 要的是"最红最蓝必须到头"⇒ 现在钉**两端顶满**，中位落在哪一格只如实报、不判红。
    *   保留的一条硬的是"不许塌"（中位仍在带内），换锚换错了它会红。 */
   var SWIN = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS();
-  T('底图（F 档 ‖ 全范围态）：色轴两端必须被"刚好用到"——最低那枚 = 0 ‖ 最高那枚 = 1 ‖ 被钉在两端的不许超过 3%',
+  T('底图（F 档 ‖ 全范围态）：色轴两端必须被"刚好用到"——p02 = 0 ‖ p98 = 1 ‖ 被钉在两端的不许超过 6%（两端各 2% 长尾被钳位）',
     (function () {
       var pin = 0; for (var z = 0; z < N; z++) { var t9 = fCol(Fv(P[z])); if (t9 <= 1e-6 || t9 >= 1 - 1e-6) pin++; }
-      return Math.abs(fCol(MDS.lo)) <= 1e-6 && Math.abs(fCol(MDS.hi) - 1) <= 1e-6 && pin <= Math.max(2, Math.round(N * 0.03)); })(),
+      return Math.abs(fCol(MDS.lo)) <= 1e-6 && Math.abs(fCol(MDS.hi) - 1) <= 1e-6 && pin <= Math.max(2, Math.round(N * 0.06)); })(),
     (function () {
       var pin = 0; for (var z = 0; z < N; z++) { var t9 = fCol(Fv(P[z])); if (t9 <= 1e-6) pin++; else if (t9 >= 1 - 1e-6) pin++; }
       return '钉在两端 ' + pin + '/' + N + '（' + (100 * pin / N).toFixed(1) + '%）‖ 最低 ' + fCol(MDS.lo).toFixed(3) +
@@ -5322,10 +5327,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   所以这里改判**每段内部**仍然线性（段内等数值差 = 等色差），跨中位的折只如实报、不判红。 */
   wVs.sort(function (x, y) { return x - y; });
   var q1 = wVs[0], q3 = wVs[wVs.length - 1], BDW = colBand() || { med: (q1 + q3) / 2 };
-  var tLoW = fCol(q1), tHiW = fCol(q3);
-  var tHalfLo = fCol((q1 + BDW.med) / 2), tHalfHi = fCol((BDW.med + q3) / 2), tMedW = fCol(BDW.med);
+  var tLoW = fCol(BDW.lo), tHiW = fCol(BDW.hi);
+  var tHalfLo = fCol((BDW.lo + BDW.med) / 2), tHalfHi = fCol((BDW.med + BDW.hi) / 2), tMedW = fCol(BDW.med);
   st.flo = 0; st.fhi = 1; recomputeVIS();
-  var tLoAll = fCol(q1);
+  var tLoAll = fCol(q3);
   T('强度窗口：两端顶到色端 ‖ 中位落灰 ‖ **两段各自线性**（段内等数值差 = 等色差），跨中位的折只报不判',
     tLoW <= 0.001 && tHiW >= 0.999 && Math.abs(tMedW - 0.5) <= 0.02 &&
     Math.abs(tHalfLo - 0.25) <= 0.02 && Math.abs(tHalfHi - 0.75) <= 0.02 && tLoAll > 0.5,
