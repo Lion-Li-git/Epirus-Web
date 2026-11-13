@@ -10,3 +10,6 @@ measure-GD4-RATION	a-v2-page-1109	A	-	-	measure-GD4-RATION	GD4-RATION-readings.t
 measure-GD6a-TILT	a-v2-page-1109	A	-	-	measure-GD6a-TILT	GD6a-TILT-readings.tsv	16	2026-11-12T23:23:08.054Z	add-point
 measure-GD6b-TILT	a-v2-page-1109	A	-	-	measure-GD6b-TILT	GD6b-TILT-readings.tsv	16	2026-11-12T23:26:32.041Z	add-point
 measure-MSB18-R1S826788378-seg2	a-v2-page-1109	A	-	-	measure-MSB18-R1S826788378-seg2	MSB18-R1S826788378-seg2-readings.tsv	16	2026-11-12T23:29:40.638Z	add-point
+b-f5-page-1114	b-f5-page-1114	B	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	1114	exam4-F5-page-1114.tsv	915	2026-11-14	rerun-1114 全库重测（引擎纪元 120fca4d + F5 风格互补五夹具）
+b-f5-eps0-1114	b-f5-eps0-1114	X	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	1114	exam4-F5-eps0-1114.tsv	915	2026-11-14	rerun-1114 Δε 配对半边（exam dose ε=0）
+a-v2coop-page-1114	a-v2coop-page-1114	A	v2-scripts(28席)+coop(5本剧本×40局/格,n≥3)	0	1114	exam4-A-coop-1114.tsv	915	2026-11-14	rerun-1114 A 轴新结构（原轮保留 + --coop=v3 追加局）

@@ -1,6 +1,9 @@
 ruler_id	axis	label	status	unit	fixture	batch_id	formula	note
-a-v2-page-1109	A	v2 脚本桌（page dose）	current	excess	v2-scripts(28 seats)	a-1109		A 轴现行
-b-f2-page-1111	B	F2 冠军夹具（page dose）	current	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-1111		B 轴现行；固定 F2 夹具
+a-v2-page-1109	A	v2 脚本桌（page dose）	reference	excess	v2-scripts(28 seats)	a-1109		A 轴现行
+b-f2-page-1111	B	F2 冠军夹具（page dose）	reference	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-1111		B 轴现行；固定 F2 夹具
 c-cr	C	C=(A+B)/2	current	excess	-	-	(A+B)/2	派生，不存 readings
 h5-page-1109	H5	旧 H5 页面卷	frozen	percent	legacy	h5-1109		frozen reference；流水线不写
-b-f2-eps0-1113	X	F2 冠军夹具（exam dose ε=0 贪心）	current	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-eps0-1113		Δε ε=0 半边（11-13 用户令「Δε 全没了…测试写进去」；页面剂量半边 = b-f2-page-1111，同夹具同 seed 同 plan ⇒ 差值只剩剂量）；viewer DE4 消费 X<c>R(L) 列
+b-f2-eps0-1113	X	F2 冠军夹具（exam dose ε=0 贪心）	reference	excess	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	b-f2-eps0-1113		Δε ε=0 半边（11-13 用户令「Δε 全没了…测试写进去」；页面剂量半边 = b-f2-page-1111，同夹具同 seed 同 plan ⇒ 差值只剩剂量）；viewer DE4 消费 X<c>R(L) 列
+b-f5-page-1114	B	F5 冠军夹具（page dose）· 风格互补五枚	current	excess	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	b-f5-page-1114		引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；F5 = MSB11-R2(蓄爆锚)+MSB14(枪炮反击)+WSEL9-200(广度)+MSB15R-HITMIX(反墙)+GD6a-TILT(蒸馏三线)，替换旧 F2 三 charge 一杂（11-11 判风格偏置）· 用户 11-14 令「先调整好轴再跑重测」
+b-f5-eps0-1114	X	F5 冠军夹具（exam dose ε=0 贪心）· Δε 配对半边	current	excess	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	b-f5-eps0-1114		引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；Δε = 页面剂量(b-f5-page-1114) − 考卷口径，同夹具同 seed 同 plan ⇒ 差值只剩剂量；viewer DE4 消费 X<c>R(L) 列
+a-v2coop-page-1114	A	v2 脚本桌 + 配合剧本局（page dose）	current	excess	v2-scripts(28席)+coop(5本剧本×40局/格,n≥3)	a-v2coop-page-1114		引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；A 轴新结构 = 原 28 席脚本轮**逐字保留** + 每格 n≥3 追加 40 局整队剧本（--coop=v3，exam-coop.mjs；用户点名：藤甲+坦克天火集火 ‖ 给攒大招的角色套盾）；n=2 无配合

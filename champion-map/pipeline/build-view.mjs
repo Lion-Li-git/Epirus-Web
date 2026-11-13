@@ -34,7 +34,8 @@ function put(row, ix, v) { if (v === null) return; row[ix] = String(v); }
 export function buildView(opts) {
   opts = opts || {};
   const data = resolve(opts.data || 'champion-map/data');
-  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv');
+  /* 对照锚 = 上一代烤好的视图（换尺时新建 gen 锚并同步改这里的默认 + rebuild-map 的硬编码；gen3-1105 留档） */
+  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv');
   const reg = readTable(join(data, 'registry.tsv'));
   const rd = readTable(join(data, 'readings/current.tsv'));
   const rulers = loadRulers(join(data, 'rulers.tsv'));
@@ -42,19 +43,21 @@ export function buildView(opts) {
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
   const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（11-13 起在册；没有该尺行会响亮报错——不许静默缺族） */
   for (const c of ['pack_id', 'ruler_id', 'cell', 'horizon', 'value']) if (rd.ix[c] === undefined) throw new Error('readings 缺列 ' + c);
-  const vals = new Map();
+  const vals = new Map(), nvals = new Map();
   for (const r of rd.rows) {
     const pid = r[rd.ix.pack_id], rid = r[rd.ix.ruler_id];
     const k = rid + '|' + r[rd.ix.cell] + '|' + r[rd.ix.horizon];
     if (!vals.has(pid)) vals.set(pid, {});
     if (vals.get(pid)[k] !== undefined) throw new Error('readings 重复键 ' + pid + ' ' + k);
     vals.get(pid)[k] = toNum(r[rd.ix.value]);
+    if (!nvals.has(pid)) nvals.set(pid, {});
+    nvals.get(pid)[k] = toNum(r[rd.ix.n]);
   }
   const out = [];
   const missing = [];
   for (const r of reg.rows) {
     const pid = r[reg.ix.pack_id];
-    const v = vals.get(pid) || {};
+    const v = vals.get(pid) || {}, vn = nvals.get(pid) || {};
     const row = new Array(HEAD.length).fill('');
     row[0] = pid;
     let any = false, all = 0;
@@ -63,12 +66,14 @@ export function buildView(opts) {
       const av = v[A + '|' + c + '|' + h[0]];
       const bv = v[B + '|' + c + '|' + h[0]];
       const xv = v[X + '|' + c + '|' + h[0]];
+      const xn = vn[X + '|' + c + '|' + h[0]];
       const ai = HEAD.indexOf('P' + c + suf), bi = HEAD.indexOf('P' + c + 'R' + suf), ci = HEAD.indexOf('C' + c + 'R' + suf);
       const xi = HEAD.indexOf('X' + c + 'R' + suf), xni = HEAD.indexOf('n' + c + 'R' + suf);
       if (av !== null && av !== undefined) { row[ai] = String(av); any = true; }
       if (bv !== null && bv !== undefined) { row[bi] = String(bv); any = true; }
       if (av !== null && av !== undefined && bv !== null && bv !== undefined) { row[ci] = String((av + bv) / 2); all++; }
       if (xv !== null && xv !== undefined) { row[xi] = String(xv); any = true; }
+      if (xn !== null && xn !== undefined) row[xni] = String(xn);
     }
     if (!any) missing.push(pid);
     out.push(row);
@@ -82,12 +87,14 @@ export function buildView(opts) {
   if (existsSync(comparePath)) {
     const ct = readTable(comparePath);
     const cid = ct.ix.id;
-    let maxD = 0, mism = 0, missView = 0, missCmp = 0;
+    let maxD = 0, mism = 0, missView = 0, missCmp = 0, noRead = 0;
     const byId = new Map(ct.rows.map((r) => [r[cid], r]));
     const seen = new Set();
     for (const r of out) {
       const pid = r[0], cr = byId.get(pid);
       if (!cr) { missCmp++; continue; }
+      /* 新尺下没有 readings 的行（registry 里文件不在盘的旧实验行）= 诚实未测，不是错配——锚里的值是模板旧纪元残值 */
+      if ((vals.get(pid) || {})[B + '|' + CELLS[0] + '|' + HORIZONS[0][0]] === undefined) { seen.add(pid); noRead++; continue; }
       seen.add(pid);
       for (let i = 1; i < HEAD.length; i++) {
         /* X 族（X*c*R/n*c*R）是 11-13 才有的列，gen3 参照表里没有 ⇒ 跳过（不是静默降级：两边共有的列一个不少） */
@@ -101,7 +108,7 @@ export function buildView(opts) {
       }
     }
     for (const r of ct.rows) if (!out.some((x) => x[0] === r[cid])) missView++;
-    cmp = { path: comparePath, max_abs_diff: maxD, mismatches: mism, missing_in_view: missView, missing_in_compare: missCmp, matched: seen.size };
+    cmp = { path: comparePath, max_abs_diff: maxD, mismatches: mism, missing_in_view: missView, missing_in_compare: missCmp, no_readings_skipped: noRead, matched: seen.size };
     if (mism || missView) {
       const e = new Error('exam-view 与 ' + comparePath + ' 不一致：mismatch=' + mism + ' max=' + maxD + ' missing_view=' + missView + ' missing_compare=' + missCmp);
       e.report = cmp;
@@ -217,7 +224,7 @@ export function buildCoordsView(opts) {
 const IS_MAIN = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_MAIN) {
   try {
-    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'), noWrite: process.argv.includes('--no-write') });
+    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv'), noWrite: process.argv.includes('--no-write') });
     const cv = buildCoordsView({ data: arg('data', 'champion-map/data'), noWrite: process.argv.includes('--no-write') });
     console.log('exam-view: ' + r.rows.length + ' 行 × ' + r.header.length + ' 列 ⇒ ' + r.viewPath);
     console.log('coords-view: ' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);

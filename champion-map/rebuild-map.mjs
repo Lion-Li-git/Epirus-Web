@@ -33,9 +33,11 @@ console.log('rebuild-map: ' + (DRY ? 'dry' : 'run'));
 /* ① 数据戳：缺 unknown / 旧夹具 / C 不符会 exit 2 */
 run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
 if (DRY) process.exit(0);
-/* ② 从 data/ 编译完整页面视图（canonical + display 模板） */
+/* ② 从 data/ 编译完整页面视图（canonical + display 模板）
+ *    对照锚 = gen4-1114（11-14 引擎纪元 120fca4d + 新轴 F5/coop 换尺时新建；gen3-1105 留档不动）。
+ *    换尺流程：build-view --compare=<不存在路径> 跳过守卫烤新视图 → 拷成新 gen 锚 → 本行指向新锚。 */
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=champion-map/archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'], '② build-view 编译 coords-view');
+  '--compare=champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */

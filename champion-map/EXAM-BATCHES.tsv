@@ -5,3 +5,6 @@ B	short(P5R)	exam4-F2-page-1111(.tsv|-6par|-86|-msb1314)	1111	MSB11-R2S306293884
 B	long(P5RL)	exam4-F2-page-long-1111(.tsv|-6par|-86)	1111	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	926	F2 固定夹具
 C	C5R/C5RL	(A+B)/2	-	-	926	attach-cmean-r.mjs 计算；本脚本只戳
 X	XR（Δε ε=0 半边）	exam4-F2-eps0-1113(.tsv|-long) pilot	1113	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	24	pilot 24 枚（registry 分层抽样）；全量 926 枚批排晚班
+B	short(P5R)/long(P5RL)	exam4-F5-page-1114.tsv ‖ exam4-F5-page-1114-long.tsv	1114	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	915	引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；F5 = MSB11-R2(蓄爆锚)+MSB14(枪炮反击)+WSEL9-200(广度)+MSB15R-
+X	XR（Δε 配对半边）	exam4-F5-eps0-1114.tsv ‖ exam4-F5-eps0-1114-long.tsv	1114	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	915	引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；Δε = 页面剂量(b-f5-page-1114) − 考卷口径，同夹具同 seed 同 plan ⇒ 
+A	P5/P5L	exam4-A-coop-1114.tsv ‖ exam4-A-coop-1114-long.tsv	1114	v2-scripts(28席)+coop(5本剧本×40局/格,n≥3)	841	引擎纪元 120fca4d（3a32e551 结算规则修复）· seed/rounds 与旧批同（100/77000）⇒ 跨纪元可配对；A 轴新结构 = 原 28 席脚本轮**逐字保留** + 每格 n≥3 追加 40 局整队剧本（--co
