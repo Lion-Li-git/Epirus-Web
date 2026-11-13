@@ -711,18 +711,33 @@ function qr(a, v) { var n = a.length; if (n < 2) return 0.5;
  *     「颜色：切批次不许挪分位」—— 那条钉的正是"批次不参与定标"，而现在的口径是批次参与（它就是"摘出去"）。 */
 function colBand() { var b = splitSets().vis, n = b.length;
   if (n < 2) return null;
-  /* 11-13：色带两端用 p0.5/p99.5，不用 min/max —— GD4-RATION 这类单点长尾（C2R -0.814）
-   *   会把整条色带压到一小段（用户原话「颜色又被压缩了」）。几何/名次/端点判据仍用真实值，
-   *   只有颜色映射做 0.5% 截尾；n<20 时样本太少，退回真实 min/max。
-   *   2% 硬截实测会裁掉 37/934（4%）并把 C2R 带压到 0.839 宽；0.5% 只裁 9/934，
-   *   带宽 1.203，仍能看出中段强度差。 */
-  var k = n >= 20 ? Math.floor((n - 1) * 0.005) : 0;
-  var j = n >= 20 ? Math.ceil((n - 1) * 0.995) : n - 1;
-  return { lo: b[k], hi: b[j], rawLo: b[0], rawHi: b[n - 1], med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
+  /* 11-13 二版：中段 p02–p98 仍走**中位灰 + 两侧线性**（保强度差）；p02 以下 / p98 以上
+   *   不再硬钳到 0/1，而是把尾巴按**排名**铺进两端各 4% 的窄色域（tail=0.04）。
+   *   这样单点离群（GD4-RATION 的 C2R -0.814）仍能看出先后，又不会把 96% 的中段压扁；
+   *   0.5% 硬截在实测里只裁 9/934，但尾巴全挤在端点、损失顺序信息 ⇒ 换成尾巴排名。
+   *   n<20 时样本太少，退回真实 min/max、tail=0。 */
+  var trim = 0.02, tail = 0.04;
+  var k = n >= 20 ? Math.floor((n - 1) * trim) : 0;
+  var j = n >= 20 ? Math.ceil((n - 1) * (1 - trim)) : n - 1;
+  var lo = b[k], hi = b[j];
+  return { lo: lo, hi: hi, rawLo: b[0], rawHi: b[n - 1],
+    loIdx: k, hiIdx: j + 1, tail: n >= 20 ? tail : 0,
+    med: (b[(n - 1) >> 1] + b[n >> 1]) / 2, n: n, mode: winFull() ? 'lib' : 'win' }; }
 function fCol(F) { var bd = colBand(); if (!bd) return 0.5;
   if (!isFinite(F)) return 0.5;   /* v1.8.27：没读数不参与色标（色带那一档由 colOf 直接给未测灰，这里只防 NaN 走进 ramp） */
-  var t = F <= bd.med ? (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * 0.5
-    : 0.5 + (F - bd.med) / ((bd.hi - bd.med) || 1e-9) * 0.5;
+  if (bd.tail > 0 && F < bd.lo) {
+    /* 低尾：排名铺到 [0, tail]；最低 = 0，贴近 p02 = tail */
+    var b = splitSets().vis;
+    var k = bnd(b, F, false);
+    return bd.tail * (k / Math.max(1, bd.loIdx));
+  }
+  if (bd.tail > 0 && F > bd.hi) {
+    var b2 = splitSets().vis;
+    var k2 = bnd(b2, F, true);
+    return (1 - bd.tail) + bd.tail * ((k2 - bd.hiIdx) / Math.max(1, bd.n - bd.hiIdx));
+  }
+  var t = F <= bd.med ? bd.tail + (F - bd.lo) / ((bd.med - bd.lo) || 1e-9) * (0.5 - bd.tail)
+    : 0.5 + (F - bd.med) / ((bd.hi - bd.med) || 1e-9) * (0.5 - bd.tail);
   return Math.max(0, Math.min(1, t)); }
 // §E601：这里原来是「rel」档用的 fColRel()（绿=比最强一批强 ‖ 红=不如）。**整档已删** ——
 //   分界被 §E596 挪到池 hard 带均值之后它落在库内约第 95 百分位，95% 的点落进红侧、绿侧只剩 4.6%（45/986），
@@ -3023,7 +3038,7 @@ function paintLegend(fr) {
   if (st.color === 'F') { var sm = document.createElement('div'); sm.style.color = 'var(--dim)';
     sm.textContent = ('针 = 最强一批（池 hard 带）均值（F ' + Fv(INC).toFixed(3) + ' = 库内第 ' + Math.round(incPct()) + ' 百分位）· 红 = 好 ‖ 蓝 = 地板 · 深浅 = '
         + (CB.mode === 'win' ? '窗内两端线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差）'
-          : '当前这批点的 p0.5–p99.5 线性铺满（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
+          : '中段 p02–p98 线性铺满 + 两端各 4% 排名尾（' + CB.lo.toFixed(3) + ' → ' + CB.hi.toFixed(3) + ' ‖ 等数值差 = 等色差 ‖ 中位在 ' + (CB.med !== undefined ? fCol(CB.med).toFixed(2) : '—') + ' 那一格）') + ' · 名次看点大小')
     lg.appendChild(sm); }
   /* §E590 池层图例：**常驻一行**（不塞进 LEG_NOTE —— 那本账是"按当前着色口径的说明"，而池环在任何口径下都画）。
    *   三色环 = 这枚在冠军池的哪一档；枚数直接从真源表数，不抄死（改了池忘了改图例就是又一处"记账说门在、门不在"）。 */
@@ -3980,9 +3995,10 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   /* 「颜色：切批次不许挪分位」这一条**删掉了**（用户 10-07：「需要重构的时候就把没用的门禁删了」+ 新口径
    *   「不渲染的点直接从图中摘出去，不影响范围内点的渲染」）—— 它钉的正是"批次不参与定标"，
    *   与新口径正面冲突，留着只会替一个已经作废的读法作证。换成钉新口径的那三条（下面这条）。 */
-  T('颜色定标按**当下画出来的那批点**：最蓝 = 其中 F 的 p0.5 ‖ 灰 = 其中位 ‖ 最红 = 其中 F 的 p99.5（±0.02；两端各截 0.5% 长尾）',
+  T('颜色定标按**当下画出来的那批点**：中段 p02–p98 线性、中位落灰；两端各 4% 色域按排名铺尾，不硬钳',
     (function () { var bd = colBand(); if (!bd) return false;
-      return Math.abs(fCol(bd.lo)) <= 0.02 && Math.abs(fCol(bd.med) - 0.5) <= 0.02 && Math.abs(fCol(bd.hi) - 1) <= 0.02
+      return Math.abs(fCol(bd.lo) - bd.tail) <= 0.02 && Math.abs(fCol(bd.med) - 0.5) <= 0.02 &&
+        Math.abs(fCol(bd.hi) - (1 - bd.tail)) <= 0.02 && Math.abs(fCol(bd.rawLo)) <= 0.02 && Math.abs(fCol(bd.rawHi) - 1) <= 0.02
         && bd.n > 1 && bd.n <= nWin() && bd.n <= NVIS; })(),
     (function () { var bd = colBand(); if (!bd) return '定标名单不足 2 枚';
       return '定标名单 ' + bd.n + ' 枚（画出来的 ' + NVIS + ' ‖ 窗内 ' + nWin() + '）‖ min/中位/max = ' +
@@ -4058,7 +4074,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *   用户 10-07 要的是"最红最蓝必须到头"⇒ 现在钉**两端顶满**，中位落在哪一格只如实报、不判红。
    *   保留的一条硬的是"不许塌"（中位仍在带内），换锚换错了它会红。 */
   var SWIN = { flo: st.flo, fhi: st.fhi }; st.flo = 0; st.fhi = 1; recomputeVIS();
-  T('底图（F 档 ‖ 全范围态）：色轴两端必须被"刚好用到"——p0.5 = 0 ‖ p99.5 = 1 ‖ 被钉在两端的不许超过 3%（两端各 0.5% 长尾被钳位）',
+  T('底图（F 档 ‖ 全范围态）：raw min = 0 ‖ raw max = 1 ‖ p02/p98 = 尾色域边界；被钉在两端的只应是真实 min/max',
     (function () {
       var pin = 0; for (var z = 0; z < N; z++) { var t9 = fCol(Fv(P[z])); if (t9 <= 1e-6 || t9 >= 1 - 1e-6) pin++; }
       return Math.abs(fCol(MDS.lo)) <= 1e-6 && Math.abs(fCol(MDS.hi) - 1) <= 1e-6 && pin <= Math.max(2, Math.round(N * 0.03)); })(),
@@ -4710,8 +4726,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   st.flo = 0; st.fhi = 1; recomputeVIS();
   var tLoAll = fCol(q3);
   T('强度窗口：两端顶到色端 ‖ 中位落灰 ‖ **两段各自线性**（段内等数值差 = 等色差），跨中位的折只报不判',
-    tLoW <= 0.001 && tHiW >= 0.999 && Math.abs(tMedW - 0.5) <= 0.02 &&
-    Math.abs(tHalfLo - 0.25) <= 0.02 && Math.abs(tHalfHi - 0.75) <= 0.02 && tLoAll > 0.5,
+    Math.abs(tLoW - BDW.tail) <= 0.02 && Math.abs(tHiW - (1 - BDW.tail)) <= 0.02 && Math.abs(tMedW - 0.5) <= 0.02 &&
+    Math.abs(tHalfLo - (BDW.tail + 0.5) / 2) <= 0.02 && Math.abs(tHalfHi - (0.5 + 1 - BDW.tail) / 2) <= 0.02 && tLoAll > 0.5,
     '低端 ' + tLoW.toFixed(3) + ' ‖ 中位 ' + tMedW.toFixed(3) + '（值 ' + BDW.med.toFixed(3) + '）‖ 上端 ' + tHiW.toFixed(3) +
       ' ‖ 下半段中点 ' + tHalfLo.toFixed(3) + '（要 0.25）‖ 上半段中点 ' + tHalfHi.toFixed(3) + '（要 0.75）' +
       ' ‖ 同一枚（全库态）' + tLoAll.toFixed(3) + '（要 > 0.5）');
