@@ -2366,7 +2366,7 @@ let WALL_GAMES = 3;
     return breaks;
   }
   function scoreMemberN(params, opps, games, n, gen, idx, hGeneIn) {
-    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0, defAdaptHits = 0, drainHeals = 0, defHands = 0, focusHits = 0;
+    let fit = 0, first = 0, second = 0, dealt = 0, rounds = 0, played = 0, ringBreaks = 0, pressRounds = 0, pierceHits = 0, beadSpent = 0, beadBoomSpent = 0, threatHits = 0, laserHits = 0, clears = 0, blocks = 0, varietyMax = 0, varietyMaxLanded = 0, bigUses = 0, chains = 0, bigTCasts = 0, wallBreakHits = 0, wallBreakDmg = 0, reflectAmt = 0, guardHitAmt = 0, beadExpired = 0, defAdaptHits = 0, drainHeals = 0, defHands = 0, focusHits = 0, retalAttacked = 0, retalHits = 0;
     let maxEpSum = 0, heavySum = 0, holdSum = 0, deepSum = 0, econGames = 0, epGain = 0, ringCasts = 0, stockSum = 0;
     /* v1.8.29：失效成功 / 理想情况（激光眼破防且同回合别人打中）——两个计数一起攒，见 voidScan。 */
     let voidWins = 0, voidIdeal = 0;
@@ -2389,7 +2389,7 @@ let WALL_GAMES = 3;
       BLOCK_W > 0 || WIDTH_W > 0 || WIDTH_LAND_W > 0 || WALL_BREAK_W > 0 || REFLECT_W > 0 || GUARD_HIT_W > 0 || BEAD_WASTE_W > 0 || BIGCARD_W > 0 || COSTLY_W > 0 || BIGT_CHAIN_W > 0 || ringWeightAt(gen) > 0 ||
       /* v1.8.29：失效定价的两个 W 也必须进这一族 —— 漏了它，`gen≤125`（`ringWeightAt` 为 0）且其余杠杆全关时
        * 计数器根本不算 ⇒ 臂上读到"void 成功 0 次"与"这根杠杆没生效"同形（§E83 那条病）。 */
-      VOID_W > 0 || VOID_IDEAL_W > 0 || DEF_ADAPT_W > 0 || DRAIN_HEAL_W > 0 || DEF_IDLE_W > 0;
+      VOID_W > 0 || VOID_IDEAL_W > 0 || DEF_ADAPT_W > 0 || DRAIN_HEAL_W > 0 || DEF_IDLE_W > 0 || RETAL_W > 0;
     /* (c) 承诺级储蓄视界 h 是**个体基因**。
      * 此前它是每局随机抽的噪声（30% 的局抽 h∈1..4）：个体不携带它 ⇒ 选择压力
      * 作用不到它 ⇒ "走通连续攒钱长轨迹"的能力没有任何机制被保留下来。
@@ -2635,6 +2635,11 @@ let WALL_GAMES = 3;
        * 集火率 28% vs v7 49% ⇒ 伤害摊在四个人身上、没人被打死。封顶 /2（两次同目标即吃满，
        * 标度按 v1.5.79 的「0 次得 0」）。默认 FOCUS_W=0 ⇒ gFit 逐字不变。 */
       const focusBonus = FOCUS_W * Math.min(1, focusHits / 2);
+      /* 夜6班 · 11-14：**被围殴还手**（GD6a 唯一阻断线：场A 还手 12%<20%；ration 教师被围殴不还手 ⇒
+       *   蒸馏侧已收口（GD7a/GD14 FINDING），只剩奖励侧。「兑现写进奖励」已有否证在册（evalSubsidyProbe
+       *   乱挥双枪 −27pt）⇒ 这根**只买还手**，不碰兑现。率形（还手次数/被打次数），封顶 ×2（50% 还手率吃满
+       *   —— 体测线是 ≥20%，50% 即远超线）。默认 RETAL_W=0 ⇒ gFit 逐字不变。 */
+      const retalBonus = RETAL_W * Math.min(2, retalAttacked > 0 ? (retalHits / retalAttacked) * 2 : 0);
       /* v1.5.121（E4）：**挡下一次伤害** —— 与"清场"互补的那把尺子（清场 = 打死人；这个是扛住）。
        * 封顶 /1（**量出来的标度**：线上包自对局实测每席每局只有 **0.10** 次挡下、最大 0.40 ⇒
        * 用 /2 会几乎恒为 0、奖励退化成常数微扰；改用 v1.5.79 那条"0 次得 0、1 次即吃满"的规矩）。 */
@@ -2682,7 +2687,7 @@ let WALL_GAMES = 3;
       /* ⚠ 标度是**量出来的**（v1.5.79 修正）：威胁命中的真实频率只有 0.30 次/局（线上包实测），
        * 用 /2 封顶时几乎每局都落在 0~0.15 ⇒ 奖励退化成常数级微扰、没有梯度。
        * 改成 /1：0 次得 0、1 次即吃满 ⇒ 约三成的局吃满，**方差大 = 真的有梯度**。 */
-      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + focusBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus + defAdaptBonus + drainHealBonus - defIdlePenalty - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
+      const gFit = Math.max(-0.3, Math.min(1.8, base + proact + deal + firstBonus + stock + conv - slow + imitB * imit + ringBonus + pressBonus + pierceBonus + beadBonus + beadBoomBonus + tgtBonus + laserBonus + voidBonus + voidIdealBonus + focusBonus + retalBonus + clearBonus + blockBonus + widthBonus + widthLandBonus + wallBreakBonus + reflectBonus + guardHitBonus + defAdaptBonus + drainHealBonus - defIdlePenalty - beadWastePenalty + bigBonus + costlyBonus + chainBonus));
       if (commitGame) {
         /* 承诺局只记账，不进 fit：它们是 h 基因的存活依据 + 终局门槛的输入。 */
         if (rank === 1) commitFirst++;
@@ -2731,6 +2736,8 @@ let WALL_GAMES = 3;
         if (DOSE_ON) clears += countClears(r.state.events, seat);
         /* DS · 11-08 夜：集火计数（与 clearBonus 同族，计数不设门槛、付钱才按 FOCUS_W 门控）。 */
         if (DOSE_ON) focusHits += countFocusHits(r.state.events, seat);
+        /* 夜6班 · 11-14：**被围殴还手**计数（分母 = 被打事件数，分子 = ≤2 回合内指向攻击者的攻击）。 */
+        if (DOSE_ON) { const rs = countRetalStats(r.state.events, seat); retalAttacked += rs.attacked; retalHits += rs.retaliated; }
         /* v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**（真的挡掉/弹走，**不认摆架势**）。
          * 论点：防御族**费用 0 ep** ⇒ 与"ep 深度"不同，它不需要多回合计划 ⇒
          * 是"shaping 只在 0.0X 尺度、买不动多回合计划"这条限制**唯一**还可能绕过的方向。 */
@@ -3744,6 +3751,9 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
 /* DS · 11-08 夜：集火奖励（默认关；与 CLEAR_W 同形，>0 才付钱）。 */
 let FOCUS_W = 0;
 function setFocusReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) FOCUS_W = v; return FOCUS_W; }
+/* 夜6班 · 11-14：**被围殴还手**奖励权重（率形；0 = 关 ⇒ gFit 逐字不变）。 */
+let RETAL_W = 0;
+function setRetalReward(w) { const v = Number(w); if (isFinite(v) && v >= 0) RETAL_W = v; return RETAL_W; }
   function clearReward() { return { w: CLEAR_W }; }
   /* ===== v1.5.121（第十三轮复核 §23 的 **E4**）：**挡下伤害**计数奖励（默认关；实验臂用 `EPIRUS_BLOCK_W` 打开）
    * 事件口径（只认"真的挡掉/弹走"，**不认摆架势**）：
@@ -3878,6 +3888,45 @@ function countVariety(events, seat) {
     }
     return n;
   }
+  /* 夜6班 · 11-14：**被围殴还手**统计（countFocusHits 同族）。回合重建照抄 countThreatHits 的规矩
+   *   （一个 pid 重复出现 = 新回合，seen 必须清空——D68 的教训）。还手判定双通道：
+   *   ① action 事件带 target（obs3b 起）且 key ∈ 攻击类 且 target === 攻击者；
+   *   ② damage 事件 source === seat 且 to === 攻击者（老事件流/未留 target 时兜底）。 */
+  function countRetalStats(events, seat) {
+    const ATK = new Set([R.SK.GUN, R.SK.SWORD, R.SK.TANK, R.SK.SNIPE, R.SK.DRAIN, R.SK.RAILGUN, R.SK.LASER_EYE, R.SK.CANNON, R.SK.DUAL_GUN]);
+    const rounds = [];
+    let seen = {}, cur = -1;
+    for (const e of (events || [])) {
+      if (e.type === 'action') {
+        if (cur < 0) cur = 0;
+        else if (seen[e.pid] !== undefined) { seen = {}; cur++; }
+        seen[e.pid] = true;
+        const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmgBy: {}, dmgTo: {} });
+        (rr.cast[e.pid] = rr.cast[e.pid] || []).push({ key: e.key, target: e.target });
+      } else if (e.type === 'damage') {
+        if (cur < 0) continue;
+        const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmgBy: {}, dmgTo: {} });
+        if (e.to === seat && e.source != null && e.source !== seat) rr.dmgBy[e.source] = (rr.dmgBy[e.source] || 0) + 1;
+        if (e.source === seat && e.to != null) (rr.dmgTo[e.to] = rr.dmgTo[e.to] || []).push(e.key);
+      }
+    }
+    let attacked = 0, retaliated = 0;
+    for (let r = 0; r < rounds.length; r++) {
+      for (const X of Object.keys(rounds[r].dmgBy)) {
+        attacked++;
+        const xi = Number(X);
+        let ok = false;
+        for (let k = r; k <= Math.min(rounds.length - 1, r + 2) && !ok; k++) {
+          const casts = rounds[k].cast[seat] || [];
+          if (casts.some((c) => ATK.has(c.key) && c.target === xi)) { ok = true; break; }
+          if ((rounds[k].dmgTo[xi] || []).length) ok = true;
+        }
+        if (ok) retaliated++;
+      }
+    }
+    return { attacked, retaliated };
+  }
+  function retalReward() { return { w: RETAL_W, stat: { games: 0, max: 0, paid: 0 } }; }
   function focusReward() { return { w: FOCUS_W, stat: { games: 0, max: 0, paid: 0 } }; }
   function threatKeyList() { return pierceKeyList().concat([R.SK.RING]); }
   function targetReward() { return { w: TGT_W, threatKeys: threatKeyList() }; }
@@ -4250,6 +4299,7 @@ function countVariety(events, seat) {
     setVoidReward, setVoidIdealReward, voidReward, countVoidWins, countVoidIdeal, voidScan,
     setClearReward, clearReward, countClears,
     setFocusReward, focusReward, countFocusHits,
+    setRetalReward, retalReward, countRetalStats,   /* 夜6班 · 11-14：被围殴还手（EPIRUS_RETAL_W） */
     blockReward, countBlocks,   // v1.5.121 E4：挡下伤害计数（奖励权重走 econ-env 的 blockW）
     widthReward,                // v1.5.124 §28a：广度收益项（权重走 econ-env 的 widthW）
     bigCardReward, countBigCards, bigTChainReward, countBigTChain, countBigTCasts,   // v1.5.126：贵卡出手奖励（权重走 econ-env 的 bigcardW）· v1.5.187/188：大雷连带收益项（bigtChainW，**率形**）

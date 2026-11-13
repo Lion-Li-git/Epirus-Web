@@ -140,6 +140,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
   'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
   'EPIRUS_PASSIVE_OPPS', 'EPIRUS_AGGRO_OPPS', 'EPIRUS_FOCUS_W',   // DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
+  'EPIRUS_RETAL_W',   //（ZCode · 11-14 夜6班）被围殴还手奖励（率形：还手次数/被打次数，封顶 50% 吃满；默认 0 ⇒ gFit 逐字不变）——GD6a 唯一阻断线（场A 还手 12%<20%）；「兑现进奖励」已有否证（evalSubsidyProbe −27pt）⇒ 此杆只买还手不碰兑现
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；表路径可指名册——11-13 统一池裁定后 pool-members-2p.tsv 是**2P 训练对手名册**（旧 v7 包当 2P 陪练），不再喂页面
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
@@ -1487,6 +1488,22 @@ if (FOCUS_W_CLI > 0) {
     process.exit(5);
   }
   console.log('[focus] train-3p 主线程生效值 FOCUS_W=' + gotFocus);
+}
+
+/* ===== 夜6班 · 11-14：`EPIRUS_RETAL_W=<w>`（被围殴还手奖励）=====
+ * 病（GD6a 12 线体测唯一阻断）：场A 还手 12%<20%——被集火不还手；蒸馏侧已收口（ration 教师自身不还手，
+ *   GD7a/GD14 五臂 FINDING）⇒ 唯一活路 = 奖励侧。纪律与 FOCUS_W 逐字同形：默认 0 ⇒ gFit 逐位不变；
+ *   >0 必须回读生效值，否则 exit 5（拒绝静默空转）。判定 = 被打后 ≤2 回合内用攻击类技能指向攻击者
+ *   （damage 通道兜底），率形封顶 50% 吃满。⚠ 预注册盯防：SEL 家族照跑；若 mastery 三线掉线即废臂
+ *   （GA 用 C 换语义的历史病灶——MSB17/18）。 */
+const RETAL_W_CLI = Number(process.env.EPIRUS_RETAL_W || 0);
+if (RETAL_W_CLI > 0) {
+  const gotRetal = T.setRetalReward ? T.setRetalReward(RETAL_W_CLI) : 0;
+  if (!(Number(gotRetal) > 0)) {
+    console.error('⛔ EPIRUS_RETAL_W=' + RETAL_W_CLI + ' 未能生效（setRetalReward 返回 ' + gotRetal + '）—— 拒绝静默空转');
+    process.exit(5);
+  }
+  console.log('[retal] train-3p 主线程生效值 RETAL_W=' + gotRetal);
 }
 
 const OPPS = [

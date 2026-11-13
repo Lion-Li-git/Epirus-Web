@@ -4,7 +4,7 @@
 > ① **代码读取**（server/knob-guard.mjs 解析四个入口，读集即闸真正认的集合）；
 > ② **注解**（`tools/train-3p.mjs` 的 `SELF_ENV_KEYS` 行尾注释——注解住在读取处旁边，删旋钮时自然消失）。
 > 改了任何一处的 env 读取 / 注解 ⇒ 跑 `node tools/knob-registry.mjs` 重生成；CI 每次 push 都会 `--check`。
-> 数据账：全集 245 ‖ 在用 235 ‖ 暗键 9 ‖ 孤儿 0 ‖ 在用未登记 0 ‖ 已删除台账 1
+> 数据账：全集 246 ‖ 在用 236 ‖ 暗键 9 ‖ 孤儿 0 ‖ 在用未登记 0 ‖ 已删除台账 1
 
 ## 状态速览
 
@@ -160,6 +160,7 @@
 | `EPIRUS_REGEN_GENS` | train-3p train-server | Y | — | 在用 | 补贴族：补贴总代数 / 补贴率下达（本入口） |
 | `EPIRUS_REGEN_SLICE` | train-3p | Y | — | 在用 | 补贴族：补贴总代数 / 补贴率下达（本入口） |
 | `EPIRUS_REPO` | — | — | — | 暗键（被提及无人读） |  |
+| `EPIRUS_RETAL_W` | train-3p | Y | — | 在用 | （ZCode · 11-14 夜6班）被围殴还手奖励（率形：还手次数/被打次数，封顶 50% 吃满；默认 0 ⇒ gFit 逐字不变）——GD6a 唯一阻断线（场A 还手 12%<20%）；「兑现进奖励」已有否证（evalSubsidyProbe −27pt）⇒ 此杆只买还手不碰兑现 |
 | `EPIRUS_RING_FORCE_EPS` | train-3p train-server | Y | — | 在用 | 聚能环强探档：ε / 截止代（默认 0=关） |
 | `EPIRUS_RING_FORCE_UNTIL` | train-3p train-server | Y | — | 在用 | 聚能环强探档：ε / 截止代（默认 0=关） |
 | `EPIRUS_RING_OPPS` | train-3p | Y | — | 在用 | v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term） |
