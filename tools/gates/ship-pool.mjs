@@ -142,8 +142,11 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     *   这本身就是"行与行没串"的数值证据（不是只看退出码，`D233` 那条纪律）。 */
   /* 第二枚用 `rand`（公平份额锚）而不是另一枚真包：实测 2 批 × 20 局时**两枚真包的榜内极差会恰好打平成 0.00**
    *   ⇒ 那条"极差 > 0"的牙就变成看运气。`rand` 与参照的差是十几 pt 量级 ⇒ 小预算也稳。 */
+  /* v2.0.7（11-13）：games 20 → 60 —— 池重排后 hard 带更强（WSEL9 进带 + GD6a 进池），1v4 同带装配下
+   *   「KDG-B vs pickRandom」的差被压进 20 局的分辨率里（实测 0.00pt 打平 = 牙看运气），60 局下极差 5.83pt 稳定可辨。
+   *   配套把 timeout 提到 600s（榜模式 3 行 × 2 批 × 60 局）。 */
   const hallRun = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE + ',rand', '--ref=' + POOL_FIXTURE,
-    '--batches=2', '--games=20', '--modes=multi', '--elected=1'], { encoding: 'utf8', timeout: 180000 });
+    '--batches=2', '--games=60', '--modes=multi', '--elected=1'], { encoding: 'utf8', timeout: 600000 });
   eq(hallRun.status, 0, '⑥c 榜模式（两枚不同包 + 影子行）必须跑成（实测 exit=' + hallRun.status + ' ‖ ' + String(hallRun.stderr || '').slice(-240) + '）');
   ok(/^   名次 \| 被考 /m.test(String(hallRun.stdout || '')), '⑥c 必须印出榜表（没印 = 榜模式从没被走过，全绿是假的）');
   ok(/自证④（影子行 ⇒ 位置不影响读数）：\d+ 批逐字相同/.test(String(hallRun.stdout || '')),

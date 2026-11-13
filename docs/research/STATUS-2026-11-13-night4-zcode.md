@@ -155,6 +155,10 @@
   ——与"没学会技能"（mastery 视角：miniT/过载炮从未 ✔，激光眼只在 GD4-LASER 单枚）互为表里：**缺口在状态/反制与甲族
   （taunt/curse/transfer/purify/holo/unite/mirror/jinshield/armor）+ 火系（tank/firestorm）+ 双特化（miniT/cannon/laserEye）**。
 
+- **装配强度校准后的 GD13（frac 0.15，训练延续）**：环 ✔ 259 段 ‖ 大雷 ✔ 265%/局 ‖ 电磁炮 ✘ 5%（浪费 77%）
+  ——份额梯度表收口：0.15 保环+大雷丢炮 / 0.4 连大雷丢 ⇒ **电磁炮（charge#elec 键）是教师混合下最脆的道**，
+  N 键道方案的下一旋钮 = 键道内份额再细分或键头冻结（晚班）。
+
 ## 四、门禁账
 
 - R66 批：np 172/172 ‖ spec 64/64 ‖ smoke/battle/map OK（`scratch/zcode-1113-gate-r66.txt`）。
@@ -163,6 +167,10 @@
 - Δε 全量批终树：**np/ship 52/52 ‖ spec 64/64 ‖ smoke/battle/map OK**（`rebuild-map3.txt`；整轮认证 = 分面绿账闭合，
   engine 面由 R66 批整轮 172/172 覆盖，此后无 engine 改动）。
 - 旋钮册 --check 绿（无注解 0）‖ 页内自检 98/0。
+- 进池/重排批：np/ship 52/52 + np/probe 89/89 + spec 64/64 + smoke/battle/map OK。途中两笔门修（都有实测背书）：
+  ① **D234 ⑥c 预算不足**——池重排后 hard 带更强，1v4 同带装配下「KDG-B vs pickRandom」差被压进 20 局分辨率
+  （实测 0.00pt 打平）⇒ games 20→60 + timeout 600s，60 局下极差 5.83pt 稳定可辨（门自注"十几 pt 量级"是旧池时代的账）；
+  ② **⑩a 图池层落后真源**——`pool-sync` 一跑即齐（16 枚逐枚一致，WSEL9 换带同步）。
 
 ## 五、晚班接什么
 

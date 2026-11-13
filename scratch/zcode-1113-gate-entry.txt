@@ -1,0 +1,40 @@
+warning: in the working copy of 'champion-map/data/batches.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/display.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/feasibility.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/features.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/page/lineage-g3.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/page/pool-members.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/page/promote.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/projections.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/readings/current.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/data/registry.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'champion-map/index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/research/STATUS-2026-11-13-night4-zcode.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'js/bundled-champion-pool.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/zcode-1113-deps/exam4-F2-eps0-1113.tsv', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scratch/zcode-1113-deps/exam4-F2-eps0-long-1113.tsv', LF will be replaced by CRLF the next time Git touches it
+--auto 判据（改动 36 个路径）：
+  probe  1 个 ‖ js/bundled-champion-pool.js
+  meta   35 个 ‖ champion-map/data/batches.tsv champion-map/data/display.tsv champion-map/data/feasibility.tsv champion-map/data/features.tsv …
+--auto ⇒ np 跑 --group=probe；⚠ 分组那一遍**不是认证**
+▶ 起跑 np/probe …
+▶ 起跑 np/engine-fuzz …
+▶ 起跑 spec …
+‖ 浏览器那几道（smoke/battle/map）等重活跑完再起 —— §E355b：它们的时间判据扛不住 np 抢核
+▶ 起跑 smoke …
+▶ 起跑 battle …
+▶ 起跑 map …
+⛔ np/probe 红（exit=1）· 完整输出：（⚠ 落盘失败：ENOENT: no such file or directory, open 'D:\code\Epirus-Web\docs\artifacts\gate-fail-np\probe.txt' ⇒ 只有下面的尾部）
+   失败的门（共 1 条）：
+   ✘ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话  → ⑥c 两行不同源（参照包 ‖ `rand`）⇒ 榜内极差必须 > 0（实测 0.00pt）⇒ 读出 0 就是各行其实来自同一个源（串台），那"名次"是抄
+  ✘ D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权重 · 自动成员不许带伤 · 抽签可复现 · 降级必须说话  → ⑥c 两行不同源（参照包 ‖ `rand`）⇒ 榜内极差必须 > 0（实测 0.00pt）⇒ 读出 0 就是各行其实来自同一个源（串台），那"名次"是抄出来的
+
+⚠ `--group=probe`：**只跑了 89 / 172 条**（跳过 83 条；累计含 probe+ship+meta）⇒ 这不是全量门禁，**不许当整轮全绿引用**。
+
+N人测试：通过 88 / 89
+
+⚠ unit-broken 的 JSON **损坏**：broken 缺起始引号 ⇒ 本工具已按「只补引号」修复后继续。（调用者不是线上槽文件 ⇒ 这是测试夹具或中间产物，不是生产缺陷；两个真线上槽由门 D168 的 ③ 腿直接读并核过。）
+
+门禁：np/probe 88/89（299.1s） · np/engine-fuzz 13/13（0.7s） · spec 64/64（0.3s） · smoke OK（10.1s） · battle OK（27.2s） · map OK（4.8s）
+⛔ 结论：**不是全绿** —— np/probe 红
+EXIT=7
