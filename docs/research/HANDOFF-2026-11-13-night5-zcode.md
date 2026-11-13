@@ -10,6 +10,17 @@
 - 三条裁定已落地：过载炮保留（R66）‖ 2P 统一池（旧 v7 名册 = `pool-members-2p.tsv` 现在是**训练对手名册**，
   `EPIRUS_POOL_OPPS_TABLE=champion-map/pool-members-2p.tsv` 消费）‖ Δε ε=0 半边 pilot 已写进图（24 点亮）。
 
+## ⚑ 晨间追加（08:0x，进图进池重排已完成）
+
+- **三枚新冠军已上图**（GD6a-TILT / GD6b-TILT / MSB18-R1S826788378-seg2，measure-point 全流程 + eps0 补齐，页面 98/0）；
+  **GD6a 已进池**（soft · invited · 12 线 11/12 唯缺还手，promote.tsv 原话入账）；**重排已落**（hard 7 / soft 9，
+  WSEL9 升 hard，断档 96.0/91.5，bundle 已重建 + pool-sync 已同步）。
+- **装配对局校准已跑**（probe-pool 双带×双桌形，compose 真装配 vs 人类替身）：hard 综合 7.76 vs soft 8.79
+  （越低越强）；hard 全格均匀（0~21%）、soft 有风格洞（只枪 33%/只防御 16.7%）——晚班配对读数必须带这批基线。
+- **门修两笔**：D234 ⑥c 预算 20→60 局（重排后 1v4 差异 0.00pt 打平 ⇒ 60 局极差 5.83pt）；⑩a pool-sync。
+- **训练份额梯度表**：教师混合下电磁炮（charge#elec）最脆——frac 0.15 保环+大雷 / 0.4 连大雷丢；
+  N 键道（teacher3..N）实现 + charge 道保护（键头冻结或道内细分）= 晚班第一实验。
+
 ## 晚班主任务（按优先级）
 
 1. **Δε 全量批 = 本班已做完**（912 枚 × 2 桌形零失败，ingest +7104 行，页面已重烘）——你接手时全图应已点亮。
