@@ -88,13 +88,28 @@ const ROLES = {
     if (aff(m, 'proto') || aff(m, 'guard')) return (aff(m, 'proto') ? 'proto' : 'guard');
     return 'ji';
   },
-  /* 挑衅坦克：把考生钉在「必须打我」的义务上（引擎 tauntBy 信号），队友白打；先攒够 2 ジ再挑 */
+  /* 挑衅坦克（11-14 用户修正：坦克不能裸奔——3~4 ジ区间才挑衅，平时按对手状态出防御，被钉住且有ジ就转移奉还）：
+   *  优先级（收入=1ジ/回合的硬约束下排的占空比）：
+   *  ① 被钉住的考生要打我了（引擎 tauntBy 义务名单）且 ep≥2 ⇒ 转移伤害原路奉还（坦克火伤除外，引擎口径）
+   *  ② 穷（ep<2）先攒——不能被防御技能把收入花光（上一版探针抓到的坑：proto 把坦克锁死在 0~1 ジ）
+   *  ③ ep≥3（3~4 ジ区间）⇒ 挑衅（花 2 剩 1~2 = 留防护余量）
+   *  ④ 考生 ep≥2（下一手大概率动手）且 ep≥2 ⇒ 原型制御挡技能伤（花 1）
+   *  ⑤ 免费架势兜底 */
   tauntank(state, pid, legal, ctx) {
     const m = byKey(legal);
-    const f = pushTarget(foesOf(ctx, state), state, 'threat');
-    if (aff(m, 'taunt')) return { key: 'taunt', target: f ? f.target : ctx.foes[0] };
-    if (state.p[pid].ep < 2) return 'ji';
-    if (aff(m, 'guard')) return 'guard';
+    const me = state.p[pid];
+    const foe = pushTarget(foesOf(ctx, state), state, 'threat');
+    const foePid = foe ? foe.target : ctx.foes[0];
+    const foeP = state.p[foePid] || {};
+    const obligated = (() => { const tb = foeP.tauntBy || foeP.tauntByPending; return Array.isArray(tb) && tb.indexOf(pid) >= 0; })();
+    if (obligated) {
+      /* 防御分级按对手 ep（11-14 用户修正：1ジ=枪级反弹白嫖还弹回去；0ジ连防都不用继续攒；2+ジ才转移奉还） */
+      if (foeP.ep >= 2 && me.ep >= 2 && aff(m, 'transfer')) return { key: 'transfer', target: foePid };
+      if (foeP.ep === 1 && aff(m, 'reflect')) return 'reflect';
+      if (foeP.ep === 0) return 'ji';
+      return (foeP.ep >= 2 && me.ep >= 1 && aff(m, 'proto')) ? 'proto' : (aff(m, 'guard') ? 'guard' : 'ji');
+    }
+    if (me.ep >= 4 && aff(m, 'taunt')) return { key: 'taunt', target: foePid };
     return 'ji';
   },
   /* 挑衅跟进手：优先打「被队友挑衅钉住的人」（pushTarget focus = tauntBy 义务名单），否则随队集火 */
