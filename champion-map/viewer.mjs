@@ -3245,8 +3245,21 @@ var ISO = null;
  *   而它**每帧**都被 isoEnsure() 调一次 ⇒ 一帧白烧 ~1.2 秒（GL 三段计时全 0、ISOBUILDS 只有 7 ⇒ 与此吻合）。
  *   它只依赖装载时算好的静态显示坐标（P[i].ax/by/cz）⇒ **本该只算一次**，这里加会话级 memo。 */
 var SIGCNT = 0, SIGVAL = 0;
+/* 11-13：三维壳的坐标轴不是常量 —— 同一页可以换三套行为轴（三个图各自渲染）。
+ *   旧缓存只拿 N + 首尾坐标做戳：三套轴若首尾碰巧接近，isoSigma / ISO 就会把上一张图的壳回吐给下一张
+ *   （表现正是「三个图用同一个过线曲面 / 势曲面」）。这里用全点坐标哈希做轴签名，进所有相关缓存键。 */
+function axisSig() {
+  var h = 2166136261;
+  for (var i = 0; i < N; i++) {
+    var x = +P[i].ax, y = +P[i].by, z = +P[i].cz;
+    h ^= (isFinite(x) ? Math.round(x * 1e6) : -1) | 0; h = Math.imul(h, 16777619);
+    h ^= (isFinite(y) ? Math.round(y * 1e6) : -1) | 0; h = Math.imul(h, 16777619);
+    h ^= (isFinite(z) ? Math.round(z * 1e6) : -1) | 0; h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0).toString(16);
+}
 function isoSigma() {
-  var _stamp = N + '|' + (P[0] ? P[0].ax : 0) + '|' + (P[N - 1] ? P[N - 1].cz : 0);
+  var _stamp = N + '|' + axisSig() + '|' + (P[0] ? P[0].ax : 0) + '|' + (P[N - 1] ? P[N - 1].cz : 0);
   if (SIGVAL && SIGCNT === _stamp) return SIGVAL;
   var nn = [];
   for (var i = 0; i < N; i++) {
@@ -3263,24 +3276,24 @@ function isoSigma() {
 }
 function isoEnsure() {
   var _tS = performance.now();
-  var sg = isoSigma();
+  var sg = isoSigma(), axs = axisSig();
   SIGMS = performance.now() - _tS;   /* E422：算签名花了多少 */
   /* §E619 第六个条件必须是**桌形**：场值走 Fv（vAt 里 field 是 pot 的那一支），而 Fv 现在有两个自由度（T 与 ftab）。
    *   原来只比 sig/thr/gn/field/bw ⇒ 换桌形时这五项全相等 ⇒ 直接回吐旧场，**底图一动不动**。
    *   用户 10-16 傍晚的现象就是这条："切换桌型不会重新渲染地图，必须配合调整一下点颜色才会更新"。
    *   （与今早那三处缓存键同一族病：凡缓存"由 Fv 导出的量"，键要带上 Fv 的每一个自由度。） */
   /* 11-07：FKEY（尺/T/权重/桌形）也是场值的自由度——拖权重滑杆而底图纹丝不动就是这条键漏维（用户点名） */
-  if (ISO && ISO.sig === sg && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab && ISO.fk === FKEY()) return ISO;
+  if (ISO && ISO.sig === sg && ISO.axs === axs && ISO.thr === st.isoT && ISO.gn === st.isoGN && ISO.field === st.isoField && ISO.bw === st.isoBW && ISO.tab === st.ftab && ISO.fk === FKEY()) return ISO;
   /* E423 DS：**指名道姓**记录这次为什么重建**（空闲时四个条件 sig/thr/gn/field 都该稳定）。
    *   §E608：带宽是**第五个**条件 —— 不进缓存键的话，滑块一动而壳纹丝不动（"改了没生效"那一族，
    *   与 §E464 那座只搭一半的桥同形：代码写了、路是空的，而页面自己看起来一切正常）。
    *   顺带把 SIGMS/BUILDMS 在该帧重建时才是当帧值；读数那边每帧清零，避免拿陈旧值判读。 */
   MISSWHY = ISO ? ((ISO.sig === sg ? '' : 'sig') + (ISO.thr === st.isoT ? '' : '|thr') +
     (ISO.gn === st.isoGN ? '' : '|gn') + (ISO.field === st.isoField ? '' : '|field') + (ISO.bw === st.isoBW ? '' : '|bw') +
-    (ISO.tab === st.ftab ? '' : '|tab') + (ISO.fk === FKEY() ? '' : '|fk') || 'all-equal?') : 'noISO';
+    (ISO.tab === st.ftab ? '' : '|tab') + (ISO.axs === axs ? '' : '|axs') + (ISO.fk === FKEY() ? '' : '|fk') || 'all-equal?') : 'noISO';
   ISOBUILDS++;   /* E419 DS：建壳次数 —— 用户真机实测 1.2s/帧、而每帧只有 3073 次画布调用(≈1.5ms)
                   *   ⇒ 1.2 秒必然花在"每帧重算"上；头号嫌疑就是这里被反复重建（GN=128 建一次 ~0.6~1.5s，量级吻合）。 */
-  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.fk = FKEY(); ISO.ms = performance.now() - t0;
+  var t0 = performance.now(); ISO = isoBuild(sg, st.isoT, st.isoGN, st.isoField, st.isoBW); ISO.axs = axs; ISO.fk = FKEY(); ISO.ms = performance.now() - t0;
   BUILDMS = ISO.ms;   /* E422：真重建花了多少 */
   return ISO;
 }
@@ -3328,7 +3341,7 @@ function drawIso(cx, cy, base, w, h, cb, shell) {
        *   要等动了壳参数才重画"就是这个（动壳参数会改 thr/gn/field 里某一项，键才终于变）。
        *   quads.length 挡不住这种 stale：换主语常常面数一样，不一样的只是里面是哪几枚。 */
       var _sig = [cb.r[0], cb.r[1], cb.r[2], cb.u[0], cb.u[1], cb.u[2], cb.f[0], cb.f[1], cb.f[2],
-        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field, m.bw, m.tab].join('|');
+        st.ox3, st.oy3, base, w, h, m.quads.length, m.gn, m.thr, m.field, m.bw, m.tab, m.axs].join('|');
       if (_sig !== GLSIG) {
       GLSIG = _sig;
       var _tG = performance.now();
