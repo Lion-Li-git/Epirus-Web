@@ -12,6 +12,7 @@
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sandbox, loadChamp, rejectUnknownFlags, chargeProfile } from '../../tools/audit-lib.mjs';   // chargeProfile = 珠账的单一来源（与门 `bead`、mastery 同一量具）
+import { widOf } from '../../champion-map/pack-id.mjs';   // 起点身份入档用（与 supfit-full 同一契约）
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
@@ -1102,7 +1103,17 @@ if (SMOKE > 0) {
 }
 
 const packed = P.pack(finalPv);
-writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
+/* 起点身份入档（11-14 白班 · ZCode）：与 supfit-full.mjs 同一式（11-05 用户令「训练侧也修一下」的契约）——
+ *   本路以前整条 META 都不写 ⇒ 谱系图只能按名字猜/画虚线（GD16m 进图时手工补边才修好）。
+ *   `hotstartFrom` 记**权重 id（wid）**不记路径（路径会因去重/改名失效）；算不出才退回路径并点名。 */
+let HF = '';
+try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }
+if (!HF) console.log('⚠ 起点 wid 算不出 ⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
+writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
+  ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
+  up: UP, hotstartFrom: HF || UP, seed: SEED, steps: STEPS, lr: LR,
+  teacher: TEACHER, objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
+}) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
