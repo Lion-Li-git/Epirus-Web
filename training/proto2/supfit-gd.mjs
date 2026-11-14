@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -30,6 +30,12 @@ const STEPS = Math.max(10, Number(arg('steps', 400)) || 400);
 const SEED = Number(arg('seed', 20261031)) || 20261031;
 const OUT = String(arg('out', 'scratch/arms/supfit-gd1.bak'));
 const TAG = String(arg('tag', ''));
+/* `--snapEvery=N`（11-15 夜 · ZCode · Tier1 课表 T1-2 的快照对冲）：DAgger 每轮存一粒
+ *   `<out>.snap<r>.bak`（META 全字段同终局产物 + snap=r）——链式蒸馏的洗损随轮数走，
+ *   "转化出现且强度未塌"的那一粒要按轮选，不能只看终局。0=关（缺省，主路径逐字不变）。 */
+const SNAP_EVERY = Math.max(0, Number(arg('snapEvery', 0)) || 0);
+let HF = '';
+try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }
 /* ⚑ 目标层级（千问 · 10-31 午后补，A 臂读数的另一半）：
  *   `key`（默认 = ZCode 的 A 臂，逐字不变）= 键级似然 `log P(key)`。两级 softmax 的键层取 `bestOf`
  *     （键内最大 logit）⇒ 梯度只碰"当前键内赢的那一枚"，**从不表态该赢哪一枚**。而 `policy.js:680`
@@ -1000,6 +1006,18 @@ for (let r = 1; r <= DAG; r++) {
   console.log('  轮 ' + r + ' ‖ 学生态 +' + gS.length + ' 组（池 ' + trainList.length + ' ‖ 标签对账 ' + (LABEL.keys - before.keys) + '，作废 ' + (LABEL.gone - before.gone) + '）' +
     ' ‖ 教师留出 ' + (100 * tr.agree).toFixed(1) + '% ‖ **学生自访留出 ' + (100 * ts.agree).toFixed(1) + '%（' + ts.n + ' 组）**');
   ROUNDS.push({ round: r, studentG: gS.length, trainG: trainList.length, teacherAgree: tr.agree, teacherLl: tr.ll, studentAgree: ts.agree, studentLl: ts.ll, studentN: ts.n });
+  if (SNAP_EVERY > 0 && r % SNAP_EVERY === 0) {
+    const sp = OUT.replace(/(\.(bak|js))$/, '') + '.snap' + r + '$1';
+    writeFileSync(sp, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
+      ts: new Date().toISOString(), arm: sp.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
+      up: UP, hotstartFrom: HF || UP, snap: r, seed: SEED, steps: STEPS, lr: LR,
+      teacher: TEACHER, teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
+      teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
+      teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
+      objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
+    }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pvCur)) + ';\n', 'utf8');
+    console.log('  ⚑ 轮 ' + r + ' 快照 → ' + sp);
+  }
 }
 /* 终评：按**训练似然最好**的那份粒报留出（lr 挑档不许偷看 test 的纪律同一源头） */
 const finalPv = pvCur;
@@ -1112,8 +1130,6 @@ const packed = P.pack(finalPv);
 /* 起点身份入档（11-14 白班 · ZCode）：与 supfit-full.mjs 同一式（11-05 用户令「训练侧也修一下」的契约）——
  *   本路以前整条 META 都不写 ⇒ 谱系图只能按名字猜/画虚线（GD16m 进图时手工补边才修好）。
  *   `hotstartFrom` 记**权重 id（wid）**不记路径（路径会因去重/改名失效）；算不出才退回路径并点名。 */
-let HF = '';
-try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }
 if (!HF) console.log('⚠ 起点 wid 算不出 ⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
 writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
   ts: new Date().toISOString(), arm: OUT.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),

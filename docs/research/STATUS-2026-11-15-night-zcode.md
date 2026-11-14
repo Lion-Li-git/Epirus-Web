@@ -87,6 +87,19 @@ mem-probe-e6 --subj CLI 化 + fork 透传修复。
 ⚠ D234 ① 的坑：`docs/artifacts/` 在 .gitignore:137 里 ⇒ 池成员 .bak 必须 `git add -f`（gemini 的
 E4c/E5c 同款；直接 `git add` 会静默失败——本班被门咬住后补）。
 
+## 三⁴、分层技能学习进度盘点（07:4x · 用户问"做到什么程度了"）
+
+| 层 | 技能 | 状态 | 载体/证据 |
+|---|---|---|---|
+| **T0 短程保底** | gun/sword/snipe | **✅ 已保住** | 全部 obs6 产物カ谱 gun 5-9%/sword 8-29%/snipe 2-9%（E9/P 线全程在谱）；**tank ⚠ 全库 0/17**——真空待补 |
+| **T1 环/大雷/电磁炮** | ring/big_t/railgun | **🔶 经济通、键道状态未解、转化机制通** | charge 经济在学生身上长出来（P8 13%/P9s2 25%/P10 multi 20%——PG+塑形 ✓）；GD16m 键道命中随轨迹密度走（1→52→14994 次咨询）但**部署仍 0-1%**；转化=多代工程（课表 PLAN-…-tier1 §二） |
+| **T2 转伤/防御/摄魂** | transfer/drain/holo/guard/reflect/bagua | **🟢 transfer 首载体落地 + 防御系健康** | transfer 1203 标签/部署 3-4%（T21/T21R，干净血统复现）；guard/reflect/bagua 在全部三旗 ✓✓；**drain ⚠ 仅 CB3 载体**（obs6 线 0）；跷跷板律：v7blk1 回填洗特殊键道 |
+| **T3 小雷/地雷/激光眼/过载炮** | mini_t/mine/laser_eye/cannon | **🔴 未开垦** | 全库 0/17；canon13 的 mine/cannon 出在 8p 桌——押后到 T1 机器换键道（课表 §四） |
+| **T4 贴贴/天火/挑衅** | curse/firestorm/taunt | **⏸ 已裁定押后** | 不立项（用户 11-15 裁定）；GD16m 独苗在册 |
+
+**池覆盖缺口榜**（普查 17+17 包）：big_t/transfer(除 E11/T21R)/mini_t/laser_eye/cannon/rod **零载体**；
+tank 只 CB3 系 + GD3ALL-G5-8p；**CB3-s13/s7 = 四键现成载体（池成员裁定待点名）**。
+
 ## 四、留给下一班 / 待用户裁
 
 1. **链式两段式**：GD16m 主教塑轨迹 → v7blk1 回填——单包 Tier1 的正路（段间快照选点待开）。
