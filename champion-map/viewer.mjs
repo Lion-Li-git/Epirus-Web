@@ -1116,8 +1116,12 @@ function inWin(d) { if (!fKnown(d)) return false;   /* v1.8.27：当前桌形这
 function recomputeVIS() { NVIS = 0;
   for (var i = 0; i < N; i++) { var d = P[i];
     /* 冠军与"加进对比的那几枚"**永远钉在图上**：切批次不能把参照物一起切没，
-     *   否则绿红分界（= 现役那一档）与对比表会各自读到不同的分母。 */
-    var keep = st.batch === 'all' || batchOf(d) === st.batch || (st.batch !== '2.0' && !!d.lin) || st.cmp.indexOf(d.id) >= 0;
+     *   否则绿红分界（= 现役那一档）与对比表会各自读到不同的分母。
+     *   11-15 深夜（ZCode · 用户令"老版本图应冻结"）：血统钉住**只许钉非 2.0 行**——11-12/11-14 的
+     *   进图把族名文本写进了 lineage 列（add-point 缺省行为，违反 11-07"血统列不再兼记产物来源"裁定），
+     *   19 枚 2.0 新点借 (st.batch!=='2.0' && !!d.lin) 全部漏进「1.8 及以前」图。数据侧已清列 +
+     *   add-point 缺省不再写 lineage；这里再加页面防线：2.0 行无论 lin 装什么都不得借道回流。 */
+    var keep = st.batch === 'all' || batchOf(d) === st.batch || (st.batch !== '2.0' && !!d.lin && batchOf(d) !== '2.0') || st.cmp.indexOf(d.id) >= 0;
     /* §G3：'2.0 系'模式**严格只画 2.0 点**——v7 的冠军记录行（d.lin）不再钉住（用户令"只包含2.0点"；
      *   '1.8 及以前'与'全部'两模式里冠军钉住的老规矩不变：分界参照物不能被切没）。 */
     if (keep && !inWin(d)) keep = false;   /* §E371 窗口：越界一律不画，冠军也不例外 */
@@ -4691,6 +4695,14 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       return '定标名单 ' + bd.n + ' 枚（画出来的 ' + NVIS + ' ‖ 窗内 ' + nWin() + '）‖ min/中位/max = ' +
         bd.lo.toFixed(3) + '/' + bd.med.toFixed(3) + '/' + bd.hi.toFixed(3) + ' → 色值 ' +
         fCol(bd.lo).toFixed(3) + '/' + fCol(bd.med).toFixed(3) + '/' + fCol(bd.hi).toFixed(3); })());
+  /* 11-15 深夜（ZCode · 用户令"老版本图应冻结"）：「1.8 及以前」模式**零 2.0 点**。
+   *   钉的是过滤结果不是数据列——将来谁再让 2.0 行带上了 lin（无论族名还是真血统），这条当场红。
+   *   跑在批次='2.0' 的测试段尾、恢复 'all' 之前：切 1.8 → 数 2.0 可见点 → 报数。 */
+  st.batch = '1.8'; recomputeVIS(); draw();
+  var _leak = []; for (var i = 0; i < N; i++) if (VIS[i] && batchOf(P[i]) === '2.0') _leak.push(P[i].id);
+  T('批次过滤：1.8 及以前模式零 2.0 点（版本冻结——血统钉住不许把 2.0 行带回旧图）',
+    _leak.length === 0,
+    '泄漏 ' + _leak.length + ' 枚' + (_leak.length ? '：' + _leak.slice(0, 8).join(',') : '') + ' ‖ 1.8 模式可见 ' + NVIS + ' / ' + N);
   st.batch = 'all'; recomputeVIS(); draw();
   /* §E600-A 新增的一条：标签文字里**不许出现 ★**。
    *   为什么这条值得占一处：★ 原来钉的是"当前线上那一枚"，而它比的是字面量 'SHIPPED-Ldemo' ——

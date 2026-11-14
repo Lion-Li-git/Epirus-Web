@@ -69,7 +69,11 @@ else if (!FAMLAB) {
     if (r) { FAMLAB = r[t.ix.famLabel]; break; }
   }
 }
-if (LINEAGE === 'new') LINEAGE = FAMLAB || '自动新点';
+/* 11-15 深夜（ZCode）：lineage 列**不再收族名**——11-07 裁定"血统列不再兼记产物来源"，但这里的缺省把
+ *   FAMLAB 写进 lineage ⇒ 11-12/11-14 的进图全部带族名入列，页面 keep 式 `!!d.lin` 钉住把 19 枚 2.0 新点
+ *   漏进「1.8 及以前」旧图（用户令"老版本图应冻结"）。族名只住 fam_label（registry 第 5 列）与
+ *   lineage-g3 的 famLabel 列；lineage 列只收显式 --lineage= 的真血统声明，缺省留空。 */
+if (LINEAGE === 'new') LINEAGE = '';
 const parentWid = String(meta.hotstartFrom || '').trim();
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
 const cand = parentWid ? wid2id.get(parentWid) : '';
