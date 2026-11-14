@@ -1007,7 +1007,7 @@ for (let r = 1; r <= DAG; r++) {
     ' ‖ 教师留出 ' + (100 * tr.agree).toFixed(1) + '% ‖ **学生自访留出 ' + (100 * ts.agree).toFixed(1) + '%（' + ts.n + ' 组）**');
   ROUNDS.push({ round: r, studentG: gS.length, trainG: trainList.length, teacherAgree: tr.agree, teacherLl: tr.ll, studentAgree: ts.agree, studentLl: ts.ll, studentN: ts.n });
   if (SNAP_EVERY > 0 && r % SNAP_EVERY === 0) {
-    const sp = OUT.replace(/(\.(bak|js))$/, '') + '.snap' + r + '$1';
+    const sp = OUT.replace(/\.(bak|js)$/, '') + '.snap' + r + '.bak';
     writeFileSync(sp, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
       ts: new Date().toISOString(), arm: sp.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
       up: UP, hotstartFrom: HF || UP, snap: r, seed: SEED, steps: STEPS, lr: LR,
