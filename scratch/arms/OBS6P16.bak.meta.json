@@ -1,0 +1,57 @@
+{
+ "tool": "pg-train",
+ "tag": "OBS6P16",
+ "parent": "scratch/arms/OBS6P4.seg4000.bak",
+ "seed": 7,
+ "games": 4000,
+ "batch": 48,
+ "lr": 0.0002,
+ "temp": 0.5,
+ "lamC": 0.005,
+ "lamF": 0.05,
+ "shapeKey": null,
+ "shapeW": null,
+ "klW": 0.1,
+ "klTilt": null,
+ "klTiltMul": null,
+ "klL1Final": 0.0694,
+ "cur": "net",
+ "updates": 84,
+ "wallSecs": 63,
+ "baseline": "mean",
+ "ridgeFeat": null,
+ "ridgeFitN": null,
+ "valueCapacityR2": null,
+ "ridgeL2": null,
+ "ridgeDim": null,
+ "probe": null,
+ "rollbackTol": 0.05,
+ "rollbackCount": 0,
+ "probeGames": 0,
+ "bestProbeScore": null,
+ "lastR2": null,
+ "loop": {
+  "meanScore": 0.1236875,
+  "firePerGame": 0,
+  "discChargePerGame": 0.0005,
+  "entropy": 0.18455030453422835,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1,
+  "n": 16411
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6P4.seg4000.bak",
+  "gen": 3,
+  "recipe": {
+   "objective": "scoreNet + λc·discCharge + λf·railgun (resident)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)",
+   "baseline": "mean"
+  }
+ }
+}
