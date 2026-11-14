@@ -45,7 +45,7 @@ const FLAT = [];
 for (const [sid, spath] of SUBJECTS) for (const opp of OPS) FLAT.push({ sid, spath, opp });
 
 if (PAIR_ONLY >= 0) {
-  const { S, Play, R } = W;
+  const S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
   const { sid, spath, opp } = FLAT[PAIR_ONLY];
   const r = duelAssembly({ S, Play, T, R }, loadChamp(W, spath), { games: GAMES, mode: 'multi', seed0: SEED0, n: 2, scripted: opp.chooser });
   console.log('PAIR ' + PAIR_ONLY + ' ' + sid + ' ' + opp.id + ' ' + r.champRate.toFixed(2) + ' ' + r.winRate.toFixed(2) + ' ' + r.drawPct.toFixed(2) + ' ' + r.avgRounds.toFixed(1));
