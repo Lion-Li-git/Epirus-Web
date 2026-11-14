@@ -17,7 +17,7 @@ import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -49,6 +49,10 @@ const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
  *   PG 后段会漂移龟缩，单终点产物不可信，多节点拿去考卷+用卡筛。0=关（旧调用逐字不变）。 */
 const SEG_EVERY = Math.max(0, Number(arg('segEvery', 0)) || 0);
 let segK = 0;
+/* `--shapeKey=<SK键名> --shapeW=<w>`（11-14 晚 · ZCode）：任意键的塑形分量（λf/λc 同族泛化，
+ *   见 shape 块注记）。SHAPE_W 默认 0 = 不塑形（旧调用逐字不变）。 */
+const SHAPE_KEY = String(arg('shapeKey', '') || '').trim();
+const SHAPE_W = Number(arg('shapeW', 0)) || 0;
 let sdSeed = (SEED * 48271 + 17) >>> 0;
 const sdRng = () => { sdSeed = (sdSeed * 1664525 + 1013904223) >>> 0; return sdSeed / 4294967296; };
 
@@ -280,11 +284,16 @@ while (games < GAMES) {
     if (evs.length !== ds.length) { ZIP.bad++; continue; }
     /* 塑形：逐决策对账事件结果（只认 ok），G_t = 终局 + 未折扣塑形回报（return-to-go） */
     const shape = new Float64Array(ds.length);
+    const SHAPE_SK = SHAPE_KEY ? R.SK[String(SHAPE_KEY).toUpperCase()] || null : null;
+    if (SHAPE_KEY && !SHAPE_SK) { console.error('⛔ --shapeKey=' + SHAPE_KEY + ' 不在 R.SK 里'); process.exit(2); }
     for (let i = 0; i < ds.length; i++) {
       const d = ds[i], e = evs[i];
       if (!d.push && e.outcome === 'ok') {
         if (d.key === R.SK.RAILGUN) { shape[i] += LAMF; stat.fire++; }
         else if (d.key === R.SK.CHARGE && d.ep >= 3 && d.elec === 0) { shape[i] += LAMC; stat.charge++; }
+        /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：任意键的塑形分量——
+         *   λf/λc 的同族泛化（ring 在 PG 里被机会+优势双重饿死，0.02-0.05 的小分量养住键道）。 */
+        if (SHAPE_SK && d.key === SHAPE_SK) shape[i] += SHAPE_W;
       }
       if (!d.push) { stat.ent += d.H; stat.decs++; }
     }
@@ -393,7 +402,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),
