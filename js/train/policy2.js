@@ -105,6 +105,14 @@
       [rec ? rec.tgt[1] : 0, rec ? Math.min(rec.cnt || 0, 4) / 4 : 0, Math.min(streakDef, 4) / 4, hasBead]);
   }
   /* obs6 逐席公开段（44 + 2S 维）：18 状态 ‖ 3 相对桌面位置 ‖ S+1 lastSkill ‖ 8 规则等价类 ‖ 6 lastTarget/2 ‖ S bag23 ‖ 8 三回合统计 */
+  /* ⚑ obs6（11-14 · gemini · 用户令）：**反转 obs4 的指纹条款**——精确键（lastSkill one-hot + 3 回合键 bag）
+   *   回归**逐席含对手**。为什么敢开回 11-10 关掉的通道：①对手池改 **synthMix 合成对手**（10 脚本 pickers
+   *   每 3 回合按局种哈希轮换 ⇒ 没有固定脚本指纹可背；考卷池锚 D235 不动）②训练侧 seatDrop（席位输入
+   *   dropout）+ seatL2（席位编码权重 L2）压制对特定席位-脚本耦合的记忆。**代价与盯防**：背诵通道重新
+   *   打开 ⇒ 考卷分数**无法**检出背诵（背名册反而分高）——判定必须配**非名册对手对照读数**（训外包/新
+   *   脚本 vs 名册的分差），分差大 = 背诵实锤，回头收紧 synthMix/seatDrop。self 侧精确键同步恢复
+   *   （同 seatEnc）⇒ obs5 时代"自己上一手是贴贴还是天火不可分辨"的教师在判别分辨率上限（11-14 白班
+   *   FINDING ksmid）在 obs6 上解除。 */
   function seatVec6(p, mePid, modeHp, R, recent, ctx6) {
     const st = p.stickers || [];
     let maxAge = 0; for (let i = 0; i < st.length; i++) if (st[i] && st[i].age > maxAge) maxAge = st[i].age;
