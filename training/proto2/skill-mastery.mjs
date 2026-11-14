@@ -363,17 +363,16 @@ function verdictOf(a) {
     line: L.miniT + '/局（各格）' + (isShort ? '（语义只记录）' : ' ∧ 打 [ep≥2 ∧ 最近 ' + MINIT_WINDOW + ' 回合蓄过珠] 的席≥1/2'),
     semEra: MINIT_ERA };
   v.cannon = { pass: isShort ? canAll >= 1 : minCannonRate(a) >= L.cannon, actual: (isShort ? canAll + ' 段' : pct(minCannonRate(a)) + '/局（对 ep 顶 ' + canEp + ' 段）'), line: isShort ? '批内≥1 段' : L.cannon + '/局（各格，第3下打ep顶）' };
-  /* 夜6班 · 11-14（用户令「转移伤害做成转移率，按转移 1 点 50% 算，看平均转移率能否到 50%」）：
-   *   转移率 = 0.5 × 成功转移点数(transferAmt) / max(1, 承伤总量(dmgIn)) —— 每转走 1 点按半价计减伤当量
-   *   （重定向不是免除：目标还挨着 + 我花 2ジ），门槛 = 平均转移率 50%（= 转走的量与挨的量等量）。
-   *   transfer==0 时按「语义读不出」记（与 miniT 分母 0 同规矩），不写成 0% 反制。 */
+  /* 夜6班 · 11-14（用户口径二勘）：**转移率 = 0.5 × 转移点数 / 转移使用次数**——每次引爆率那套的转移版：
+   *   「按转移 1 点 50% 算」= 1 点只抵 2ジ 成本的一半；**100% = 每次平均转走 2 点 = 回本**（2ジ 技能），
+   *   门槛 50% = 平均每次转走 ≥1 点。分母是**使用次数**不是承伤——不用转移的回合照常承伤，
+   *   拿承伤当分母会把「出手频率」混进「每次转得多不多」里（用户勘正）。transfer==0 时按「语义读不出」记。 */
   const tfAll = a.cells.reduce((s, st) => s + (st.obs.transfer || 0), 0);
   const tfAmt = a.cells.reduce((s, st) => s + (st.obs.transferAmt || 0), 0);
-  const tfDmgIn = a.cells.reduce((s, st) => s + (st.obs.dmgIn || 0), 0);
-  const tfRate = tfDmgIn > 0 ? (0.5 * tfAmt) / tfDmgIn : 0;
+  const tfRate = tfAll > 0 ? (0.5 * tfAmt) / tfAll : 0;
   v.transfer = { pass: minRate('transfer') >= 0.05 && (isShort || tfRate >= 0.5),
     unreadable: !isShort && tfAll === 0,
-    actual: pct(minRate('transfer')) + '/局，转移 ' + tfAmt + ' 点（当量 ' + (0.5 * tfAmt).toFixed(1) + '）/ 承伤 ' + tfDmgIn + ' ⇒ 转移率 ' + pct(tfRate),
+    actual: pct(minRate('transfer')) + '/局，转移 ' + tfAmt + ' 点 / ' + tfAll + ' 次 ⇒ 转移率 ' + pct(tfRate) + '（回本线 100% = 2.0 点/次）',
     line: '0.05/局（各格）' + (isShort ? '' : ' ∧ 转移率≥50%') };
   /* 夜6班 · 11-14（用户令「天火训练把引爆率和电磁炮珠浪费一样当重要门槛」）：**贴而不引**是主浪费形态
    *   （R62 实测 GD3ALL-NGA2R 贴 89 引 1，I/A=0.01）。口径：引爆率 = okUses.firestorm / max(1, okUses.curse)
