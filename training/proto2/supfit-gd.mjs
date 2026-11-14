@@ -20,7 +20,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -223,8 +223,13 @@ const laserPick = (state, pid, cs) => {
  *   ⚑ 贴符剂量（GD16b mastery 抓修）：无剂量时引爆分支**绑架整个行为**（1522 贴/365 引，引爆率 24%，
  *   火线全洗——GD5「叠高层挤掉经济线」的单教师版）。贴符对齐 ration 的短程配额（剑 2/枪 3 同族）：
  *   每局贴 ≤3 符（2~3 个宿主），贴完转入引爆循环（firestorm 不设限 = 收益段）⇒ 引爆率上去、火线拿回梯度。 */
-const DET_CURSE_DOSE = 3;
+/* `--detDose=N`（夜6班 · 11-14 中点扫尾）：教师每局贴符上限 = 支配度↔洗线的旋钮。缺省 3 = GD16c 逐字不变；
+ *   0/负 = 不设限（GD16b 形态——引爆分支自由绑架）。GD16 钟摆两极都量过（∞=行为 425/局 火线全洗；
+ *   3=线全保行为零），中点在 dose 轴上还没扫过。 */
+const DET_CURSE_DOSE_RAW = Number(arg('detDose', 3));
+const DET_CURSE_DOSE = DET_CURSE_DOSE_RAW > 0 ? DET_CURSE_DOSE_RAW : Infinity;
 const detonatePick = (state, pid, cs) => {
+  const me = state.p[pid] || {};
   const fs = cs.find((c) => c.key === R.SK.FIRESTORM && c.affordable !== false);
   if (fs) return fs;
   let stuck = 0;
@@ -233,6 +238,10 @@ const detonatePick = (state, pid, cs) => {
   }
   if (stuck >= DET_CURSE_DOSE) return null;
   let best = null, bestHp = -1;
+  /* v5（11-14 白班）：**贴符时机 = ep≥2**——贴完立刻付得起天火（窗口变 stick→fs→ji→fs = 2 引/贴），
+   *   ep=1 贴符会把相位窗口浪费在进账拍上（GD16i 实测：窗口 4 拍只装得下 1 引 ⇒ demo 引爆率 36.5% 卡住）。
+   *   ep<2 时本拍返回 null ⇒ 链上 ji 进账，下一拍 ep≥2 再贴。 */
+  if ((me.ep || 0) < 2) return null;
   for (const c of cs) {
     if (c.key !== R.SK.CURSE || c.affordable === false) continue;
     const o = state.p[c.target];
@@ -240,6 +249,32 @@ const detonatePick = (state, pid, cs) => {
     if (hp > bestHp) { bestHp = hp; best = c; }
   }
   return best;
+};
+/* **引爆相位**（v6 · 11-14 白班）：GD16 三臂教师标签账的病灶实锤——GD16b 教师 贴 176/引 13（demo 引爆率
+ *   7.4%），学生三臂部署引爆率全部钉在 15~24%（学不到教师没演示过的形态）。病根：符 age≤3 回合老化，
+ *   而 detonate 时机只是 ration 的空闲拍、被火线段挤散 ⇒ 符在两次引爆时机之间过期。
+ *   修法：贴符后**锁道 1 拍**（相位 ⟺ 自己 lastSkill==CURSE）。
+ *   ⚑ 拟合崩溃的真因（两勘，用户两次抓错后定案）：本臂亲代 GD6a-TILT 是 **obs5** 面——逐席历史是
+ *   **类目级**（lastSkill 只进 4 类 one-hot，且 CURSE/FIRESTORM/CANNON/ROD/MINE/BIG_T/RAILGUN 全是
+ *   CAT.SPECIAL ⇒ 塌成同一位；自己动作史只剩 rec.cnt/streakDef 派生标量，policy2.js:79「无精确键
+ *   （断脚本指纹）」是 11-10 设计决定）。obs3b 才有 K=4 精确键 bag——别再拿 obs3b manifest 说 obs5 的事。
+ *   ⇒ 相位判别子在 obs5 不可观测：fs 标签落 (SPECIAL, ep≥1) 态，而 ration 的 ring 标签也落同格
+ *   （post-电磁炮/避雷针/落雷接环）⇒ 同观测双标签，加权 ll 可行最优低于起点（GD16k/l 起点=最优）。
+ *   dose 响应：dose=1/2（fs 21/43 个标签，采样未撞格或撞得少）拟合健康、dose=3（52）崩——悬崖敏感。
+ *   ⚑ GD4-LASER 先例不冲突：它独立的是**输出侧**键位（keySplit 抬 charge#boom），不靠输入侧历史。 */
+const DET_PHASE_TURNS = 1;
+const detPhaseActive = (state, pid) => {
+  let seen = 0;
+  const evs = state.events || [];
+  for (let i = evs.length - 1; i >= 0 && seen < DET_PHASE_TURNS; i--) {
+    const e = evs[i];
+    if (e.type !== 'action' || e.pid !== pid) continue;
+    const k = e.key;
+    if (k === R.SK.RING || k === R.SK.BIG_T || k === R.SK.CANNON || k === R.SK.CHARGE || k === R.SK.RAILGUN) return false;
+    if (k === R.SK.CURSE) return true;
+    seen++;   /* ji / firestorm / 其他非破相动作计入窗口 */
+  }
+  return false;
 };
 /* **过载炮**（R66：穿防御与反弹；φ3 清空目标全部ジ）。计价真源（state.js rawCost）：φ1=2ジ、φ2=付光
  *   （min 1，R55）、φ3=付光+自损 1 血——**"3" 是 pri 不是 cost**（夜6班初版误读，用户勘正）。
@@ -571,6 +606,9 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => detonatePick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把引爆段拖回攒钱 */
   : name === 'rationdet'
     ? (state, pid, cs) => rationPick(state, pid, cs) || detonatePick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'rationdet2'
+    ? (state, pid, cs) => (detPhaseActive(state, pid) ? (detonatePick(state, pid, cs) || rationPick(state, pid, cs)) : (rationPick(state, pid, cs) || detonatePick(state, pid, cs)))
+      || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
     /* 夜6班 · 11-14：**复合教师**（火线剂量 + 空闲时贴/引爆）——修「键道教师蹭不到主教师轨迹」的状态分布病：
      *   纯 detonate 键道在 ration 轨迹里 firestorm=0（ration 不贴符 ⇒ 集合态无活符）；把贴/引爆接进 ration
      *   自己的轨迹（空闲拍贴符 → 后续态有活符 → firestorm 可发动 → 引爆循环长在同一条轨迹里），
@@ -646,7 +684,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
