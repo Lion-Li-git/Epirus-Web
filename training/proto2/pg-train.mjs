@@ -17,7 +17,7 @@ import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -44,6 +44,11 @@ const RL2 = Number(arg('ridgeL2', 1e-2)) || 1e-2;   /* 观测侧线性基线的�
 const RFEAT = String(arg('ridgeFeat', 'obs')) === 'small' ? 'small' : 'obs';   /* 基线读哪套特征：obs=xin 全宽 ‖ small=7 个手挑标量 */
 const SEAT_DROP = Math.max(0, Math.min(1, Number(arg('seatDrop', 0)) || 0));
 const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
+/* `--segEvery=N`（11-14 晚 · ZCode · 用户令"强且宽"）：每 N 局存一档快照 `<out>.seg<k*N>.bak`
+ *   —— FINDING-2026-11-14-obs6-coldstart §四 自己开的方子（"更早保存 2000–5000 局多节点筛选"）：
+ *   PG 后段会漂移龟缩，单终点产物不可信，多节点拿去考卷+用卡筛。0=关（旧调用逐字不变）。 */
+const SEG_EVERY = Math.max(0, Number(arg('segEvery', 0)) || 0);
+let segK = 0;
 let sdSeed = (SEED * 48271 + 17) >>> 0;
 const sdRng = () => { sdSeed = (sdSeed * 1664525 + 1013904223) >>> 0; return sdSeed / 4294967296; };
 
@@ -370,6 +375,14 @@ while (games < GAMES) {
     const p8 = OUT.replace(/\.bak$/, '') + '-8k.bak';
     savePack(p8);
     console.log('  ⚑ P-B2 快照（1/3 预算）→ ' + p8);
+  }
+  if (SEG_EVERY > 0) {
+    while (games >= (segK + 1) * SEG_EVERY) {
+      segK++;
+      const to = OUT.replace(/\.(bak|js)$/, '') + '.seg' + (segK * SEG_EVERY) + '.bak';
+      savePack(to);
+      console.log('  ⚑ seg 快照（' + (segK * SEG_EVERY) + ' 局）→ ' + to);
+    }
   }
 }
 const secs = (Date.now() - t0) / 1000;

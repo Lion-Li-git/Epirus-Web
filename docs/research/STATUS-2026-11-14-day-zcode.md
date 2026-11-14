@@ -66,6 +66,8 @@ build 934 行对 gen4 锚 0 错配）④trends 页去陈旧。gate-all --auto �
 | `3b92c0e8` | 中点合拢：GD16m 天火线首次全门（9 臂 + 三勘 + dose 悬崖 + supfit --detDose/rationdet2 v6） |
 | `3e64a51f` | GD16m 进图（24 读数 + measure-point 现代化三修） |
 | `09019598` | 父边升实线 + supfit-gd META 契约（hotstartFrom=wid） |
+| `77296c2c` | obs6 复核补账（seatVec6 注记 + STATUS §七） |
+| 〔本笔〕 | **晚间批**：obs6 背诵探针（PG 段 +7.9pt 名册侧摆动）+ 强且宽第一轮（W2.seg1500 C5长 3× 族最优；pg-train --segEvery；mem-probe/seg-eval 并行默认——用户令） |
 
 ## 六、留给下一班 / 待用户裁
 
