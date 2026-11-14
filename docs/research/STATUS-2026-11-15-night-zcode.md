@@ -1,4 +1,8 @@
-# STATUS · 2026-11-15 深夜（ZCode · 00:0x~02:0x，接 11-14 夜 gemini obs6 批）
+# STATUS · 2026-11-15 深夜（ZCode · 接 11-14 夜 gemini obs6 批）
+
+> ⚠ **时钟勘误（07:31 补）**：本班 shell `date` 时区偏早 ~2.5h ⇒ 正文时间标签（02:4x/03:1x 等）比真实
+> 本机时刻早同量；**真值以 `git log --date=iso-local` 为准**。门禁戳（07:31）与 pool-members addedAt
+> 是对的。
 
 > 本班主题：①**图修根**（用户令：老版本图应冻结 + D3 进图 + 开新族）②**蒸馏第五轮**（用户课程裁定
 > 五臂全谱）。主账见 [FINDING-2026-11-15-night-distill-curriculum-zcode.md](FINDING-2026-11-15-night-distill-curriculum-zcode.md)。
@@ -67,6 +71,21 @@ mem-probe-e6 --subj CLI 化 + fork 透传修复。
 - **E10 两段式机制通**（GD16m 键道 1→52、charge 部署 1%）产量小；**PG10 经济原生**（charge multi
   20%）但链转化 0%；**E12 大雷专项**（bigtfocus+8p）键道命中仅 3——**链式落地 = 经济（已通）→
   键道状态（轨迹设计，未解）→ 转化（机制通）的多代工程**。
+
+## 三′′′、三旗进池（07:3x，用户裁定"都可以进池"）——hard 9/soft 9
+
+`pool-members.tsv` +3 行 → `build-pool-bundle.mjs` 重烘（18 枚 {hard 9, soft 9}）→ `pool-sync.mjs`
+图池层同步 → 门禁 6 道全绿（D234 ① 十条腿全过；⑩a 池层同步是最后一腿）。
+
+| 包 | tier | invited | verdict | 依据 |
+|---|---|---|---|---|
+| **OBS6E9** | **hard** | 0 | pass | 全门 G4✓G5✓×4 / G 7.87+6.88 / 11 卡 / Gap −1.3 |
+| **OBS6P9-S4000** | **hard** | 0 | pass | 全门 ×6 / C5长 0.2956 / Gap −18.8 / charge 25% |
+| **OBS6P4-S4000** | **hard** | **1** | block（仅 G4[multi] 60.7 骑线 0.7pt） | C5长 0.3268 全晚纪录 / Gap −37.8 最净——**KD-G2 invited 先例**（10-21 裁定 A 同族点名越过） |
+
+强度带排序含义：P4-S4000 = 强度极（考卷最强席）、P9-S4000 = 全门强度席、E9 = 宽度席（11 卡全晚最宽）。
+⚠ D234 ① 的坑：`docs/artifacts/` 在 .gitignore:137 里 ⇒ 池成员 .bak 必须 `git add -f`（gemini 的
+E4c/E5c 同款；直接 `git add` 会静默失败——本班被门咬住后补）。
 
 ## 四、留给下一班 / 待用户裁
 
