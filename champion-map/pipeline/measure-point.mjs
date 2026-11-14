@@ -3,7 +3,7 @@
  * 只做四件事：跑 A/B × multi/long 四张 exam4、跑 ruler-measure、拼 readings/display、调用 add-point。
  * 跑 feas(allLong/allMulti) + proj-tsne 整表重投影；新点不写 H5/F/rank（H5 是冻结旧尺，页面按 C·R 重算名次）。
  * 用法：
- *   node champion-map/pipeline/measure-point.mjs --pack=<权重> --id=<id> --ver=2.0 [--rounds=12]
+ *   node champion-map/pipeline/measure-point.mjs --pack=<权重> --id=<id> --ver=2.0 [--rounds=100]
  *     [--no-add] [--bake] [--dry] [--skip-long] [--skip-b]
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -25,7 +25,7 @@ const HERE = join(ROOT, 'champion-map');
 const PACK = resolve(arg('pack', ''));
 const ID = String(arg('id', '')).trim();
 const VER = String(arg('ver', '2.0')).trim();
-const ROUNDS = String(arg('rounds', '12'));
+const ROUNDS = String(arg('rounds', '100'));   /* 11-14：与全库重测口径对齐（100/77000）；旧缺省 12 是 exam-4n-full 时代的 */
 const FAM = String(arg('fam', '')).trim();
 const FAMLAB = String(arg('fam-label', '')).trim();
 if (!PACK || !ID) { console.error('⛔ 需要 --pack= 和 --id='); process.exit(2); }
@@ -33,8 +33,15 @@ if (!existsSync(PACK)) { console.error('⛔ pack 不在：' + PACK); process.exi
 const ST = join(HERE, 'staging');
 if (!DRY) mkdirSync(ST, { recursive: true });
 const rul = readTable(join(HERE, 'data/rulers.tsv'));
+const curRuler = (axis) => {
+  const r = rul.rows.find((r) => r[rul.ix.axis] === axis && r[rul.ix.status] === 'current');
+  if (!r) { console.error('⛔ 没有 current ' + axis + ' 尺'); process.exit(2); }
+  return String(r[rul.ix.ruler_id]);
+};
+/* 11-14 白班（ZCode）：尺 id 从 rulers.tsv 现役行取——旧硬编码 a-v2-page-1109/b-f2-page-1111 已冻结，
+ *   add-point 对 frozen 尺拒写；换尺后这里就是唯一要跟的地方。 */
+const RID_A = curRuler('A'), RID_B = curRuler('B'), RID_X = curRuler('X');
 const bRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.status] === 'current');
-if (!bRow) { console.error('⛔ 没有 current B 尺'); process.exit(2); }
 const F2 = bRow[rul.ix.fixture];
 const F2ARG = F2.replace(/x\d+$/, '').split('+').join(',');
 const rel = PACK.replace(ROOT + '\\', '').replace(/\\/g, '/');
@@ -44,39 +51,56 @@ if (!DRY) {
   writeFileSync(only, ID + '\n', 'utf8');
 }
 const runs = [];
-const addRun = (tag, args) => runs.push({ tag, args });
-const ex = (tag, mode, axis, extraArgs) => {
-  const out = join(ST, ID + '-' + tag + '.tsv');
-  addRun(tag, ['tools/exam-4n-full.mjs',
-    '--out=' + out.replace(HERE + '\\', '').replace(/\\/g, '/'),
-    '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),
-    '--only=' + only.replace(HERE + '\\', '').replace(/\\/g, '/'),
-    '--rounds=' + ROUNDS, '--jobs=1', '--dose=page', '--mode=' + mode, '--exam=' + axis].concat(extraArgs || []));
+const addRun = (tag, exam, mode, dose, args) => runs.push({ tag, exam, mode, dose, args });
+/* 11-14 白班（ZCode）：考卷口径与全库重测对齐（rerun-1114 同款）——exam-4n.mjs 位置参数 100/77000，
+ *   A 轴带 --coop=v3（原轮 + 配合剧本追加局），B 轴带 F5 champ 墙；eps0（dose=exam，Δε 配对半边）补跑，
+ *   读数落 readings（display 无 eps0 列）。rounds 缺省 12→100。 */
+const ex = (tag, mode, axis, dose, extraArgs) => {
+  addRun(tag, axis, mode, dose, ['tools/exam-4n.mjs', ROUNDS, '77000', rel,
+    '--dose=' + dose, '--mode=' + mode, '--exam=' + axis].concat(extraArgs || []));
 };
-ex('a-multi', 'multi', 'A');
-if (!SKIP_LONG) ex('a-long', 'long', 'A');
+ex('a-multi', 'multi', 'A', 'page', ['--coop=v3']);
+if (!SKIP_LONG) ex('a-long', 'long', 'A', 'page', ['--coop=v3']);
 if (!SKIP_B) {
-  ex('b-multi', 'multi', 'B', ['--champ=' + F2ARG, '--champn=1']);
-  if (!SKIP_LONG) ex('b-long', 'long', 'B', ['--champ=' + F2ARG, '--champn=1']);
+  ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
+  if (!SKIP_LONG) ex('b-long', 'long', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
+  ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
+  if (!SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
 }
 const featOut = join(ST, ID + '-ruler.tsv');
-addRun('ruler', ['champion-map/ruler-measure.mjs', '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),
-  '--ids=' + ID, '--out=' + featOut.replace(HERE + '\\', '').replace(/\\/g, '/'), '--exam=120', '--self=40', '--seat=100', '--probe=40']);
+const RULER_ARGS = ['champion-map/ruler-measure.mjs', '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),
+  '--ids=' + ID, '--out=' + featOut.replace(HERE + '\\', '').replace(/\\/g, '/'), '--exam=120', '--self=40', '--seat=100', '--probe=40'];
 for (const r of runs) console.log('[measure] ' + r.tag + '：node ' + r.args.join(' '));
+console.log('[measure] ruler：node ' + RULER_ARGS.join(' '));
 if (DRY) { console.log('--dry：未跑任何测量'); process.exit(0); }
+/* exam-4n 吐的是 `[冠军4N]` 摘要行（rerun-1114 同款抽法）——落成 staging TSV 供下面的读数拼装读 */
+const EXHEAD = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
 for (const r of runs) {
   try {
     const out = execFileSync('node', r.args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-    console.log('—— ' + r.tag + ' ——\n' + out.trim().split('\n').slice(-2).join('\n'));
+    const line = out.split('\n').find((l) => l.startsWith(r.exam === 'B' ? '[冠军4N-B]' : '[冠军4N]'));
+    if (!line) throw new Error('考卷摘要行缺失');
+    const get = (k) => { const m = line.match(new RegExp('[ hnxpkc]' + k + '=([^ ]+)')); return m ? m[1] : ''; };
+    const row = [ID, get('h2'), get('h3'), get('h5'), get('h8'), get('x2'), get('x3'), get('x5'), get('x8'),
+      get('n2'), get('n3'), get('n5'), get('n8'), '77000', ROUNDS, r.mode, r.dose, r.exam, get('pool'), get('champ'), get('sec')];
+    writeFileSync(join(ST, ID + '-' + r.tag + '.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
+    console.log('—— ' + r.tag + ' —— ' + line.trim());
   } catch (e) {
     console.error('⛔ ' + r.tag + ' 失败：' + String(e.message || e).slice(0, 300));
     process.exit(2);
   }
 }
+try {
+  const out = execFileSync('node', RULER_ARGS, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+  console.log('—— ruler ——\n' + out.trim().split('\n').slice(-2).join('\n'));
+} catch (e) {
+  console.error('⛔ ruler 失败：' + String(e.message || e).slice(0, 300));
+  process.exit(2);
+}
 const cell = [2, 3, 5, 8];
 const rd = [['ruler_id', 'cell', 'horizon', 'value', 'n']];
 const vals = {};
-for (const tag of ['a-multi', 'a-long', 'b-multi', 'b-long']) {
+for (const tag of ['a-multi', 'a-long', 'b-multi', 'b-long', 'x-multi', 'x-long']) {
   const f = join(ST, ID + '-' + tag + '.tsv');
   if (!existsSync(f)) continue;
   const t = readTable(f); const row = t.rows[0]; if (!row) continue;
@@ -84,10 +108,10 @@ for (const tag of ['a-multi', 'a-long', 'b-multi', 'b-long']) {
   for (const c of cell) {
     const x = row[t.ix['x' + c]], n = row[t.ix['n' + c]];
     if (x === undefined || x === '') continue;
-    const rid = axis === 'a' ? 'a-v2-page-1109' : 'b-f2-page-1111';
+    const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : RID_X;
     const hor = horizon === 'multi' ? 'short' : 'long';
     rd.push([rid, String(c), hor, x, n]);
-    vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
+    if (axis !== 'x') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
   }
 }
 writeFileSync(join(ST, ID + '-readings.tsv'), rd.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
