@@ -158,7 +158,7 @@ v7ws1-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打�
 v7ws1-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
 v7ws1-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
 v7ws2-31	block	F 被集火还手率 17% < 20%（被 4 席猛攻时不还手） · G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 31%）	100	31	0
-U2-77001	pass	—
+U2-77001	pass	—			
 MSB11-R2S306293884	pass	—			
 MSB14-railgun-R1S175656469	pass	—			
 MSB11-R1S130778313	pass	—			
@@ -168,3 +168,8 @@ MSB15R-GD4RAT	block	field-a,breadth-multi
 GD4-RATION	block	no-meta			
 MSB15-LASER-R3	block	field-a,behavior-gate,behavior-gate,behavior-gate			
 GD6a-TILT	block	F 被集火还手率 12.0% < 20%（被 4 席猛攻时不还手）——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕（2026-11-13 promote --dry，原文 docs/artifacts/promote-GD6a-TILT.txt）			
+OBS6-GA25	block	reflect-wall,field-a			
+OBS6-GA200	block	reflect-wall,breadth-multi,breadth-long,behavior-gate,behavior-gate			
+OBS6-GA100M	block	breadth-multi,breadth-long,behavior-gate,behavior-gate,behavior-gate,behavior-gate			
+OBS6-GA2PG-8K	block	field-a,breadth-multi,breadth-long,behavior-gate			
+OBS6-GA2PG-12K	block	reflect-wall,field-a,seat-symmetry,breadth-multi,breadth-long,behavior-gate,behavior-gate			

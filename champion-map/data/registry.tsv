@@ -934,3 +934,8 @@ GD6a-TILT	D:\code\Epirus-Web\scratch\arms\GD6a-TILT-3p.bak	2.0	21	GD6 蒸馏多�
 GD6b-TILT	D:\code\Epirus-Web\scratch\arms\GD6b-TILT-3p.bak	2.0	21	GD6 蒸馏多线 11-12	GD6 蒸馏多线 11-12	2026-11-12T23:26:32.041Z	9bc37fd5b332520b5906be316c32b6c951d8e9ccf3634b7d203039af7b697813	active
 MSB18-R1S826788378-seg2	D:\code\Epirus-Web\docs\artifacts\MSB18-R1S826788378-seg2.bak	2.0	21	GD6 蒸馏多线 11-12	GD6 蒸馏多线 11-12	2026-11-12T23:29:40.638Z	78de26d3f6e820ec7dd7be30aa653334fb333812812297f9e02baf6474c161a4	active
 GD16m	D:\code\Epirus-Web\scratch\arms\GD16m-D1.bak	2.0	21	GD6 蒸馏多线 11-12	GD6 蒸馏多线 11-12	2026-11-14T06:51:49.926Z	a25da3c22906f152a8be0e434274125aac597db396474f1dd4faea2ab5132b91	active
+OBS6-GA25	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA25.js	2.0	22	2.0 obs6 无教师冷启动（11-14）	2.0 obs6 无教师冷启动（11-14）	2026-11-14T09:03:14.977Z	282af2032e438599f3c27cd3787bb2dab8c2244d486a07043c130f745240b1f7	active
+OBS6-GA200	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA200.js	2.0	22		自动新点	2026-11-14T09:33:58.387Z	b62e7a928caf3f7a8a070af1a2cb9d6719b0c7d46a387f71b884f81d9fafecd5	active
+OBS6-GA100M	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA100M.js	2.0	22		自动新点	2026-11-14T09:34:13.856Z	14e07670a9d871972b3644e0cd4229858d82c5c686ee64d41973e8489121e5bd	active
+OBS6-GA2PG-8K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-8K.bak	2.0	22		自动新点	2026-11-14T09:34:29.284Z	73d4f9e21657ecb4748c9d404d8bb76d657a26a2a85b583c0c0b30dfcee5c279	active
+OBS6-GA2PG-12K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-12K.bak	2.0	22		自动新点	2026-11-14T09:34:44.563Z	d46984a915bbde4a008ac304592ff8b2d27ab0fa6fd19bfaf1150e3d14ff3687	active

@@ -23,10 +23,17 @@ export function layoutOf(P) {
     /* 11-10：bias 一律按段名查——obs5 的 seg[1]=attn，按 [1] 取就拿到 attention 的偏移（对 obs3 族逐位同值） */
     seatBias: segOf('seatEnc') + L.seatH * L.seatIn, actBias: segOf('actEnc') + L.actH * L.actIn,
     ctxBias: segOf('ctx') + L.hid * L.ctxDim, candBias: segOf('cand') + L.hid2 * L.candIn,
-    is4: L.input === 'obs4', is5: L.input === 'obs5', selfDim: L.selfDim,
+    is4: L.input === 'obs4', is5: L.input === 'obs5', is6: L.input === 'obs6', selfDim: L.selfDim, skills: L.skills,
     /* obs5 聚合段的偏移（缺了就是 NaN 静默零——必须在入口守卫里响亮红） */
     AT: (L.seg.find((x) => x.name === 'attn') || {}).off,
     PM: (L.seg.find((x) => x.name === 'pma') || {}).off,
+    ...(L.input === 'obs6' ? {
+      oSelf: segOf('selfEnc'), oSeat: segOf('seatEnc'),
+      oAQ: segOf('attnQ'), oAK: segOf('attnK'), oAV: segOf('attnV'), oAO: segOf('attnO'),
+      oRF1: segOf('rff1'), oRF2: segOf('rff2'),
+      oXQ: segOf('xattnQ'), oXK: segOf('xattnK'), oXV: segOf('xattnV'),
+      oSK: segOf('skillHead'), oTB: segOf('tBilin'),
+    } : {}),
   };
   if (L.interK > 0 || L.tinterK > 0) throw new Error('pg-lib: interK/tinterK>0 的包反传未实现（收到 ' + L.interK + '/' + L.tinterK + '）⇒ 拒绝静默按线性算');
   return y;
@@ -101,6 +108,7 @@ export function dLogKeyP(k, logits, keys, temp, t) {
 /* 前向重放：tape（wantTape 产物）+ params ⇒ 全部激活 + logits。
  *   xin 尾块（hSelf/mean/max）从 e 重算（反传要这两条路）；前块（g/priv/seq/sums）直接抄 tape。 */
 export function tapeForward(tape, params, ly) {
+  if (ly.is6) return tapeForward6(tape, params, ly);
   if (ly.is5) { if (ly.AT == null || ly.PM == null) throw new Error('tapeForward: obs5 的 AT/PM 偏移缺失 ⇒ layoutOf 没对上段表'); return tapeForward5(tape, params, ly); }   /* obs5：注意力重放（陈旧性不存在：嵌入每步从 svs 重建） */
   if (ly.is4) return tapeForward4(tape, params, ly);   /* obs4：槽位重放（11-10 修：旧路把尾块换成 obs3 族 hSelf/mean/mx 且头部槽嵌入冻结在 tape 里 = 污染） */
   const { seatIn, seatH, ctxDim, hid, actIn, actH, candIn, hid2, WS, WA, WC, WK, headOff, seatBias, actBias, ctxBias, candBias } = ly;
@@ -155,7 +163,8 @@ export function tapeForward(tape, params, ly) {
  *     · dSeat 是"对 e_s（seatEnc 的 ReLU 输出）的梯度"，四条路（hSelf/mean/max/te1·te2）**都不掩**，
  *       统一在 seatEnc 聚合处掩 e_s>0 —— 掩两次 = 把别的路也清了（第一版就栽在这里）。 */
 export function tapeBackward(tape, params, ly, act, upstream, grad) {
-  if (ly.is5) { if (ly.AT == null || ly.PM == null) throw new Error('tapeBackward: obs5 的 AT/PM 偏移缺失'); return tapeBackward5(tape, params, ly, act, upstream, grad); }
+  if (ly.is6) return tapeBackward6(tape, params, ly, act, upstream, grad);
+  if (ly.is5) { if (ly.AT == null || ly.PM == null) throw new Error('tapeBackward: obs5 的 AT/PM 缺失'); return tapeBackward5(tape, params, ly, act, upstream, grad); }
   if (ly.is4) return tapeBackward4(tape, params, ly, act, upstream, grad);
   const { seatIn, seatH, ctxDim, hid, actIn, actH, candIn, hid2, WS, WA, WC, WK, headOff, seatBias, actBias, ctxBias, candBias } = ly;
   const head = ctxDim - 3 * seatH;
@@ -583,3 +592,311 @@ function seatEncAgg(tape, params, ly, act, grad, dSeat) {
 }
 /* enc_：pg-lib 内部层算术的别名（与上方 enc 同一函数体，共用实现） */
 function enc_(buf, params, inDim, outDim, wOff, biasOff, out) { return enc(buf, params, inDim, outDim, wOff, biasOff, out); }
+
+/* ==================== obs6 重放/反传 + seatDrop（11-14） ==================== */
+function lin6_(params, src, inDim, outDim, segOff0, applyRelu) {
+  const out = new Float64Array(outDim), bOff = segOff0 + outDim * inDim;
+  for (let j = 0; j < outDim; j++) {
+    let s = params[bOff + j];
+    const base = segOff0 + j * inDim;
+    for (let i = 0; i < inDim; i++) s += params[base + i] * src[i];
+    out[j] = applyRelu ? (s > 0 ? s : 0) : s;
+  }
+  return out;
+}
+function rms6_(x, D) {
+  let sq = 0; for (let j = 0; j < D; j++) sq += x[j] * x[j];
+  const inv = 1 / Math.sqrt(sq / D + 1e-6);
+  const y = new Float64Array(D);
+  for (let j = 0; j < D; j++) y[j] = x[j] * inv;
+  return { y, inv };
+}
+function sm6_(row) {
+  let mx = -Infinity; for (let j = 0; j < row.length; j++) if (row[j] > mx) mx = row[j];
+  let s = 0; const w = new Float64Array(row.length);
+  for (let j = 0; j < row.length; j++) { w[j] = Math.exp(row[j] - mx); s += w[j]; }
+  for (let j = 0; j < row.length; j++) w[j] /= s;
+  return w;
+}
+function rmsBack_(dy, out, inv, D, dx) {
+  let dot = 0; for (let t = 0; t < D; t++) dot += dy[t] * out[t];
+  const mu = dot / D;
+  for (let t = 0; t < D; t++) dx[t] += inv * (dy[t] - mu * out[t]);
+}
+function linBack_(params, grad, src, dy, inDim, outDim, segOff0, dx) {
+  const bOff = segOff0 + outDim * inDim;
+  for (let r = 0; r < outDim; r++) {
+    const d = dy[r]; if (!d) continue;
+    grad[bOff + r] += d;
+    const base = segOff0 + r * inDim;
+    for (let c = 0; c < inDim; c++) { grad[base + c] += d * src[c]; dx[c] += params[base + c] * d; }
+  }
+}
+
+function tapeForward6(tape, params, ly) {
+  const { seatIn, seatH, ctxDim, hid, actH, selfDim, skills, WC, ctxBias,
+    oSelf, oSeat, oAQ, oAK, oAV, oAO, oRF1, oRF2, oXQ, oXK, oXV, oSK, oTB } = ly;
+  if (!tape.self || tape.self.length !== selfDim) throw new Error('tapeForward6: tape.self 缺/宽不对');
+  const H = seatH, FFH = 2 * H;
+  const hSelf = lin6_(params, tape.self, selfDim, hid, oSelf, true);
+  const e0s = [], isSelfArr = [], ids = [];
+  for (let i = 0; i < tape.svs.length; i++) {
+    const sv = tape.svs[i].sv;
+    ids.push(tape.svs[i].id);
+    isSelfArr.push(sv[seatIn - 1] >= 0.5 ? 1 : 0);
+    e0s.push(lin6_(params, sv, seatIn, H, oSeat, true));
+  }
+  const K = e0s.length;
+  const nH = (H % 2 === 0) ? 2 : 1, hd = H / nH, SQ1 = Math.sqrt(hd);
+  const r0s = [], inv0s = [], q1s = [], k1s = [], v1s = [];
+  for (let i = 0; i < K; i++) {
+    const { y: r0, inv: iv0 } = rms6_(e0s[i], H);
+    r0s.push(r0); inv0s.push(iv0);
+    q1s.push(lin6_(params, r0, H, H, oAQ, false));
+    k1s.push(lin6_(params, r0, H, H, oAK, false));
+    v1s.push(lin6_(params, r0, H, H, oAV, false));
+  }
+  const u1s = [], w1 = [], e1s = [];
+  for (let i = 0; i < K; i++) {
+    const u1 = new Float64Array(H), wi = [];
+    for (let h = 0; h < nH; h++) {
+      const h0 = h * hd, row = new Float64Array(K);
+      for (let j = 0; j < K; j++) {
+        let lg = 0; for (let t = 0; t < hd; t++) lg += q1s[i][h0 + t] * k1s[j][h0 + t];
+        row[j] = lg / SQ1;
+      }
+      const w = sm6_(row); wi.push(w);
+      for (let j = 0; j < K; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < hd; t++) u1[h0 + t] += wj * v1s[j][h0 + t]; }
+    }
+    w1.push(wi); u1s.push(u1);
+    const ao = lin6_(params, u1, H, H, oAO, false);
+    const e1 = new Float64Array(H);
+    for (let t = 0; t < H; t++) e1[t] = e0s[i][t] + ao[t];
+    e1s.push(e1);
+  }
+  const r1s = [], inv1s = [], ffhs = [], ectx = [], enc = new Map();
+  for (let i = 0; i < K; i++) {
+    const { y: r1, inv: iv1 } = rms6_(e1s[i], H);
+    r1s.push(r1); inv1s.push(iv1);
+    const ffh = lin6_(params, r1, H, FFH, oRF1, true);
+    ffhs.push(ffh);
+    const ffo = lin6_(params, ffh, FFH, H, oRF2, false);
+    const ec = new Float64Array(H);
+    for (let t = 0; t < H; t++) ec[t] = e1s[i][t] + ffo[t];
+    ectx.push(ec); enc.set(ids[i], ec);
+  }
+  const q2 = lin6_(params, hSelf, hid, FFH, oXQ, false);
+  const r2s = [], inv2s = [], k2s = [], v2s = [];
+  for (let j = 0; j < K; j++) {
+    const { y: r2, inv: iv2 } = rms6_(ectx[j], H);
+    r2s.push(r2); inv2s.push(iv2);
+    k2s.push(lin6_(params, r2, H, FFH, oXK, false));
+    v2s.push(lin6_(params, r2, H, FFH, oXV, false));
+  }
+  const cross = new Float64Array(FFH), w2 = [], SQ2 = Math.sqrt(H);
+  for (let m = 0; m < 2; m++) {
+    const m0 = m * H, row = new Float64Array(K);
+    for (let j = 0; j < K; j++) {
+      let lg = 0; for (let t = 0; t < H; t++) lg += q2[m0 + t] * k2s[j][m0 + t];
+      row[j] = lg / SQ2;
+    }
+    const w = sm6_(row); w2.push(w);
+    for (let j = 0; j < K; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H; t++) cross[m0 + t] += wj * v2s[j][m0 + t]; }
+  }
+  const oppMax = new Float64Array(H), maxIdx = new Int32Array(H).fill(-1);
+  let hasOpp = false;
+  for (let j = 0; j < K; j++) {
+    if (isSelfArr[j]) continue;
+    if (!hasOpp) { oppMax.set(ectx[j]); maxIdx.fill(j); hasOpp = true; }
+    else for (let t = 0; t < H; t++) if (ectx[j][t] > oppMax[t]) { oppMax[t] = ectx[j][t]; maxIdx[t] = j; }
+  }
+  const xinRaw = new Float64Array(ctxDim);
+  xinRaw.set(hSelf, 0); xinRaw.set(cross, hid); xinRaw.set(oppMax, hid + FFH);
+  const xin = Float64Array.from(xinRaw);
+  if (ly.L.norm) { const mu = ly.L.norm.mean, sd = ly.L.norm.std; for (let i = 0; i < ctxDim; i++) xin[i] = (xin[i] - mu[i]) / sd[i]; }
+  const hctx = enc_(xin, params, ctxDim, hid, WC, ctxBias, new Float64Array(hid));
+  const act = candReplay(tape, params, ly, enc, hctx);
+  const tb1 = oTB, tb2 = oTB + H * actH, skB = oSK + skills * hid;
+  for (let i = 0; i < act.logits.length; i++) {
+    const ki = tape.skillIdx[i];
+    if (ki >= 0 && ki < skills) {
+      let sk = params[skB + ki];
+      const wRow = oSK + ki * hid;
+      for (let j = 0; j < hid; j++) sk += params[wRow + j] * hctx[j];
+      act.logits[i] += sk;
+    }
+    const ae = act.aes[i], te1 = act.te1s[i], te2 = act.te2s[i];
+    let b1 = 0, b2 = 0;
+    for (let r = 0; r < H; r++) {
+      let u1 = 0, u2 = 0;
+      const r1 = tb1 + r * actH, r2 = tb2 + r * actH;
+      for (let c = 0; c < actH; c++) { const ac = ae[c]; u1 += params[r1 + c] * ac; u2 += params[r2 + c] * ac; }
+      b1 += u1 * te1[r]; b2 += u2 * te2[r];
+    }
+    act.logits[i] += b1 + b2;
+  }
+  act.hSelf = hSelf; act.e0s = e0s; act.eArr = e0s;
+  act.r0s = r0s; act.inv0s = inv0s; act.q1s = q1s; act.k1s = k1s; act.v1s = v1s; act.w1 = w1; act.u1s = u1s; act.e1s = e1s;
+  act.r1s = r1s; act.inv1s = inv1s; act.ffhs = ffhs; act.ectx = ectx;
+  act.q2 = q2; act.r2s = r2s; act.inv2s = inv2s; act.k2s = k2s; act.v2s = v2s; act.w2 = w2; act.cross = cross; act.maxIdx = maxIdx;
+  act.xin = xin;
+  return act;
+}
+
+function tapeBackward6(tape, params, ly, act, upstream, grad) {
+  const { seatIn, seatH, ctxDim, hid, actIn, actH, selfDim, skills, WA, WC, actBias, ctxBias,
+    oSelf, oAQ, oAK, oAV, oAO, oRF1, oRF2, oXQ, oXK, oXV, oSK, oTB } = ly;
+  const H = seatH, FFH = 2 * H, K = act.e0s.length;
+  const { dhctxTot, tePaths } = candBackward(tape, params, ly, act, upstream, grad);
+  const tb1 = oTB, tb2 = oTB + H * actH, skB = oSK + skills * hid;
+  for (let i = 0; i < upstream.length; i++) {
+    const u = upstream[i];
+    if (!u) continue;
+    const ki = tape.skillIdx[i];
+    if (ki >= 0 && ki < skills) {
+      grad[skB + ki] += u;
+      const wRow = oSK + ki * hid;
+      for (let j = 0; j < hid; j++) { grad[wRow + j] += u * act.hctx[j]; dhctxTot[j] += u * params[wRow + j]; }
+    }
+    const ae = act.aes[i], te1 = act.te1s[i], te2 = act.te2s[i];
+    const hasT1 = tape.t1[i] != null && act.e.has(tape.t1[i]);
+    const hasT2 = tape.t2[i] != null && act.e.has(tape.t2[i]);
+    const dae = new Float64Array(actH);
+    const dte1 = hasT1 ? new Float64Array(H) : null;
+    const dte2 = hasT2 ? new Float64Array(H) : null;
+    for (let r = 0; r < H; r++) {
+      const te1r = te1[r], te2r = te2[r], r1 = tb1 + r * actH, r2 = tb2 + r * actH;
+      for (let c = 0; c < actH; c++) {
+        const ac = ae[c];
+        grad[r1 + c] += u * ac * te1r;
+        grad[r2 + c] += u * ac * te2r;
+        dae[c] += u * (params[r1 + c] * te1r + params[r2 + c] * te2r);
+        if (hasT1) dte1[r] += u * params[r1 + c] * ac;
+        if (hasT2) dte2[r] += u * params[r2 + c] * ac;
+      }
+    }
+    if (hasT1) tePaths.push({ seatId: tape.t1[i], dte: dte1 });
+    if (hasT2) tePaths.push({ seatId: tape.t2[i], dte: dte2 });
+    const af = tape.afs[i];
+    for (let j = 0; j < actH; j++) {
+      const d = (ae[j] > 0) ? dae[j] : 0; if (!d) continue;
+      grad[actBias + j] += d;
+      const base = WA + j * actIn;
+      for (let t2 = 0; t2 < actIn; t2++) grad[base + t2] += d * af[t2];
+    }
+  }
+  const dxin = new Float64Array(ctxDim);
+  for (let j = 0; j < hid; j++) {
+    const d = (act.hctx[j] > 0) ? dhctxTot[j] : 0; if (!d) continue;
+    grad[ctxBias + j] += d;
+    const base = WC + j * ctxDim;
+    for (let t2 = 0; t2 < ctxDim; t2++) { grad[base + t2] += d * act.xin[t2]; dxin[t2] += d * params[base + t2]; }
+  }
+  if (ly.L.norm) { const sd = ly.L.norm.std; for (let i = 0; i < ctxDim; i++) dxin[i] /= sd[i]; }
+  const dhSelf = Float64Array.from(dxin.subarray(0, hid));
+  const dcross = dxin.subarray(hid, hid + FFH);
+  const doppMax = dxin.subarray(hid + FFH, ctxDim);
+
+  const dq2 = new Float64Array(FFH), dk2 = [], dv2 = [], dectx = [];
+  for (let j = 0; j < K; j++) { dk2.push(new Float64Array(FFH)); dv2.push(new Float64Array(FFH)); dectx.push(new Float64Array(H)); }
+  const SQ2 = Math.sqrt(H);
+  for (let m = 0; m < 2; m++) {
+    const m0 = m * H, w = act.w2[m];
+    let dotu = 0; for (let t = 0; t < H; t++) dotu += dcross[m0 + t] * act.cross[m0 + t];
+    for (let j = 0; j < K; j++) {
+      let dotv = 0; for (let t = 0; t < H; t++) dotv += dcross[m0 + t] * act.v2s[j][m0 + t];
+      const dl = w[j] * (dotv - dotu);
+      for (let t = 0; t < H; t++) {
+        dq2[m0 + t] += dl * act.k2s[j][m0 + t] / SQ2;
+        dk2[j][m0 + t] += dl * act.q2[m0 + t] / SQ2;
+        dv2[j][m0 + t] += w[j] * dcross[m0 + t];
+      }
+    }
+  }
+  linBack_(params, grad, act.hSelf, dq2, hid, FFH, oXQ, dhSelf);
+  for (let j = 0; j < K; j++) {
+    const dr2 = new Float64Array(H);
+    linBack_(params, grad, act.r2s[j], dk2[j], H, FFH, oXK, dr2);
+    linBack_(params, grad, act.r2s[j], dv2[j], H, FFH, oXV, dr2);
+    rmsBack_(dr2, act.r2s[j], act.inv2s[j], H, dectx[j]);
+  }
+  for (let t = 0; t < H; t++) { const j = act.maxIdx[t]; if (j >= 0) dectx[j][t] += doppMax[t]; }
+  const id2idx = new Map();
+  for (let i = 0; i < K; i++) id2idx.set(tape.svs[i].id, i);
+  for (const p of tePaths) {
+    const sidx = id2idx.get(p.seatId);
+    if (sidx === undefined) throw new Error('tapeBackward6: te 席号 ' + p.seatId + ' 不在 tape.svs');
+    for (let t = 0; t < H; t++) dectx[sidx][t] += p.dte[t];
+  }
+  const de1 = [];
+  for (let i = 0; i < K; i++) {
+    const de1i = Float64Array.from(dectx[i]);
+    const dffh = new Float64Array(FFH);
+    linBack_(params, grad, act.ffhs[i], dectx[i], FFH, H, oRF2, dffh);
+    for (let r = 0; r < FFH; r++) if (!(act.ffhs[i][r] > 0)) dffh[r] = 0;
+    const dr1 = new Float64Array(H);
+    linBack_(params, grad, act.r1s[i], dffh, H, FFH, oRF1, dr1);
+    rmsBack_(dr1, act.r1s[i], act.inv1s[i], H, de1i);
+    de1.push(de1i);
+  }
+  const nH = (H % 2 === 0) ? 2 : 1, hd = H / nH, SQ1 = Math.sqrt(hd);
+  const dq1 = [], dk1 = [], dv1 = [];
+  for (let i = 0; i < K; i++) { dq1.push(new Float64Array(H)); dk1.push(new Float64Array(H)); dv1.push(new Float64Array(H)); }
+  const de0 = [];
+  for (let i = 0; i < K; i++) {
+    const de0i = Float64Array.from(de1[i]);
+    const du1 = new Float64Array(H);
+    linBack_(params, grad, act.u1s[i], de1[i], H, H, oAO, du1);
+    for (let h = 0; h < nH; h++) {
+      const h0 = h * hd, w = act.w1[i][h];
+      let dotu = 0; for (let t = 0; t < hd; t++) dotu += du1[h0 + t] * act.u1s[i][h0 + t];
+      for (let j = 0; j < K; j++) {
+        let dotv = 0; for (let t = 0; t < hd; t++) dotv += du1[h0 + t] * act.v1s[j][h0 + t];
+        const dl = w[j] * (dotv - dotu);
+        for (let t = 0; t < hd; t++) {
+          dq1[i][h0 + t] += dl * act.k1s[j][h0 + t] / SQ1;
+          dk1[j][h0 + t] += dl * act.q1s[i][h0 + t] / SQ1;
+          dv1[j][h0 + t] += w[j] * du1[h0 + t];
+        }
+      }
+    }
+    de0.push(de0i);
+  }
+  const dSeat = new Map();
+  for (let i = 0; i < K; i++) {
+    const dr0 = new Float64Array(H);
+    linBack_(params, grad, act.r0s[i], dq1[i], H, H, oAQ, dr0);
+    linBack_(params, grad, act.r0s[i], dk1[i], H, H, oAK, dr0);
+    linBack_(params, grad, act.r0s[i], dv1[i], H, H, oAV, dr0);
+    rmsBack_(dr0, act.r0s[i], act.inv0s[i], H, de0[i]);
+    dSeat.set(i, de0[i]);
+  }
+  seatEncAgg(tape, params, ly, act, grad, dSeat);
+  const sbOff = oSelf + hid * selfDim;
+  for (let j = 0; j < hid; j++) {
+    const d = (act.hSelf[j] > 0) ? dhSelf[j] : 0; if (!d) continue;
+    grad[sbOff + j] += d;
+    const base = oSelf + j * selfDim;
+    for (let t = 0; t < selfDim; t++) grad[base + t] += d * tape.self[t];
+  }
+}
+
+/** obs6 训练防过拟合：按 seatDrop 概率对非自身席位遮蔽精确键身份(lsKey/bag23)与3回合风格统计，保留核心状态与规则等价位 */
+export function dropObs6Tape(tape, rate, rng) {
+  if (!(rate > 0) || !tape || !tape.is6 || !tape.svs || !tape.svs.length) return tape;
+  const seatIn = tape.svs[0].sv.length;
+  const S = Math.round((seatIn - 51) / 2);
+  if (51 + 2 * S !== seatIn) return tape;
+  const r = rng || Math.random;
+  let changed = false;
+  const svs = tape.svs.map((item) => {
+    const src = item.sv;
+    if (src[seatIn - 1] >= 0.5 || r() >= rate) return item;
+    changed = true;
+    const sv = Float64Array.from(src);
+    sv.fill(0, 21, 22 + S);
+    sv.fill(0, 36 + S, 44 + 2 * S);
+    return { id: item.id, sv };
+  });
+  return changed ? { ...tape, svs } : tape;
+}

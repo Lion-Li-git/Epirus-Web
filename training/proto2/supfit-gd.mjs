@@ -15,13 +15,13 @@ import { sandbox, loadChamp, rejectUnknownFlags, chargeProfile } from '../../too
 import { widOf } from '../../champion-map/pack-id.mjs';   // 起点身份入档用（与 supfit-full 同一契约）
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
-import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi } from './pg-lib.mjs';
+import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi, dropObs6Tape } from './pg-lib.mjs';
 import { pickChain, pickKey } from './chain-lib.mjs';
 import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预示式代理 + 防席名单的单一来源（千问 §二十三/11-01）
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -918,6 +918,10 @@ console.log('  起点：加权似然 ' + base.ll.toFixed(4) + ' ‖ ' + (OBJ ===
 
 /* ---- Adam + 反传（全批）：`--dagger>0` 时同一函数按轮续跑（池子换、动量重开）---- */
 const B1 = 0.9, B2 = 0.999, EPSA = 1e-8;
+const SEAT_DROP = Math.max(0, Math.min(1, Number(arg('seatDrop', 0)) || 0));
+const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
+const seatEncSeg = ly.L.seg.find((s) => s.name === 'seatEnc');
+const se0 = seatEncSeg ? seatEncSeg.off : -1, se1 = seatEncSeg ? (seatEncSeg.off + seatEncSeg.len) : -1;
 function adamFit(pvStart, trainList, sentinelLl, roundTag) {
   WKEY = weightOf(trainList);
   const DIM = pvStart.length;
@@ -927,14 +931,15 @@ function adamFit(pvStart, trainList, sentinelLl, roundTag) {
   for (let it = 1; it <= STEPS; it++) {
     const grad = new Float64Array(DIM);
     for (const gr of trainList) {
-      const act = tapeForward(gr.tape, pvR, ly);
+      const tp = SEAT_DROP > 0 ? dropObs6Tape(gr.tape, SEAT_DROP, rnd) : gr.tape;
+      const act = tapeForward(tp, pvR, ly);
       const t = tailOf(act.logits, gr.keys, 1);
       const p = OBJ === 'cand' ? t.probs[gr.wantIdx] : t.kProb[gr.wantKey];
       if (!(p > 0)) continue;
       const w = WKEY[cls(gr)];
       const u = (OBJ === 'cand' ? dLogPi(gr.wantIdx, act.logits, gr.keys, 1, t) : dLogKeyP(gr.wantKey, act.logits, gr.keys, 1, t));
       for (let j = 0; j < u.length; j++) u[j] *= -w;
-      tapeBackward(gr.tape, pvR, ly, act, u, grad);
+      tapeBackward(tp, pvR, ly, act, u, grad);
     }
     const denom = Math.max(1, trainList.length);
     for (let d = 0; d < DIM; d++) {
@@ -942,7 +947,8 @@ function adamFit(pvStart, trainList, sentinelLl, roundTag) {
       m[d] = B1 * m[d] + (1 - B1) * g;
       v[d] = B2 * v[d] + (1 - B2) * g * g;
       const mh = m[d] / (1 - Math.pow(B1, it)), vh = v[d] / (1 - Math.pow(B2, it));
-      pvR[d] -= LR * mh / (Math.sqrt(vh) + EPSA);
+      const wd = (SEAT_L2 > 0 && d >= se0 && d < se1) ? SEAT_L2 * pvR[d] : 0;
+      pvR[d] -= LR * (mh / (Math.sqrt(vh) + EPSA) + wd);
     }
     if (it % 50 === 0 || it === STEPS) {
       const tr = like(pvR, trainList);

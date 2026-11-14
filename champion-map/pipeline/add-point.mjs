@@ -63,6 +63,12 @@ for (const t of [linMain, linG3]) { const iw = t.ix.wid, ii = t.ix.id; if (iw ==
   for (const r of t.rows) { if (r[iw] && r[ii]) wid2id.set(r[iw], r[ii]); } }
 if (!FAM) { let mx = 0; for (const t of [linMain, linG3]) for (const r of t.rows) { const n = Number(r[t.ix.fam]); if (Number.isFinite(n) && n > mx) mx = n; }
   FAM = String(mx + 1); FAMLAB = FAMLAB || (LINEAGE !== 'new' ? LINEAGE : '自动新点 ' + now.slice(0, 10)); }
+else if (!FAMLAB) {
+  for (const t of [linMain, linG3]) {
+    const r = t.rows.find((x) => String(x[t.ix.fam]) === FAM && x[t.ix.famLabel]);
+    if (r) { FAMLAB = r[t.ix.famLabel]; break; }
+  }
+}
 if (LINEAGE === 'new') LINEAGE = FAMLAB || '自动新点';
 const parentWid = String(meta.hotstartFrom || '').trim();
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));

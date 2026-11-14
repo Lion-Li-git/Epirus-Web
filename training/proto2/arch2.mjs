@@ -44,7 +44,7 @@ const SEAT3 = 22 + 5 + 1, SELF3_EXTRA = 5 + 2 + 48 + 1;
 const SEAT3B = 81 + 5 + 1, SELF3B_EXTRA = 5 + 2 + 78 + 1;   /* obs3b 序列 78 = 32 Q.seq + 30 Q.bag + 16 Q.out */
 const SEAT3C = 89 + 5 + 1;   /* obs3c：obs3b 81 + 风格摘要 11（3 聚合 + 8 防御有效位；DS · 11-02 晚） */
 const CAND3_BASE = 30;                      /* obs3 候选侧基础段（代 2 删掉恒零的 `tgt.none`）*/
-const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c' || s === 'obs4' || s === 'obs5';   /* obs5：注意力面（11-10 ZCode）——特征与 obs4 同一张 manifest，聚合段换 set-transformer */   /* obs4：槽位面（11-10 ZCode），与 obs3 族同构（actIn/dof/inter/seqBlocks） */   /* 2.0 观测面共用同一条结构路 */
+const isO3Input = (s) => s === 'obs3' || s === 'obs3b' || s === 'obs3c' || s === 'obs4' || s === 'obs5' || s === 'obs6';   /* obs6 = 3回合精确对手记忆+自注意/交叉注意（11-14） */
 /* 初始化尺度**只允许一处定义**：`make` 与"相对变异"都要读它，两边各写一个数就会静默错位（10-29 加）。 */
 const INIT_SCALE = 0.25;
 /* ===== 结构代 `gen`（10-30 下午换代）=====
@@ -90,7 +90,7 @@ export function packInstallCfg(raw, extra) {
   if (raw.v !== V_FOR_GEN[gen]) throw new Error('packInstallCfg: v=' + raw.v + ' 与 dims.gen=' + gen + ' 不自洽（该是 v=' + V_FOR_GEN[gen] + '）');
   const cfg = Object.assign({ mutMode: 'seg' }, raw.dims || {}, { gen }, extra || {});
   if (raw.dims && raw.dims.input && !isO3Input(raw.dims.input)) {
-    throw new Error('packInstallCfg: dims.input=' + raw.dims.input + ' 认不出（认 obs3 | obs3b | obs3c）');
+    throw new Error('packInstallCfg: dims.input=' + raw.dims.input + ' 认不出（认 obs3 | obs3b | obs3c | obs4 | obs5 | obs6）');
   }
   return { cfg, gen, era: '代 ' + gen + '（段偏移修正 + ' + ((raw.dims && raw.dims.input) || 'obs3') + ' 观测面）' };
 }
@@ -143,62 +143,64 @@ export function layout(opts) {
    *     旧写法"只在非零时写"是为了让代 2 容器逐位不变；现在代 2 没了，留着就等于"读回来的默认可能与写出去的不同"。 */
   const keySplit = (o.keySplit == null) ? 1 : (Number(o.keySplit) > 0 ? 1 : 0);
   if (gen !== GEN_LATEST) throw new Error('layout: 只实现代 ' + GEN_LATEST + '（收到 gen=' + gen + '）；代 1 请 checkout ' + GEN_FROZEN_COMMIT + ' 跑旧尺、代 2 请 checkout 删 qHead 前那一笔，不要在这里装半旧档');
-  const input = o.input === 'obs3' || o.input === 'obs3b' || o.input === 'obs3c' || o.input === 'obs4' || o.input === 'obs5' ? o.input : 'v7';
-  const isO3 = input === 'obs3' || input === 'obs3b' || input === 'obs3c' || input === 'obs4' || input === 'obs5';
+  const input = o.input === 'obs3' || o.input === 'obs3b' || o.input === 'obs3c' || o.input === 'obs4' || o.input === 'obs5' || o.input === 'obs6' ? o.input : 'v7';
+  const isO3 = isO3Input(input);
   const skills = Math.max(1, Number(o.skills) || 27);
+  const is4 = input === 'obs4';   /* obs4：固定 8 槽 + 正交席位块 + 无池化（11-10 深夜 ZCode） */
+  const is5 = input === 'obs5';   /* obs5：注意力聚合（seatIn/selfDim 与 obs4 同族；seg 多 attn/pma 两段） */
+  const is6 = input === 'obs6';   /* obs6：3回合精确对手记忆 + self/cross attention + skillHead + tBilin（11-14） */
   const seatH = Math.max(1, Number(o.seatH) || 16);
-  const actH = Math.max(1, Number(o.actH) || 8);
+  const actH = Math.max(1, Number(o.actH) || (is6 ? 12 : 8));
   const hid = Math.max(1, Number(o.hid) || 32);
   const hid2 = Math.max(1, Number(o.hid2) || 24);
-    const is4 = input === 'obs4';   /* obs4：固定 8 槽 + 正交席位块 + 无池化（11-10 深夜 ZCode） */
-    const is5 = input === 'obs5';   /* obs5：注意力聚合（seatIn/selfDim 与 obs4 同族；seg 多 attn/pma 两段） */
-  const seatIn = (is4 || is5) ? 35 : input === 'obs3' ? SEAT3 : input === 'obs3c' ? SEAT3C : input === 'obs3b' ? SEAT3B : SEAT_DIM;
+  const seatIn = is6 ? (51 + 2 * skills) : (is4 || is5) ? 35 : input === 'obs3' ? SEAT3 : input === 'obs3c' ? SEAT3C : input === 'obs3b' ? SEAT3B : SEAT_DIM;
   const actIn = isO3 ? (CAND3_BASE + skills) : 22;
-    const selfDim = (is4 || is5) ? 60 : input === 'obs3' ? SELF3_EXTRA : (input === 'obs3b' || input === 'obs3c') ? SELF3B_EXTRA : BASE + 3;   // obs4：G5+私有2+序列48+合计1+局面比较4   // v7：base(63)+桌子形状三条 ‖ obs3：全局+私有+序列+全场合计 ‖ obs3b：序列 168（+Q.id 120）
+  const selfDim = is6 ? (56 + 2 * skills) : (is4 || is5) ? 60 : input === 'obs3' ? SELF3_EXTRA : (input === 'obs3b' || input === 'obs3c') ? SELF3B_EXTRA : BASE + 3;   // obs6：56+2S ‖ obs4/obs5：60 ‖ obs3/3b/3c
   /* 池化段的拼接项：obs3 档是 **h_self ‖ mean(对手) ‖ max(对手)**（三块），v7 档是 mean ‖ max（两块，
    *   因为 base(63) 本来就把自己的资源/冷却/架势写全了，再拼一份 h_self 就是同一事实写两遍）。
    * ⚑ 两档都**不把你自己算进池化**——旧代码把 `sc.seats`（含 isSelf 那一席）一起平均，于是
    *   ① 与设计文档 L1.5 的 `mean_{i≠self}` 不符，② 与离线平面向量 `obs3.encode` 的 `pool.mean.*`（只算对手）
    *   不是同一个量 ⇒ 离线路尺（dimgate/fit2/rankfit）关于"哪一列值多少"的账，跟训练时真吃的那一列对不上。
    *   obs3 档的 xin 里原本没有任何"自己"的席位列（只有 g/priv/seq/sums），所以直接排除会把你弄丢 ⇒ 补 h_self。 */
-    const poolN = is4 ? 8 : is5 ? 4 : isO3 ? 3 : 2;   /* obs4：8 槽位（无池化块） ‖ obs5：4 个 PMA seed（ctx 拼接块） */
-  const ctxDim = selfDim + poolN * seatH;
+  const poolN = is6 ? 3 : is4 ? 8 : is5 ? 4 : isO3 ? 3 : 2;   /* obs6：cross(2*seatH)+oppMax(seatH)=3 ‖ obs4：8槽 ‖ obs5：4 PMA seed */
+  const ctxDim = is6 ? (hid + 3 * seatH) : (selfDim + poolN * seatH);
   /* ⚠ 10-28 18:4x 自己抓到的布局 bug（字节对账逼出来的，不是看代码看出的）：
    *   原先写的是 `ctxDim + actH + seatH`，而真正喂进逐候选层的只有 **[hctx(hid) ‖ ae(actH) ‖ te(seatH)]**
    *   ⇒ 每单位多出 `selfDim + 2*seatH - hid` 列**恒零输入的死权重**（S1 默认档 = 66×24 ≈ 1584 个参数白占白算）。
    *   旧版每候选新建数组 ⇒ 尾部天然为 0，看不出来；改成复用缓冲后残留值让两次结果不一致，才把它照出来。
    *   ⇒ 宽度一律**由实际拼接项算**，并在 selftest 里加一条"尾列必须有牙"的构造对照（T8）。 */
-  const candIn = hid + actH + ((isO3 || is4) ? 2 * seatH : seatH);   // obs4/obs5：两目标槽同 obs3 族
-  /* ===== 交互头（10-30 凌晨，ZCode；用户假说"层数不足"的可测形态）=====
-   * `inter=K`：**rank-K 双线性通道**——logit += Σ_k g_k·tanh((u_k·ae)·(v_k·hctx) + b_k)。
-   * 动因：`rank-inter` 在 v7 编码上读到"无一阶 state×action 奖品"（容量文档 §二），而"对第 k 威胁者"这类
-   *   条件项是逐候选侧与桌面侧的**乘法**关系；S1o 的 cand 层虽是 ReLU 隐层（原理上能凑出乘积），
-   *   但那条路要靠 ES 从加法特征里自己撞出来——显式双线性通道把这一格变成可训练、可置零、可验收的段。
-   * 三条硬规矩：① **默认 K=0 = 段不存在** ⇒ 布局/参数量/前向与旧口径逐位同（老包照读，历史臂照比）；
-   *   ② 段追加在 seg 表**末尾** ⇒ 既有段偏移一字不动；③ **全零段 ⇒ 前向逐位等于 K=0**（tanh(b) 项被 g=0 压死
-   *   的前提是 g 也在段里 ⇒ 段全零时 u·ae=0 且贡献=g·tanh(0)=0，两条都成立）⇒ 蒸馏起点可以安全带零段。
-   * ⚠ 只接 obs3 面：v7 面是被 12 臂读数验证过的老路，不往里塞分支（与 forwardV7/forwardObs3 分函数同理）。 */
-  const interK = isO3 ? Math.max(0, Math.floor(Number(o.inter) || 0)) : 0;
+  const candIn = hid + actH + ((isO3 || is4) ? 2 * seatH : seatH);   // obs4/obs5/obs6：两目标槽同 obs3 族
+  if (is6 && (Number(o.inter) > 0 || Number(o.tinter) > 0 || Number(o.keyHead) > 0)) {
+    throw new Error('layout: obs6 已内置 skillHead 与 tBilin，不许叠加 inter/tinter/keyHead');
+  }
+  const interK = (!is6 && isO3) ? Math.max(0, Math.floor(Number(o.inter) || 0)) : 0;
   if (Number(o.inter) > 0 && !isO3) throw new Error('layout: inter 只接 obs3/obs3b 输入面（input=' + input + '）；v7 面是老路，不许加分支');
   const interStride = actH + hid + 2;                    // 每通道：u(actH) ‖ v(hid) ‖ g ‖ b
-  /* ===== 目标交互头（勘误十二，10-31 07:1x，ZCode）=====
-   * `tinter=K`：**act×target 双线性通道**——logit += Σ_k g_k·tanh((u_k·ae)·(w_k·te1) + b_k)。
-   * 动因：miniT 可见性检验（§十一末）——对手键身份已在特征里，但"对着 bigT 用户放小雷"是候选×目标的
-   *   乘法关系，cand 层要从 te1 嵌入里解出身份需要显式通道（inter 头是 act×ctx，管不到目标侧）。
-   * 三条硬规矩与 inter 同款：① 默认 K=0 段不存在 ⇒ 逐位不变；② 段追加 seg 表**末尾**（inter 之后）；
-   *   ③ 无目标 ⇒ te1=zeroSeat ⇒ 项退化为常数 g·tanh(b)（可学习压零）。 */
-  /* DS 11-04（用户命题："直接把 2.0 的打分改过去"）：`keyHead=1` ⇒ 加一段**逐键状态权重**
- *   logit += w_key · hctx + b_key（w 的扇入 = hid）。这正是 v7 `value(state,key)` 的形状，
- *   但挂在 2.0 的状态编码器上 ⇒ 让"哪个键赢"随局面变，是**结构**给的，不靠初始化巧合。
- *   默认 0 ⇒ 段不存在、paramCount 与历史臂逐字相同。 */
-const keyHeadOn = isO3 ? (Number(o.keyHead) > 0 ? 1 : 0) : 0;
-if (Number(o.keyHead) > 0 && !isO3) throw new Error('layout: keyHead 只接 obs3/obs3b 输入面');
-const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
+  const keyHeadOn = (!is6 && isO3) ? (Number(o.keyHead) > 0 ? 1 : 0) : 0;
+  if (Number(o.keyHead) > 0 && !isO3) throw new Error('layout: keyHead 只接 obs3/obs3b 输入面');
+  const tinterK = (!is6 && isO3) ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
   if (Number(o.tinter) > 0 && !isO3) throw new Error('layout: tinter 只接 obs3/obs3b 输入面（input=' + input + '）');
   const tinterStride = actH + seatH + 2;                 // 每通道：u(actH) ‖ w(seatH) ‖ g ‖ b
-  /* obs3 档把**两个目标槽**都拼进逐候选层（规则的target 上限就是 2，且镜面反射要区分 source/output）
-   * ⇒ 目标身份 = 那一席自己的隐向量 h_t1 ⊕ h_t2，不再抄目标标量。 */
-  const seg = [
+  const FFH = 2 * seatH;
+  const seg = is6 ? [
+    { name: 'selfEnc', off: 0, len: hid * selfDim + hid },
+    { name: 'seatEnc', off: 0, len: seatH * seatIn + seatH },
+    { name: 'attnQ', off: 0, len: seatH * seatH + seatH },
+    { name: 'attnK', off: 0, len: seatH * seatH + seatH },
+    { name: 'attnV', off: 0, len: seatH * seatH + seatH },
+    { name: 'attnO', off: 0, len: seatH * seatH + seatH },
+    { name: 'rff1', off: 0, len: FFH * seatH + FFH },
+    { name: 'rff2', off: 0, len: seatH * FFH + seatH },
+    { name: 'xattnQ', off: 0, len: FFH * hid + FFH },
+    { name: 'xattnK', off: 0, len: FFH * seatH + FFH },
+    { name: 'xattnV', off: 0, len: FFH * seatH + FFH },
+    { name: 'actEnc', off: 0, len: actH * actIn + actH },
+    { name: 'ctx', off: 0, len: hid * ctxDim + hid },
+    { name: 'skillHead', off: 0, len: skills * hid + skills },
+    { name: 'tBilin', off: 0, len: 2 * seatH * actH },
+    { name: 'cand', off: 0, len: hid2 * candIn + hid2 },
+    { name: 'policyHead', off: 0, len: hid2 + 1 },
+  ] : [
     { name: 'seatEnc', off: 0, len: seatH * seatIn + seatH },
     /* obs5（11-10 ZCode）：attn = Wq|bq|Wk|bk|Wv|bv（各 H*H+H）；pma = Wq2|bq2|seeds(4*H）。注意这两个块的
      *   内部序与偏移算术必须与 policy2.layoutOfPack / pg-lib.layoutOf 逐字同源，不一致由 parity 当场红。 */
@@ -224,7 +226,13 @@ const tinterK = isO3 ? Math.max(0, Math.floor(Number(o.tinter) || 0)) : 0;
     poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, keyHeadOn, seg, n: off, keySplit,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
-    fanIn: { seatEnc: seatIn, actEnc: actIn, ctx: ctxDim, cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid, attn: seatH, pma: seatH },
+    fanIn: {
+      selfEnc: selfDim, seatEnc: seatIn,
+      attnQ: seatH, attnK: seatH, attnV: seatH, attnO: seatH,
+      rff1: seatH, rff2: FFH, xattnQ: hid, xattnK: seatH, xattnV: seatH,
+      actEnc: actIn, ctx: ctxDim, skillHead: hid, tBilin: actH,
+      cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid, attn: seatH, pma: seatH,
+    },
   };
 }
 
@@ -263,9 +271,8 @@ export function install(W, opts) {
    *   布局不自洽就当场抛，不许静默切错 —— 切错的消融读数比没有读数更坏。 */
   if (isO3Input(L.input)) L.seqBlocks = obs3SeqLayout(R, L.input);
   const OPT = { mutMode: String((opts && opts.mutMode) || 'seg'), temp: 0.6, mutRel: Number(opts && opts.mutRel) > 0 ? 1 : 0,
-    /* `mutOnly=<段名,段名>`（10-29 P2）：只在这几段上变异/交叉，其余**逐字保持不变**。
-     *   动因：DS 的 P2 要"闭式解热启动 + ES 只动最后一层"——主干不动才谈得上"不是 ES 把主干压扁了"。
-     *   ⚠ 名单里的段名认错就抛（不许"以为冻结了其实没冻"）。 */
+    seatL2: Math.max(0, Number(opts && opts.seatL2) || 0),
+    /* `mutOnly=<段名,段名>`（10-29 P2）：只在这几段上变异/交叉，其余**逐字保持不变**。 */
     mutOnly: (function (v) {
       if (v == null || v === '') return null;
       const a = Array.isArray(v) ? v.map(String) : String(v).split(/[,+]/).map((x) => x.trim()).filter(Boolean);
@@ -656,7 +663,205 @@ export function install(W, opts) {
     if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
     return { probs, argmax: arg, cand: cands[arg] || null, logits, phi: phiRet, ...(TP ? { tape: TP } : {}) };
   }
+  /* ===== obs6 输入面（3 回合精确对手记忆 + 自注意/交叉注意 + skillHead + tBilin，11-14）=====
+   * 与 policy2.forwardCands(obs6) / pg-lib.tapeForward6 逐字同源，改一处必改三处。 */
+  function lin6(params, src, inDim, outDim, segOff0, applyRelu) {
+    const out = new Float64Array(outDim);
+    const bOff = segOff0 + outDim * inDim;
+    for (let j = 0; j < outDim; j++) {
+      let s = params[bOff + j];
+      const base = segOff0 + j * inDim;
+      for (let i = 0; i < inDim; i++) s += params[base + i] * src[i];
+      out[j] = applyRelu ? (s > 0 ? s : 0) : s;
+    }
+    return out;
+  }
+  function rms6(x, D) {
+    let sq = 0;
+    for (let j = 0; j < D; j++) sq += x[j] * x[j];
+    const inv = 1 / Math.sqrt(sq / D + 1e-6);
+    const y = new Float64Array(D);
+    for (let j = 0; j < D; j++) y[j] = x[j] * inv;
+    return y;
+  }
+  function sm6(row) {
+    let mx = -Infinity;
+    for (let j = 0; j < row.length; j++) if (row[j] > mx) mx = row[j];
+    let s = 0;
+    const w = new Float64Array(row.length);
+    for (let j = 0; j < row.length; j++) { w[j] = Math.exp(row[j] - mx); s += w[j]; }
+    for (let j = 0; j < row.length; j++) w[j] /= s;
+    return w;
+  }
+  function forwardObs6(state, pid, cands, params, opts2) {
+    CNT.forwards++; CNT.cands += cands.length;
+    const sc = obs3Scene(W, state, pid, 'obs6');
+    const H6 = L.seatH, FFH = 2 * H6;
+    const oSelf = segOff('selfEnc'), oSeat = segOff('seatEnc');
+    const oAQ = segOff('attnQ'), oAK = segOff('attnK'), oAV = segOff('attnV'), oAO = segOff('attnO');
+    const oRF1 = segOff('rff1'), oRF2 = segOff('rff2');
+    const oXQ = segOff('xattnQ'), oXK = segOff('xattnK'), oXV = segOff('xattnV');
+    const oAct = segOff('actEnc'), oCtx = segOff('ctx');
+    const oSK = segOff('skillHead'), oTB = segOff('tBilin');
+    const oCand = segOff('cand'), oHead = segOff('policyHead');
+
+    const selfVec = new Float64Array(L.selfDim);
+    let sp = 0;
+    for (let i = 0; i < sc.g.length; i++) selfVec[sp++] = sc.g[i];
+    for (let i = 0; i < sc.sit.length; i++) selfVec[sp++] = sc.sit[i];
+    for (let i = 0; i < sc.priv.length; i++) selfVec[sp++] = sc.priv[i];
+    for (let i = 0; i < sc.selfPhase.length; i++) selfVec[sp++] = sc.selfPhase[i];
+    for (let i = 0; i < sc.seq.length; i++) selfVec[sp++] = sc.seq[i];
+    if (sp !== L.selfDim) throw new Error('obs6 布局不自洽：selfVec=' + sp + ' ‖ selfDim=' + L.selfDim);
+    const hSelf = lin6(params, selfVec, L.selfDim, L.hid, oSelf, true);
+
+    const TP = (opts2 && opts2.wantTape) ? { is6: 1, self: Float64Array.from(selfVec), svs: [], afs: [], t1: [], t2: [], skillIdx: [], keys: [], xin: null } : null;
+    const svs6 = [], isSelfArr = [], ids6 = [], e0s = [];
+    const PUBN = sc.seatN;
+    for (const s of sc.seats) {
+      const sv = new Float64Array(L.seatIn);
+      let k = 0;
+      for (let j = 0; j < PUBN; j++) sv[k++] = s.public[j];
+      for (let j = 0; j < 6; j++) sv[k++] = s.rel[j];
+      sv[k++] = s.isSelf;
+      if (k !== L.seatIn) throw new Error('obs6 布局不自洽：sv=' + k + ' ‖ seatIn=' + L.seatIn);
+      svs6.push(sv); isSelfArr.push(s.isSelf); ids6.push(s.id);
+      if (TP) TP.svs.push({ id: s.id, sv: Float64Array.from(sv) });
+      e0s.push(lin6(params, sv, L.seatIn, H6, oSeat, true));
+    }
+    const K = e0s.length;
+    const nH = (H6 % 2 === 0) ? 2 : 1, hd = H6 / nH, SQ1 = Math.sqrt(hd);
+    const q1s = [], k1s = [], v1s = [];
+    for (let i = 0; i < K; i++) {
+      const r0 = rms6(e0s[i], H6);
+      q1s.push(lin6(params, r0, H6, H6, oAQ, false));
+      k1s.push(lin6(params, r0, H6, H6, oAK, false));
+      v1s.push(lin6(params, r0, H6, H6, oAV, false));
+    }
+    const e1s = [];
+    for (let i = 0; i < K; i++) {
+      const u1 = new Float64Array(H6);
+      for (let h = 0; h < nH; h++) {
+        const h0 = h * hd, row = new Float64Array(K);
+        for (let j = 0; j < K; j++) {
+          let lg = 0; for (let t = 0; t < hd; t++) lg += q1s[i][h0 + t] * k1s[j][h0 + t];
+          row[j] = lg / SQ1;
+        }
+        const w = sm6(row);
+        for (let j = 0; j < K; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < hd; t++) u1[h0 + t] += wj * v1s[j][h0 + t]; }
+      }
+      const ao = lin6(params, u1, H6, H6, oAO, false);
+      const e1 = new Float64Array(H6);
+      for (let t = 0; t < H6; t++) e1[t] = e0s[i][t] + ao[t];
+      e1s.push(e1);
+    }
+    const enc = new Map(), ectx = [];
+    for (let i = 0; i < K; i++) {
+      const r1 = rms6(e1s[i], H6);
+      const ffh = lin6(params, r1, H6, FFH, oRF1, true);
+      const ffo = lin6(params, ffh, FFH, H6, oRF2, false);
+      const ec = new Float64Array(H6);
+      for (let t = 0; t < H6; t++) ec[t] = e1s[i][t] + ffo[t];
+      ectx.push(ec);
+      enc.set(ids6[i], ec);
+    }
+    const q2 = lin6(params, hSelf, L.hid, FFH, oXQ, false);
+    const k2s = [], v2s = [];
+    for (let j = 0; j < K; j++) {
+      const r2 = rms6(ectx[j], H6);
+      k2s.push(lin6(params, r2, H6, FFH, oXK, false));
+      v2s.push(lin6(params, r2, H6, FFH, oXV, false));
+    }
+    const cross = new Float64Array(FFH), SQ2 = Math.sqrt(H6);
+    for (let m = 0; m < 2; m++) {
+      const m0 = m * H6, row = new Float64Array(K);
+      for (let j = 0; j < K; j++) {
+        let lg = 0; for (let t = 0; t < H6; t++) lg += q2[m0 + t] * k2s[j][m0 + t];
+        row[j] = lg / SQ2;
+      }
+      const w = sm6(row);
+      for (let j = 0; j < K; j++) { const wj = w[j]; if (!wj) continue; for (let t = 0; t < H6; t++) cross[m0 + t] += wj * v2s[j][m0 + t]; }
+    }
+    const oppMax = new Float64Array(H6);
+    let hasOpp = false;
+    for (let j = 0; j < K; j++) {
+      if (isSelfArr[j]) continue;
+      if (!hasOpp) { oppMax.set(ectx[j]); hasOpp = true; }
+      else for (let t = 0; t < H6; t++) if (ectx[j][t] > oppMax[t]) oppMax[t] = ectx[j][t];
+    }
+    const xin = new Float64Array(L.ctxDim);
+    xin.set(hSelf, 0); xin.set(cross, L.hid); xin.set(oppMax, L.hid + FFH);
+    if (TP) TP.xin = Float64Array.from(xin);
+    if (L.norm) { const mu = L.norm.mean, sd = L.norm.std; for (let i = 0; i < L.ctxDim; i++) xin[i] = (xin[i] - mu[i]) / sd[i]; }
+    const hctx = lin6(params, xin, L.ctxDim, L.hid, oCtx, true);
+
+    const KH = new Map();
+    (R.skills || []).forEach((s, idx) => KH.set(typeof s === 'string' ? s : (s.key || s.id), idx));
+    const n = cands.length, logits = new Float64Array(n);
+    const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;
+    const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
+    const tb1 = oTB, tb2 = oTB + H6 * L.actH, skB = oSK + L.skills * L.hid;
+    for (let i = 0; i < n; i++) {
+      const cp = obs3CandOf(sc, cands[i]);
+      let m2 = 0;
+      for (let j = 0; j < cp.base.length; j++) afbuf[m2++] = cp.base[j];
+      for (let j = 0; j < cp.idOne.length; j++) afbuf[m2++] = cp.idOne[j];
+      if (m2 !== L.actIn) throw new Error('obs6 布局不自洽：actIn=' + m2 + ' ‖ ' + L.actIn);
+      const ae = lin6(params, afbuf, L.actIn, L.actH, oAct, true);
+      const t1 = cands[i].target == null ? null : cands[i].target;
+      const t2 = cands[i].target2 == null ? null : cands[i].target2;
+      const te1 = t1 != null && enc.has(t1) ? enc.get(t1) : zeroSeat;
+      const te2 = t2 != null && enc.has(t2) ? enc.get(t2) : zeroSeat;
+      ci.set(hctx, 0); ci.set(ae, L.hid); ci.set(te1, L.hid + L.actH); ci.set(te2, L.hid + L.actH + H6);
+      const hc = lin6(params, ci, L.candIn, L.hid2, oCand, true);
+      if (phis) phis[i] = Float64Array.from(hc);
+      const ki = KH.has(cands[i].key) ? KH.get(cands[i].key) : -1;
+      if (TP) { TP.afs.push(Float64Array.from(afbuf)); TP.t1.push(t1); TP.t2.push(t2); TP.skillIdx.push(ki); TP.keys.push(DK(cands[i])); }
+      let v = params[oHead + L.hid2];
+      for (let j = 0; j < L.hid2; j++) v += params[oHead + j] * hc[j];
+      if (ki >= 0 && ki < L.skills) {
+        let sk = params[skB + ki];
+        const wRow = oSK + ki * L.hid;
+        for (let j = 0; j < L.hid; j++) sk += params[wRow + j] * hctx[j];
+        v += sk;
+      }
+      let b1 = 0, b2 = 0;
+      for (let r = 0; r < H6; r++) {
+        let u1 = 0, u2 = 0;
+        const r1 = tb1 + r * L.actH, r2 = tb2 + r * L.actH;
+        for (let c = 0; c < L.actH; c++) { const ac = ae[c]; u1 += params[r1 + c] * ac; u2 += params[r2 + c] * ac; }
+        b1 += u1 * te1[r]; b2 += u2 * te2[r];
+      }
+      v += b1 + b2;
+      logits[i] = v;
+    }
+    const temp = (opts2 && opts2.temp) || OPT.temp;
+    const bestOf = {}, kSum = {}, kProb = {}, keys = [];
+    for (let i = 0; i < n; i++) {
+      const k = DK(cands[i]);
+      if (!(k in bestOf)) { bestOf[k] = -1e9; kSum[k] = 0; keys.push(k); }
+      if (logits[i] > bestOf[k]) bestOf[k] = logits[i];
+    }
+    let kmax = -1e9;
+    for (const k of keys) if (bestOf[k] > kmax) kmax = bestOf[k];
+    let ktot = 0;
+    for (const k of keys) { kProb[k] = Math.exp((bestOf[k] - kmax) / temp); ktot += kProb[k]; }
+    for (const k of keys) kProb[k] = ktot > 0 ? kProb[k] / ktot : 0;
+    for (let i = 0; i < n; i++) { const k = DK(cands[i]); kSum[k] += Math.exp((logits[i] - bestOf[k]) / temp); }
+    const probs = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+      const k = DK(cands[i]);
+      const within = kSum[k] > 0 ? Math.exp((logits[i] - bestOf[k]) / temp) / kSum[k] : 1 / n;
+      probs[i] = kProb[k] * within;
+    }
+    let arg = 0, best = -1e9;
+    for (let i = 0; i < n; i++) if (logits[i] > best) { best = logits[i]; arg = i; }
+    let phiRet = null;
+    if (phis) { phiRet = new Float64Array(n * L.hid2); for (let i = 0; i < n; i++) phiRet.set(phis[i], i * L.hid2); }
+    return { probs, argmax: arg, cand: cands[arg] || null, logits, phi: phiRet, ...(TP ? { tape: TP } : {}) };
+  }
   function forwardCands(state, pid, cands, params, opts2) {
+    if (L.input === 'obs6') return forwardObs6(state, pid, cands, params, opts2);
     return L.input === 'v7' ? forwardV7(state, pid, cands, params, opts2) : forwardObs3(state, pid, cands, params, opts2);
   }
 
@@ -762,9 +967,18 @@ export function install(W, opts) {
 
   /* ---- 段感知变异 / 交叉（优化器×结构这一格的主角）---- */
   function biasLen(s) {
-    /* 每段末尾是 bias 向量（head 段是 1 个标量） ⇒ 长度 = 该段输出维 */
-    const outDim = { seatEnc: L.seatH, actEnc: L.actH, ctx: L.hid, cand: L.hid2, policyHead: 1 };
-    return outDim[s.name] || 1;
+    /* 每段末尾是 bias 向量（head 段是 1 个标量；tBilin 无偏置=0） ⇒ 长度 = 该段输出维 */
+    const FFH = 2 * L.seatH;
+    const outDim = {
+      selfEnc: L.hid, seatEnc: L.seatH,
+      attnQ: L.seatH, attnK: L.seatH, attnV: L.seatH, attnO: L.seatH,
+      rff1: FFH, rff2: L.seatH,
+      xattnQ: FFH, xattnK: FFH, xattnV: FFH,
+      actEnc: L.actH, ctx: L.hid,
+      skillHead: L.skills, tBilin: 0,
+      cand: L.hid2, policyHead: 1,
+    };
+    return (s.name in outDim) ? outDim[s.name] : 1;
   }
   /* 段名白名单：只在**第一次真要变异时**校验（那时 L 一定已就绪），认错就抛 */
   let MUT_ONLY = null, MUT_CHECKED = false;

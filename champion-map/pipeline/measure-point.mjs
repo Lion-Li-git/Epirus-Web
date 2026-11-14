@@ -8,18 +8,23 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
+import { cpus } from 'node:os';
+import { promisify } from 'node:util';
 import { readTable, writeTable } from '../map-table.mjs';
 
+const execFileP = promisify(execFile);
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DRY = process.argv.includes('--dry');
 const NO_ADD = process.argv.includes('--no-add');
+const FROM_STAGING = process.argv.includes('--from-staging');
 const BAKE = process.argv.includes('--bake');
 const SKIP_LONG = process.argv.includes('--skip-long');
 const SKIP_B = process.argv.includes('--skip-b');
 const SKIP_FEAS = process.argv.includes('--skip-feas');
 const SKIP_PROJ = process.argv.includes('--skip-proj');
 const AUDIT = process.argv.includes('--audit');
+const JOBS = Math.max(1, Number(arg('jobs', Math.min(10, cpus().length))) || 1);
 const ROOT = resolve(process.cwd());
 const HERE = join(ROOT, 'champion-map');
 const PACK = resolve(arg('pack', ''));
@@ -75,27 +80,74 @@ console.log('[measure] ruler：node ' + RULER_ARGS.join(' '));
 if (DRY) { console.log('--dry：未跑任何测量'); process.exit(0); }
 /* exam-4n 吐的是 `[冠军4N]` 摘要行（rerun-1114 同款抽法）——落成 staging TSV 供下面的读数拼装读 */
 const EXHEAD = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
-for (const r of runs) {
-  try {
-    const out = execFileSync('node', r.args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-    const line = out.split('\n').find((l) => l.startsWith(r.exam === 'B' ? '[冠军4N-B]' : '[冠军4N]'));
-    if (!line) throw new Error('考卷摘要行缺失');
-    const get = (k) => { const m = line.match(new RegExp('[ hnxpkc]' + k + '=([^ ]+)')); return m ? m[1] : ''; };
-    const row = [ID, get('h2'), get('h3'), get('h5'), get('h8'), get('x2'), get('x3'), get('x5'), get('x8'),
-      get('n2'), get('n3'), get('n5'), get('n8'), '77000', ROUNDS, r.mode, r.dose, r.exam, get('pool'), get('champ'), get('sec')];
-    writeFileSync(join(ST, ID + '-' + r.tag + '.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
-    console.log('—— ' + r.tag + ' —— ' + line.trim());
-  } catch (e) {
-    console.error('⛔ ' + r.tag + ' 失败：' + String(e.message || e).slice(0, 300));
-    process.exit(2);
+const auditOut = join(ST, ID + '-audit.json');
+const feasLongOut = join(ST, ID + '-feas-long.tsv');
+const feasShortOut = join(ST, ID + '-feas-short.tsv');
+const runPool = async (items, limit, fn) => {
+  let idx = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (idx < items.length) {
+      const i = idx++;
+      await fn(items[i]);
+    }
+  }));
+};
+if (!FROM_STAGING) {
+  const tasks = [];
+  for (const r of runs) {
+    tasks.push(async () => {
+      try {
+        const { stdout } = await execFileP('node', r.args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+        const line = stdout.split('\n').find((l) => l.startsWith(r.exam === 'B' ? '[冠军4N-B]' : '[冠军4N]'));
+        if (!line) throw new Error('考卷摘要行缺失');
+        const get = (k) => { const m = line.match(new RegExp('[ hnxpkc]' + k + '=([^ ]+)')); return m ? m[1] : ''; };
+        const row = [ID, get('h2'), get('h3'), get('h5'), get('h8'), get('x2'), get('x3'), get('x5'), get('x8'),
+          get('n2'), get('n3'), get('n5'), get('n8'), '77000', ROUNDS, r.mode, r.dose, r.exam, get('pool'), get('champ'), get('sec')];
+        writeFileSync(join(ST, ID + '-' + r.tag + '.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
+        console.log('—— ' + r.tag + ' —— ' + line.trim());
+      } catch (e) {
+        console.error('⛔ ' + r.tag + ' 失败：' + String(e.message || e).slice(0, 300));
+        process.exit(2);
+      }
+    });
   }
-}
-try {
-  const out = execFileSync('node', RULER_ARGS, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-  console.log('—— ruler ——\n' + out.trim().split('\n').slice(-2).join('\n'));
-} catch (e) {
-  console.error('⛔ ruler 失败：' + String(e.message || e).slice(0, 300));
-  process.exit(2);
+  tasks.push(async () => {
+    try {
+      const { stdout } = await execFileP('node', RULER_ARGS, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+      console.log('—— ruler ——\n' + stdout.trim().split('\n').slice(-2).join('\n'));
+    } catch (e) {
+      console.error('⛔ ruler 失败：' + String(e.message || e).slice(0, 300));
+      process.exit(2);
+    }
+  });
+  if (!SKIP_FEAS) {
+    const fIn = join(ST, ID + '-feas-input.tsv');
+    const bg = readTable(join(HERE, 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'));
+    const row = new Array(bg.header.length).fill('');
+    row[bg.ix.id] = ID; row[bg.ix.path] = rel;
+    writeTable(fIn, { header: bg.header, rows: bg.rows.concat([row]) }, { backup: false });
+    for (const [flag, out] of [['--allLong=1', feasLongOut], ['--allMulti=1', feasShortOut]]) {
+      tasks.push(async () => {
+        await execFileP('node', [join(HERE, 'feas.mjs'), '--table=' + fIn, '--ids=' + ID, '--out=' + out, flag], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+      });
+    }
+  }
+  if (AUDIT) {
+    tasks.push(async () => {
+      let pr = '';
+      try {
+        ({ stdout: pr } = await execFileP('node', ['tools/promote-champion.mjs', rel, '--dry', '--games=10', '--exam-games=20', '--json'],
+          { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 }));
+      } catch (e) {
+        if (e && typeof e.stdout === 'string' && e.stdout.indexOf('EPIRUS_JSON ') >= 0) pr = e.stdout;
+        else throw e;
+      }
+      const line = String(pr).split('\n').filter((x) => x.indexOf('EPIRUS_JSON ') === 0).pop();
+      if (!line) { console.error('⛔ --audit：promote 没有吐 EPIRUS_JSON'); process.exit(2); }
+      writeFileSync(auditOut, line.slice('EPIRUS_JSON '.length) + '\n', 'utf8');
+    });
+  }
+  await runPool(tasks, JOBS, (fn) => fn());
 }
 const cell = [2, 3, 5, 8];
 const rd = [['ruler_id', 'cell', 'horizon', 'value', 'n']];
@@ -137,14 +189,7 @@ setD('examG', fr[ft.ix.examG] || '120');
  *   当前页面名次由 viewer 按 C·R 重算，新点没有“旧尺出厂名次”。旧 926 行保留历史值。 */
 /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */
 if (!SKIP_FEAS) {
-  const fIn = join(ST, ID + '-feas-input.tsv');
-  const bg = readTable(join(HERE, 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'));
-  const row = new Array(bg.header.length).fill('');
-  row[bg.ix.id] = ID; row[bg.ix.path] = rel;
-  writeTable(fIn, { header: bg.header, rows: bg.rows.concat([row]) }, { backup: false });
-  for (const [flag, okCol, failCol] of [['--allLong=1', 'okLong', 'failsLong'], ['--allMulti=1', 'okShort', 'failsShort']]) {
-    const out = join(ST, ID + '-feas-' + (flag.indexOf('Long') >= 0 ? 'long' : 'short') + '.tsv');
-    execFileSync('node', [join(HERE, 'feas.mjs'), '--table=' + fIn, '--ids=' + ID, '--out=' + out, flag], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+  for (const [flag, okCol, failCol, out] of [['--allLong=1', 'okLong', 'failsLong', feasLongOut], ['--allMulti=1', 'okShort', 'failsShort', feasShortOut]]) {
     const FT = readTable(out); const rr = FT.rows.find((x) => x[FT.ix.id] === ID);
     if (rr) { setD(okCol, rr[FT.ix.ok]); setD(failCol, rr[FT.ix.fails]); }
   }
@@ -181,6 +226,16 @@ const dispFile = join(ST, ID + '-display.tsv');
 writeFileSync(dispFile, [dispHead.join('\t'), D.join('\t')].join('\n') + '\n', 'utf8');
 console.log('readings ' + (rd.length - 1) + ' 条 ‖ display ' + basename(dispFile));
 if (NO_ADD) { console.log('--no-add：停在 ' + join(ST, ID + '-readings.tsv')); process.exit(0); }
+if (AUDIT) {
+  /* 自动 12 线：先把裁决写进 data/page/promote.tsv，再进 add-point --bake，保证页面 pv 着色一次带全。 */
+  const J = JSON.parse(readFileSync(auditOut, 'utf8'));
+  const pt = readTable(join(HERE, 'data/page/promote.tsv'));
+  const row = new Array(pt.header.length).fill('');
+  row[pt.ix.id] = ID; row[pt.ix.verdict] = J.blocked ? 'block' : 'pass';
+  row[pt.ix.blocks] = (J.classes && J.classes.length) ? J.classes.join(',') : '—';
+  writeTable(join(HERE, 'data/page/promote.tsv'), { header: pt.header, rows: pt.rows.filter((r) => r[pt.ix.id] !== ID).concat([row]), backup: false });
+  console.log('audit: ' + ID + ' ⇒ ' + row[pt.ix.verdict] + ' ' + row[pt.ix.blocks]);
+}
 const addArgs = [join(HERE, 'pipeline/add-point.mjs'), '--id=' + ID, '--pack=' + PACK, '--ver=' + VER,
   '--readings=' + join(ST, ID + '-readings.tsv'), '--display=' + dispFile, '--batch=measure-' + ID];
 if (projFile) addArgs.push('--projections=' + projFile);
@@ -189,18 +244,3 @@ if (FAMLAB) addArgs.push('--fam-label=' + FAMLAB);
 if (BAKE) addArgs.push('--bake');
 const out = execFileSync('node', addArgs, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 console.log(out.trim().split('\n').slice(-6).join('\n'));
-if (AUDIT) {
-  /* 自动 12 线：测完立刻跑 promote，并把裁决写进 data/page/promote.tsv（页面 pv 着色读它）。
-   *   这一步本来就该在 add-point 之后自动发生；--audit 默认关是因为一次 3 分钟，批量进图只想看形状时可跳过。 */
-  const pr = execFileSync('node', ['tools/promote-champion.mjs', PACK, '--dry', '--games=10', '--exam-games=20', '--json'],
-    { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-  const line = String(pr).split('\n').filter((x) => x.indexOf('EPIRUS_JSON ') === 0).pop();
-  if (!line) { console.error('⛔ --audit：promote 没有吐 EPIRUS_JSON'); process.exit(2); }
-  const J = JSON.parse(line.slice('EPIRUS_JSON '.length));
-  const pt = readTable(join(HERE, 'data/page/promote.tsv'));
-  const row = new Array(pt.header.length).fill('');
-  row[pt.ix.id] = ID; row[pt.ix.verdict] = J.blocked ? 'block' : 'pass';
-  row[pt.ix.blocks] = (J.classes && J.classes.length) ? J.classes.join(',') : '—';
-  writeTable(join(HERE, 'data/page/promote.tsv'), { header: pt.header, rows: pt.rows.filter((r) => r[pt.ix.id] !== ID).concat([row]), backup: false });
-  console.log('audit: ' + ID + ' ⇒ ' + row[pt.ix.verdict] + ' ' + row[pt.ix.blocks]);
-}

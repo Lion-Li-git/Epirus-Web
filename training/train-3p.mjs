@@ -600,14 +600,11 @@ const T = sb.window.EpirusTrainer;
  *   · `EPIRUS_MUT_MODE=seg|flat` 换的是**优化器算子**（段感知 σ / 段级交叉 vs 逐位均匀），与结构正交
  *     ⇒ 这一对正交旋钮就是本波要测的"哪种优化器配这种结构"。
  */
+let A2_INSTALLED = null;
 if (process.env.EPIRUS_ARCH2) {
   const spec = String(process.env.EPIRUS_ARCH2);
   const parts = spec.split(':');
   const cfg = { mutMode: String(process.env.EPIRUS_MUT_MODE || 'seg') };
-  /* ⚑ 11-01（ZCode）修**静默落 v7 面**：原先所有 spec 值一律过 `Number()` ⇒ `input=obs3b` 变 NaN
-   *   ⇒ `layout` 落回 'v7'（实测冒烟：paramCount=5225 而不是 7993，横幅却照样印着 obs3b 的 spec 串）。
-   *   修法：数字键才 Number，字符串键（input 等）原样保留；并在横幅印**解析后的面**，
-   *   再加一条硬闸——spec 串里写了 obs3/obs3b 而解析结果不是它 ⇒ 当场退（这一类"横幅与实际不一致"不许再藏）。 */
   if (parts[1]) parts[1].split(',').forEach(function (kv) { const e = kv.split('='); if (e.length === 2) { const v = e[1].trim(); cfg[e[0].trim()] = /^-?\d+(\.\d+)?$/.test(v) ? Number(v) : v; } });
   if (process.env.EPIRUS_NORM) {
     /* E1（DS · 11-02 晚）：ctx 输入逐维标准化统计量（离线语料算好；随包存 dims.norm，推理自动复用）。 */
@@ -617,7 +614,8 @@ if (process.env.EPIRUS_ARCH2) {
     console.log('[train-3p] 输入标准化：' + String(process.env.EPIRUS_NORM) + '（' + cfg.norm.mean.length + ' 维）');
   }
   const A2 = installArch2(sb.window, cfg);
-  const __wantFace = (String(spec).match(/input=(obs3c|obs3b|obs3|v7)/) || [])[1];   /* ⚑ 最长优先：obs3c 不能被 obs3 抢先匹配（11-02 冒烟） */
+  A2_INSTALLED = A2;
+  const __wantFace = (String(spec).match(/input=(obs3c|obs3b|obs3|obs4|obs5|obs6|v7)/) || [])[1];   /* ⚑ 最长优先：obs3c 不能被 obs3 抢先匹配（11-02 冒烟） */
   if (__wantFace && A2.L && A2.L.input !== __wantFace) {
     console.error('[train-3p] ⛔ EPIRUS_ARCH2 spec 写了 input=' + __wantFace + ' 但实际装出的面是 ' + A2.L.input +
       '（横幅与实际不一致 = 静默错结构，11-01 冒烟抓到的形状）⇒ 拒绝开跑');
@@ -1289,6 +1287,22 @@ const COUNTER_WANT = !COUNTER_RAW || COUNTER_RAW === '0' ? []
     : (COUNTER_RAW === 'all' || COUNTER_RAW === '*') ? Object.keys(COUNTER_OPP_TABLE)
       : COUNTER_RAW.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
 const COUNTER_OPPS = COUNTER_WANT.map(function (nm) {
+  if (nm === 'synthMix') {
+    const POOL_FNS = [
+      Bots.pickAggressive, Bots.pickDefend, Bots.pickBalanced, Bots.pickHeavyFire, Bots.pickDeepSaver,
+      Bots.pickProtoMine, Bots.pickRingSpam, Bots.pickTargeter, Bots.pickEarlyPressure, Bots.pickToolKit,
+    ].filter((f) => typeof f === 'function');
+    return {
+      name: 'cnt:synthMix',
+      sel: function (state, pid) {
+        const turn = Math.floor((state.round || 1) / 3);
+        const h = ((pid + 1) * 2654435761 + turn * 2246822519 + ((state.gameSeq || 0) * 3266489917)) >>> 0;
+        const r = state.rng && typeof state.rng.next === 'function' ? state.rng.next() : ((h & 65535) / 65536);
+        const idx = (r < 0.15) ? Math.floor((r / 0.15) * POOL_FNS.length) % POOL_FNS.length : (h % POOL_FNS.length);
+        return POOL_FNS[idx].apply(null, arguments);
+      },
+    };
+  }
   const o = COUNTER_OPP_TABLE[nm];
   if (!o) {
     console.error('[train-3p] ⛔ EPIRUS_COUNTER_OPPS 里有不认识的名字：' + JSON.stringify(nm) +
@@ -1860,6 +1874,14 @@ for (let gen = 0; gen < GENS; gen++) {
       for (let ai = 0; ai < params.length; ai++) { const d = params[ai] - aRef[ai]; s += d * d; }
       const ms = s / params.length;
       r = Object.assign({}, r, { anchorDist: Math.sqrt(ms), fit: r.fit - ANCHOR * ms });
+    }
+    if (A2_INSTALLED && A2_INSTALLED.OPT.seatL2 > 0) {
+      const se = A2_INSTALLED.L.seg.find((s) => s.name === 'seatEnc');
+      if (se && se.len > 0) {
+        let s2 = 0;
+        for (let ai = se.off; ai < se.off + se.len; ai++) s2 += params[ai] * params[ai];
+        r = Object.assign({}, r, { fit: r.fit - A2_INSTALLED.OPT.seatL2 * (s2 / se.len) });
+      }
     }
     return { params: params, r: r };
   });

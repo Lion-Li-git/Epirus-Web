@@ -14,3 +14,8 @@ b-f5-page-1114	b-f5-page-1114	B	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WS
 b-f5-eps0-1114	b-f5-eps0-1114	X	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	MSB11-R2S306293884+MSB14-railgun-R1S175656469+WSEL9-200+MSB15R-HITMIX+GD6a-TILTx1	1114	exam4-F5-eps0-1114.tsv	915	2026-11-14	rerun-1114 Δε 配对半边（exam dose ε=0）
 a-v2coop-page-1114	a-v2coop-page-1114	A	v2-scripts(28席)+coop(5本剧本×40局/格,n≥3)	0	1114	exam4-A-coop-1114.tsv	915	2026-11-14	rerun-1114 A 轴新结构（原轮保留 + --coop=v3 追加局）
 measure-GD16m	a-v2-page-1109	A	-	-	measure-GD16m	GD16m-readings.tsv	24	2026-11-14T06:51:49.926Z	add-point
+measure-OBS6-GA25	a-v2-page-1109	A	-	-	measure-OBS6-GA25	OBS6-GA25-readings.tsv	24	2026-11-14T09:03:14.977Z	add-point
+measure-OBS6-GA200	a-v2-page-1109	A	-	-	measure-OBS6-GA200	OBS6-GA200-readings.tsv	24	2026-11-14T09:33:58.387Z	add-point
+measure-OBS6-GA100M	a-v2-page-1109	A	-	-	measure-OBS6-GA100M	OBS6-GA100M-readings.tsv	24	2026-11-14T09:34:13.856Z	add-point
+measure-OBS6-GA2PG-8K	a-v2-page-1109	A	-	-	measure-OBS6-GA2PG-8K	OBS6-GA2PG-8K-readings.tsv	24	2026-11-14T09:34:29.284Z	add-point
+measure-OBS6-GA2PG-12K	a-v2-page-1109	A	-	-	measure-OBS6-GA2PG-12K	OBS6-GA2PG-12K-readings.tsv	24	2026-11-14T09:34:44.563Z	add-point

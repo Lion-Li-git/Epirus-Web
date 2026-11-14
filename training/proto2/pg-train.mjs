@@ -8,15 +8,16 @@
  * 塑形（常驻，回应 SUPTUNE 拆链）：λc·1[charge(ok) ∧ 决策时 ep≥3 ∧ 无电珠] + λf·1[railgun(ok)]。
  * 共驾四处（PREREG 口径差异清单）：大雷助推照执行不进梯度；自备 rng 采样；lockTarget:false；收集 temp=0.5。
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mjs';
+import { widOf } from '../../champion-map/pack-id.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
-import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi } from './pg-lib.mjs';
+import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -41,6 +42,10 @@ const PROBE_TEMP = 0.15;   /* 探针一律按部署温度，与验收同档 */
 const PROBE_CAP = arg('criticProbe', '0') === '1' || BASELINE === 'ridge';
 const RL2 = Number(arg('ridgeL2', 1e-2)) || 1e-2;   /* 观测侧线性基线的岭系数 */
 const RFEAT = String(arg('ridgeFeat', 'obs')) === 'small' ? 'small' : 'obs';   /* 基线读哪套特征：obs=xin 全宽 ‖ small=7 个手挑标量 */
+const SEAT_DROP = Math.max(0, Math.min(1, Number(arg('seatDrop', 0)) || 0));
+const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
+let sdSeed = (SEED * 48271 + 17) >>> 0;
+const sdRng = () => { sdSeed = (sdSeed * 1664525 + 1013904223) >>> 0; return sdSeed / 4294967296; };
 
 const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
@@ -239,9 +244,18 @@ console.log('# pg-train（B 臂） ‖ 起点 ' + UP.replace(/^.*[\\/]/, '') + '
   ' ‖ 基线 ' + BASELINE + ' ‖ seed ' + SEED);
 console.log('  口径：arena2 mild(cap2/mix0.5) salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度');
 
+let HF = '';
+try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }
+if (!HF) console.log('⚠ 起点 wid 算不出 ⇒ hotstartFrom 退回路径 ' + UP + '，谱系这一级仍按名字推');
 function savePack(to) {
   mkdirSync(dirname(to), { recursive: true });
-  writeFileSync(to, 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pv)) + ';\n', 'utf8');
+  const meta = {
+    ts: new Date().toISOString(), arm: to.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
+    up: UP, hotstartFrom: HF || UP, seed: SEED, games, batch: BATCH, lr: LR,
+    lamC: LAMC, lamF: LAMF, baseline: BASELINE, seatDrop: SEAT_DROP, seatL2: SEAT_L2,
+  };
+  writeFileSync(to, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify(meta) + ';\n' +
+    'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pv)) + ';\n', 'utf8');
 }
 
 while (games < GAMES) {
@@ -306,22 +320,26 @@ while (games < GAMES) {
     const V = VOF(d, mu);
     const A = (G - V) / sdUse;
     if (!Number.isFinite(A)) { console.error('⛔ 优势非有限（G=' + G + ' mu=' + mu + ' sd=' + sd + '）⇒ 拒绝静默训练'); process.exit(9); }
-    const act = tapeForward(d.tape, pv, ly);
-    const t = tailOf(act.logits, d.tape.keys, TEMP);
-    const g = dLogPi(d.idx, act.logits, d.tape.keys, TEMP, t);
+    const tp = SEAT_DROP > 0 ? dropObs6Tape(d.tape, SEAT_DROP, sdRng) : d.tape;
+    const act = tapeForward(tp, pv, ly);
+    const t = tailOf(act.logits, tp.keys, TEMP);
+    const g = dLogPi(d.idx, act.logits, tp.keys, TEMP, t);
     for (let j = 0; j < g.length; j++) g[j] *= A;
-    tapeBackward(d.tape, pv, ly, act, g, grad);
+    tapeBackward(tp, pv, ly, act, g, grad);
   }
   { let mx = 0; for (let q = 0; q < DIM; q++) { const a = Math.abs(grad[q]); if (a > mx) mx = a; }
     if (mx === 0) { zeroGrad++; if (zeroGrad >= 3) { console.error('⛔ 连续 ' + zeroGrad + ' 步 grad 全零 ⇒ 训练在空转，拒绝继续'); process.exit(9); } }
     else zeroGrad = 0; }
   adam.t++;
+  const seSeg = SEAT_L2 > 0 ? ly.L.seg.find((s) => s.name === 'seatEnc') : null;
+  const se0 = seSeg ? seSeg.off : -1, se1 = seSeg ? (seSeg.off + seSeg.len) : -1;
   for (let d = 0; d < DIM; d++) {
     const gg = grad[d] / Math.max(1, decsBatch.length);
     adam.m[d] = 0.9 * adam.m[d] + 0.1 * gg;
     adam.v[d] = 0.999 * adam.v[d] + 0.001 * gg * gg;
     const mh = adam.m[d] / (1 - Math.pow(0.9, adam.t)), vh = adam.v[d] / (1 - Math.pow(0.999, adam.t));
-    pv[d] -= LR * mh / (Math.sqrt(vh) + 1e-8);
+    const wd = (SEAT_L2 > 0 && d >= se0 && d < se1) ? SEAT_L2 * pv[d] : 0;
+    pv[d] -= LR * (mh / (Math.sqrt(vh) + 1e-8) + wd);
   }
   if (BASELINE === 'ridge') {
     const Xs = [], ys = [];
