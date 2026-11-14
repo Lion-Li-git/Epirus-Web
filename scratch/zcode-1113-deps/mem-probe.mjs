@@ -23,8 +23,8 @@ const PAIR_ONLY = process.argv.find((a) => a.startsWith('--pair=')) ? Number(pro
 const SEED0 = 90210;
 
 const SUBJECTS = [
-  ['OBS6-GA2PG-8K', 'docs/artifacts/obs6-coldstart/OBS6-GA2PG-8K.bak'],
-  ['OBS6-GA25', 'docs/artifacts/obs6-coldstart/OBS6-GA25.js'],
+  ['OBS6E1', 'scratch/arms/OBS6E1.bak'],
+  ['OBS6E2', 'scratch/arms/OBS6E2.bak'],
   ['GD6a-TILT(对照)', 'scratch/arms/GD6a-TILT.bak'],
 ];
 /* 名册 R：训练桌见过的 v2 池脚本，四角色各取一（枪压/墙/八卦防spam/攻防/重火力/深经济） */

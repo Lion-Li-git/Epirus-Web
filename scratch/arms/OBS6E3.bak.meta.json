@@ -1,0 +1,164 @@
+{
+ "tool": "supfit-gd",
+ "tag": "OBS6E3",
+ "parent": "scratch/arms/OBS6A4.seg1000.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 406,
+ "trainG": 304,
+ "testG": 102,
+ "objective": "key",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "pack:docs/artifacts/v7blk1-92.bak",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 1354957,
+  "hit": 631085,
+  "stuckCharge": 1658,
+  "missCharge": 456,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 1436,
+  "moved": 189,
+  "gone": 0,
+  "keys": 1625,
+  "rare": 2379495,
+  "byKey": {
+   "ji": 582,
+   "sword": 76,
+   "reflect": 89,
+   "guard": 97,
+   "bagua": 80,
+   "snipe": 58,
+   "charge": 210,
+   "ring": 404,
+   "gun": 8,
+   "bigT": 21
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 304,
+    "teacherAgree": 0.96875,
+    "teacherLl": -0.8473168701035364,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 419,
+    "trainG": 618,
+    "teacherAgree": 0.9791666666666666,
+    "teacherLl": -0.2972330850976792,
+    "studentAgree": 0.6395348837209303,
+    "studentLl": -0.8356340896454847,
+    "studentN": 86
+   },
+   {
+    "round": 2,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.9509803921568627,
+    "teacherLl": -0.1338716725971207,
+    "studentAgree": 0.6327868852459017,
+    "studentLl": -8.673221835586615,
+    "studentN": 305
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 9609,
+    "firstDiff": 0,
+    "dim": 16411
+   },
+   {
+    "round": 2,
+    "moved": 9365,
+    "firstDiff": 0,
+    "dim": 16411
+   }
+  ],
+  "startAgree": 0.4166666666666667,
+  "startLl": -4.429672428772888,
+  "agree": 0.9509803921568627,
+  "ll": -0.1338716725971207,
+  "wAgree": 0.8983686863047278,
+  "nTest": 102,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 6,
+  "studentAgree": 0.6327868852459017,
+  "studentN": 305,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 57,
+    "hit": 57
+   },
+   {
+    "key": "charge#elec",
+    "n": 18,
+    "hit": 17
+   },
+   {
+    "key": "reflect",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "sword",
+    "n": 15,
+    "hit": 15
+   },
+   {
+    "key": "snipe",
+    "n": 2,
+    "hit": 2
+   },
+   {
+    "key": "bagua",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "guard",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "ring",
+    "n": 6,
+    "hit": 6
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6A4.seg1000.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}

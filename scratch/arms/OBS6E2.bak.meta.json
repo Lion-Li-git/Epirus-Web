@@ -1,0 +1,134 @@
+{
+ "tool": "supfit-gd",
+ "tag": "OBS6E2",
+ "parent": "scratch/arms/OBS6D3.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 800,
+ "trainG": 600,
+ "testG": 200,
+ "objective": "key",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "pack:docs/artifacts/v7seat24b-92.bak",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 689836,
+  "hit": 534511,
+  "stuckCharge": 6067,
+  "missCharge": 180,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 2286,
+  "moved": 114,
+  "gone": 0,
+  "keys": 2400,
+  "rare": 730284,
+  "byKey": {
+   "ji": 587,
+   "sword": 120,
+   "gun": 12,
+   "bagua": 55,
+   "charge": 315,
+   "guard": 52,
+   "reflect": 53,
+   "bigT": 265,
+   "ring": 940,
+   "proto": 1
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 600,
+    "teacherAgree": 0.82,
+    "teacherLl": -4.228017657454889,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.92,
+    "teacherLl": -1.3482552960392882,
+    "studentAgree": 0.86,
+    "studentLl": -1.7874255434098598,
+    "studentN": 200
+   },
+   {
+    "round": 2,
+    "studentG": 800,
+    "trainG": 1200,
+    "teacherAgree": 0.89,
+    "teacherLl": -1.2461592899872374,
+    "studentAgree": 0.7125,
+    "studentLl": -1.2727831641776295,
+    "studentN": 400
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 9751,
+    "firstDiff": 0,
+    "dim": 16411
+   },
+   {
+    "round": 2,
+    "moved": 9064,
+    "firstDiff": 0,
+    "dim": 16411
+   }
+  ],
+  "startAgree": 0.18,
+  "startLl": -19.74853759261585,
+  "agree": 0.89,
+  "ll": -1.2461592899872374,
+  "wAgree": 0.7467895949950609,
+  "nTest": 200,
+  "nTrain": 1200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.7125,
+  "studentN": 400,
+  "byKey": [
+   {
+    "key": "ring",
+    "n": 183,
+    "hit": 170
+   },
+   {
+    "key": "bigT",
+    "n": 17,
+    "hit": 8
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6D3.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}
