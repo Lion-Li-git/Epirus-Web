@@ -89,3 +89,17 @@ dLogKeyP 进 tapeBackward；mode-covering，不依赖键被采样——对症第
 - 机制自洽：锚 L1 稳定 ~0.20（A1），确定性复现再+1（A1.seg1500 与 A3.seg1500 逐位同）。
 - tradeoff 曲线锐利：0.05→正分宽 7；0.1→宽 9 但分塌；**中间档窄**，A4.seg1000 恰好落在交点。
 - 残留 blocker = breadth-multi（多桌卡谱还差一口）——下一轮攻点。
+
+## 七、补课第一轮（倾斜锚）+ 好包进图
+
+- **`--klTilt=k1,k2,… --klTiltMul=<m>`**：锚目标的弱键倾斜（tilt 键 ×m 全键归一）——A4.seg1000 的 G_eff≈2.8
+  骑线是 ji/guard/tank 三键占 95%，倾斜直接抬 sword/bagua/ring/armor 的拉力。seg-eval 补 G_eff 列
+  （promote 同口径：min(selfPlay ‖ breadthProfile)，multi/long 分列）。
+- **G 门全线过关**：B 臂 10 枚快照 9 枚 G_M/G_L ≥3（ring 1-4%、sword 3-6% 全活；B1.seg1500 2.89 骑线除外）。
+- **代价照旧**：倾斜把 C5长 拉回负区（−0.002~−0.06）——B2.seg250（250 局，倾斜 ×8）−0.0019 最接近打平。
+- **promote 演进线（全族）**：GA2PG-8K 4 条 → W2.seg1500 6 条（强极）→ A4.seg1000 **1 条**（breadth-multi）
+  → B2.seg250 **2 条**（reflect-wall,behavior-gate；breadth×2+field-a 清）。
+- **两条路线各剩一口**：强路线（A4.seg1000）缺 G_M ~0.2；宽路线（B2.seg250）缺强度（250 局没训够）。
+  中间形态候选：A4.seg1000 + 轻倾斜（×2）/ 或 A4.seg1000 再训 250 局轻锚——下轮试。
+- **好包进图**：OBS6A4-S1000 / OBS6W2-S1500 / OBS6A5-S1500 三枚入图（fam22，registry 943），
+  **父边全自动实线**（seedpack-wid——本日 META 契约生效），页检各步 99/0 + rebuild 98/0。

@@ -939,3 +939,6 @@ OBS6-GA200	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA200.js	2.0	22
 OBS6-GA100M	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA100M.js	2.0	22		自动新点	2026-11-14T09:34:13.856Z	14e07670a9d871972b3644e0cd4229858d82c5c686ee64d41973e8489121e5bd	active
 OBS6-GA2PG-8K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-8K.bak	2.0	22		自动新点	2026-11-14T09:34:29.284Z	73d4f9e21657ecb4748c9d404d8bb76d657a26a2a85b583c0c0b30dfcee5c279	active
 OBS6-GA2PG-12K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-12K.bak	2.0	22		自动新点	2026-11-14T09:34:44.563Z	d46984a915bbde4a008ac304592ff8b2d27ab0fa6fd19bfaf1150e3d14ff3687	active
+OBS6A4-S1000	D:\code\Epirus-Web\scratch\arms\OBS6A4.seg1000.bak	2.0	22	2.0	2.0	2026-11-14T12:35:09.216Z	c7b4aa0ab244bdac83ff7291d8040e88ee4ed34fd2c63d391931bac15d51beed	active
+OBS6W2-S1500	D:\code\Epirus-Web\scratch\arms\OBS6W2.seg1500.bak	2.0	22	2.0	2.0	2026-11-14T12:36:50.631Z	e9434156ad7106314d996406af99538fc2317c4081046bf9024676facb589e4d	active
+OBS6A5-S1500	D:\code\Epirus-Web\scratch\arms\OBS6A5.seg1500.bak	2.0	22	2.0	2.0	2026-11-14T12:41:14.748Z	403266ed86abc5f09ec9cc95c3325c3f4c621f58d3fe6e4cdb2190ab70e77f64	active

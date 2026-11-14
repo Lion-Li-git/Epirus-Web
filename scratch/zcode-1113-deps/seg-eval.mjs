@@ -6,7 +6,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { cpus } from 'node:os';
-import { sandbox, loadChamp, cardUsageProfile } from '../../tools/audit-lib.mjs';
+import { sandbox, loadChamp, cardUsageProfile, breadthProfile } from '../../tools/audit-lib.mjs';
 
 const execFileP = promisify(execFile);
 const arg = (k, d) => { const a = process.argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
@@ -42,7 +42,13 @@ async function evalPack(p) {
   const params = loadChamp(W, p);
   if (!params) throw new Error('读不出：' + p);
   const cu = cardUsageProfile(W, params, { games: 60, mode: 'multi' });
-  return { p, c5s, c5l, x4s, x4l, cards: cu.distinct, defShare: cu.defShare, pct: cu.pct };
+  /* G_eff（promote breadth 门口径）：min(selfPlay.effSkills ‖ breadthProfile.G_eff)，multi/long 分列 */
+  const spM = W.EpirusTrainer.mirrorHealth(params, 20, 5, 'multi');
+  const spL = W.EpirusTrainer.mirrorHealth(params, 20, 5, 'long');
+  const bM = breadthProfile(W, params, 'multi', 20), bL = breadthProfile(W, params, 'long', 20);
+  const gM = Math.min(Number(spM.effSkills), Number(bM.G_eff));
+  const gL = Math.min(Number(spL.effSkills), Number(bL.G_eff));
+  return { p, c5s, c5l, x4s, x4l, cards: cu.distinct, defShare: cu.defShare, pct: cu.pct, gM, gL };
 }
 
 console.log('并行评估 ' + PACKS.length + ' 枚 × 4 考卷 ‖ jobs=' + JOBS);
@@ -56,15 +62,17 @@ await Promise.all(Array.from({ length: Math.min(JOBS, PACKS.length) }, async () 
     console.log('[' + done + '/' + PACKS.length + '] ' + r.p.split(/[\\/]/).pop());
   }
 }));
-console.log('\npack'.padEnd(30) + ' C5短    C5长    X̄₄短    X̄₄长    用卡  防御%  カ谱');
+console.log('\npack'.padEnd(30) + ' C5短    C5长    X̄₄短    X̄₄长    用卡  防御%  G_M   G_L   カ谱');
 for (const r of results) {
   const spec = Object.keys(r.pct).sort((x, y) => r.pct[y] - r.pct[x]).slice(0, 6)
     .map((k) => k + ' ' + r.pct[k].toFixed(0) + '%').join(' ');
   console.log(r.p.split(/[\\/]/).pop().padEnd(30) + ' ' + r.c5s.toFixed(4).padEnd(8) + r.c5l.toFixed(4).padEnd(8) +
     r.x4s.toFixed(4).padEnd(8) + r.x4l.toFixed(4).padEnd(8) + String(r.cards).padEnd(6) +
-    r.defShare.toFixed(1).padEnd(7) + spec);
+    r.defShare.toFixed(1).padEnd(7) + r.gM.toFixed(2).padEnd(6) + r.gL.toFixed(2).padEnd(6) + spec);
 }
-console.log('\n=== 强且宽候选排序（C5长 为主键） ===');
+console.log('\n=== 强且宽候选排序（C5长 为主键；G 门 = ≥3 两档都要） ===');
 for (const r of results.slice().sort((x, y) => y.c5l - x.c5l)) {
-  console.log(r.p.split(/[\\/]/).pop().padEnd(30) + ' C5长 ' + r.c5l.toFixed(4) + ' ‖ 用卡 ' + r.cards + ' ‖ 防御 ' + r.defShare.toFixed(1) + '%');
+  const gpass = r.gM >= 3 && r.gL >= 3 ? 'G✓' : 'G✗';
+  console.log(r.p.split(/[\\/]/).pop().padEnd(30) + ' C5长 ' + r.c5l.toFixed(4) + ' ‖ 用卡 ' + r.cards + ' ‖ G ' +
+    r.gM.toFixed(2) + '/' + r.gL.toFixed(2) + ' ' + gpass + ' ‖ 防御 ' + r.defShare.toFixed(1) + '%');
 }

@@ -17,7 +17,7 @@ import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -60,6 +60,11 @@ const SHAPE_W = Number(arg('shapeW', 0)) || 0;
  *   逐决策优势分量挂不上未采样键；CE 锚是**全键同时拉**（mode-covering），不依赖键被采样。
  *   0 = 关（旧调用逐字不变）。代价：每决策多一次 tapeForward（起点参数）。 */
 const KL_W = Number(arg('klW', 0)) || 0;
+/* `--klTilt=k1,k2,… --klTiltMul=<m>`（11-14 晚 · ZCode · 补课 breadth-multi）：锚目标的**弱键倾斜**——
+ *   把 tilt 表里的键在锚目标里 ×m 再全键归一（m>1 = 抬弱键份额的拉力）。A4.seg1000 的 G_eff≈2.8 骑线
+ *   （ji/guard/tank 三键占 95%），倾斜锚直接把 breadth 门要的小键（sword/bagua/ring）顶上去。 */
+const KL_TILT = String(arg('klTilt', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
+const KL_TILT_MUL = Number(arg('klTiltMul', 1)) || 1;
 let sdSeed = (SEED * 48271 + 17) >>> 0;
 const sdRng = () => { sdSeed = (sdSeed * 1664525 + 1013904223) >>> 0; return sdSeed / 4294967296; };
 
@@ -353,10 +358,15 @@ while (games < GAMES) {
        *   （第二轮 --shapeKey 的死因就是采样塌缩）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
       const act0 = tapeForward(d.tape, pv0, ly);
       const t0 = tailOf(act0.logits, d.tape.keys, TEMP);
+      /* 倾斜：tilt 表里的键 ×m，全键归一（锚目标 = 抬弱键的拉力分布） */
+      const q0 = {};
+      let q0sum = 0;
+      for (const k of new Set(d.tape.keys)) { q0[k] = (t0.kProb[k] || 0) * (KL_TILT.indexOf(k) >= 0 ? KL_TILT_MUL : 1); q0sum += q0[k]; }
+      if (q0sum > 0) for (const k of Object.keys(q0)) q0[k] /= q0sum;
       const acc = new Float64Array(act.logits.length);
       for (const k of new Set(d.tape.keys)) {
         const u = dLogKeyP(k, act.logits, tp.keys, TEMP, t);
-        const qk = t0.kProb[k] || 0;
+        const qk = q0[k] || 0;
         for (let j = 0; j < u.length; j++) acc[j] -= qk * u[j];
         klL1 += Math.abs((t.kProb[k] || 0) - qk);
       }
@@ -427,7 +437,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),
