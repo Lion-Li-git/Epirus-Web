@@ -14,10 +14,11 @@ import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mj
 import { widOf } from '../../champion-map/pack-id.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
+import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/桌形单一来源（与 supfit-gd 同源） */
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -80,7 +81,16 @@ const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=U
 if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
-const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: true, stratCap: 2, stratMix: 0.5, wantEvents: 1 });
+/* 11-15 深夜（ZCode · 用户令"多换训练环境防背诵"）：PG 的自对局桌也能换对手表/桌形——
+ *   缺省逐字不变（stratified cap2/mix0.5 = 千问配对批口径）；--arenaPool=names:… 摆特化族对手
+ *   （避开考卷名册脚本），--arenaShapes=3:multi,5:long 等轮换桌形。 */
+const PG_ROSTER = rosterFromArg(W, T, String(arg('arenaPool', '')), 'pg-train');
+const PG_SHAPES = shapesFromArg(arg('arenaShapes', ''), 'pg-train');
+const A2 = createArena2(W, Object.assign(
+  { refParams, temp: 0.15, highN: 1, wantEvents: 1 },
+  PG_ROSTER ? { roster: PG_ROSTER } : { stratified: true, stratCap: 2, stratMix: 0.5 },
+  PG_SHAPES ? { shapes: PG_SHAPES } : {},
+));
 
 /* ===== 价值容量探针 `--criticProbe=1`：先问"装得下吗"，再问"训得熟吗" =====
  * 同一批 (状态, return-to-go) 上，用岭回归（闭式解，带 2 折**按局**切）量两种读出的**可达** R²：

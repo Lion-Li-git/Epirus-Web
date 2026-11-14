@@ -16,13 +16,17 @@ const PAIR_ONLY = process.argv.find((a) => a.startsWith('--pair=')) ? Number(pro
 const SEED0 = 90210;
 void EXAM_POOL;
 
-const SUBJECTS = [
-  ['OBS6E6a', 'scratch/arms/OBS6E6a.bak'],
-  ['OBS6E6c', 'scratch/arms/OBS6E6c.bak'],
-  ['OBS6E6d', 'scratch/arms/OBS6E6d.bak'],
-  ['OBS6E6e', 'scratch/arms/OBS6E6e.bak'],
-  ['GD6a-TILT', 'scratch/arms/GD6a-TILT.bak'],
-];
+/* 11-15 深夜：--subj=tag:path,tag:path,… 可从命令行换名单（缺省 = E6 批四臂 + 对照） */
+const SUBJ_ARG = process.argv.find((a) => a.startsWith('--subj='));
+const SUBJECTS = SUBJ_ARG
+  ? SUBJ_ARG.slice(7).split(',').filter(Boolean).map((s) => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; })
+  : [
+      ['OBS6E6a', 'scratch/arms/OBS6E6a.bak'],
+      ['OBS6E6c', 'scratch/arms/OBS6E6c.bak'],
+      ['OBS6E6d', 'scratch/arms/OBS6E6d.bak'],
+      ['OBS6E6e', 'scratch/arms/OBS6E6e.bak'],
+      ['GD6a-TILT', 'scratch/arms/GD6a-TILT.bak'],
+    ];
 const R_NAMES = ['gunspam', 'wall', 'baguaspam', 'guardgun', 'heavyfire', 'deepsaver'];
 const H_PACKS = [
   ['GD16m', 'scratch/arms/GD16m-D1.bak'],
@@ -58,7 +62,11 @@ let idx = 0, done = 0;
 await Promise.all(Array.from({ length: Math.min(JOBS, FLAT.length) }, async () => {
   while (idx < FLAT.length) {
     const i = idx++;
-    const { stdout } = await execFileP('node', [fileURLToPath(import.meta.url), '--games=' + GAMES, '--pair=' + i], { cwd: process.cwd(), maxBuffer: 1 << 24 });
+    /* ⚠ fork 必须透传 --subj：子进程按自己的 SUBJECTS 建 FLAT，不透传 = 父子名单错位（11-15 夜事故，
+     *   症状 = 汇总全零/串牌——父标 E7b 实测 E6a）。 */
+    const childArgs = [fileURLToPath(import.meta.url), '--games=' + GAMES, '--pair=' + i];
+    if (SUBJ_ARG) childArgs.push(SUBJ_ARG);
+    const { stdout } = await execFileP('node', childArgs, { cwd: process.cwd(), maxBuffer: 1 << 24 });
     const line = stdout.split('\n').find((l) => l.startsWith('PAIR ' + i + ' '));
     const [, , sid, oppId, sw, ow, dw, rd] = line.split(/\s+/);
     pairs.push({ i, sid, oppId, set: oppId[0], subjWin: +sw, oppWin: +ow, draw: +dw, rounds: +rd });
