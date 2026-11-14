@@ -1,0 +1,108 @@
+{
+ "tool": "supfit-gd",
+ "tag": "OBS6D1",
+ "parent": "scratch/arms/OBS6A4.seg1000.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 415,
+ "trainG": 311,
+ "testG": 104,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "pack:docs/artifacts/night-adapt/GD6a-TILT-3p.bak",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 314,
+  "moved": 101,
+  "gone": 0,
+  "keys": 415,
+  "rare": 561485,
+  "byKey": {
+   "ji": 228,
+   "curse": 18,
+   "tank": 41,
+   "gun": 111,
+   "reflect": 1,
+   "shift": 1,
+   "ring": 15
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 311,
+    "teacherAgree": 0.797752808988764,
+    "teacherLl": -1.1658267390951265,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.4943820224719101,
+  "startLl": -12.611284364850508,
+  "agree": 0.797752808988764,
+  "ll": -1.1658267390951265,
+  "wAgree": 0.7474236866709819,
+  "nTest": 89,
+  "nTrain": 311,
+  "testClassNotInTrain": 15,
+  "startClassNotInTrain": 15,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 50,
+    "hit": 42
+   },
+   {
+    "key": "gun",
+    "n": 27,
+    "hit": 19
+   },
+   {
+    "key": "curse",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "tank",
+    "n": 10,
+    "hit": 10
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6A4.seg1000.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

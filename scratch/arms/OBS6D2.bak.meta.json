@@ -1,0 +1,129 @@
+{
+ "tool": "supfit-gd",
+ "tag": "OBS6D2",
+ "parent": "scratch/arms/OBS6A4.seg1000.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 400,
+ "groups": 415,
+ "trainG": 311,
+ "testG": 104,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 0,
+ "teacher": "pack:docs/artifacts/night-adapt/GD6a-TILT-3p.bak",
+ "keySplit": 1,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 258,
+  "moved": 157,
+  "gone": 0,
+  "keys": 415,
+  "rare": 612949,
+  "byKey": {
+   "ji": 195,
+   "curse": 14,
+   "tank": 50,
+   "guard": 27,
+   "gun": 79,
+   "bagua": 20,
+   "reflect": 14,
+   "shift": 1,
+   "ring": 15
+  },
+  "t1Groups": 429355,
+  "t2Groups": 184009,
+  "t2Hits": 278140,
+  "t2Fallback": 273887
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 311,
+    "teacherAgree": 0.4943820224719101,
+    "teacherLl": -6.969351564753228,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.38202247191011235,
+  "startLl": -10.179772355108518,
+  "agree": 0.4943820224719101,
+  "ll": -6.969351564753228,
+  "wAgree": 0.27636416259948454,
+  "nTest": 89,
+  "nTrain": 311,
+  "testClassNotInTrain": 15,
+  "startClassNotInTrain": 15,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "gun",
+    "n": 20,
+    "hit": 6
+   },
+   {
+    "key": "ji",
+    "n": 41,
+    "hit": 29
+   },
+   {
+    "key": "curse",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "reflect",
+    "n": 4,
+    "hit": 1
+   },
+   {
+    "key": "bagua",
+    "n": 7,
+    "hit": 0
+   },
+   {
+    "key": "tank",
+    "n": 7,
+    "hit": 7
+   },
+   {
+    "key": "guard",
+    "n": 7,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6A4.seg1000.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}
