@@ -14,10 +14,10 @@ import { sandbox, loadChamp, rejectUnknownFlags } from '../../tools/audit-lib.mj
 import { widOf } from '../../champion-map/pack-id.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
-import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dropObs6Tape } from './pg-lib.mjs';
+import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -49,10 +49,17 @@ const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
  *   PG 后段会漂移龟缩，单终点产物不可信，多节点拿去考卷+用卡筛。0=关（旧调用逐字不变）。 */
 const SEG_EVERY = Math.max(0, Number(arg('segEvery', 0)) || 0);
 let segK = 0;
+let klL1 = 0, klN = 0;   /* 键频锚诊断：锚两侧键分布的平均 L1 距离（漂移指示器） */
 /* `--shapeKey=<SK键名> --shapeW=<w>`（11-14 晚 · ZCode）：任意键的塑形分量（λf/λc 同族泛化，
  *   见 shape 块注记）。SHAPE_W 默认 0 = 不塑形（旧调用逐字不变）。 */
 const SHAPE_KEY = String(arg('shapeKey', '') || '').trim();
 const SHAPE_W = Number(arg('shapeW', 0)) || 0;
+/* `--klW=<w>`（11-14 晚 · ZCode · 用户点单的宽之路①）：**批级键频锚**——每决策对**冻结起点策略**的键分布
+ *   做交叉熵拉力（−Σ q0_k·log kProb_k，梯度 = (π_cur−π_start) 的键级版，经 dLogKeyP 进 tapeBackward）。
+ *   为什么不用逐决策塑形（第二轮 --shapeKey 判负）：ring 的 logit 在 PG 头 250 局就塌了，采样归零 ⇒
+ *   逐决策优势分量挂不上未采样键；CE 锚是**全键同时拉**（mode-covering），不依赖键被采样。
+ *   0 = 关（旧调用逐字不变）。代价：每决策多一次 tapeForward（起点参数）。 */
+const KL_W = Number(arg('klW', 0)) || 0;
 let sdSeed = (SEED * 48271 + 17) >>> 0;
 const sdRng = () => { sdSeed = (sdSeed * 1664525 + 1013904223) >>> 0; return sdSeed / 4294967296; };
 
@@ -64,6 +71,7 @@ const W = sandbox();
 installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;
 const pv = Float64Array.from(P.unpack(raw, true));
+const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
 if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
@@ -340,6 +348,22 @@ while (games < GAMES) {
     const g = dLogPi(d.idx, act.logits, tp.keys, TEMP, t);
     for (let j = 0; j < g.length; j++) g[j] *= A;
     tapeBackward(tp, pv, ly, act, g, grad);
+    if (KL_W > 0) {
+      /* 批级键频锚：对**全键**同时拉向冻结起点的键分布（CE，mode-covering）——不依赖键被采样
+       *   （第二轮 --shapeKey 的死因就是采样塌缩）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
+      const act0 = tapeForward(d.tape, pv0, ly);
+      const t0 = tailOf(act0.logits, d.tape.keys, TEMP);
+      const acc = new Float64Array(act.logits.length);
+      for (const k of new Set(d.tape.keys)) {
+        const u = dLogKeyP(k, act.logits, tp.keys, TEMP, t);
+        const qk = t0.kProb[k] || 0;
+        for (let j = 0; j < u.length; j++) acc[j] -= qk * u[j];
+        klL1 += Math.abs((t.kProb[k] || 0) - qk);
+      }
+      for (let j = 0; j < acc.length; j++) acc[j] *= KL_W;
+      tapeBackward(tp, pv, ly, act, acc, grad);
+      klN++;
+    }
   }
   { let mx = 0; for (let q = 0; q < DIM; q++) { const a = Math.abs(grad[q]); if (a > mx) mx = a; }
     if (mx === 0) { zeroGrad++; if (zeroGrad >= 3) { console.error('⛔ 连续 ' + zeroGrad + ' 步 grad 全零 ⇒ 训练在空转，拒绝继续'); process.exit(9); } }
@@ -377,6 +401,7 @@ while (games < GAMES) {
     console.log('  局 ' + games + ' ‖ 步 ' + upd + ' ‖ 平均净分 ' + (stat.score / Math.max(1, games)).toFixed(3) +
       ' ‖ 炮 ' + (stat.fire / Math.max(1, games)).toFixed(2) + '/局 ‖ 纪律蓄 ' + (stat.charge / Math.max(1, games)).toFixed(2) + '/局' +
       ' ‖ 熵 ' + (stat.ent / Math.max(1, stat.decs)).toFixed(3) + 'nats ‖ zip坏 ' + ZIP.bad + '/' + ZIP.games +
+      (KL_W > 0 ? ' ‖ 锚L1 ' + (klN ? (klL1 / klN).toFixed(3) : '-') : '') +
       (BASELINE !== 'mean' ? ' ‖ **R² ' + lastR2.toFixed(3) + '** ‖ V ' + vDiag.mv.toFixed(2) + '±' + vDiag.sv.toFixed(2) + ' ‖ G ' + vDiag.mg.toFixed(2) + '±' + vDiag.sg.toFixed(2) + ' ‖ 回滚 ' + rbCount : ''));
   }
   if (!stat.snap8k && games >= Math.floor(GAMES / 3)) {
@@ -402,7 +427,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),

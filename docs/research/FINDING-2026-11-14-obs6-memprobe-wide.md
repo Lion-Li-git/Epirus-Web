@@ -67,3 +67,25 @@ pg-train 补 `--shapeKey/--shapeW`（λf/λc 的同族泛化：任意键的逐�
 - **宽之路三选**（待用户点名）：①批级键频锚（KL/频-match GA25 分布——对症采样塌缩）②早期 PG 提温
   （temp 0.8×前 500 局）③接受 PG 宽 5-6 张、宽从 GA 侧 SEL_CARDS 买。
 - 工具修正：shapeKey 解析改大小写不敏感（R.SK 键大写、键值小写——首版 `R.SK['ring']` 落空当场退）。
+
+## 六、第三轮（用户点单①）：批级键频锚——剂量轴量完，A4.seg1000 只剩 1 条 block
+
+pg-train 补 `--klW=<w>`：每决策对**冻结起点策略**的键分布做 CE 拉力（−Σ q0_k·log kProb_k，梯度经
+dLogKeyP 进 tapeBackward；mode-covering，不依赖键被采样——对症第二轮的采样塌缩）。诊断量 锚L1
+（锚两侧键分布平均 L1）随产品 meta 入档。
+
+剂量轴全景（全部 lr3e-4/seed7/segEvery 快照/并行评估，18+10+15 枚）：
+
+| klW | 用卡 | ring% | C5长 最优 | promote |
+|---|---|---|---|---|
+| **0**（W2/R3.seg1500） | 5 | 0 | **+0.0514** | block×6（reflect-wall,field-a,breadth×2,behavior-gate×2） |
+| **0.05 @1000 局**（**A4.seg1000**） | **7** | 1 | **+0.0165** | **block×1（仅 breadth-multi）** |
+| 0.1（A5.seg1500） | 9 | 14 | −0.0820 | — |
+| 0.3–1.0（A1/A2/A3） | 7–9 | 2–14 | −0.060~−0.074 | — |
+
+- **强且宽落点 = OBS6A4.seg1000**：与旧族最优 GA2PG-8K 同分（C5长 +0.0165 vs +0.0170）但**多 2 张卡**；
+  promote 从 8K 的 4 条 block 降到 **1 条**（breadth-long/field-a/behavior-gate/reflect-wall 全清——
+  8K 的 field-a 17.2%<20% 缺口被锚顺手补上）。
+- 机制自洽：锚 L1 稳定 ~0.20（A1），确定性复现再+1（A1.seg1500 与 A3.seg1500 逐位同）。
+- tradeoff 曲线锐利：0.05→正分宽 7；0.1→宽 9 但分塌；**中间档窄**，A4.seg1000 恰好落在交点。
+- 残留 blocker = breadth-multi（多桌卡谱还差一口）——下一轮攻点。
