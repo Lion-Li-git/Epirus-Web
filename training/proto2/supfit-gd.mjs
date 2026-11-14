@@ -1123,6 +1123,10 @@ writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
+  /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
+  teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
+  teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
+  teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, roundsMoved: ROUNDS_MOVED, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,

@@ -1,0 +1,99 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD16-solo",
+ "parent": "scratch/arms/GD6a-TILT.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 100,
+ "groups": 120,
+ "trainG": 90,
+ "testG": 30,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "detonate",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 120,
+  "moved": 0,
+  "gone": 0,
+  "keys": 120,
+  "rare": 0,
+  "byKey": {
+   "ji": 61,
+   "curse": 41,
+   "firestorm": 18
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 90,
+    "teacherAgree": 1,
+    "teacherLl": -0.000020423586208655454,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.7666666666666667,
+  "startLl": -1.8347687713305088,
+  "agree": 1,
+  "ll": -0.000020423586208655454,
+  "wAgree": 1,
+  "nTest": 30,
+  "nTrain": 90,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "firestorm",
+    "n": 8,
+    "hit": 8
+   },
+   {
+    "key": "ji",
+    "n": 15,
+    "hit": 15
+   },
+   {
+    "key": "curse",
+    "n": 7,
+    "hit": 7
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD6a-TILT.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

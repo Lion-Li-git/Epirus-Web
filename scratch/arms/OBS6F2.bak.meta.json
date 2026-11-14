@@ -1,0 +1,57 @@
+{
+ "tool": "pg-train",
+ "tag": "OBS6F2",
+ "parent": "scratch/arms/OBS6E4b.bak",
+ "seed": 20261115,
+ "games": 1500,
+ "batch": 48,
+ "lr": 0.0002,
+ "temp": 0.5,
+ "lamC": 0,
+ "lamF": 0,
+ "shapeKey": null,
+ "shapeW": null,
+ "klW": 0.1,
+ "klTilt": null,
+ "klTiltMul": null,
+ "klL1Final": 0.1119,
+ "cur": "net",
+ "updates": 32,
+ "wallSecs": 47,
+ "baseline": "mean",
+ "ridgeFeat": null,
+ "ridgeFitN": null,
+ "valueCapacityR2": null,
+ "ridgeL2": null,
+ "ridgeDim": null,
+ "probe": null,
+ "rollbackTol": 0.05,
+ "rollbackCount": 0,
+ "probeGames": 0,
+ "bestProbeScore": null,
+ "lastR2": null,
+ "loop": {
+  "meanScore": 0.4196375661375668,
+  "firePerGame": 0,
+  "discChargePerGame": 0.0013333333333333333,
+  "entropy": 0.18095652690457265,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1,
+  "n": 16411
+ },
+ "lineage": {
+  "parent": "scratch/arms/OBS6E4b.bak",
+  "gen": 3,
+  "recipe": {
+   "objective": "scoreNet only (λ=0 negative control)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)",
+   "baseline": "mean"
+  }
+ }
+}

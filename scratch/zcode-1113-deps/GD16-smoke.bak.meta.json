@@ -1,0 +1,106 @@
+{
+ "tool": "supfit-gd",
+ "tag": "GD16-smoke",
+ "parent": "scratch/arms/GD6a-TILT.bak",
+ "seed": 20261031,
+ "lr": 0.02,
+ "steps": 100,
+ "groups": 120,
+ "trainG": 90,
+ "testG": 30,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "teacher": "ration",
+ "keySplit": 0,
+ "rareOnly": "bigT,ring",
+ "rareFrac": 0.5,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 120,
+  "moved": 0,
+  "gone": 0,
+  "keys": 120,
+  "rare": 509,
+  "byKey": {
+   "ji": 40,
+   "curse": 5,
+   "cannon": 7,
+   "ring": 52,
+   "transfer": 6,
+   "bigT": 10
+  },
+  "t2Groups": 63,
+  "t2Hits": 183,
+  "t3Groups": 94,
+  "t3Hits": 168,
+  "t4Groups": 94,
+  "t4Fallback": 162,
+  "t3Fallback": 114,
+  "t4Hits": 120,
+  "t2Fallback": 6
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 90,
+    "teacherAgree": 1,
+    "teacherLl": -0.0661100055338106,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.6666666666666666,
+  "startLl": -0.7664697040269649,
+  "agree": 1,
+  "ll": -0.0661100055338106,
+  "wAgree": 1,
+  "nTest": 30,
+  "nTrain": 90,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ring",
+    "n": 25,
+    "hit": 25
+   },
+   {
+    "key": "bigT",
+    "n": 5,
+    "hit": 5
+   }
+  ],
+  "verdict": "⇒ P-A1 达标候选（留出 ≥75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs5",
+  "dof": 292,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/GD6a-TILT.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

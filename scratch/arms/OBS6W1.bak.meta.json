@@ -1,0 +1,54 @@
+{
+ "tool": "pg-train",
+ "tag": "OBS6W1",
+ "parent": "docs/artifacts/obs6-coldstart/OBS6-GA25.js",
+ "seed": 7,
+ "games": 6000,
+ "batch": 48,
+ "lr": 0.0001,
+ "temp": 0.5,
+ "lamC": 0,
+ "lamF": 0,
+ "cur": "net",
+ "updates": 125,
+ "wallSecs": 95,
+ "baseline": "ridge",
+ "ridgeFeat": "small",
+ "ridgeFitN": 2023,
+ "valueCapacityR2": {
+  "gX": -0.6364496013670409,
+  "gF": -0.2691585300571431
+ },
+ "ridgeL2": 0.01,
+ "ridgeDim": 7,
+ "probe": 400,
+ "rollbackTol": 0.05,
+ "rollbackCount": 0,
+ "probeGames": 2000,
+ "bestProbeScore": 0.0078,
+ "lastR2": 0.0827,
+ "loop": {
+  "meanScore": -0.03566865079365087,
+  "firePerGame": 0,
+  "discChargePerGame": 0,
+  "entropy": 0.4020993091451921,
+  "zipBad": 0
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1,
+  "n": 16411
+ },
+ "lineage": {
+  "parent": "docs/artifacts/obs6-coldstart/OBS6-GA25.js",
+  "gen": 3,
+  "recipe": {
+   "objective": "scoreNet only (λ=0 negative control)",
+   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)",
+   "baseline": "ridge"
+  }
+ }
+}
