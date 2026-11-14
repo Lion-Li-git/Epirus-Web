@@ -320,6 +320,18 @@ if (existsSync(linP)) {
   const ll = readFileSync(linP, 'utf8').trim().split('\n'); const lh = ll[0].split('\t');
   for (const l of ll.slice(1)) { const c = l.split('\t'); const o = {}; lh.forEach((k, i) => { o[k] = c[i]; }); LIN[o.id] = o; }
 } else console.log('⚠ 没有 lineage.tsv ⇒ 家族退回按 seed 上色（跑 node champion-map/lineage.mjs 生成）');
+/* 归档脱离盘的旧 pack（e1-*, g14-*, D1-77000 等 18 枚）在 lineage.tsv 中 ts 为空，registry.tsv 仍保留真实 ts ⇒ 缺省回退 */
+const regP = join(HERE, 'data/registry.tsv');
+const REGTS = {};
+if (existsSync(regP)) {
+  const rl = readFileSync(regP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+  const rh = rl[0].split('\t');
+  const iId = rh.indexOf('pack_id'), iTs = rh.indexOf('ts');
+  if (iId >= 0 && iTs >= 0) for (const l of rl.slice(1)) {
+    const c = l.split('\t');
+    if (c[iId] && c[iTs]) REGTS[c[iId]] = c[iTs];
+  }
+}
 /* ===== §G3（11-05 深夜 · 用户令「2.0 点放进旧演化图」）：2.0 谱系 sidecar 并进 LIN =====
  *   lineage.tsv 由 lineage.mjs 从 git/面板生成 ⇒ 2.0 节点不在其中（它们没有 v7 面板行）。
  *   sidecar = `lineage-g3.tsv`（多班共维：ZCode 起，DS 补 fam18，Qoder 11-11 补 fam19，列同构：id/fam/famLabel/ts/parent/wid），
@@ -611,7 +623,7 @@ const DATA = rows.map(r => ({
   /* §E304 家族：`fam` = 方法/目标等价类编号（按最早 ts 排 ⇒ 号大 = 训得晚）；`ms` = META 里真正的 RNG seed
    *   （和包名后缀那个数**不是一回事**，实测 META.seed 有 84 个取值、名字后缀只有 14 个）。*/
   fam: LIN[r.id] ? +LIN[r.id].fam : 0, ms: LIN[r.id] ? LIN[r.id].metaSeed : '',
-  ts: LIN[r.id] ? LIN[r.id].ts : '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: mainOf(LIN[r.id] ? LIN[r.id].parentOf : ''),
+  ts: (LIN[r.id] && LIN[r.id].ts) || REGTS[r.id] || '', par: LIN[r.id] ? LIN[r.id].parent : '', pof: mainOf(LIN[r.id] ? LIN[r.id].parentOf : ''),
   /* §E363：wid = 这枚自己的**权重哈希** ⇒ 用来证"倒挂的那条边确实连的是同一份权重"（页内自检里判），
    *   没有它就只能拿 ts 说话，而"ts 倒挂"这件事本身有两种相反的解释（槽位时刻 vs 数据错）。*/
   wid: LIN[r.id] ? (LIN[r.id].wid || '') : '',

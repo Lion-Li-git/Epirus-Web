@@ -6,15 +6,13 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync, unl
 import { spawnSync } from 'node:child_process';
 import { isWideVs, LAND_TOL } from '../tools/pool-frontier-lib.mjs';   // §十四：门槛不自造判据——两条都指到在册出处（种类那条 = 产品门 L1 `broad`，净兑现那条 = 池级前沿尺 `isWideVs`）
 import { P2_FNAME } from '../tools/p2-baselines.mjs';   // 2P 考卷基准的单一来源（v1.5.150：`EPIRUS_XN2REF=exam` 用它）
-import { loadPool, makeMimic } from '../tools/human-pool.mjs';   // v1.6.60：人类形状对手的**单一来源**（§E152e/§E155/§E168 的产物；别再抄一份采样器）
 import { guardWrite, declareCopy } from '../champion-map/pack-guard.mjs';   /* §E589：落盘前查「这粒权重是否已有真身」 */
 import { widOf, widOfArr } from '../champion-map/pack-id.mjs';   /* 2026-10-12 DS：`hotstartFrom` 记权重身份（wid）而不是路径 —— 与 server 的 weightsId 同式 */
 import { densityProfile, aggressionProfile, cardUsageProfile } from '../tools/audit-lib.mjs';   // §N9 退化闸的口径源（与 promote 同一个 zeroAtkRate）‖ §E787 清场地板用同一个 `aggressionProfile`（官方 场A/场B 口径，与门禁 `fieldB.clearedPerGame` 同源 ⇒ 不加新尺）   // 11-09 P2：`cardUsageProfile` = `tools/card-usage.mjs` 的那把尺搬进 lib ⇒ 地板与 POOL-CONTRACT v2.1 的基准同一个种子序列
-import { duelAssembly } from '../tools/v2v4-lib.mjs';   // 10-24 G4long 逐格否决（EPIRUS_SEL_G4LONG）用的同一份装配（纯 lib、import 无副作用）
 import { ECON_ENV_KEYS, ECON_REWARD_KEYS, readEconEnv } from './server/econ-env.mjs';   // v1.5.155 黑键侦测：server 下发族名单（单一来源）
 import { readTrainEnv, hasTrainOverride, REMOVED_TRAIN_KEYS } from './server/train-env.mjs';   // v1.5.159：训练分布旋钮（与 econ/fight 同构的单一来源）
-import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, bandPickByFloor, rejectNarrowWinners, rejectGiftSpamWinners,
-  gridPickByRarity, parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from '../tools/pick-best.mjs';
+import { rejectDegenerateWinners, bandPickByLand, bandPickByUsage, rejectNarrowWinners, rejectGiftSpamWinners,
+  parseSelSeeds, selBases, scoreRuns, selNote, selGapNote, bandFor } from '../tools/pick-best.mjs';
 import { HOLO_GIFT_MAX, landShareOf } from '../tools/audit-lib.mjs';   // v1.5.168：送盾阈值与 promote 同源（当选面预筛要用）   // §N9 当选面退化闸（纯函数，门 D121 直接喂合成表）· §N24 兑现广度同分带排序
 /* v1.5.269（§E77）：载重 veto 的**同口径量具** —— `behavior-profile` 的 `fieldProfile`（ε=0 · temp 0.15 · 5 席同包）。
  * 该模块的主体被 `if (RUN_AS_MAIN)` 守着 ⇒ **import 无副作用**（只会多装载一次引擎，实测 ~0.5 秒）。 */
@@ -102,70 +100,27 @@ const SELF_ENV_KEYS = [
   'EPIRUS_ARCH2', 'EPIRUS_MUT_MODE',   // §E821（10-28 傍晚 · 千问）：2.0 架构原型 + 段感知/扁平变异算子档（默认关 ⇒ 逐字回到 v7）
   'EPIRUS_SEL_EVAL_SEEDS',   // §E322（v1.6.7）：当选键重验用几粒 seedBase 取均值（默认 4；=1 逐字回到旧行为）
   'EPIRUS_SEL_LAND', 'EPIRUS_SEL_LAND_GAMES', 'EPIRUS_SEL_LAND_TOL',   // v1.5.167：当选面兑现广度（默认关）
-  'EPIRUS_HALL_SEED',   // v1.5.277 §E114：把起点补进终局重验的候选池（默认关）
   'EPIRUS_BREADTH_FLOOR',   // v1.5.170：广度准入线（§N29，默认关；`SEL_LAND_GAMES` 是它共用的量具局数）
-  'EPIRUS_BREADTH_FATAL',   // DS 11-03：名人堂全塌缩时中止（默认关 ⇒ 旧行为逐字同）
-  'EPIRUS_EFFSKILL_MIN',    // DS 11-03：有效技能数下限（非ジ份额 ≥0.5% 的键数；0=关）
-  'EPIRUS_EFFSKILL_SHARE',  // DS 11-03：上面那条"份额"的阈值（默认 0.005）
   'EPIRUS_GA_GATE', 'EPIRUS_GA_GATE_GAMES', 'EPIRUS_GA_BAND', 'EPIRUS_STALL_ABORT',   // 每代 top-3 健康门槛(宽粒优先,饿退不杀) ‖ 门槛测量局数(默认6) ‖ 带内取宽带宽 ‖ 连续K代bestFit不进步⇒整臂终止
   'EPIRUS_HALL_TRACE', 'EPIRUS_HALL_TRACE_OUT',   // 名人堂逐粒追踪开关 ‖ 追踪 JSONL 落盘路径(默认 scratch/hall-trace/<臂>.jsonl)
-  'EPIRUS_POPSTAT', 'EPIRUS_POPSTAT_K', 'EPIRUS_POPSTAT_OUT',   // #46（11-03 晚）：逐代**种群统计量** JSONL（默认 0=关 ⇒ 一行不写、gen 行逐字不变）
-  'EPIRUS_HALL_TRACE_PROBE',   // ⤵ 11-01 深：M-1 连续下限罚（默认 0）
-  'EPIRUS_FITGW',   // 11-01 深（PREREG-MERGER §一）：指纹行加 top-3 只测不选的宽读数（默认关）
-  'EPIRUS_WIDE_FINAL',   // 11-01 深（ZCode · PREREG-2026-11-01-WIDE-FINAL）：v4 终局同尺（默认关）   // 11-01 晚（ZCode · 千问交接 §五.3）：逐代名人堂/门槛指纹落盘（默认关 ⇒ 一条行为不变）   // 千问 §十一 C：演化期健康门槛（形状搬自 `evo.js:3952`）+ 它的测量长度 + 带内取宽的带宽 ‖ GA 臂级空转终止（`EPIRUS_STALL_ABORT` 已在 §六② 实现，名单此前漏登记）
   'EPIRUS_SEL_GIFT_VETO', 'EPIRUS_SEL_GIFT_VETO_GAMES',   // §E650（千问）：送盾当选 veto + 它的测量长度（默认关 ⇒ `gateOk` 那一次测量也不跑）
-  'EPIRUS_SEL_KEEP', 'EPIRUS_SEL_KEEP_KEYS', 'EPIRUS_SEL_KEEP_CAST_KEYS', 'EPIRUS_SEL_KEEP_SEAT', 'EPIRUS_SEL_KEEP_SEAT_GAMES', 'EPIRUS_SEL_KEEP_SEAT_MIN', 'EPIRUS_SEL_KEEP_MODES', 'EPIRUS_SEL_KEEP_CAL', 'EPIRUS_SEL_KEEP_PLAIN_GAMES',   // v1.5.265b/266/267：落地 / 出手 / 座位对称性三把尺（默认全关）
   'EPIRUS_INIT_SCALE',                        // 11-04 波 H（千问）：随机起点幅度（缺省 0.25 = 出厂）
   'EPIRUS_SEL_CLEAR', 'EPIRUS_SEL_CLEAR_GAMES',   // §E787（10-26 夜班后追加，用户裁"加上开跑"）：当选面的**场B 清场地板**（veto，不进 fit）+ 它的测量局数（默认 40 = 官方口径）
   'EPIRUS_COUNTER_OPPS', 'EPIRUS_SEL_COUNTER',    // v1.5.172：把 G4/G5 的判据原型放上训练桌（§N35，默认关）
-  /* §E797（10-27 夜班）：`EPIRUS_BLOCK_W` = **挡下/反弹**计数的奖励权重（`js/train/evo.js:3357` 的 `countBlocks`
-   * 同时认 `blocked` 与 `reflect` ⇒ 这根确实付反弹）。投递走通用 econ 回路（`blockW` 在单一来源
-   * `ECON_REWARD_KEYS` 里 ⇒ 下面 `T.setEconomyReward(payload)` 那一块与它的逐键回执比对就是证据）。
-   *   ⚠ 写这段注释**不许复述那句下达横幅的原文**：门 `D174` 用那个字符串在本文件里的**首次出现位置**去判
-   *   "下达块在 `const T = sb.window.EpirusTrainer` 之后"，在这里复述一次就把那条腿撞红（10-27 02:0x 实测撞到）。
-   * ⚑ 为什么这个键**不能**登记进本数组，只能显式 `EPIRUS_ALLOW_DARK=1` 放行（机制已查清，不是猜）：
-   *   ① `knob-guard.repoKnobUniverse` 把 `tools/**` 整个扫进"有人读的键"全集，**包括门体目录** ⇒
-   *     `tools/gates/train-evo.mjs` 里 D77 的正文提到这个键名，就把它拉进全集；而读集刻意跳过名单模块
-   *     （`ENV_LIST_MODULE`，`server/econ-env.mjs` 是名单）⇒ 于是"全集有它、读集没有它"⇒ 本入口判它暗键 `exit 6`。
-   *   ② 想按 ① 的暗示去登记 ⇒ 就是在本数组写它的字面量 ⇒ 又被 D77（"econ 键名只许出现在 econ-env 的非注释行"）撞红。
-   *     ⇒ **两条门的意图互斥**（02:0x 实测两轮：登记 ⇒ `train-evo` 红；不登记 ⇒ 臂 `exit 6`）。
-   *   ③ 我先前那句"HEAD 副本冒烟证明不登记也能过"是**错的对照**：`enforceKnobs` 的 `entry` 是硬编码路径
-   *     `'training/train-3p.mjs'`，副本照样扫**工作树里那一份已改的文件** ⇒ 那次"过闸"其实是白名单行的功劳。
-   *     ⇒ 与 [[feedback-cross-process-readings-must-share-conditions]] 同族：换文件跑 ≠ 换条件跑。
-   *   ④ 为什么 `voidW`/`beadBoomW` 不受影响：它们的名字在全仓只出现在 econ-env 里 ⇒ 进不了全集 ⇒ 闸看不见它们。
-   *     ⇒ 也就是说这条闸的"活键"判定会被**门体文本**驱动；要真修，方向是 D77 放过声明行、或守卫区分"门体提到"与"入口读到"。留给早班（§E800 三）。
-   *   ⇒ 用 `EPIRUS_ALLOW_DARK=1` 的臂必须自己补回证据：看到通用 econ 下达那行的**逐键回执一致 ✓** 与剂量行 `挡=` 列，才算这根杠杆进了这臂。
-   *   默认不设 ⇒ 引擎默认 0，历史臂逐字不变。 */
-  'EPIRUS_RING_OPPS',        // v1.5.285 §E127：把会放聚能环的对手放上训练桌（默认关；判据用现成的 probe-dead-term）
-  'EPIRUS_ECON_OPPS',        // v1.5.325 §E236：把"会攒并且真兑现"的深经济对手放上训练桌（名字表驱动，默认关）
-  'EPIRUS_TOOLKIT_OPPS',     // §E676（10-21 早班）：把杂货铺（计划层 P0~P7）放上训练桌（份数驱动，默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_PASSIVE_OPPS', 'EPIRUS_AGGRO_OPPS', 'EPIRUS_FOCUS_W',   // DS 11-08 夜：集火奖励（连续命中同一目标；默认 0 ⇒ gFit 逐字不变）   // DS 11-08 晚（用户「2.0 要全方位优于 v7」）：把 pickFarmer（只攒钱席）追加进训练桌，补「场B 清场」在 fitness 里的缺失（默认关 ⇒ OPPS 一字不变）
-  'EPIRUS_RETAL_W',   //（ZCode · 11-14 夜6班）被围殴还手奖励（率形：还手次数/被打次数，封顶 50% 吃满；默认 0 ⇒ gFit 逐字不变）——GD6a 唯一阻断线（场A 还手 12%<20%）；「兑现进奖励」已有否证（evalSubsidyProbe −27pt）⇒ 此杆只买还手不碰兑现
+  /* §E797（10-27 夜班）：`EPIRUS_BLOCK_W` 走通用 econ 回路（D77/D174 见 git 史）。 */
   'EPIRUS_POOL_OPPS', 'EPIRUS_POOL_OPPS_TIER', 'EPIRUS_POOL_OPPS_TABLE',   // v1.7.83 §E631：把**冠军池成员**放上训练桌（枚数 + 档名驱动，默认关 ⇒ OPPS 一字不变）；表路径可指名册——11-13 统一池裁定后 pool-members-2p.tsv 是**2P 训练对手名册**（旧 v7 包当 2P 陪练），不再喂页面
   'EPIRUS_SEL_POOL',   // v1.7.92 §E635：把池成员**也放上选拔桌**（终局重验那张表；默认关 ⇒ `ALL_PAIRS` 一字不变）
   'EPIRUS_HALL_DEDUP', // v1.7.92 §E635：名人堂按 wid 去重（同一粒权重只占一席；默认关 ⇒ 榜的形状一字不变）
-  'EPIRUS_OPP_HUMAN', 'EPIRUS_OPP_HUMAN_SRC', 'EPIRUS_OPP_HUMAN_TGT', 'EPIRUS_OPP_HUMAN_FILE',   // v1.6.60：把**人类形状替身**放上训练桌（默认关 ⇒ OPPS 一字不变）
   'EPIRUS_BIGT_PUSH', 'EPIRUS_DRAIN_PUSH',   // §E275（v1.5.334）：**部署档的 CLI 把手**（大雷默认档 / 摄魂探索软提升）；不设 ⇒ 引擎默认一字不动，设了就由引擎回读
-  'EPIRUS_SEL_DEF', 'EPIRUS_SEL_DEF_MIN', 'EPIRUS_SEL_DEF_GAMES', 'EPIRUS_SEL_DEF_MODE',   // 11-02 千问 §A（PREREG-2026-11-02-SEL-DEF）：当选面**防御下限**排序键（默认 0=关 ⇒ 当选者逐字不变）
   'EPIRUS_SEL_BIGT', 'EPIRUS_SEL_BIGT_KEYS', 'EPIRUS_SEL_BIGT_GAMES', 'EPIRUS_SEL_BIGT_MODE',   // v1.5.326 §E249：同分带内按贵卡出手选人（默认 0 ⇒ 当选者逐字不变）
-  'EPIRUS_SEL_GRID', 'EPIRUS_SEL_GRID_GAMES', 'EPIRUS_SEL_GRID_MODE',   // 11-03 T1：当选面**按族别签名分格取最稀格**（默认 0=关 ⇒ 当选者逐字不变；单位同 SEL_DEF = 重验分分差 pt）
   'EPIRUS_SEL_DEFQ', 'EPIRUS_SEL_DEFQ_MINHANDS', 'EPIRUS_SEL_DEFQ_MINSHARE', 'EPIRUS_SEL_DEFQ_GAMES', 'EPIRUS_SEL_DEFQ_MODE', 'EPIRUS_SEL_DEFQ_EPS',   // 11-09 P1（用户三条裁定：容差带内**排序键**不是硬地板 ‖ 防御手 n≥30 才算数、不够按"没量到"跳过 ‖ 只筛新候选不动现役池）：带内把**白防率低**的挤上当选席，默认 0=关 ⇒ 当选者逐字不变
   'EPIRUS_SEL_CARDS', 'EPIRUS_SEL_CARDS_GAMES',   // 11-09 P2（用户裁定：只筛新候选、不回筛现役池）：当选面**用卡数地板 veto**，度量复用 fieldProfile 的逐卡计数（份额 ≥0.5%，与 tools/card-usage.mjs 同定义），默认 0=关
   'EPIRUS_CARD_ABORT', 'EPIRUS_CARD_MIN', 'EPIRUS_CARD_ABORT_GAMES',   // 11-10（用户：连续一段 <4 卡就杀，不等终局）：训练期 top-1 用卡数连续 K 代低于下限 ⇒ 整臂 exit 13，不写产物
-  'EPIRUS_OPP_BLOCK',       // v1.5.279 §E124：整桌同原型（改"桌子的形状"，不改名单；默认关 ⇒ 逐字可逆）
-  'EPIRUS_OPP_SWEEP',       // DS 11-03：对手池每代轮齐（旧公式每代只覆盖 11 位；默认关）
   'EPIRUS_KILL_REWARD', 'EPIRUS_KR_TRANSFER',   // v1.5.194：击杀奖励规则训练（0924 夜 · 内存补丁，不动仓库引擎）
   'EPIRUS_SEQ_W',   // v1.5.229：序列奖励（"蓄能[电珠]→下一回合电磁炮"完成时 +W ep；同样只在内存里，默认 0=关）
-  /* v1.5.141（DS）留到今天的一根**没人能从本入口开**的杠杆：补贴局给受评席每回合补一颗珠（`SUB_BEAD`）。
-   * 它的**读取点在 worker**（`server/paralleltrain.mjs:131` 从继承的 env 读 → `server/train-worker.mjs:228`
-   * 调 `T.setSubBead(...)` 并**回显生效值**「[imit] worker 消息subBead 生效 = true」⇒ 不是"设了没人读"，
-   * 而是本入口的白名单从来没登记它（实测 10-26 01:2x 冒烟：`⛔ 检测到本入口读不到的旋钮：EPIRUS_SUB_BEAD` ⇒ exit 6，
-   * 一秒响、零成本，这正是这条闸该有的样子）。登记之后 `EFFECTIVE_ENV` 会自动把它写进产物的 `meta.recipe.env`。
-   * ⚑ 与 v1.8.37 夜班续的 `EPIRUS_SUB_BEAD_KIND`（珠种，走 econ 单一来源）**要一起设**：只设珠种 = 钩子不进。 */
   'EPIRUS_SUB_BEAD',   // 模仿教师的蓄能钩子（与 EPIRUS_SUB_BEAD_KIND 一起设才进；只设珠种=钩子不进）
   'EPIRUS_SEQ_KIND',   // v1.8.37（10-25 ZCode · §二十一）：序列奖励的**珠种档**（'elec' 缺省 = 电磁炮原义；'boom' = 蓄爆珠→激光眼）
   'EPIRUS_KILL_FIELD',   // v1.5.160：收割席注入（qoder §N13 · 用户裁定"场B 缺口走对手池"）⇒ 带**开火计数**才敢算"已下达"
-  'EPIRUS_FAMILY_FIELD',   // §E798（10-27 夜班）：训练桌形状（k 席被测家族副本 + 其余脚本，k=3 即考卷形状）⇒ 同样带作用计数
   'EPIRUS_TRAIN_MODE',   // v1.5.169：训练模式（§N28 · 用户"炼一个 5 血长程通吃其他模式"）⇒ 认不了就 exit 7，不许静默退回 multi
   'EPIRUS_MIX8',   //（ZCode · 11-02 深夜）fitness 每第 K 局换 8 人桌——地雷 5P+ 高性价比（用户裁定），8P 局照常进 fit（默认 0=关）
   'EPIRUS_MIX2_EVERY',   //（ZCode · 11-06 夜）fitness 每第 K 局换 2 人桌——同代混桌（DS 待办 2；默认 0=关）
@@ -175,18 +130,9 @@ const SELF_ENV_KEYS = [
   'EPIRUS_HPSEED',   //（ZCode · 11-02 深夜）残血开局课程——摄魂 (b) 线（默认 0=关；p 比例局全席对称压 HP=min(2,modeHp-1)）
   'EPIRUS_HOLDOUT_SEG',   //（ZCode · 11-03 凌晨）E3 存段：每 K 代快照当代最优粒落 band 目录（默认 0=关；只存盘不改当选）
   'EPIRUS_HOLO2PROTO',   // v1.7.4（10-13 夜班 S2a）：训练期把"送盾"改写成"给自己上原型制御"（决策期档，`policy.js` 的 `setHolo2Proto`）
-                         //   ⇒ 与 TRAIN_MODE 同一条纪律：引擎没 setter / 读回不等于下达值就 exit 7；生效值进 `meta.recipe.h2p`
   'EPIRUS_PUBLISH', 'EPIRUS_SEED', 'EPIRUS_SEEDPACK', 'EPIRUS_XN2G', 'EPIRUS_XN2REF',   // 出厂写槽开关(=1 才写 js/bundled*,默认关) ‖ 种子 ‖ 热启动包 ‖ 2P切片局数(默认 GAMES/2) ‖ 2P对手集 'exam'=对产品考卷基准
-  'EPIRUS_XN2SCRIPTS', 'EPIRUS_XN2W',   // 2P 切片并入多人脚本池(默认不并,防稀释) ‖ 2P 切片 fit 权重(0=关)
-  'EPIRUS_WIDTH_LAND_W',   // 落地广度奖励（v1.7.90，默认关）
-  'EPIRUS_WALL_BREAK_W',   // 破反弹墙奖励（v1.8.39，默认关）
-  'EPIRUS_DEF_ADAPT_W',   // 多血适度防御奖励（DS 11-02，默认关）
-  'EPIRUS_DRAIN_HEAL_W',   // 残血摄魂奖励（DS 11-02，默认关）
-  'EPIRUS_DEF_IDLE_W',   // 白防罚（DS 11-02，默认关）
+  'EPIRUS_XN2W',   // 2P 切片 fit 权重(0=关)
   'EPIRUS_PAIRED',   /* 2026-10-28（DS）：配对评估 —— 同代所有个体吃同一批局（common random numbers），默认关 */
-  'EPIRUS_REFLECT_W',   // 真反射 credit（PREREG §二十六·4，只给 reflect 事件付钱，默认关）
-  'EPIRUS_GUARD_HIT_W',   // 打龟奖励（§E816 A案，只给打在本回合摆防御目标上的伤害付钱，默认关）
-  'EPIRUS_BEAD_WASTE_W',   // 过期珠浪费惩罚（PREREG §二十九，数 beadExpire 事件不碰花费侧，默认关）
   /* ===== 11-11 夜（ZCode）：补登记 sweep —— 在用未登记 68 条清零（清单 = 生成器 docs/TRAINING-KNOBS.md「在用未登记」节，
    * 剔除 ECON/FIGHT/TRAIN 三份单一来源表已管的 37 条）。注解一律同行 //（收割按行取）；详注在读取点旁边。 ===== */
   'EPIRUS_ALLOW_DARK',   // 闸放行旗（=1 放行「本入口读不到的键」）；用臂必须自己补回逐键回执证据（见上 ⚑ 块）
@@ -204,7 +150,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_SIGMA_FLOOR', 'EPIRUS_SIGMA_DECAY', 'EPIRUS_SIGMA_STALL',   // GA σ 调度：下限（0.06）/ 衰减（0.995）/ 停滞回抬档（K 代没进步 ×1.25，默认 0=关）
   'EPIRUS_TRAIN_EPS', 'EPIRUS_TRAIN_EPS_K', 'EPIRUS_TRAIN_EPS_MODE', 'EPIRUS_TRAIN_TEMP',   // 训练执行口径（E28）：ε / εK / 模式 / 温度——缺省=产品口径，显式给=显式实验
   'EPIRUS_WR_TOL',   // 2P 服务：冠军换代的胜率容差（默认 0.03）
-  'EPIRUS_SEL_TWO_STAGE', 'EPIRUS_SEL_G45', 'EPIRUS_SEL_G4LONG',   // 选拔档：两段式（默认开，=0 关）/ G4/G5 最坏格否决（默认关）/ G4long 逐格否决（默认关）
+  'EPIRUS_SEL_TWO_STAGE',   // 选拔档：两段式（默认开，=0 关）
   'EPIRUS_FEAS_GAMES', 'EPIRUS_AGGR_GAMES', 'EPIRUS_SEAT_GAMES', 'EPIRUS_DENSITY_GAMES', 'EPIRUS_CHARGE_GAMES',   // 体检量具局数族（audit-lib.feasPlan 单一来源；默认=在册 FEAS_N_DEFAULTS）
   'EPIRUS_FEASIBILITY', 'EPIRUS_FEASIBILITY_BLOCK',   // 2P 服务：落盘前可行性体检（=0 关）/ 体检不过阻断落盘（默认关）
   'EPIRUS_OPP_N',   // 2P 服务：对手池名单覆盖（逗号名表，缺省 9 席；配对 A/B 用）
@@ -213,7 +159,7 @@ const SELF_ENV_KEYS = [
   'EPIRUS_S4_GAMES',   // 2P 服务：shapeScorer 量具局数（默认 8）
   'EPIRUS_SEED0',   // 2P 服务：worker 播种根（服务端派生后下发）
   'EPIRUS_TRAIN_SEAT_GAMES',   // 2P 服务：座位轮换局数（>0 才开 setSeatGames）
-  'EPIRUS_STYLE_TABLE', 'EPIRUS_STYLE_FRAC', 'EPIRUS_STYLE_W', 'EPIRUS_STYLE_GAMES',   // 风格课程：指定风格桌 / 风格席混入比例 / 风格奖励权重（服务端，默认 0.5）/ 其量具局数（默认 2）
+  'EPIRUS_STYLE_W', 'EPIRUS_STYLE_GAMES',   // 风格课程：风格奖励权重（服务端，默认 0.5）/ 其量具局数（默认 2）
   'EPIRUS_SUBSIDY_H', 'EPIRUS_SUBSIDY_EP', 'EPIRUS_SUBSIDY_MIN',   // 2P 服务：补贴局形状（每 h 局 / 从 ep 起 / 低于 min 不补）
   'EPIRUS_WALL_MS',   // 2P 服务：墙钟收敛（ms，=0 纯按代数；动它破坏同参可复现，慎重）
   'EPIRUS_WORKERS',   // 2P 服务并行度：worker 数（缺省 cpus-1，上限 16）
@@ -333,29 +279,11 @@ const XN2W = Number(process.env.EPIRUS_XN2W || 0);
 const SEL_LAND = Number(process.env.EPIRUS_SEL_LAND || 0);
 const SEL_LAND_GAMES = Number(process.env.EPIRUS_SEL_LAND_GAMES || 20);
 const SEL_LAND_TOL = Number(process.env.EPIRUS_SEL_LAND_TOL || 0.03);
-/* ===== v1.5.277（qoder 09-28 夜班 §E114 · 默认 0 ⇒ 行为逐字不变）：**把起点也放进终局重验的候选池** =====
- * 动因（§E113 补，实测）：今晚 9 支接力臂的名人堂逐席与现役比 —— **7 支的 6 席里没有一席是起点**
- *   （只有 λ0.30+costlyW 那两支占了 1~2 席，而那两支恰好把起点选成了产物）。
- * ⇒ 结构缺口：**接力交出的包从来没跟现役比过**。"训练成功出货"与"这粒比现役强"是两个互不蕴含的命题，
- *   这正是档案里"臂产物从来没上过槽"的机制形状（不是"门不够严"，是**候选池里没有参照**）。
- * 开关语义：终局重验之前，若起点不在名人堂里就**追加**成一粒候选（`fit=null` ⇒ 只标"起点"，不参与任何打分）。
- *   不改训练评分、不改 `fit`、不动种群、不改 promote 的五道门 —— 它只让"最后一次选人"看得见起点。
- * ⚠ 这不是判据变更，但它**会改变交出去的那一粒** ⇒ 属训练侧配方：先实测（§E114 两 seed），再提请用户裁定，不默认开。 */
-const HALL_SEED = Number(process.env.EPIRUS_HALL_SEED || 0) > 0 ? 1 : 0;
 /* v1.5.170（qoder §N29 · 默认 0 ⇒ 行为逐字不变）：**广度准入线**（不是排序键）。
  * 判据 = `mirrorHealth(SEL_LAND_GAMES, N, 'multi')` 的净 `effSkillsLand ≥ 本值` **且** `landedKeys ≥ 2`。
  * 标定（`mirrorHealth(20,5,'multi')` 实测）：现役 `2.66（3 种）` · 2P 槽 `2.98（3 种）` · §N28 三粒塌缩冠军 `1.00~1.24` · 最宽那粒 `1.75（3 种）`
  * ⇒ 线画在 1.5 只砍"塌成一种卡"，不砍"宽但兑现率低"。默认关，开了必须自己说剔了几粒。 */
 const BREADTH_FLOOR = Number(process.env.EPIRUS_BREADTH_FLOOR || 0);
-/* DS 11-03 晚（用户裁）："宽粒与基本防御是过线基本要求" ⇒ 名人堂**全部塌缩**时不许照写产物。
- *   既有行为（v1.5.170 起）只标 `breadthFloorAllNarrow` 然后照写 ⇒ 1 种卡的包能一路写到最后。
- *   本键 =1 ⇒ 直接 exit 7，不写产物（默认 0 保持旧行为，回归逐字同）。 */
-const BREADTH_FATAL = Number(process.env.EPIRUS_BREADTH_FATAL || 0) > 0;
-/* DS 11-03 晚（用户裁定）："伤害来源集中不是技能种类少" ⇒ 宽度改看**有效技能数**：
- *   非ジ、成功出手、份额 ≥ `EPIRUS_EFFSKILL_SHARE`（默认 0.5%）的键数。
- *   `maxLandShare` 只作记录（大雷输出型冠军的主要伤害来源本来就该集中）。0=关。 */
-const EFFSKILL_MIN = Math.max(0, Number(process.env.EPIRUS_EFFSKILL_MIN || 0) || 0);
-const EFFSKILL_SHARE = Math.min(0.2, Math.max(0.0001, Number(process.env.EPIRUS_EFFSKILL_SHARE || 0.005) || 0.005));
 /* ===== §十一 C（千问 · 11-01 傍晚，用户"开一下"）：把**演化期**健康门槛搬进 GA（不是终局筛）=====
  * 形状搬自线上 trainer（`js/train/evo.js:3952`）：不过自对局健康门槛 ⇒ 不许进容差带 / 不配当选，
  *   然后"先按分数取带、带内取覆盖熵最高者"。与在册 `EPIRUS_BREADTH_FLOOR` 的区别：那根作用在**终局 `sel.clean`**
@@ -373,22 +301,6 @@ const GA_GATE = Math.max(0, Number(process.env.EPIRUS_GA_GATE || 0));
 const GA_KINDS = Math.max(3, GA_GATE);
 const GA_GATE_GAMES = Math.max(2, Number(process.env.EPIRUS_GA_GATE_GAMES || 6) || 6);
 
-/* ===== 11-01 晚（ZCode · 千问交接件 §五.3）：逐代名人堂/门槛指纹 =====
- * 病：§廿五 那条"末代 top-3 过线粒 ≠ 产物"目前靠门槛自检打印 + 产物重读**夹出来**，没有逐代个体指纹
- *   ⇒ "终局当选从名人堂挑了另一粒"只是推断。本开关把每一代的 {top3 指纹, 门槛读数, 准入后名人堂} 追加落 JSONL，
- *   终局当选时再补一行 final（当选粒指纹 + 名人堂全家）⇒ 机制可以从"推断"升成"账面"。
- * 默认关：一个 env 读取 + 一个 if ⇒ 逐字原行为（回归腿：默认关轨迹逐字同）。 */
-const HALL_PROBE = Number(process.env.EPIRUS_HALL_TRACE_PROBE || 0);
-let PROBE_INC;   /* 探针参照：种子包同口径量一次（与 GA_INC 同式；GA_GATE 关时也成立） */
-const WIDE_FINAL = Number(process.env.EPIRUS_WIDE_FINAL || 0);
-if (WIDE_FINAL && GA_GATE <= 0 && !HALL_PROBE) {
-  console.error('[wide-final] ⛔ EPIRUS_WIDE_FINAL 要与 EPIRUS_GA_GATE 同开（或 HALL_TRACE_PROBE=1 由探针喂同一把尺的参照）；单开没有"同尺"可讲');
-  process.exit(2);
-}
-let bestWideSeen = null;   /* v4：全程最宽粒快照（参数拷贝 ⇒ 育种变异不穿透） */
-let WIDE_FINAL_PICK = null;
-const FITGW = Number(process.env.EPIRUS_FITGW || 0);
-if (FITGW > 0 && GA_GATE <= 0) { console.error('[fitgw] ⛔ EPIRUS_FITGW 复用门槛读数，要与 EPIRUS_GA_GATE 同开'); process.exit(2); }
 const HALL_TRACE = Number(process.env.EPIRUS_HALL_TRACE || 0);
 const HALL_TRACE_OUT = String(process.env.EPIRUS_HALL_TRACE_OUT || ('scratch/hall-trace/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
 if (HALL_TRACE) {
@@ -397,24 +309,6 @@ if (HALL_TRACE) {
   console.log('[hall-trace] 每代指纹 → ' + HALL_TRACE_OUT + '（EPIRUS_HALL_TRACE=1；指纹 = widOfArr，与名人堂去重同式）');
 }
 const GA_BAND = Math.max(0, Number(process.env.EPIRUS_GA_BAND || 0));
-/* ===== #46（11-03 晚 · 用户裁"这么跑一下吧"）：逐代**种群统计量**，不再只记 argmax =====
- * 病（今天量出来的，不是猜的）：`EPIRUS_HOLDOUT_SEG` 存段与 `gen` 行印的都是 `scored[0]`（当代评估最优**那一枚**）。
- *   而 pop=8 × 每代 8 局 ⇒ "谁是最优"本身就是带噪的 argmax：同一次跑里第 1 与第 2 名分差 6.17pt，
- *   比它们各自的自身极差 10.1pt 还小（在册原话"分差小于自身噪声 ⇒ 方向可信、幅度判不动"）。
- *   ⇒ 演化折线把**排名抖动**画成了**风格摆动**，用户看图后问"为什么在两头反复横跳"就是这么来的。
- * 这一档做的事：每代把**整个种群**（pop 个个体）已有的读数聚合成统计量落一份 JSONL ——
- *   `fit` / `挡 blockPerGame`（防御族剂量的引擎口径）/ `广 varietyMaxEv` 三量的 best、top-k 均值、种群均值/中位/最小，
- *   外加每个个体的 `{wid, fit, blk, var}`。**零额外对局**（这些数本来就是逐个体算的，只是以前只印第 0 名）。
- * 默认 0=关 ⇒ 一行都不写、`gen` 行逐字不变（这条与 T1 同一套验收：开档后 `gen` 行必须与基线日志逐字同）。 */
-const POPSTAT = Math.max(0, Number(process.env.EPIRUS_POPSTAT || 0));
-const POPSTAT_K = Math.max(1, Number(process.env.EPIRUS_POPSTAT_K || 3) || 3);
-const POPSTAT_OUT = String(process.env.EPIRUS_POPSTAT_OUT || ('scratch/popstat/' + (process.env.EPIRUS_ARM || 'arm') + '.jsonl'));
-let POPSTAT_FAIL = 0;
-if (POPSTAT > 0) {
-  try { mkdirSync(POPSTAT_OUT.split(/[\\/]/).slice(0, -1).join('/') || '.', { recursive: true }); } catch (ePs0) {}
-  try { unlinkSync(POPSTAT_OUT); } catch (ePs1) {}
-  console.log('[种群统计] 每代 → ' + POPSTAT_OUT + '（EPIRUS_POPSTAT=' + POPSTAT + ' ‖ top-k=' + POPSTAT_K + ' ‖ 零额外对局：吃的是逐个体已有读数）');
-}
 const GA_STAT = { audits: 0, healthyGens: 0, starvedGens: 0, swapped: 0, eff1Sum: 0, lastEff1: '', noRef: 0 };
 /* §十四 判据换掉（v2 被 Goodhart，见 PREREG §十三）：门槛**不自己数键**，改用两条在册判据的合取——
  *   ① 种类：`两模式 effSkills ≥3` —— 与产品门 L1 `broad` 的 `pass` 逐字同一条（`champion-gate.mjs:80-85`，
@@ -442,82 +336,7 @@ let BREADTH_LOG = null, BREADTH_ALL_NARROW = false;
 const SEL_GIFT_VETO = Number(process.env.EPIRUS_SEL_GIFT_VETO || 0);
 const SEL_GIFT_VETO_GAMES = Number(process.env.EPIRUS_SEL_GIFT_VETO_GAMES || 0) || SEL_LAND_GAMES;
 let GIFT_VETO_LOG = null, GIFT_VETO_ALL_SPAM = false;
-/* ===== v1.5.265b（qoder 09-28 夜班 §E66 · 默认 0 ⇒ 行为逐字不变）：**载重优点 veto** =====
- * 动因（同批 12 支臂实测，见 `RESEARCH-LOG-2026-09-28-qoder.md` §E66）：从现役接力 1200 代，
- * 五粒里 **4 粒把"载重卡"打没了**（电磁炮 2.23→0~0.08 次/局、蓄能 3.83→0、最大 ep 93→2~18），
- * 5P 产品口径三粒全部低于现役（38.7 / 25.0 / 37.1 vs 42.5）⇒ **"接着练"目前是退化路径**。
- * 为什么不是"加权重"：本仓已五次否证（`WIDTH_W` 推向乱打 / `BLOCK_W` 推向龟 / `CLEAR_W` 与抗只枪单调互斥 /
- * 两臂恢复环实验全否 / `DIV_W=0.6` 选出种类=1）⇒ 走**当选面 veto**（先例 `BREADTH_FLOOR`/`SEL_LAND`）：
- * 不改 `fit`，只在"已经赢过"的候选里剔掉"把起点优点弄丢了"的那几粒。
- * 判据 = 候选的 `mirrorHealth(...).landByKey[卡]` **每局落地量** ≥ 起点（热启动种子包）同口径读数的 `(1 − SEL_KEEP)`；
- * 起点读数**当场用同一次 `mirrorHealth` 量**，不抄数字（09-27 那条"文案抄数字"的同族病）。
- * ⚠ 参照缺失（没热启动 / 该卡起点落地为 0）⇒ **响亮失败**，不许把"判不了"读成"通过"。 */
-const SEL_KEEP = Number(process.env.EPIRUS_SEL_KEEP || 0);
-const SEL_KEEP_KEYS = String(process.env.EPIRUS_SEL_KEEP_KEYS || 'railgun').split(',')
-  .map(function (s) { return s.trim(); }).filter(Boolean);
-/* v1.5.265b：**出手口径**的那一维（09-28 实测补）：`landByKey` 只数造成过伤害的卡 ⇒
- * 聚能环/蓄能**天然判不到**，把它们放进 `SEL_KEEP_KEYS` 只会得到"起点为 0、无法判"的点名。
- * ⇒ 分成两个名单：`_KEYS` 按**落地**判，`_CAST_KEYS` 按**成功出手**判（`mirrorHealth.castByKey`，v1.5.266 新增字段）。 */
-const SEL_KEEP_CAST_KEYS = String(process.env.EPIRUS_SEL_KEEP_CAST_KEYS || 'ring,charge').split(',')
-  .map(function (s) { return s.trim(); }).filter(Boolean);
-/* ===== v1.5.326（qoder 10-03 夜班 §E249 · 默认 0 ⇒ 当选者与今天逐字相同）：**同分带内按"贵卡出手"选人** =====
- * 动因（今晚 4 批 47 臂实测）：`EPIRUS_COSTLY_W` 能把名人堂里"会打大雷"的粒从**对照 0/6 抬到 6/6**，
- *   可**当选产物**常常还是 0.000 —— 因为终局重验只按胜负分选人，"会不会打这张卡"不在它看得见之列。
- *   （`SEL_KEEP` 那次**逐位没换人**是同一族的另一半：veto 只能在保住优点的粒里挑，**造不出**保住优点的粒。）
- * ⇒ 这一根**不改 `fit`、不改奖励、不改规则**，只在"胜负分相差不到 `SEL_BIGT` pt 的候选里"挑贵卡出手最多的一粒
- *   —— 也就是**拿 ≤tol pt 的胜负分，换"这粒会打这张卡"**，把"抽签"变成"选人规则"。
- * 用量口径 = `behavior-profile.fieldProfile`（**ε=0 · soft · 5 席同包 · seed0=77000**），与 `SEL_KEEP_CAL=plain` **同一把尺**，
- *   只是 n 与模式可另给（`_GAMES` / `_MODE`，默认 60 · `long` —— 大雷要 5 珠，只有长程够得着）。
- * ⚠ 三条纪律：① 带内**全部用量为 0 ⇒ 不许改判**，并响亮印"带内 0 粒打过 ⇒ 这臂零作用"（防"永不触发的守卫当假绿"）；
- *   ② 必须印 **改判/未改判 + 胜负分差 pt**（排序键不咬 = 没接线，§N12 的原话）；③ 生效值与结果写进 `meta.recipe.selBigT`。 */
 const SEL_BIGT = Number(process.env.EPIRUS_SEL_BIGT || 0);
-/* ===== §A（11-02 · 用户裁"做 A"· 预注册 `PREREG-2026-11-02-SEL-DEF-qoder.md`）：当选面**防御下限**排序键 =====
- * 只做一件事：在"重验分相差 ≤ `SEL_DEF` pt"的带内，把**防御出手/局 低于下限**的候选挤下当选席。
- *   ⇒ **不最大化防御量**（`bandPickByFloor` 与 `bandPickByUsage` 的刻意区别）：给防御付钱的形状在册已被三次否证
- *     （`evo.js:1805` 对 `BLOCK_W` 原话"奖励含混，会把包推向挡起来" ‖ §廿四 v2 门槛被凑数 ‖ §六 K-2 到得了不选）。
- *   ⇒ 标定（11-02 `scratch/` 内联跑，20 局脚本桌）：现役 v7 冠军 **2.30 手/局**（multi）‖ 代 3 各臂 **0.00** ‖
- *     被 Goodhart 的 `GATE2-s13` **4.25~6.20 手/局（占总出手 20~22%）** ⇒ 所以下限取"从零到有"（默认 0.10），
- *     **上界不进排序**，只在读数里报（>4 手/局 或 >15% 出手 = 落进 GATE2 那片凑数区，由 A-2 白防率判死活）。
- * 量具不自造：防御手数 = `behavior-profile.mjs` 的 `fieldProfile(...).def`，其定义是引擎的 `cat === R.CAT.DEFENSE`
- *   （实测含 guard/reflect/bagua/shift/jinshield/armor/proto/holo）⇒ 与 `SEL_BIGT` 同一件、同一调用形状。 */
-const SEL_DEF = Number(process.env.EPIRUS_SEL_DEF || 0);
-const SEL_DEF_MIN = Number(process.env.EPIRUS_SEL_DEF_MIN || 0.10);
-const SEL_DEF_GAMES = Number(process.env.EPIRUS_SEL_DEF_GAMES || 20);
-const SEL_DEF_MODE = String(process.env.EPIRUS_SEL_DEF_MODE || 'multi');
-let SEL_DEF_LOG = null;
-/* ===== T1（11-03 用户裁"先试低成本两条"）：当选面**按族别签名分格取最稀格**（niching / crowding）=====
- * 治的病（今天实测，不是推测）：2.0 的地形把"带反击族"与"会赢"分成两个不连通的高原，而**同一次跑的名人堂里
- *   明明有宽粒却被 fit 挤掉**（`CBG-s13`：band3/band4 = 10 种带 taunt/holo/proto/tank，当选的 band2 = 8 种；
- *   ZCode 的 `EPIRUS_HALL_TRACE` 在 `GATE3-s13` 上抓到同形）。⇒ 这是**选择层**的病，就在选择层治，训练侧一字不动。
- * 单位：`EPIRUS_SEL_GRID` = 容差带（重验分分差 pt，与 `SEL_DEF` 同一把尺）；0 = 关 ⇒ 整段一行都不跑。
- * 签名不新造口径：一格 = **防御族份额档 D0~D3**（`fieldProfile().def/.acts`，其定义就是引擎 `byKey[k].cat === R.CAT.DEFENSE`）
- *   × **种数档 K0~K3**（非ジ且份额 ≥0.5%，与 `scratch/breadth.mjs:43` 同口径）。
- * 档边线来自今天那两张实测表（`breadth-17-1103.txt` ‖ `breadth-v7pool-20.txt`）：gen-3 当选粒防御族 0~0.6%、v7 池 3.2~18.7%
- *   ⇒ D 切在 0.5/3/8%；种数跨 1~11 ⇒ K 切在 5/8/11。切在哪儿都会印在回执里，格没分开 = 这根键零作用，不算测过。 */
-const SEL_GRID = Number(process.env.EPIRUS_SEL_GRID || 0);
-const SEL_GRID_GAMES = Math.max(4, Number(process.env.EPIRUS_SEL_GRID_GAMES || 12) || 12);
-const SEL_GRID_MODE = String(process.env.EPIRUS_SEL_GRID_MODE || 'multi');
-let SEL_GRID_LOG = null;
-if (!(SEL_GRID >= 0) || !isFinite(SEL_GRID)) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_GRID 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_GRID));
-  process.exit(2);
-}
-if (SEL_GRID > 0 && typeof fieldProfile !== 'function') {
-  console.error('[train-3p] ⛔ SEL_GRID 开着但量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
-  process.exit(7);
-}
-if (!(SEL_DEF >= 0) || !isFinite(SEL_DEF)) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_DEF 必须是 ≥0 的数（0=关，单位=重验分分差 pt）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_DEF));
-  process.exit(2);
-}
-if (SEL_DEF > 0 && !(SEL_DEF_MIN > 0)) {
-  console.error('[train-3p] ⛔ SEL_DEF 开着但 EPIRUS_SEL_DEF_MIN=' + SEL_DEF_MIN + ' ⇒ 下限为 0 就是恒真判据（人人都达标 = 这根没装）');
-  process.exit(2);
-}
-if (SEL_DEF > 0 && SEL_DEF_GAMES < 10) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_DEF_GAMES=' + SEL_DEF_GAMES + ' 太短（<10 局 ⇒ 防御是"整局才几次"的事件，量不稳）');
-  process.exit(2);
-}
 /* ===== 11-09 P1/P2（用户 11-09 上午裁定）：当选面**白防率排序键**与**用卡数地板** =====
  * 两条都默认 0=关 ⇒ 整段一行都不跑，`meta.recipe` 里留 null，与历史臂逐字相同（在册纪律）。
  * **P1 为什么是排序键而不是地板**（同口径实测 `scratch/qoder-1109-defq-caliber.mjs`，页面装配 60 局×2 seed）：
@@ -576,55 +395,6 @@ const SEL_BIGT_KEYS = String(process.env.EPIRUS_SEL_BIGT_KEYS || 'bigT,drain').s
 const SEL_BIGT_GAMES = Number(process.env.EPIRUS_SEL_BIGT_GAMES || 60);
 const SEL_BIGT_MODE = String(process.env.EPIRUS_SEL_BIGT_MODE || 'long');
 let SEL_BIGT_LOG = null;
-/* v1.5.268（§E75）：载重 veto **两模式都判**（默认 `multi,long`）。
- * 起因：只按 multi 镜判"炮还在不在"，与 long 口径的载重读数**反向**（NCV-71 改判后 炮 2.90→0.90、5P 41.3→39.2）。
- * 每多一个模式 = 每名候选多跑一次 `mirrorHealth`（实测 20 局 ≈ 百毫秒级），**不加对局进 fit**、不改判定，只在当选时多筛一道。 */
-const SEL_KEEP_MODES = String(process.env.EPIRUS_SEL_KEEP_MODES || 'multi,long').split(',')
-  .map(function (s) { return s.trim(); }).filter(Boolean);
-/* v1.5.269（§E77）：veto 的**量具口径**。
- * `mirror` = `mirrorHealth`，用的是**训练口径** chooser（temp 0.35 · ε0.15 硬档）⇒ 它与"这个包上线后会不会真的少打炮"不是同一个分布；
- * `plain`（默认）= `behavior-profile.fieldProfile`，**ε=0 · temp 0.15 · 5 席同包** ⇒ 与我判载重用的那把尺同口径（§E64/§E68 都是它）。
- * 动因（实测）：`NCV-71` 那粒被 multi 镜挑中，训练口径下 `railgun@long` 过线，ε=0 口径只有 **0.97/2.23 = 43%** ⇒ 挑错了。 */
-const SEL_KEEP_CAL = String(process.env.EPIRUS_SEL_KEEP_CAL || 'plain').trim();
-const SEL_KEEP_PLAIN_GAMES = Number(process.env.EPIRUS_SEL_KEEP_PLAIN_GAMES || 60);
-if (SEL_KEEP_CAL !== 'plain' && SEL_KEEP_CAL !== 'mirror') {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_CAL 只认 plain / mirror，收到：' + JSON.stringify(process.env.EPIRUS_SEL_KEEP_CAL) +
-    '（默认走 mirror = 拿训练口径的尺当"上线后会不会退化"的判据，正是 09-28 那次误挑的成因）');
-  process.exit(7);
-}
-if (!(SEL_KEEP_PLAIN_GAMES >= 20)) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_PLAIN_GAMES 至少 20 局（实测 G=20 与 G=60 的炮读数差 0.22/局 ⇒ 再小就是噪声）：收到 ' + SEL_KEEP_PLAIN_GAMES);
-  process.exit(7);
-}
-const BAD_MODE = SEL_KEEP_MODES.filter(function (m) { return m !== 'multi' && m !== 'long'; });
-if (BAD_MODE.length) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_MODES 里有不认识的模式：' + BAD_MODE.join(',') + '（只认 multi / long）');
-  process.exit(7);
-}
-/* v1.5.267（§E73 第 4 条）：**座位对称性**也是一条会随接力退化的优点（现役 5pt 是本仓历史最好，M 组 6~15pt）。
- * 它不是一张卡 ⇒ 不能走"逐卡落地/出手"那两把尺，但 `mirrorHealth` **同一次**就已经回了 `seatSpread` ⇒ 几乎免费。
- * 本值 = 允许比起点**多出**多少 pt（0 表示"不许比起点差"）；起点读不到（`underpowered`）⇒ 点名、不据此剔人。
- * ⚠ 09-28 实测：广度线共用的 `SEL_LAND_GAMES=20` 局里**只有 18 个决胜局** ⇒ 起点自己读出 25~33pt（而 promote 用 100 局读 5pt）
- *   ⇒ 拿那把尺判"对称性退化"是**拿噪声当判据**。所以这一维**单开一次专用量具**（`SEL_KEEP_SEAT_GAMES`，默认 60），
- *   并要求**决胜局数 ≥ `SEL_KEEP_SEAT_MIN`（默认 24）**才参与判定；不够就点名"未判定"，既不剔人也不当通过。 */
-const SEL_KEEP_SEAT = process.env.EPIRUS_SEL_KEEP_SEAT == null ? null : Number(process.env.EPIRUS_SEL_KEEP_SEAT);
-const SEL_KEEP_SEAT_GAMES = Number(process.env.EPIRUS_SEL_KEEP_SEAT_GAMES || 60);
-const SEL_KEEP_SEAT_MIN = Number(process.env.EPIRUS_SEL_KEEP_SEAT_MIN || 24);
-if (SEL_KEEP_SEAT !== null && !(SEL_KEEP_SEAT >= 0 && SEL_KEEP_SEAT <= 100)) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_SEAT 必须是 0~100 的pt数（不给 = 关闭这一维）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_KEEP_SEAT));
-  process.exit(7);
-}
-if (SEL_KEEP_SEAT !== null && !(SEL_KEEP_SEAT_GAMES >= 20 && SEL_KEEP_SEAT_MIN >= 1)) {
-  console.error('[train-3p] ⛔ 座位维的量具参数不成立：GAMES=' + SEL_KEEP_SEAT_GAMES + ' MIN=' + SEL_KEEP_SEAT_MIN +
-    '（GAMES 至少 20、MIN 至少 1 —— 否则"判得到"是假的）');
-  process.exit(7);
-}
-let SEL_KEEP_LOG = null, SEL_KEEP_UNJUDGED_SEAT = null;
-if (!(SEL_KEEP >= 0 && SEL_KEEP <= 1)) {
-  console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP 必须是 0~1 的数（0=关）：收到 ' + JSON.stringify(process.env.EPIRUS_SEL_KEEP) +
-    ' —— 非数值/越界一律拒，不许 clamp 之后谎称"开过了"');
-  process.exit(7);
-}
 /* ===== §E787（用户 10-26 11:5x 裁"加上开跑"）：当选面的**场B 清场地板** =====
  * 动因（§E786 四格，同包反事实给的因果）：`U2`/`N2`/`Q4` 在官方 场B（calm 桌）上清场 **0.00**、每局伤害 1.00，
  *   而引擎自带的 `forceAttack`（选ジ而当回合枪买得起 ⇒ 改判成枪）把 `U2` 的场B 清场抬到 **3.00/4.00**
@@ -892,9 +662,9 @@ if (process.env.EPIRUS_ARCH2) {
       console.error('[train-3p] ⛔ WIN 侧装出的面=' + AW.L.input + ' ≠ spec 的 ' + cfg.input + ' ⇒ 拒跑');
       process.exit(7);
     }
-    const WIN_READERS = [['SEL_BIGT', SEL_BIGT], ['SEL_CLEAR', SEL_CLEAR], ['SEL_DEF', SEL_DEF], ['SEL_GRID', SEL_GRID],
-      ['SEL_DEFQ', SEL_DEFQ], ['SEL_CARDS', SEL_CARDS], ['SEL_KEEP', SEL_KEEP], ['SEL_LAND', SEL_LAND],
-      ['BREADTH_FLOOR', BREADTH_FLOOR], ['EFFSKILL_MIN', EFFSKILL_MIN],
+    const WIN_READERS = [['SEL_BIGT', SEL_BIGT], ['SEL_CLEAR', SEL_CLEAR],
+      ['SEL_DEFQ', SEL_DEFQ], ['SEL_CARDS', SEL_CARDS], ['SEL_LAND', SEL_LAND],
+      ['BREADTH_FLOOR', BREADTH_FLOOR],
       ['CARD_ABORT', Number(process.env.EPIRUS_CARD_ABORT || 0)]].filter(function (f) { return f[1] > 0; });
     console.log('[train-3p] ⚙ **量具同代已接线**：behavior-profile 的沙箱 WIN 也装了 arch2 ‖ 面=' + AW.L.input +
       ' ‖ paramCount=' + WIN.EpirusPolicy.paramCount() + ' ‖ ' + wiredMsg +
@@ -1032,7 +802,6 @@ function rcptEq(a, b) {
  * 一局未注 ⇒ `exit 8`）。§N11 的教训就是"横幅读回 0.34 ✓ 而作用点 0 局"烧掉两臂 ⇒ 横幅只能证明**变量**到位，
  * 证明不了**效果**发生。语义与三条设计约束见 `js/train/evo.js` 的 `killSeatFor` 注释。 */
 let KILL_REQ = 0, SEL_LAND_LOG = null, KILL_REC = null, TRAIN_MODE_REQ = null, BIGT_CHAIN_REQ = 0, H2P_REQ = null;   // 兑现广度当选的账（写进 meta，事后能查这臂到底改没改判）
-let FAMILY_REQ = 0, FAMILY_REC = null;   // §E798：训练桌形状（k 席家族副本）的下达与**作用计数**账
 let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注入"的归因（必须在下达块之前声明 —— 那里要赋值）
 {
   const trainEnv = readTrainEnv(process.env);
@@ -1049,39 +818,6 @@ let IMIT_ON = false;   // v1.5.189：示范真开着才逐代印"原生 vs 注�
     KILL_REQ = Number(got);
     console.log('[train-3p] 收割席注入已下达：killField=' + got + ' ⇒ 消费点读回 ' + T.killField() +
       '（每 ' + Math.max(2, Math.round(1 / got)) + ' 局注 **1 席** pickKillSecure · 相位按代旋转 · 只注多人局 · 避开承诺局）');
-  }
-  /* ===== §E798（10-27 夜班 · 千问）：训练桌形状 `EPIRUS_FAMILY_FIELD=<k>`（默认关 ⇒ 历史臂逐字不变）=====
-   * k = 每局里"被测自己的副本"占几席（其余非受评席仍是脚本对手，且**至少留 1 席外部人**）⇒ `k=3` 就是考卷那张桌。
-   * 动因与三条边界写在 `js/train/evo.js` 的 `familySeatSet` 头上（只动适应度桌，三把评测尺不动）。
-   * 纪律照 `TOOLKIT_OPPS` ‖ `KILL_FIELD`：非整数/负数 ⇒ `exit 4`（拒绝把打错的当 0）‖ 没 setter ⇒ `exit 7` ‖
-   * 下达后必须**读回消费点** ‖ 收口带**作用计数**（一局未注 ⇒ `exit 8`，见下面 §N11 那一段旁边）。 */
-  const FAMILY_RAW = process.env.EPIRUS_FAMILY_FIELD;
-  if (FAMILY_RAW !== undefined && FAMILY_RAW !== '') {
-    const kf = Number(FAMILY_RAW);
-    if (!Number.isInteger(kf) || kf < 0) {
-      console.error('[train-3p] ⛔ `EPIRUS_FAMILY_FIELD` 要非负整数（收到 ' + JSON.stringify(FAMILY_RAW) +
-        '）⇒ 拒绝把它当 0');
-      process.exit(4);
-    }
-    if (kf > 0) {
-      if (typeof T.setFamilyField !== 'function') {
-        console.error('[train-3p] ⛔ 传了 EPIRUS_FAMILY_FIELD 但引擎没有 setFamilyField ⇒ 拒绝静默空转');
-        process.exit(7);
-      }
-      const got = Number(T.setFamilyField(kf));
-      if (!(got >= 1)) {
-        console.error('[train-3p] ⛔ EPIRUS_FAMILY_FIELD=' + kf + ' 被 setter 拒绝（读回 ' + got + '）');
-        process.exit(7);
-      }
-      const echo = (typeof T.familyField === 'function') ? Number(T.familyField()) : NaN;
-      if (echo !== got) {
-        console.error('[train-3p] ⛔ 桌形下达后消费点读回不一致：' + echo + ' ≠ ' + got + ' ⇒ 拒绝对着没接通的桌子跑臂');
-        process.exit(7);
-      }
-      FAMILY_REQ = got;
-      console.log('[train-3p] 训练桌形状已下达：familyField=' + got + ' ⇒ 每局 ' + got + ' 席是被测自己的副本' +
-        '（其余非受评席仍是脚本 · 必留 ≥1 席外部人 · 席位按代旋转）‖ 评测尺 `evalEconProbe`/`evalSubsidyProbe`/`evalN` 不受影响');
-    }
   }
   /* ===== v1.5.177（DS）：**补贴率下达** `EPIRUS_REGEN_SLICE` =====
    * 动因（数据）：全卡边际扫描显示"钱是**系统性**的墙"（long 只有 59%/18%/3% 的回合买得起 1/2/3 费；
@@ -1475,37 +1211,6 @@ if (CLEAR_W_CLI > 0) {
 }
 
 
-/* ===== DS · 11-08 夜：`EPIRUS_FOCUS_W=<w>`（集火奖励）=====
- * 病（RESULTS §十三.7 实测量）：2.0 对 4 农民伤害 10.65/局（比 v7 的 6.00 还高），却**清场 0.00**（v7 2.91）；
- *   集火率 28% vs v7 49% ⇒ 伤害摊在 4 个人身上、没人被打死。清场奖励（CLEAR_W）0.3 与 1.0 两档已证伪
- *   （1.0 直接把包练成 70% 防御的龟壳、X̄₄ 转负）⇒ 换一根对症的杠杆：**连续命中同一目标**才付钱。
- * 纪律与 `EPIRUS_CLEAR_W` 逐字同形：默认 0 ⇒ `gFit` 逐字不变；>0 必须回读生效值，否则 exit 5（拒绝静默空转）。 */
-const FOCUS_W_CLI = Number(process.env.EPIRUS_FOCUS_W || 0);
-if (FOCUS_W_CLI > 0) {
-  const gotFocus = T.setFocusReward ? T.setFocusReward(FOCUS_W_CLI) : 0;
-  if (!(Number(gotFocus) > 0)) {
-    console.error('⛔ EPIRUS_FOCUS_W=' + FOCUS_W_CLI + ' 未能生效（setFocusReward 返回 ' + gotFocus + '）—— 拒绝静默空转');
-    process.exit(5);
-  }
-  console.log('[focus] train-3p 主线程生效值 FOCUS_W=' + gotFocus);
-}
-
-/* ===== 夜6班 · 11-14：`EPIRUS_RETAL_W=<w>`（被围殴还手奖励）=====
- * 病（GD6a 12 线体测唯一阻断）：场A 还手 12%<20%——被集火不还手；蒸馏侧已收口（ration 教师自身不还手，
- *   GD7a/GD14 五臂 FINDING）⇒ 唯一活路 = 奖励侧。纪律与 FOCUS_W 逐字同形：默认 0 ⇒ gFit 逐位不变；
- *   >0 必须回读生效值，否则 exit 5（拒绝静默空转）。判定 = 被打后 ≤2 回合内用攻击类技能指向攻击者
- *   （damage 通道兜底），率形封顶 50% 吃满。⚠ 预注册盯防：SEL 家族照跑；若 mastery 三线掉线即废臂
- *   （GA 用 C 换语义的历史病灶——MSB17/18）。 */
-const RETAL_W_CLI = Number(process.env.EPIRUS_RETAL_W || 0);
-if (RETAL_W_CLI > 0) {
-  const gotRetal = T.setRetalReward ? T.setRetalReward(RETAL_W_CLI) : 0;
-  if (!(Number(gotRetal) > 0)) {
-    console.error('⛔ EPIRUS_RETAL_W=' + RETAL_W_CLI + ' 未能生效（setRetalReward 返回 ' + gotRetal + '）—— 拒绝静默空转');
-    process.exit(5);
-  }
-  console.log('[retal] train-3p 主线程生效值 RETAL_W=' + gotRetal);
-}
-
 const OPPS = [
   { name: 'random', sel: Bots.pickRandom },
   { name: 'balanced', sel: Bots.pickBalanced },
@@ -1640,243 +1345,6 @@ if (PACK_OPP) {
   }
 }
 
-/* ===== §E127（v1.5.285 · Qoder 通宵班）：把 `ringspam` 放上训练桌（`EPIRUS_RING_OPPS=1`，默认关）=====
- * 病（DS 清单第 4 条的前提，本班修正过）：`ringspam` 在 `server/opp-pool.mjs:42` 的 `OPP_SPECS` 里，
- *   但**不在本文件运行时的 9 条 `OPPS` 里** ⇒ 训练桌上没人施放聚能环 ⇒ `ringW`（出厂 0.10，权重量级最大的一根）
- *   在常见桌上从不发声（§E96/§E104：单位级 0/9 不变、臂级 0/5689 维不同）。
- * ⚠ 但**"死项"不等于"可摘"**：§E99 已被 N=5 推翻过一次（极罕见，可一发声就重 roll 整条轨迹）。
- *   ⇒ 所以这里不摘、不改权重，只补一个**第三选项**的证据：让会放环的对手真上桌，然后看 `ringW` 开不开口。
- * 判法用现成的常驻尺（不新造）：产物跑 `tools/probe-dead-term.mjs --key=ringW` ⇒ 0/9 = 上桌也没梯度；>0 = 梯度回来了。
- * 纪律与 `EPIRUS_COUNTER_OPPS` 逐字同形：默认关 ⇒ `OPPS` 一字不变 ⇒ 历史臂仍可逐位复现；要的对手不存在 ⇒ `exit 4`（少一个就是一根空枪）。 */
-const RING_OPPS = Number(process.env.EPIRUS_RING_OPPS || 0) > 0 ? [
-  { name: 'cnt:ringSpam', sel: Bots.pickRingSpam },   // 会施放聚能环的对手（训练桌此前没有这一型）
-] : [];
-if (RING_OPPS.length) {
-  for (const o of RING_OPPS) {
-    if (typeof o.sel !== 'function') {
-      console.error('[train-3p] ⛔ EPIRUS_RING_OPPS 要的对手在 EpirusBots 里不存在：' + o.name + ' ⇒ 拒绝静默少放对手');
-      process.exit(4);
-    }
-    OPPS.push(o);
-  }
-  console.log('[ring-ops] 会放环的对手已进训练桌：' + RING_OPPS.map(function (o) { return o.name; }).join(',') +
-    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物跑 probe-dead-term --key=ringW 看 0/9 有没有变）');
-}
-
-/* ===== §E236（v1.5.325 · qoder 10-02 夜班）：**把"会攒并且真兑现"的对手放上训练桌** `EPIRUS_ECON_OPPS` =====
- * 病（读出来的，不是猜的）：训练时那 9 条 `OPPS`（上面那份表）里**没有 `deepsaver`**——
- *   `farmer` 只攒不还手、`heavyfire` 会还手但 ep≤2（贵卡分支永不触发），
- *   而**能攒到 5 珠并真把它花出去**的脚本只活在**考卷**里（`eval-5p` 的池子明确含 deepsaver，见其文件头）。
- *   ⇒ 训练世界里"攒钱"从来没有回报来源，也从来没有威胁来源 —— 这正是 DS 交接 §3 那个 (W) 分叉的**可执行版本**：
- *   要么"攒到 5"在这个分布里本来就不划算（那是对手分布问题，不该拿奖励硬拧），要么划算（那奖励侧才有意义）。
- * 口径：`EPIRUS_ECON_OPPS=deepsaver` ‖ `=deepsaver,deadlineBurst`（逗号分隔，名字在下面这张表里）；
- *   ⚠️ **不写死 1/2 档**：档名会把"加了谁"埋进数字里，而今晚要问的正是"是哪一型对手在施压"。
- * 纪律与 `EPIRUS_COUNTER_OPPS`/`EPIRUS_RING_OPPS` 逐字同形：
- *   默认关 ⇒ `OPPS` 一字不变（历史臂仍可逐位复现）；名字不在表里 ⇒ **`exit 4` 点名**（少一个就是一根空枪）。 */
-const ECON_OPP_TABLE = {
-  deepsaver: { name: 'econ:deepSaver', sel: Bots.pickDeepSaver },         // 会攒 + 会放大雷（考卷里那枚深经济对手）
-  deadlineBurst: { name: 'econ:deadlineBurst', sel: Bots.pickDeadlineBurst }, // 攒到第 ECON_B(=6) 回合全额兑现
-  earlyPressure: { name: 'econ:earlyPressure', sel: Bots.pickEarlyPressure }   // 从第 1 回合就全额兑现（与上一枚只差"第几回合花"）
-};
-const ECON_OPPS = String(process.env.EPIRUS_ECON_OPPS || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean)
-  .map(function (nm) {
-    const o = ECON_OPP_TABLE[nm];
-    if (!o) {
-      console.error('[train-3p] ⛔ EPIRUS_ECON_OPPS 里有不认识的名字：' + nm +
-        '（合法的是 ' + Object.keys(ECON_OPP_TABLE).join(',') + '）⇒ 拒绝静默少放对手');
-      process.exit(4);
-    }
-    if (typeof o.sel !== 'function') {
-      console.error('[train-3p] ⛔ ' + o.name + ' 在 EpirusBots 里不是一个函数 ⇒ 拒绝静默空转');
-      process.exit(4);
-    }
-    return o;
-  });
-if (ECON_OPPS.length) {
-  for (const o of ECON_OPPS) OPPS.push(o);
-  console.log('[econ-ops] "会攒并且真兑现"的对手已进训练桌：' + ECON_OPPS.map(function (o) { return o.name; }).join(',') +
-    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（判据：产物的**决策时 ep 均值 / 大雷出手**，见日志 §E236 预注册）');
-}
-
-/* ===== `EPIRUS_STYLE_TABLE=gun|sword|…`（DS · 11-02 晚，用户「明显风格能不能学会」）：
- *   **纯风格训练桌**——清空对手池，只填该风格的 8 个脚本席（focus 之外全是对手，池里全是它）。
- *   目的：检验「看 4 回合历史 → 该防还是该穿」在当前观测面/参数量下能不能学出来。
- *   纪律：默认关；开时把池子清空并响亮印出；只用于研究臂。 */
-const STYLE_TABLE = String(process.env.EPIRUS_STYLE_TABLE || '').trim();
-if (STYLE_TABLE) {
-  const mkOnly = function (key) {
-    return function (state, pid, legal) {
-      const lg = (legal || []).find(function (c) { return c.key === key && c.affordable; });
-      if (!lg) return { key: 'ji' };
-      const foes = [];
-      for (let i = 0; i < state.p.length; i++) if (i !== pid && state.p[i].hp > 0) foes.push(i);
-      return { key: key, target: foes.length ? foes[0] : null };
-    };
-  };
-  const FRAC = Math.max(0, Math.min(1, Number(process.env.EPIRUS_STYLE_FRAC || 1)));
-  if (FRAC >= 0.999) {
-    OPPS.length = 0;
-    for (let i = 0; i < 8; i++) OPPS.push({ name: 'only:' + STYLE_TABLE + '#' + (i + 1), sel: mkOnly(STYLE_TABLE) });
-    console.log('[style-table] 纯风格训练桌：' + STYLE_TABLE + ' × 8（对手池已清空 ⇒ OPPS ' + OPPS.length + '）');
-  } else if (FRAC > 0) {
-    /* `EPIRUS_STYLE_FRAC=0.3`：按比例把风格席混进对手池（座位按 (gen*3+g+k)%L 轮转 ⇒ 比例≈池内占比）。 */
-    const base = OPPS.length;
-    const k = Math.max(1, Math.round(base * FRAC / (1 - FRAC)));
-    for (let i = 0; i < k; i++) OPPS.push({ name: 'only:' + STYLE_TABLE + '#mix' + (i + 1), sel: mkOnly(STYLE_TABLE) });
-    console.log('[style-mix] 风格混桌：' + STYLE_TABLE + ' × ' + k + ' / 池 ' + (base + k) + ' ⇒ 约 ' + (100 * k / (base + k)).toFixed(0) + '% 席位是 ' + STYLE_TABLE);
-  }
-}
-
-/* ===== §E676（qoder 10-21 早班）：把**杂货铺**放上训练桌 `EPIRUS_TOOLKIT_OPPS=<k>`（默认关）=====
- * 动因（用户 10-21 07:0x 的假设）：「训练对应的脚本场并不会用连招 ⇒ 把杂货铺丢到训练里面」。
- * 前提尺现量（同一批 picker 函数、5 席镜像桌、multi+long 各 200 局）三条：
- *   ① **电磁炮（RAILGUN）在 800 场里出手 = 0**（9 只全零，加进 toolkit 那臂也仍是 0）⇒ "蓄能→炮"这条链在训练世界里根本不存在；
- *   ② "攒到门槛再兑现"只有 `breakdef` 一只在做的（大雷 1.00~1.35/席/局 ‖ ep 最大 5），而 `farmer` 攒到 ep 最大 51~58
- *      **一次都不花** ⇒ 训练桌缺的不是卡种数（`mix` 已有 23 种），是**攒-花这一链**；
- *   ③ `st:toolkit` 是那批里唯一既攒到 6~7 又花出去的（过载 1.97~2.81 ‖ 环 0.55~1.21 ‖ 大雷 0.17~0.37 /席/局）。
- * 纪律与 `EPIRUS_COUNTER_OPPS`/`EPIRUS_RING_OPPS`/`EPIRUS_ECON_OPPS` 逐字同形：
- *   默认关 ⇒ `OPPS` 一字不变（历史臂仍可逐位复现）‖ `k` 不是非负整数 ⇒ **`exit 4`**（拒绝把打错的当成 0）
- *   ‖ `EpirusBots.pickToolKit` 不是函数 ⇒ `exit 4`（少一个就是一根空枪）‖ 开了必印"OPPS 从 9 个变 N 个"与份额。
- * ⚠ `k>1` 不是"多几席"而是**改这张桌的份额**（append k 份 ⇒ 轮换里占 k/(9+k)）⇒ 剂量是一根自变量，别顺手设。 */
-const TOOLKIT_N = Number(process.env.EPIRUS_TOOLKIT_OPPS || 0);
-if (!Number.isInteger(TOOLKIT_N) || TOOLKIT_N < 0) {
-  console.error('[train-3p] ⛔ `EPIRUS_TOOLKIT_OPPS` 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_TOOLKIT_OPPS || '') +
-    '）⇒ 拒绝把它当 0');
-  process.exit(4);
-}
-if (TOOLKIT_N > 0) {
-  if (typeof Bots.pickToolKit !== 'function') {
-    console.error('[train-3p] ⛔ EPIRUS_TOOLKIT_OPPS 要的对手在 EpirusBots 里不存在：tk:toolkit ⇒ 拒绝静默少放对手');
-    process.exit(4);
-  }
-  for (let i = 0; i < TOOLKIT_N; i++) {
-    OPPS.push({ name: 'tk:toolkit' + (TOOLKIT_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickToolKit });
-  }
-  console.log('[toolkit-ops] 杂货铺（`st:toolkit` 的 `pickToolKit`，含计划层 P0~P7）已进训练桌 ' + TOOLKIT_N + ' 份' +
-    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个（桌内份额 ' + (100 * TOOLKIT_N / OPPS.length).toFixed(1) + '%）' +
-    '（判据：产物的**攒-花链**那一族，见日志 §E676 预注册）');
-
-}
-
-/* ===== `EPIRUS_PASSIVE_OPPS=<k>`（DS · 11-08 晚 · 用户「2.0 包要全方位优于 v7 包」）=====
- * 病（实测）：场B（对 4 个只攒钱席的**清场数**）在 2.0 线上恒 0.00 —— 考卷池 28 个脚本全会打人，
- *   fitness 里没有一张「被动桌」⇒ 打死一个不构成威胁的对手从来不换分（KILL_FIELD 的 killSecure 是**会打人**的，
- *   COURSE_BOT=pickFarmer 每代只注 1 席且杀它不加分）。v7 强包（Q-s47 场B 2.91）不是被奖励出来的，是老 fitness 的攻防形状带出来的。
- * 纪律与 EPIRUS_RING_OPPS / ECON_OPPS / TOOLKIT_OPPS 逐字同形：
- *   默认 0 ⇒ OPPS 一字不变（历史臂仍可逐位复现）；k 不是非负整数 ⇒ exit 4；
- *   Bots.pickFarmer 不是函数 ⇒ exit 4（少一个就是一根空枪）；开了必印「OPPS 从 N 变 M」与桌内份额。
- * ⚠ 与 EPIRUS_CLEAR_W 配合使用才有意义：CLEAR_W 单独开（§N8 的 xn10b）会把最高分让给纯ジ龟包，
- *   环境（被动桌）+ 奖励（清场）同时到位才可能让「清场」有价格（与 KILL_FIELD 那条的推理同构）。 */
-const PASSIVE_N = Number(process.env.EPIRUS_PASSIVE_OPPS || 0);
-if (!Number.isInteger(PASSIVE_N) || PASSIVE_N < 0) {
-  console.error('[train-3p] ⛔ EPIRUS_PASSIVE_OPPS 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_PASSIVE_OPPS || '') + '）⇒ 拒绝把它当 0');
-  process.exit(4);
-}
-if (PASSIVE_N > 0) {
-  if (typeof Bots.pickFarmer !== 'function') {
-    console.error('[train-3p] ⛔ EPIRUS_PASSIVE_OPPS 要的对手在 EpirusBots 里不存在：passive:farmer ⇒ 拒绝静默少放对手');
-    process.exit(4);
-  }
-  const baseP = OPPS.length;
-  for (let i = 0; i < PASSIVE_N; i++) OPPS.push({ name: 'passive:farmer' + (PASSIVE_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickFarmer });
-  console.log('[passive-ops] 只攒钱席（pickFarmer）已进训练桌 ' + PASSIVE_N + ' 份 ⇒ OPPS 从 ' + baseP + ' 个变 ' + OPPS.length +
-    ' 个（桌内份额 ' + (100 * PASSIVE_N / OPPS.length).toFixed(1) + '%）（判据：产物的场B 清场数 / 对农民桌胜率）');
-}
-
-/* ===== `EPIRUS_AGGRO_OPPS=<k>`（DS · 11-09 晚）：把 **pickAggro** 追加进训练桌 ===== */
-/* 动机（RESULTS §十三.15 的反面）：只喂防御席能把 G5 从 40% 压到 2%，但包会变成「不还手的墙」（场A 14.4%）；
- *   而换进攻课程补场A 又把 G5 打回 100%。⇒ 需要**两种对手同时在桌上**：防御课程保 G5、进攻席逼还手。
- * 纪律与 PASSIVE_OPPS/TOOLKIT_OPPS 逐字同形：默认 0 ⇒ OPPS 一字不变；非负整数；函数缺失 exit 4；开了印份额。 */
-const AGGRO_N = Number(process.env.EPIRUS_AGGRO_OPPS || 0);
-if (!Number.isInteger(AGGRO_N) || AGGRO_N < 0) {
-  console.error('[train-3p] ⛔ EPIRUS_AGGRO_OPPS 要非负整数（收到 ' + JSON.stringify(process.env.EPIRUS_AGGRO_OPPS || '') + '）⇒ 拒绝把它当 0');
-  process.exit(4);
-}
-if (AGGRO_N > 0) {
-  if (typeof Bots.pickAggro !== 'function') {
-    console.error('[train-3p] ⛔ EPIRUS_AGGRO_OPPS 要的对手在 EpirusBots 里不存在：pickAggro ⇒ 拒绝静默少放对手');
-    process.exit(4);
-  }
-  const baseA = OPPS.length;
-  for (let i = 0; i < AGGRO_N; i++) OPPS.push({ name: 'aggro:pickAggro' + (AGGRO_N > 1 ? '#' + (i + 1) : ''), sel: Bots.pickAggro });
-  console.log('[aggro-ops] 进攻席（pickAggro）已进训练桌 ' + AGGRO_N + ' 份 ⇒ OPPS 从 ' + baseA + ' 个变 ' + OPPS.length +
-    ' 个（桌内份额 ' + (100 * AGGRO_N / OPPS.length).toFixed(1) + '%）（判据：场A 还手率与 G5 破防两条同时看）');
-}
-
-/* ===== v1.6.60（用户 10-10 提的方向，10-11 落成接线）：把**人类形状替身**放上训练桌 =====
- * `EPIRUS_OPP_HUMAN=<n>`（默认关）· `_SRC=human|ai`（默认 human）· `_TGT=next|rand`（默认 next）· `_FILE=<路径>`（默认 human-behavior.json）
- *
- * 病（四处独立读数指向同一件事）：出厂闸反复毙掉候选的理由是"**对着人类原型崩**"——
- *   §E505 那一类到 10-11 已**独立复现 4 次**（最近一次是 `contX-201`：页面 55.9 > 现役 50.4、考卷 56.4，
- *   而人类原型把它当靶子打：三格双双过否决线）。⇒ 而**训练桌上没有人**：
- *   `OPPS` 那 9 条全是脚本，最接近的 `defend` 是"**会还手**的防御" ⇒ 训练目标与闸要考的东西之间，缺的正是这一型对手。
- *
- * 口径（单一来源，不抄实现）：`tools/human-pool.mjs` 的 `loadPool/makeMimic`，
- *   分布来自 `docs/artifacts/human-behavior.json`（56 局 / ~997 个决策的人类日志，§E152e 的产物）。
- *   条件键 = `钱档(0..5)/是否富有(≥5ep)/上一手的显示名`；抽不到可负担的卡最多重试 8 次后退回 ジ。
- *   ⚠️ 它是**粗模型**（按经验分布抽样、**不会针对你调整**）⇒ 只当"人类这种打法"的代理，**别当真人**。
- *
- * 确定性（本设计里最要紧的一条）：`makeMimic` 的随机流**由调用方注入**，而引擎给的局种子含 `opp.name`
- *   （`js/train/evo.js:286`）⇒ 我**不能**用一条全局推进的流：那会让"谁先被评"影响后面的抽样，
- *   破坏配对评估（v1.4.1 那个疤：轮换跟个体下标走 ⇒ 考卷 38.4% 掉到 21.8%）。
- *   ⇒ 所以**每次决策前按 state 重播种**（round / 各席血量 / 钱 / 电珠 / pid / 合法集大小）：
- *   人形对手成了"**state 的确定性函数**"，与代次、个体下标、局号**都无关** ⇒ 可复现、且两臂面对同一个人。
- *
- * 纪律与 §N35（COUNTER_OPPS）/§E127（RING_OPPS）/§E236（ECON_OPPS）逐字同形：
- *   **默认关 ⇒ `OPPS` 一字不变**（历史臂仍可逐位复现）‖ 分布读不出/参数非法 ⇒ **`exit 4` 点名**（少一个就是一根空枪）
- *   ‖ 开了必须印"OPPS 从 9 个变 N 个"与分布口径，并在退出前印**开火计数**（命中/退回ジ）。
- * ⚠️ 空枪守卫**不许盖掉已经存在的非零退出码**（与 `EPIRUS_TRAIN_EPS` 那条不同——它正是这样把 D176 的 exit 7 盖成 8 的）。 */
-const HUMAN_N_RAW = String(process.env.EPIRUS_OPP_HUMAN || '').trim();
-const HUMAN_N = HUMAN_N_RAW === '' ? 0 : Number(HUMAN_N_RAW);
-if (HUMAN_N_RAW !== '' && (!Number.isFinite(HUMAN_N) || HUMAN_N < 0 || HUMAN_N !== Math.floor(HUMAN_N) || HUMAN_N > 8)) {
-  console.error('[opp-human] ⛔ EPIRUS_OPP_HUMAN 必须是不大于 8 的非负整数（收到 ' + JSON.stringify(HUMAN_N_RAW) + '）');
-  process.exit(4);
-}
-const HUMAN_OPPS = [];
-if (HUMAN_N > 0) {
-  const HB_SRC = String(process.env.EPIRUS_OPP_HUMAN_SRC || 'human').trim();
-  const HB_TGT = String(process.env.EPIRUS_OPP_HUMAN_TGT || 'next').trim();
-  if (HB_TGT !== 'next' && HB_TGT !== 'rand') {
-    console.error('[opp-human] ⛔ EPIRUS_OPP_HUMAN_TGT 只能是 next 或 rand（收到 ' + JSON.stringify(HB_TGT) + '）');
-    process.exit(4);
-  }
-  let pool = null;
-  try { pool = loadPool(sb.window, HB_SRC, process.env.EPIRUS_OPP_HUMAN_FILE || null); }
-  catch (e) {
-    console.error('[opp-human] ⛔ 读不出人类形状分布（SRC=' + HB_SRC + '）：' + (e && e.message) +
-      ' ⇒ 拒绝静默少放对手（少一个就是一根空枪）');
-    process.exit(4);
-  }
-  for (let i = 0; i < HUMAN_N; i++) {
-    const st = { cur: null };
-    const fn = makeMimic(sb.window, pool, HB_TGT, function () { return st.cur(); });
-    const wrapped = function (state, pid, legal) {
-      let h = (Math.imul(state.round | 0, 2654435761) ^ Math.imul(pid | 0, 40503) ^ Math.imul(legal ? legal.length : 0, 97)) | 0;
-      const ps = state.p || [];
-      for (let k = 0; k < ps.length; k++) {
-        h = (Math.imul(h, 31) + ((ps[k].hp | 0) * 7 + ((ps[k].ep || 0) * 13) + ((ps[k].elec || 0) * 3))) | 0;
-      }
-      st.cur = sb.window.EpirusTrainer.mulberry32(((h >>> 0) ^ Math.imul(i + 1, 2246822519)) >>> 0);
-      return fn(state, pid, legal);
-    };
-    wrapped.stat = fn.stats;   /* 与 `makeMimic` 的 stats 同一个对象 ⇒ 计数直接落在它上面 */
-    HUMAN_OPPS.push({ name: 'human' + (i + 1), sel: wrapped });
-  }
-  for (const o of HUMAN_OPPS) OPPS.push(o);
-  console.log('[opp-human] 人类形状替身已进训练桌：' + HUMAN_OPPS.map(function (o) { return o.name; }).join(',') +
-    '（分布=' + HB_SRC + ' · 指向=' + HB_TGT + ' · 条件数=' + pool.conds + ' · 样本 ' + pool.games + ' 局）' +
-    ' ⇒ OPPS 从 9 个变 ' + OPPS.length + ' 个');
-  process.on('exit', function () {
-    let hit = 0, miss = 0;
-    for (const o of HUMAN_OPPS) { if (o && o.sel && o.sel.stat) { hit += o.sel.stat.hit; miss += o.sel.stat.miss; } }
-    console.log('[opp-human] 开火计数：命中条件分布 **' + hit + '** 次 · 8 次抽不到退回ジ ' + miss + ' 次');
-    if (hit + miss === 0 && !process.exitCode) {
-      console.error('[opp-human] ⛔ 空枪：放上了人形对手却一次都没被问到 ⇒ 读数与出厂臂无差别，作废');
-      process.exitCode = 8;
-    }
-  });
-}
-
 /* ===== §E631（v1.7.83 · 千问 10-17 白班）：**把冠军池放上训练桌** `EPIRUS_POOL_OPPS=<k>`（默认关）=====
  * 用户裁定（10-17 逐字）：「把冠军池本身当做一个新判据也可以参与训练，并且新冠军总是能进冠军池，这样永远不会碰到区分度低的问题」。
  * 为什么是**混进 `OPPS`** 而不是"换成池桌"：`docs/research/archive/2026-11-06-october-sweep/TRAINING-METHOD-CONCLUSIONS-2026-10-17-ds.md:67` 那条实测——
@@ -1989,61 +1457,6 @@ if (POOL_OPP_N > 0) {
   });
 }
 
-/* ===== §E124（v1.5.279 · qoder 0928 下午班）：**整桌同原型** `EPIRUS_OPP_BLOCK` 的下达（默认关）=====
- * 与 `EPIRUS_COUNTER_OPPS` 的区别要说清：那根改的是**名单**（有谁），这根改的是**桌子的形状**
- * （一局的 N−1 席是不是同一个原型）⇒ 后者才让"一局 = 一个环境"第一次成为训练里的对象。
- * 纪律照 §N35/D174：下达后**读回消费点**、不等就 `exit 7`；**没开就一行不印**（"开了没生效"必须看得见）。 */
-const OPP_BLOCK_WANT = Number(process.env.EPIRUS_OPP_BLOCK || 0) > 0;
-if (OPP_BLOCK_WANT) {
-  if (typeof T.setOppTable !== 'function' || typeof T.oppTable !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_OPP_BLOCK 但引擎没有 setOppTable/oppTable ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setOppTable({ block: true });
-  const got = T.oppTable() || {};
-  if (got.block !== true) {
-    console.error('[train-3p] ⛔ EPIRUS_OPP_BLOCK=1 读回 ' + JSON.stringify(got.block) + ' ⇒ 没生效，退出（不许跑出"以为开了"的臂）');
-    process.exit(7);
-  }
-  console.log('[opp-block] 训练桌改为**整桌同原型**：每局 N−1 席填同一脚本，原型按 (gen*3+g) 跨局轮换' +
-    '（覆盖面/轮换节奏/CRN 一字不动，只改一桌的纯度）⇒ 判据见 §E124 ⑤/⑥');
-}
-
-/* ===== DS 11-03 晚（Claude review）：`EPIRUS_OPP_SWEEP` 的下达（默认关）=====
- * 病：旧公式 `(gen*3+g+k)` 每代只覆盖 11 个位置 ⇒ 17 个对手池里约 6 个每代缺席，
- *   反制原型可能连续多代不上桌 ⇒ 偏科打法在"没有反制者"的代被选出。
- * 开 ⇒ `(g*4+(k-1)+gen*4)`：每代 24 局覆盖 96 个位次，17 个对手每个 ≥5 次。
- * 纪律同 §N35：下达后读回消费点，不等就 exit 7；没开一行不印。 */
-const OPP_SWEEP_WANT = Number(process.env.EPIRUS_OPP_SWEEP || 0) > 0;
-if (OPP_SWEEP_WANT) {
-  if (typeof T.setOppTable !== 'function' || typeof T.oppTable !== 'function') { console.error('[train-3p] ⛔ EPIRUS_OPP_SWEEP 但引擎没有 setOppTable/oppTable'); process.exit(7); }
-  T.setOppTable({ sweep: true });
-  const gotS = T.oppTable() || {};
-  if (gotS.sweep !== true) { console.error('[train-3p] ⛔ EPIRUS_OPP_SWEEP=1 读回 ' + JSON.stringify(gotS.sweep) + ' ⇒ 没生效'); process.exit(7); }
-  console.log('[opp-sweep] 对手池每代轮齐：座位取 (g*4+k+gen*4)%L（k=ok 从 0 起），每代覆盖全部对手（旧公式每代仅 11 位）');
-}
-
-/* ===== v1.7.90（DS · 10-17）：**落地广度** `EPIRUS_WIDTH_LAND_W` 的下达（默认关）=====
- * 病（10-17 三批实测）：`WIDTH_W` 量的是「事件流里**用过**几种」（`countVariety`），
- *   而验收的兑现腿量的是「**打上血**几种」（`effSkillsLand`）⇒ 抬 `WIDTH_W` 必然抬 `G`、必然掉兑现比。
- *   本项把**同一形状**（FLOOR→TARGET 线性、饱和）挂在**落地量**（`varietyMaxLanded`）上 ⇒ 奖励与验收对齐。
- * 纪律照 §N35/D174：下达后**读回消费点**、不等就 `exit 7`；**没开就一行不印**。 */
-const WIDTH_LAND_WANT = Number(process.env.EPIRUS_WIDTH_LAND_W || 0);
-if (WIDTH_LAND_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_WIDTH_LAND_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ widthLandW: WIDTH_LAND_WANT });
-  const gotWL = (T.economyReward() || {}).widthLandW;
-  if (gotWL !== WIDTH_LAND_WANT) {
-    console.error('[train-3p] ⛔ EPIRUS_WIDTH_LAND_W=' + WIDTH_LAND_WANT + ' 读回 ' + JSON.stringify(gotWL) + ' ⇒ 没生效，退出（不许跑出\"以为开了\"的臂）');
-    process.exit(7);
-  }
-  console.log('[width-land] 广度奖励改为**按落地**：' + JSON.stringify({ widthLandW: gotWL, floor: 3, target: 7 }) +
-    '（形状与 widthW 同形，度量 = damage.via 里的真卡名）');
-}
-
 /* ===== 2026-10-28（DS · 2.0 重构前）：`EPIRUS_PAIRED=1` ⇒ **配对评估** =====
  * 为什么现在加：千问 §E822 量出「同代个体各自抽桌 ⇒ 名人堂 1↔2 名差 0.05pt 而自身极差 7.9pt ⇒ 基本是抽签」。
  *   配对之后，同一代所有个体吃同一批局（同对手、同局面、同随机流），适值差里不再混「哪桌好打」的运气。
@@ -2059,106 +1472,6 @@ if (process.env.EPIRUS_PAIRED) {
   if (s0 !== s3) { console.error("[train-3p] ⛔ 配对评估没生效（同代两个下标的种子不同：" + s0 + " vs " + s3 + "）"); process.exit(7); }
   console.log("[paired] 配对评估已开：同代所有个体吃同一批局（gen7 种子 " + s0 + " ‖ idx 0/3 相同）");
 }
-/* ===== v1.8.39（DS · 10-27 早 · 用户裁「做一下 A」）：**破反弹墙** `EPIRUS_WALL_BREAK_W`（默认关）=====
- * 病（10-27 早四臂）：F 的 13 行只剩两行 —— 反弹墙 0.00/局 ‖ G5 51/35，而它们是同一件事：对不还手/摆架势的桌打不进去。
- *   现有 PIERCE_W 早已被坦克打成常数（min(1,hits/2)），所以这里只给**穿反弹**的三张卡（激光剑/狙击/电磁炮）付钱。
- * 纪律照 §N35/D174：下达后**读回消费点**、不等就 exit 7；没开就一行不印。 */
-const WALL_BREAK_WANT = Number(process.env.EPIRUS_WALL_BREAK_W || 0);
-if (WALL_BREAK_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_WALL_BREAK_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ wallBreakW: WALL_BREAK_WANT });
-  const gotWB = (T.economyReward() || {}).wallBreakW;
-  if (Number(gotWB) !== WALL_BREAK_WANT) {
-    console.error('[train-3p] ⛔ EPIRUS_WALL_BREAK_W=' + WALL_BREAK_WANT + ' 读回 ' + JSON.stringify(gotWB) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
-    process.exit(7);
-  }
-  const wbk = (T.wallBreakReward && T.wallBreakReward().keys) || null;
-  console.log('[wall-break] 破反弹墙奖励已下达：' + JSON.stringify({ wallBreakW: gotWB, keys: wbk }) + ' ⇒ 只给穿反弹卡（激光剑/狙击枪/电磁炮）的落地付钱，坦克不算');
-}
-/* ===== DS 11-02（用户口径）：多血适度防御 `EPIRUS_DEF_ADAPT_W` / 残血摄魂 `EPIRUS_DRAIN_HEAL_W` / 白防罚 `EPIRUS_DEF_IDLE_W`（默认关）=====
- * 口径：只进接受分（不碰报告口径）。DEF_ADAPT 只数「防御族真挡下 ≥1 伤」（每局帽 2）；DRAIN_HEAL 只数「HP≤1 摄魂命中回血」（每局帽 2）；
- *   DEF_IDLE 按防御手数扣分（帽 4 手/局 ⇒ **超过 4 手不再加重**，用它压塌方之前要先知道这一条）。
- * 纪律同 WALL_BREAK_W：读回消费点、不等就 exit 7；没开就一行不印。
- * ⚠ qoder 11-02 复核补：DS 的 `a8059f13` 只在引擎侧加了 `DEF_IDLE_W`，**这一族的 env 下达口一直没接** ⇒
- *   他那批 P 组（"DEF_ADAPT + 白防罚 0.6"）实际跑的是罚=0，`recipe.env` 里也没有这根键（`dark knob` 闸抓不到：没人读它）。 */
-const DEF_ADAPT_WANT = Number(process.env.EPIRUS_DEF_ADAPT_W || 0);
-const DRAIN_HEAL_WANT = Number(process.env.EPIRUS_DRAIN_HEAL_W || 0);
-const DEF_IDLE_WANT = Number(process.env.EPIRUS_DEF_IDLE_W || 0);
-if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0 || DEF_IDLE_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_DEF_ADAPT_W/EPIRUS_DRAIN_HEAL_W/EPIRUS_DEF_IDLE_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ defAdaptW: DEF_ADAPT_WANT, drainHealW: DRAIN_HEAL_WANT, defIdleW: DEF_IDLE_WANT });
-  const back2 = T.economyReward() || {};
-  if (Number(back2.defAdaptW) !== DEF_ADAPT_WANT || Number(back2.drainHealW) !== DRAIN_HEAL_WANT || Number(back2.defIdleW) !== DEF_IDLE_WANT) {
-    console.error('[train-3p] ⛔ 读回 defAdaptW=' + JSON.stringify(back2.defAdaptW) + ' drainHealW=' + JSON.stringify(back2.drainHealW) +
-      ' defIdleW=' + JSON.stringify(back2.defIdleW) + ' ⇒ 没生效，退出');
-    process.exit(7);
-  }
-  console.log('[def-drain] 已下达：' + JSON.stringify({ defAdaptW: back2.defAdaptW, drainHealW: back2.drainHealW, defIdleW: back2.defIdleW }) +
-    ' ⇒ DEF_ADAPT 只给防御族真挡下（帽 2/局，中文名与键名都认），DRAIN_HEAL 只给 HP≤1 摄魂回血（帽 2/局），DEF_IDLE 按防御手数扣分（帽 4 手/局）');
-}
-
-/* ===== 11:5x（千问 · 用户「这几个都可以」· PREREG §二十六 条款 4）：**反射** `EPIRUS_REFLECT_W`（默认关）=====
- * 病（§E805 的 GB2 = 11/13 只差 G4+珠）：`G4` 长程只枪 84% —— `BLOCK_W` 抬档会连墙/G5/强一起卖（它同时给 blocked 与 reflect 付钱）；
- *   本项**只给真反射出去的那一下**付钱（事件 `{type:'reflect', to, amt}`，纯训练侧计数，不动 js/core）。
- * 纪律与 WALL_BREAK_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
-const REFLECT_WANT = Number(process.env.EPIRUS_REFLECT_W || 0);
-if (REFLECT_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_REFLECT_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ reflectW: REFLECT_WANT });
-  const gotRF = (T.economyReward() || {}).reflectW;
-  if (Number(gotRF) !== REFLECT_WANT) {
-    console.error('[train-3p] ⛔ EPIRUS_REFLECT_W=' + REFLECT_WANT + ' 读回 ' + JSON.stringify(gotRF) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
-    process.exit(7);
-  }
-  console.log('[reflect] 反射奖励已下达：' + JSON.stringify({ reflectW: gotRF }) + ' ⇒ 只给"我把伤害弹回去"的那一下付钱（按弹回量 /2，1 点起有梯度）');
-}
-/* ===== 17:5x（A 案 · §E816）：**打龟**奖励 `EPIRUS_GUARD_HIT_W`（默认关）=====
- * 动机（§E816 的否证）：把龟放上训练桌反而让网络学成"自己也摆盾" ⇒ 问题不在分布，在**收益归属**：
- *   自由混战里"打龟"的收益全桌共享 ⇒ 单席理性是不打。本项把它改成"**谁打谁拿**"：
- *   只数 damage 事件 source===本席 且 to===X、**同一回合** X 的 action ∈ GUARD_FAMILY（只认 outcome ok、只认落地）。
- * 纪律与 WALL_BREAK_W/REFLECT_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
-const GUARD_HIT_WANT = Number(process.env.EPIRUS_GUARD_HIT_W || 0);
-if (GUARD_HIT_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_GUARD_HIT_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ guardHitW: GUARD_HIT_WANT });
-  const gotGH = (T.economyReward() || {}).guardHitW;
-  if (Number(gotGH) !== GUARD_HIT_WANT) {
-    console.error('[train-3p] ⛔ EPIRUS_GUARD_HIT_W=' + GUARD_HIT_WANT + ' 读回 ' + JSON.stringify(gotGH) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
-    process.exit(7);
-  }
-  console.log('[guard-hit] 打龟奖励已下达：' + JSON.stringify({ guardHitW: gotGH }) + ' ⇒ 只给"打在本回合正在摆防御的目标身上"的落地伤害付钱（按伤害量 /2）');
-}
-/* ===== 12:5x（千问 · PREREG §二十九）：**过期珠**惩罚 `EPIRUS_BEAD_WASTE_W`（默认关）=====
- * 病（§E807）：`BEAD_W` 撤回默认能把珠买到线内（87%→23%）却把 珍 0.38 卖到 0.045 —— 它买的是"量"不是"花法"。
- *   本项只惩罚**浪费本身**（{type:'beadExpire', pid} 事件数 /4 封顶），不碰花费侧的奖励。
- * 纪律与 WALL_BREAK_W/REFLECT_W 逐字相同：读回消费点、不等就 exit 7；没开就一行不印。 */
-const BEAD_WASTE_WANT = Number(process.env.EPIRUS_BEAD_WASTE_W || 0);
-if (BEAD_WASTE_WANT > 0) {
-  if (typeof T.setEconomyReward !== 'function' || typeof T.economyReward !== 'function') {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_BEAD_WASTE_W 但引擎没有 setEconomyReward/economyReward ⇒ 拒绝静默空转');
-    process.exit(7);
-  }
-  T.setEconomyReward({ beadWasteW: BEAD_WASTE_WANT });
-  const gotBW = (T.economyReward() || {}).beadWasteW;
-  if (Number(gotBW) !== BEAD_WASTE_WANT) {
-    console.error('[train-3p] ⛔ EPIRUS_BEAD_WASTE_W=' + BEAD_WASTE_WANT + ' 读回 ' + JSON.stringify(gotBW) + ' ⇒ 没生效，退出（不许跑出以为开了的臂）');
-    process.exit(7);
-  }
-  console.log('[bead-waste] 过期珠惩罚已下达：' + JSON.stringify({ beadWasteW: gotBW }) + ' ⇒ 只给"珠过期没用掉"扣分（事件数 /4 封顶，不碰花费奖励）');
-}
-
 /* ===== §N6 修正（v1.5.150 · DS 09-22）：**2P 切片的对手必须是 2P 强参照，不能是多人池** =====
  * 病（实测，`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §2）：原实现让每个个体对**多人池**打 2P，而现役包对
  *   `pickBalanced`/`pickGunSpam`/`pickAggro` 在 2P 里**全是 0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是**常数**
@@ -2202,7 +1515,6 @@ for (const rp of (XN2W > 0 ? XN2REF_PATHS : [])) {
   if (!rpParams) { console.error('[train-3p] ⛔ EPIRUS_XN2REF 读不出包：' + rp + '（拒绝静默退化：无梯度的切片等于白跑）'); process.exit(2); }
   XN2_OPPS.push({ name: 'ref:' + rp.replace(/^.*[\\/]/, ''), sel: champChooser(rpParams) });
 }
-if (Number(process.env.EPIRUS_XN2SCRIPTS || 0) === 1) for (const o of OPPS) XN2_OPPS.push(o);
 
 const t0 = Date.now();
 
@@ -2315,22 +1627,6 @@ if (process.env.EPIRUS_FIT_CHAMP != null && process.env.EPIRUS_FIT_CHAMP !== '')
   if (!st || !st.on) { console.error('⛔ EPIRUS_FIT_CHAMP 没生效 ⇒ 拒静默空转'); process.exit(7); }
   console.log('[部署档] EPIRUS_FIT_CHAMP ⇒ ' + pf + '（每 ' + st.every + ' 局一席；参数量 ' + paramsF.length + '）');
   DEPLOY_REC.EPIRUS_FIT_CHAMP = { path: pf, every: st.every, n: paramsF.length };
-}
-/* v1.5.265b：**开 veto 就必须有参照**，而且要在开跑之前查（跑到 1200 代才发现参照缺失 = 白烧十分钟）。
- * 卡名也在这里验：非法名会让那一维"永远判不到" ⇒ 与静默空转同族，直接 `exit 7`。 */
-if (SEL_KEEP > 0) {
-  if (!seedParams) {
-    console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP=' + SEL_KEEP + ' 但本臂**没有热启动种子包**可当参照' +
-      '（`EPIRUS_HOTSTART=1` + `EPIRUS_SEEDPACK=<包>`）⇒ 拒绝空转：没有参照的"不劣于起点"是一条恒真判据');
-    process.exit(7);
-  }
-  const Rules0 = sb.window.EpirusRules;
-  const bad = SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).filter(function (k) { return !(Rules0.byKey && Rules0.byKey[k]); });
-  if (bad.length) {
-    console.error('[train-3p] ⛔ EPIRUS_SEL_KEEP_KEYS / EPIRUS_SEL_KEEP_CAST_KEYS 里有不认识的卡名：' + bad.join(',') +
-      '（合法的是 `EpirusRules.byKey` 的键）⇒ 拒绝按"判不到的维"放行');
-    process.exit(7);
-  }
 }
 
 /* 11-04 傍晚（千问 · 波 H）：**随机起点幅度**从硬编码提出成一个显式剂量。
@@ -2585,40 +1881,6 @@ for (let gen = 0; gen < GENS; gen++) {
       process.exit(13);
     }
   }
-  /* #46：逐代种群统计（默认关 ⇒ 这一段一行都不跑）。口径纪律：
-   *   ‣ `null` 就写 `null`，**不许**把"没量到"聚成 0（`varietyMaxEv` 在 `doseOn=false` 时是 null）；
-   *   ‣ 分母（种群大小、参与均值的个体数）跟着数一起落，否则以后没人知道那个均值是几粒算的。 */
-  if (POPSTAT > 0) {
-    const fin = function (v) { return (typeof v === 'number' && isFinite(v)) ? v : null; };
-    const fits = scored.map(function (x) { return fin(x.r && x.r.fit); }).filter(function (v) { return v !== null; });
-    const blk = scored.map(function (x) { return fin(x.r && x.r.blockPerGame); });
-    const vr = scored.map(function (x) { return fin(x.r && x.r.varietyMaxEv); });
-    const agg = function (arr) {
-      const v = arr.filter(function (q) { return q !== null; });
-      if (!v.length) return { n: 0, mean: null, median: null, min: null, max: null };
-      const s = v.slice().sort(function (a, b) { return a - b; });
-      return { n: v.length, mean: +((v.reduce(function (a, b) { return a + b; }, 0) / v.length).toFixed(4)),
-        median: +(s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2).toFixed(4),
-        min: +s[0].toFixed(4), max: +s[s.length - 1].toFixed(4) };
-    };
-    const topK = function (arr) { return agg(arr.slice(0, POPSTAT_K)); };
-    const rec = { gen: gen + 1, sigma: +sigma.toFixed(4), pop: scored.length, k: POPSTAT_K,
-      fit: { best: fits.length ? +fits[0].toFixed(4) : null, topK: topK(fits), pop: agg(fits) },
-      block: { best: blk[0] === null ? null : +blk[0].toFixed(4), topK: topK(blk), pop: agg(blk) },
-      variety: { best: vr[0] === null ? null : vr[0], topK: topK(vr), pop: agg(vr) },
-      indiv: scored.map(function (x, i) { return { gi: i, wid: widOfArr(x.params), fit: fin(x.r && x.r.fit),
-        blk: fin(x.r && x.r.blockPerGame), var: fin(x.r && x.r.varietyMaxEv), h: (x.r && x.r.hGene) || 0 }; }) };
-    try { appendFileSync(POPSTAT_OUT, JSON.stringify(rec) + '\n'); }
-    catch (ePs2) { POPSTAT_FAIL++; if (POPSTAT_FAIL === 1) console.error('[种群统计] ⛔ 写不出（后续只计数不再刷屏）：' + ePs2.message); }
-    if ((gen + 1) % 20 === 0) {
-      console.log('[种群统计] gen ' + (gen + 1) + ' ‖ 挡 最优 ' + (rec.block.best === null ? '未量' : rec.block.best.toFixed(3)) +
-        ' / top' + POPSTAT_K + ' 均值 ' + (rec.block.topK.mean === null ? '未量' : rec.block.topK.mean.toFixed(3)) +
-        ' / 种群均值 ' + (rec.block.pop.mean === null ? '未量' : rec.block.pop.mean.toFixed(3)) +
-        '（n=' + rec.block.pop.n + '）‖ 广 最优 ' + (rec.variety.best === null ? '未量' : rec.variety.best) +
-        ' / 种群均值 ' + (rec.variety.pop.mean === null ? '未量' : rec.variety.pop.mean.toFixed(2)) +
-        ' ‖ fit 最优 ' + (rec.fit.best === null ? '?' : rec.fit.best.toFixed(3)) + ' / 种群均值 ' + (rec.fit.pop.mean === null ? '?' : rec.fit.pop.mean.toFixed(3)));
-    }
-  }
   /* ===== §十二（11-01 傍晚的位置勘误）：门槛必须接在**父母抽取处**，不是名人堂准入 =====
    * 第一批（判据 §十一）把钩子接在 `addHall` 上，结果三粒产物与对照**权重逐位同**
    *   （`GATE-s7/s13/s41.js` vs `GA2R-sword-s*.js` 的 `"a":[` 摘要相同），而门槛自检明明审计了 1200 次、换粒 180 次
@@ -2660,25 +1922,7 @@ for (let gen = 0; gen < GENS; gen++) {
         }
       }
     }
-    if (WIDE_FINAL) {
-      for (const r of reads) {
-        if (!r.m.wide) continue;
-        if (!bestWideSeen || r.fit > bestWideSeen.fit) {   /* v4.1：主评分排序（用户裁：宽=资格线；wideScore-max 是熵系数同病） */
-          bestWideSeen = { params: Float64Array.from(scored[r.gi].params), wid: widOfArr(scored[r.gi].params),
-            gen: gen, wideScore: r.wideScore, gMulti: r.m.gMulti, gLong: r.m.gLong, landMulti: r.m.landMulti, landLong: r.m.landLong };
-        }
-      }
-    }
-    let rank;
-    if (FITGW > 0 && GA_INC) {
-      /* M-1（PREREG-MERGER §五）：连续下限罚进排序键——窄粒在父母面直接丢 fit，宽粒不必等二元 wide-first 恰好有候选 */
-      const FLOOR_LAND = (GA_INC.landMulti + GA_INC.landLong) / 2 - 0.10;
-      const pen = function (r) { return r.fit - FITGW * Math.max(0, FLOOR_LAND - (r.m.landMulti + r.m.landLong) / 2); };
-      rank = reads.slice().sort(function (a, b) { return pen(b) - pen(a); });
-      if (gen % 40 === 0) console.log('[fitgw] gen ' + gen + ' 排序键（罚后）: ' + rank.map(function (r) { return 'gi' + r.gi + '=' + pen(r).toFixed(3); }).join(' ‖ '));
-    } else {
-      rank = reads.filter((r) => r.m.wide);
-    }
+    let rank = reads.filter((r) => r.m.wide);
     const nWide = rank.length;
     if (GA_BAND > 0 && rank.length > 1) {
       const tf = rank[0].fit;
@@ -2705,27 +1949,6 @@ for (let gen = 0; gen < GENS; gen++) {
     const rec = { gen: gen, bestFit: +(scored[0].r.fit.toFixed(4)),
       top3: scored.slice(0, 3).map(function (x, i) { return { gi: i, wid: widOfArr(x.params), fit: +(x.r.fit.toFixed(4)) }; }),
       hall: hall.map(function (h) { return h.wid || widOfArr(h.params); }) };
-    if (HALL_PROBE) {
-      if (PROBE_INC === undefined) PROBE_INC = seedParams ? wideMetricsOf(seedParams) : null;
-      const pr = [];
-      for (let pi = 0; pi < Math.min(3, scored.length); pi++) {
-        const pm = wideMetricsOf(scored[pi].params);
-        pr.push({ gi: pi, wid: widOfArr(scored[pi].params), fit: +scored[pi].r.fit.toFixed(4), wideScore: +(pm.landMulti + pm.landLong).toFixed(2),
-          gMulti: +pm.gMulti.toFixed(2), gLong: +pm.gLong.toFixed(2),
-          landMulti: +pm.landMulti.toFixed(2), landLong: +pm.landLong.toFixed(2),
-          wide: (pm.gMulti >= 3 && pm.gLong >= 3) && (PROBE_INC ? isWideVs(pm, PROBE_INC) : true) });
-      }
-      if (WIDE_FINAL) {
-        for (const r of pr) {
-          if (!r.wide) continue;
-          if (!bestWideSeen || r.fit > bestWideSeen.fit) {
-            bestWideSeen = { params: Float64Array.from(scored[r.gi].params), wid: r.wid,
-            gen: gen, fit: r.fit, wideScore: r.wideScore, gMulti: r.gMulti, gLong: r.gLong, landMulti: r.landMulti, landLong: r.landLong };
-          }
-        }
-      }
-      rec.probe = { ref: PROBE_INC ? { lm: +PROBE_INC.landMulti.toFixed(2), ll: +PROBE_INC.landLong.toFixed(2) } : null, reads: pr };
-    }
     if (gateReads) rec.gate = { kinds: GA_KINDS, rank: gateRank,
       reads: gateReads.map(function (r) { return { gi: r.gi, wid: widOfArr(scored[r.gi].params), fit: +(r.fit.toFixed(4)),
         gMulti: +r.m.gMulti.toFixed(2), gLong: +r.m.gLong.toFixed(2),
@@ -2911,29 +2134,6 @@ if (HALL_DEDUP) console.log('[hall-dedup] 进榜拒收同一粒权重 ' + hallDu
  * 而本工具的终局当选**过去没有任何退化检查** ⇒ 三处（promote 阻断 / 2P vetoDegenerate / 这里）必须同判据。
  * 口径抄 promote：`densityProfile.zeroAtkRate ≥ 0.9` = 退化（从不出手的局占比）。
  * 全退化时：不静默——产物照写但 meta.degenerateOnlyWinner=true + ⛔ 响亮（下一道 promote 本来也会砍它）。 */
-/* v1.5.277（§E114 · 默认关）：起点不在名人堂 ⇒ 追加成终局重验的一粒候选（见文件头 `EPIRUS_HALL_SEED` 的注释）。 */
-let HALL_SEED_APPENDED = false;
-if (HALL_SEED > 0 && seedParams) {
-  if (!hall.some(function (h) { return h.params === seedParams || (HALL_DEDUP && h.wid === widOfArr(seedParams)); })) {
-    hall.push({ params: seedParams, fit: null });
-    /* §E635：开了去重也要给这席带上 wid，否则它躲得过查重（起点那粒常与榜里某席同权重）。
-     * ⚠ 这一行**必须保持字面 `hall.push({ params: seedParams, fit: null })`** —— 门 `D185`② 钉的就是这条锚点
-     *   （10-17 我把它写成三元式，CI 当场红：行为没变（两支都写 fit:null）而锚点没了 ⇒ 属"门没跑成"不是"产品坏了"；
-     *   它的意图其实已由同门的行为腿覆盖：`fitsOn.length===6` 且六席读数与关档逐字相同）。改法：push 之后补字段。 */
-    if (HALL_DEDUP) hall[hall.length - 1].wid = widOfArr(seedParams);
-    HALL_SEED_APPENDED = true;
-    console.log('[hall-seed] 起点已追加为终局重验候选（现在 ' + hall.length + ' 席，逐位来自 ' + (hotstartPath || hotstartFrom) + '）');
-  } else {
-    console.log('[hall-seed] 起点本来就在名人堂里（' + hall.filter(function (h) { return h.params === seedParams; }).length + ' 席）⇒ 不重复追加');
-  }
-}
-let WIDE_FINAL_APPENDED = false;
-if (WIDE_FINAL && bestWideSeen && !hall.some(function (h) { return (HALL_DEDUP && h.wid === bestWideSeen.wid) || h.params === bestWideSeen.params; })) {
-  hall.push({ params: bestWideSeen.params, fit: null, wid: bestWideSeen.wid });
-  WIDE_FINAL_APPENDED = true;
-  console.log('[wide-final] 全程最宽粒入终局池：gen ' + bestWideSeen.gen + ' wideScore ' + bestWideSeen.wideScore.toFixed(2) +
-    '（' + bestWideSeen.gMulti.toFixed(1) + '/' + bestWideSeen.gLong.toFixed(1) + 'G ‖ ' + bestWideSeen.landMulti.toFixed(2) + '/' + bestWideSeen.landLong.toFixed(2) + '兑）wid ' + bestWideSeen.wid.slice(0, 10));
-}
 const hallEntries = [];
 /* §E322（v1.6.7）：当选键**不再只吃一粒 seedBase**。默认 4 粒取均值（`EPIRUS_SEL_EVAL_SEEDS=1` 逐字回到旧行为）。
  * 病与量的证据在 `pick-best.mjs` 的 §E322 头注里（单枚换种子摆 5.4~9.1pt，而同分带只有 3.0pt）。 */
@@ -2979,58 +2179,23 @@ for (const h of hall) {
   if (sel.dropped) console.log('[退化闸] 剔除 ' + sel.dropped + ' 粒零攻击≥90% 的名人堂成员（与 promote/2P 同判据）');
   /* v1.5.170（§N29）：两把"兑现"口径的闸共用一次 `mirrorHealth`（同一量具测两遍 = 白跑一遍）。
    * 未开任何一个开关 ⇒ 这段一行都不跑 ⇒ 与 v1.5.166 之前的行为逐字相同。 */
-  if ((BREADTH_FLOOR > 0 || SEL_LAND > 0 || SEL_KEEP > 0 || EFFSKILL_MIN > 0) && sel.clean && sel.clean.length) {
+  if ((BREADTH_FLOOR > 0 || SEL_LAND > 0) && sel.clean && sel.clean.length) {
     for (const e of sel.clean) {
       const mh = T.mirrorHealth(e.ref.params, SEL_LAND_GAMES, N, 'multi');
-      e.mhByMode = { multi: mh };   // v1.5.268：载重 veto 需要 long 口径时复用，不重复跑 multi
+      e.mhByMode = { multi: mh };
       e.landG = mh.effSkillsLand || 0; e.landedKeys = mh.landedKeys || 0; e.castG = mh.effSkills || 0;
-      e.landByKey = mh.landByKey || {}; e.mhGames = SEL_LAND_GAMES;   // v1.5.265b：veto 吃逐卡落地量
-      e.castByKey = mh.castByKey || {};                                //          与**出手量**（环/蓄能不打血）
-      /* v1.5.267：座位维用**专用量具**（共用 20 局只有 ~18 个决胜局 ⇒ 噪声当判据）。只在开了这一维时才多跑一次。 */
-      if (SEL_KEEP_SEAT !== null) {
-        const mhS = T.mirrorHealth(e.ref.params, SEL_KEEP_SEAT_GAMES, N, 'multi');
-        e.seatSpread = (typeof mhS.seatSpread === 'number' ? mhS.seatSpread : null);
-        e.seatDec = mhS.seatDecisive || 0;
-      } else e.seatSpread = (mh.seatSpread === undefined ? null : mh.seatSpread);
-      /* v1.5.227（用户裁定换 G）：**塌缩判据 = 最大单卡落地份额**（旧判据"数种类"从来没触发过，见 pick-best 头注）。
-       * 与 `landG` 取自**同一次** `mirrorHealth` ⇒ 两个读数天然同一口径、同一批局，不另跑一遍。
-       * 归属计算走 `audit-lib.landShareOf`（单一来源：只数真卡名、分母用过滤后的 landedTotal）——
-       * ⚠️ 我第一版在这里直接 `max(landByKey)/landedTotal`，而 `landByKey` 含**非卡键**（"终局收缩"…）
-       * ⇒ 算出过 44900% 的份额（实测 `v7teach-32`）。 */
+      e.landByKey = mh.landByKey || {}; e.mhGames = SEL_LAND_GAMES;
+      e.castByKey = mh.castByKey || {};
+      e.seatSpread = (mh.seatSpread === undefined ? null : mh.seatSpread);
       const __ls = landShareOf(sb, mh);
       e.maxLandShare = __ls.share; e.maxLandKey = __ls.key;
       e.conv = (mh.nonJi ? (mh.landedTotal || 0) / mh.nonJi : 0);
-      /* 与 promote 的"不可 --force"硬门槛同阈值（`HOLO_GIFT_MAX`，单源）：送盾当主业的候选**不参与**广度换人 */
       e.gateOk = (mh.holoOtherPerGame || 0) <= HOLO_GIFT_MAX;
-      /* 有效技能数（用户 11-03 裁定）：非ジ、成功出手、份额 ≥ EFFSKILL_SHARE 的键数。
-       * ⚠ 与 `maxLandShare` 的关系：后者只记录，不作宽度判据（输出集中 ≠ 技能少）。 */
-      {
-        const cast = e.castByKey || {};
-        /* 11-03 深夜（GLM）：此处作用域没有 `R`（train-3p 的 rules 走 `sb.window.EpirusRules`，DS 是从 evo.js 抄的写法）
-         * ⇒ EFFSKILL_MIN>0 时 ReferenceError 当场炸臂（EFFG 三臂实测）。SK 常量从同一个 sb 取。 */
-        const SKJ = sb.window.EpirusRules.SK.JI;
-        const tot = Object.keys(cast).reduce((a, k) => a + (k === SKJ ? 0 : (cast[k] || 0)), 0) || 1;
-        e.effSkillCount = Object.keys(cast).filter((k) => k !== SKJ && (cast[k] || 0) / tot >= EFFSKILL_SHARE).length;
-      }
     }
   }
   /* ===== v1.5.170（§N29）：广度**准入线**（默认关）——把"塌成一种卡"当不合格，而不是当排序键 =====
    * 依据（§N28 实测）：两对种子 4 粒冠军里有 3 粒净兑现只剩 1 种卡（`1.00（1 种）`）⇒ 塌缩是常态不是意外；
    * 而 §N25 已证明"广度当排序键"要么咬不动（带里只剩 1 粒）要么咬错（换上来的是过不了硬门槛的包）。 */
-  if (EFFSKILL_MIN > 0 && sel.clean && sel.clean.length) {
-    const okE = sel.clean.filter((e) => (e.effSkillCount || 0) >= EFFSKILL_MIN);
-    console.log('[有效技能线] 判据 = 非ジ成功出手里份额 ≥ ' + (100 * EFFSKILL_SHARE).toFixed(1) + '% 的键数 ≥ ' + EFFSKILL_MIN + '（fatal=' + (BREADTH_FATAL ? 1 : 0) + '）' +
-      ' · n=' + sel.clean.length + ' · 各粒：' + sel.clean.map((e) => (e.effSkillCount || 0)).join(','));
-    if (!okE.length) {
-      console.error('⛔ [有效技能线] 名人堂**没有一粒达到 ' + EFFSKILL_MIN + ' 种有效技能** ⇒ ' +
-        (BREADTH_FATAL ? 'BREADTH_FATAL=1 ⇒ 中止，不写产物（宽粒是过线基本要求）' : '产物照写但标 effSkillAllNarrow'));
-      if (BREADTH_FATAL) { console.error('[train-3p] exit 7（EFFSKILL_MIN）：这一臂没有合格的宽粒，不许落盘'); process.exit(7); }
-    } else {
-      okE.sort((a, b) => (b.landG || 0) - (a.landG || 0));
-      sel.clean = okE; sel.best = okE[0];
-      console.log('[有效技能线] 保留 ' + okE.length + '/' + sel.clean.length + ' 粒 ⇒ 冠军 ' + (okE[0].effSkillCount || 0) + ' 种有效技能');
-    }
-  }
   if (BREADTH_FLOOR > 0 && sel.clean && sel.clean.length) {
     const nf = rejectNarrowWinners(sel.clean, BREADTH_FLOOR);
     console.log('[广度线] 判据 = 净 `G(落地) ≥ ' + BREADTH_FLOOR + '` 且 **最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '%**（v1.5.227 起；旧判据是 `landedKeys ≥ 2`，实测从不触发）· n=' + SEL_LAND_GAMES + ' 局 multi 镜 · 各粒：' +
@@ -3040,135 +2205,10 @@ for (const h of hall) {
       (nf.best ? ' ⇒ 池内冠军 ' + (nf.best.score === sel.best.score ? '**没换人**' : '**换成 ' + nf.best.landG.toFixed(2) + '(' + nf.best.landedKeys + '种,最大' + (100 * (nf.best.maxLandShare || 0)).toFixed(0) + '%' + (nf.best.maxLandKey ? '-' + nf.best.maxLandKey : '') + ')**') : ''));
     if (nf.allRejected) {
       BREADTH_ALL_NARROW = true;
-      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '% 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ ' +
-        (BREADTH_FATAL ? '**EPIRUS_BREADTH_FATAL=1 ⇒ 中止，不写产物**（宽粒是过线基本要求，不是可选项）' : '产物照写但标 breadthFloorAllNarrow；这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包'));
-      if (BREADTH_FATAL) { console.error('[train-3p] exit 7（BREADTH_FATAL）：这一臂没有一粒合格的宽粒，按用户裁定不许落盘'); process.exit(7); }
+      console.error('⛔ [广度线] 名人堂**全部塌缩**（没有一粒 `最大单卡落地份额 ≤ ' + (nf.collapseLine * 100).toFixed(0) + '% 且 G(落地)≥' + BREADTH_FLOOR + '`）⇒ 产物照写但标 breadthFloorAllNarrow；这按预注册是**走向②**（该回去改奖励面，不是继续加排序键），别拿这粒去换包');
     } else { sel.clean = nf.clean; if (nf.best) sel.best = nf.best; }
     BREADTH_LOG = { floor: BREADTH_FLOOR, games: SEL_LAND_GAMES, dropped: nf.dropped, of: sel.clean.length + nf.dropped,
       allNarrow: nf.allRejected, winnerLandG: sel.best ? sel.best.landG : null, winnerKeys: sel.best ? sel.best.landedKeys : null };
-  }
-  /* ===== v1.5.265b（§E66 · 默认关）：**载重优点 veto**（剔"把起点优点弄丢的粒"，不加任何奖励项） =====
-   * 量具与广度线**共用同一次** `mirrorHealth` ⇒ 同一口径、同一批局，不另跑一遍（§N29 的规矩）。
-   * 起点参照**当场量**（不抄数字）。判不到的维（起点该卡落地为 0）⇒ 整臂 `exit 7`，不许静默当"通过"。 */
-  if (SEL_KEEP > 0 && sel.clean && sel.clean.length && seedParams) {
-    /* v1.5.268（§E75 第 3 条）：**两模式都判**。09-28 实测：只按 `multi` 镜的逐卡落地判"炮还在不在"，
-     * 与按 `long` 自读的载重读数**反向**（`NCV-71` 改判后 炮 2.90→0.90、5P 41.3%→39.2%）
-     * ⇒ 单模式尺当判据会骗人（本仓先例：广度"两个模式都判"，v1.5.145 用户裁定）。 */
-    const modes = SEL_KEEP_MODES.length ? SEL_KEEP_MODES : ['multi'];
-    const mhOf = function (params, entry, mode) {
-      if (entry && entry.mhByMode && entry.mhByMode[mode]) return entry.mhByMode[mode];
-      const m = T.mirrorHealth(params, SEL_LAND_GAMES, N, mode);
-      if (entry) { entry.mhByMode = entry.mhByMode || {}; entry.mhByMode[mode] = m; }
-      return m;
-    };
-    const usable = [], zeroRef = [];
-    /* 口径分派：plain = ε=0 五席同包**出手**计数（两张尺合一，因为这道判据问的是"上线后还按不按"）；
-     * mirror = 训练口径的 mirrorHealth（逐卡**落地** + 逐卡**出手**两把尺）。 */
-    const plainCache = new Map();
-    const plainOf = function (p, mode) {
-      let byMode = plainCache.get(p);
-      if (!byMode) { byMode = {}; plainCache.set(p, byMode); }
-      if (!byMode[mode]) byMode[mode] = fieldProfile(p, 0, 'soft', SEL_KEEP_PLAIN_GAMES, 77000, 'self', mode);
-      return byMode[mode];
-    };
-    const refOf = function (mode, key, src) {
-      return SEL_KEEP_CAL === 'plain'
-        ? ((plainOf(seedParams, mode).keys[key] || 0) / SEL_KEEP_PLAIN_GAMES)
-        : (((src === 'land' ? mhOf(seedParams, null, mode).landByKey : mhOf(seedParams, null, mode).castByKey)[key] || 0) / SEL_LAND_GAMES);
-    };
-    const srcOf = k => (SEL_KEEP_CAL === 'plain' ? 'act' : k);
-    for (const mode of modes) {
-      /* 两个名单 = 两把尺：`SEL_KEEP_KEYS` 看**落地**（会造成伤害的卡），`SEL_KEEP_CAST_KEYS` 看**成功出手**（环/蓄能这类不打血的）
-       * plain 口径下两者统一成"出手"（`act`），因为 fieldProfile 数的是 chooser 返回的那一手。 */
-      for (const k of SEL_KEEP_KEYS) {
-        const pg = refOf(mode, k, 'land');
-        if (pg > 0) usable.push({ key: k, src: srcOf('land'), cal: SEL_KEEP_CAL, mode: mode, games: SEL_KEEP_CAL === 'plain' ? SEL_KEEP_PLAIN_GAMES : SEL_LAND_GAMES, ref: pg, line: pg * (1 - SEL_KEEP) });
-        else zeroRef.push(k + '(' + (SEL_KEEP_CAL === 'plain' ? 'act' : '落地') + '/' + mode + ')');
-      }
-      for (const k of SEL_KEEP_CAST_KEYS) {
-        const pg = refOf(mode, k, 'cast');
-        if (pg > 0) usable.push({ key: k, src: srcOf('cast'), cal: SEL_KEEP_CAL, mode: mode, games: SEL_KEEP_CAL === 'plain' ? SEL_KEEP_PLAIN_GAMES : SEL_LAND_GAMES, ref: pg, line: pg * (1 - SEL_KEEP) });
-        else zeroRef.push(k + '(' + (SEL_KEEP_CAL === 'plain' ? 'act' : '出手') + '/' + mode + ')');
-      }
-    }
-    const valOf = function (e, u) {
-      return u.cal === 'plain'
-        ? ((plainOf(e.ref.params, u.mode).keys[u.key] || 0) / SEL_KEEP_PLAIN_GAMES)
-        : (((u.src === 'land' ? mhOf(e.ref.params, e, u.mode).landByKey : mhOf(e.ref.params, e, u.mode).castByKey)[u.key] || 0) / SEL_LAND_GAMES);
-    };
-    if (!usable.length) {
-      console.error('[train-3p] ⛔ 起点（' + (hotstartPath || hotstartFrom || '热启动种子包') + '）在 ' + modes.join('/') + ' 镜的 ' +
-        SEL_KEEP_KEYS.concat(SEL_KEEP_CAST_KEYS).join('/') + ' 上落地与出手**全为 0** ⇒ "不劣于起点"没有参照，' +
-        '拒绝按恒真判据空转（可换 --keys / --modes 或加大 EPIRUS_SEL_LAND_GAMES）');
-      process.exit(7);
-    }
-    /* v1.5.267：座位极差是一条"越小越好"的规则 ⇒ 单独走，且用**专用量具**（`SEL_KEEP_SEAT_GAMES` 局）；
-     * 决胜局不够 ⇒ 整维点名"未判定"，既不据此剔人也不当通过。 */
-    let seatRule = null;
-    if (SEL_KEEP_SEAT !== null) {
-      const refSeatMh = T.mirrorHealth(seedParams, SEL_KEEP_SEAT_GAMES, N, 'multi');
-      if (typeof refSeatMh.seatSpread !== 'number' || (refSeatMh.seatDecisive || 0) < SEL_KEEP_SEAT_MIN) {
-        console.log('[载重veto] ⚠ 起点的座位极差**未判定**（' + SEL_KEEP_SEAT_GAMES + ' 局里只有 ' + (refSeatMh.seatDecisive || 0) +
-          ' 个决胜局 < 门槛 ' + SEL_KEEP_SEAT_MIN + '）⇒ 这一维不进判据');
-        SEL_KEEP_UNJUDGED_SEAT = '起点 underpowered（决胜 ' + (refSeatMh.seatDecisive || 0) + '/' + SEL_KEEP_SEAT_MIN + '）';
-      } else {
-        seatRule = { line: refSeatMh.seatSpread + SEL_KEEP_SEAT, ref: refSeatMh.seatSpread, tol: SEL_KEEP_SEAT, games: SEL_KEEP_SEAT_GAMES };
-      }
-    }
-    if (seatRule) {
-      for (const e of sel.clean) {
-        const sMh = T.mirrorHealth(e.ref.params, SEL_KEEP_SEAT_GAMES, N, 'multi');
-        e.seatSpread = (typeof sMh.seatSpread === 'number' && (sMh.seatDecisive || 0) >= SEL_KEEP_SEAT_MIN) ? sMh.seatSpread : null;
-        e.seatDec = sMh.seatDecisive || 0;
-      }
-    }
-    const mLbl = function (u) { return modes.length > 1 ? '@' + u.mode : ''; };
-    const fmt = function (e) {
-      return usable.map(function (u) {
-        return u.key + (u.src === 'cast' ? '≈' : ' ') + mLbl(u) + ' ' + valOf(e, u).toFixed(2) + '/' + u.ref.toFixed(2);
-      }).join('  ') + (seatRule ? ' 座位' + (e.seatSpread === null ? '?' : e.seatSpread.toFixed(0)) + '/' + seatRule.line.toFixed(0) : '');
-    };
-    console.log('[载重veto] 参照 = 起点逐卡量（口径 ' + SEL_KEEP_CAL +
-      (SEL_KEEP_CAL === 'plain' ? ' = ε0·temp0.15·5 席同包**出手**，' + SEL_KEEP_PLAIN_GAMES + ' 局（与 `behavior-profile` 同尺）'
-        : ' = mirrorHealth 训练口径（temp0.35·ε0.15 硬档），' + SEL_LAND_GAMES + ' 局，与广度线共用') +
-      ' · 模式 ' + modes.join('+') + '；`≈` = 按**出手**判）：' +
-      usable.map(function (u) { return u.key + (u.src === 'cast' ? '≈' : '') + mLbl(u) + ' ' + u.ref.toFixed(2) + '/局 → 线 ' + u.line.toFixed(2) + '（容差 ' + (100 * SEL_KEEP).toFixed(0) + '%）'; }).join(' · ') +
-      (seatRule ? ' · 座位极差 ' + seatRule.ref.toFixed(1) + 'pt → 线 ≤' + seatRule.line.toFixed(1) + 'pt（容差 +' + seatRule.tol.toFixed(0) + 'pt）' : '') +
-      (zeroRef.length ? ' ｜ ⚠ 起点为 0、无法判的维：' + zeroRef.join(',') : '') +
-      ' ｜ 广度参照 G(落地)=' + (mhOf(seedParams, null, modes[0]).effSkillsLand || 0).toFixed(2) + '（' + modes[0] + ' 镜）');
-    const kept = [], dropped = [];
-    for (const e of sel.clean) {
-      const fails = usable.filter(function (u) { return valOf(e, u) < u.line; });
-      if (seatRule && e.seatSpread !== null && e.seatSpread > seatRule.line) fails.push({ key: '座位', mode: 'seat' });
-      if (fails.length) dropped.push({ e: e, why: fails.map(function (f) { return f.key + (modes.length > 1 && f.mode !== 'seat' ? '@' + f.mode : ''); }).join(',') }); else kept.push(e);
-    }
-    console.log('[载重veto] 候选 ' + sel.clean.length + ' 粒逐卡（本粒/起点）：' +
-      sel.clean.map(function (e) { return fmt(e) + (e === sel.best ? '(当选)' : ''); }).join('  '));
-    SEL_KEEP_LOG = { tol: SEL_KEEP, modes: modes, cal: SEL_KEEP_CAL,
-      games: SEL_KEEP_CAL === 'plain' ? SEL_KEEP_PLAIN_GAMES : SEL_LAND_GAMES,
-      keys: usable.map(function (u) { return u.key + ':' + u.src + '@' + u.mode; }),
-      ref: usable.map(function (u) { return { key: u.key, src: u.src, mode: u.mode, perGame: Number(u.ref.toFixed(3)), line: Number(u.line.toFixed(3)) }; }),
-      unjudgeable: zeroRef, dropped: dropped.length, of: sel.clean.length,
-      seat: seatRule ? { ref: Number(seatRule.ref.toFixed(2)), line: Number(seatRule.line.toFixed(2)), tol: SEL_KEEP_SEAT, games: seatRule.games }
-        : (SEL_KEEP_SEAT !== null ? { requested: SEL_KEEP_SEAT, games: SEL_KEEP_SEAT_GAMES, unjudgeable: SEL_KEEP_UNJUDGED_SEAT || '起点 underpowered' } : null),
-      droppedDetail: dropped.map(function (d) { return { score: Number(d.e.score.toFixed(4)), why: d.why }; }),
-      allRejected: false, changedWinner: false, winnerKept: false };
-    if (!kept.length) {
-      SEL_KEEP_LOG.allRejected = true;
-      console.error('[载重veto] ⛔ 名人堂**全部**丢了起点载重卡 ⇒ 产物照写并标 selKeepAllDropped；' +
-        '这按预注册是**走向②**（接力本身在丢优点，该回去改训练场/谱系，不是继续加 veto），别拿这粒去换包');
-    } else {
-      let best = kept[0];
-      for (const e of kept) if (e.score > best.score) best = e;
-      SEL_KEEP_LOG.changedWinner = best !== sel.best;
-      SEL_KEEP_LOG.winnerKept = SEL_KEEP_LOG.changedWinner;
-      console.log('[载重veto] 剔 ' + dropped.length + '/' + sel.clean.length + ' 粒（丢了 ' +
-        dropped.map(function (d) { return d.why; }).filter(function (x, i, a) { return a.indexOf(x) === i; }).join('/') + '）' +
-        (SEL_KEEP_LOG.changedWinner ? ' ⇒ **改判**：换成 ' + fmt(best) + ' 的粒（胜负分差 ' +
-          ((best.score - sel.best.score) * 100).toFixed(1) + 'pt，veto 换人本来就是拿胜负分换优点）'
-          : ' ⇒ 未改判（原当选者本来就达标）'));
-      sel.clean = kept; sel.best = best;
-    }
   }
   /* ===== §E787：场B 清场地板（当选 veto）—— 位置在载重 veto **之后**、兑现广度**之前** =====
    * 顺序要说清：载重 veto 问"这粒还打不打那张关键卡"，这根问"它打不打得死人"。两根都过才进排序。
@@ -3409,74 +2449,6 @@ for (const h of hall) {
       if (nb) sel.best = nb;
     }
   }
-/* ===== v4（PREREG-2026-11-01-WIDE-FINAL）：终局同一把宽尺 =====
- * 对幸存候选用与演化门槛**同一把尺**（wideMetricsOf ‖ 同参照 GA_INC ‖ 同谓词 kinds≥3 ∧ isWideVs）
- * ⇒ 宽中取重验分最高者为产物；无宽粒 ⇒ 保留原产物 + wideFinalAllNarrow 响亮。只换"最后一句话谁说"，训练侧零变化。 */
-if (WIDE_FINAL) {
-  const cands = (sel.clean && sel.clean.length) ? sel.clean : (sel.best ? [sel.best] : []);
-  const wreads = [];
-  for (const e of cands) {
-      const m = wideMetricsOf(e.ref.params);
-      const INC = GA_INC || PROBE_INC;   /* v4/2b：参照 = 门槛或探针（同一函数同一定义，谁开用谁） */
-      m.wide = (m.gMulti >= GA_KINDS && m.gLong >= GA_KINDS) && (INC ? isWideVs(m, INC) : true);
-    wreads.push({ e: e, m: m });
-    console.log('[wide-final]   候选 trainFit=' + (typeof e.ref.fit === 'number' ? e.ref.fit.toFixed(3) : '追加') +
-      ' → ' + m.gMulti.toFixed(1) + '/' + m.gLong.toFixed(1) + 'G ‖ ' + m.landMulti.toFixed(2) + '/' + m.landLong.toFixed(2) + '兑 ' + (m.wide ? '宽✔' : '窄✘'));
-  }
-  const wides = wreads.filter(function (r) { return r.m.wide; });
-  if (wides.length) {
-    wides.sort(function (a, b) { return b.e.score - a.e.score; });
-    const w0 = wides[0];
-    const changed = sel.best !== w0.e;
-    if (changed) console.log('[wide-final] **换人**：宽粒（score ' + w0.e.score.toFixed(3) + '，wideScore ' + w0.m.landMulti.toFixed(2) + '+' + w0.m.landLong.toFixed(2) + '）取代原当选');
-    else console.log('[wide-final] 原当选本来就是宽粒 ⇒ 不换人');
-    sel.best = w0.e;
-    WIDE_FINAL_PICK = { wideN: wides.length, of: cands.length, changed: changed, allNarrow: false };
-  } else {
-    console.error('[wide-final] ⛔ 终局池无一宽粒（wideFinalAllNarrow）⇒ 保留原产物，这粒按预注册不许当"宽产物"引用');
-    WIDE_FINAL_PICK = { wideN: 0, of: cands.length, changed: false, allNarrow: true };
-  }
-}
-  /* ===== §A（11-02 千问 · 用户裁"做 A"· 默认 0 ⇒ 这一段一行都不跑）：当选面**防御下限**排序键 =====
-   * 位置：所有 veto 与 v4 终局宽选**之后**（最后一句话由它说会盖掉前面，所以放最后并按 A-4 如实报宽窄）。
-   * 只做"把完全不防御的挤下去"这一件事；不最大化 ⇒ 与 `bandPickByUsage`（取用量最高）刻意不同。 */
-  if (SEL_DEF > 0 && sel.best) {
-    if (typeof fieldProfile !== 'function') {
-      console.error('[防御选人] ⛔ 量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
-      process.exit(7);
-    }
-    const defOf = function (e) {
-      if (e.__defUse === undefined) {
-        const t = fieldProfile(e.ref.params, 0, 'soft', SEL_DEF_GAMES, 77000, 'scripts', SEL_DEF_MODE);
-        e.__defUse = (t.def || 0) / SEL_DEF_GAMES;
-        e.__defShare = t.acts ? 100 * (t.def || 0) / t.acts : 0;
-        e.__defBy = '防御 ' + (t.def || 0) + '/' + SEL_DEF_GAMES + '局 = ' + e.__defUse.toFixed(2) + ' 手/局（占出手 ' + e.__defShare.toFixed(1) + '%）';
-      }
-      return e.__defUse;
-    };
-    defOf(sel.best);   /* 照 `SEL_BIGT` 的在册坑：best 不一定在带内，先单独量一遍，否则下面读 `.__defBy` 会崩在选完人之后 */
-    const pool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
-    const dp = bandPickByFloor(pool, SEL_DEF, defOf, SEL_DEF_MIN, null, sel.best);   // 全不达标 ⇒ 原样保留 sel.best（11-02 修：旧版会反过来把达标的原当选换掉）
-    const ladder = dp.band.map(function (e) { return e.__defBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）'; }).join(' ‖ ');
-    SEL_DEF_LOG = { tol: SEL_DEF, min: SEL_DEF_MIN, games: SEL_DEF_GAMES, mode: SEL_DEF_MODE, band: dp.band.length, of: pool.length,
-      usage: dp.band.map(function (e) { return Number(e.__defUse.toFixed(3)); }), picked: Number((dp.best ? dp.best.__defUse : 0).toFixed(3)),
-      wasWinner: Number(sel.best.__defUse.toFixed(3)), by: dp.tieBrokenBy, changedWinner: dp.best !== sel.best, allBelow: dp.allBelow,
-      pickedShare: Number((dp.best ? dp.best.__defShare : 0).toFixed(1)) };
-    if (dp.allBelow) {
-      console.log('[防御选人] tol=' + SEL_DEF + 'pt · 下限 ' + SEL_DEF_MIN + ' 手/局 · 带内 ' + dp.band.length + '/' + pool.length +
-        ' 粒 ⇒ **全都不达标（selDefAllBelow）**：' + ladder + ' ⇒ 不改判；这一臂算「这根旋钮**零作用**」，不算"测过且无效"');
-    } else if (dp.best !== sel.best) {
-      console.log('[防御选人] 带内防御梯：' + ladder +
-        '\n[防御选人] **改判（下限换人）**：拿 ' + ((sel.best.score - dp.best.score) * 100).toFixed(1) + 'pt 胜负分换「' + dp.best.__defBy +
-        '」（原当选者 ' + sel.best.__defBy + '）');
-      sel.best = dp.best;
-    } else {
-      console.log('[防御选人] 带内防御梯：' + ladder + ' ⇒ **未改判**（原当选者本就达标 ⇒ 下限这条没有边际作用，要看 A-1 才知有没有学到）');
-    }
-    if (dp.best && dp.best.__defShare > 15) {
-      console.log('[防御选人] ⚠ 当选者防御占出手 ' + dp.best.__defShare.toFixed(1) + '%（>15% 就靠近 `GATE2-s13` 那片凑数区 20~22% ⇒ A-2 白防率判生死）');
-    }
-  }
   /* ===== 11-09 P1（用户裁「容差带内排序键 + n≥30 才算数 + 只筛新候选」）：当选面**白防率**排序键 =====
    * 与 `SEL_DEF` 的刻意分工：那根问"防得够不够多"（下限，越多越好），这根问"防得对不对时机"（白防率低者优）。
    *   在册证据：把占比推上去只会放大白防（11-09 实机：实验室 24% → 实机 49%，同时白防率 89%）。
@@ -3545,86 +2517,6 @@ if (WIDE_FINAL) {
       }
     }
   }
-  /* ===== T1（11-03 用户裁"先试这两个低成本的" · 默认 0 ⇒ 这一段一行都不跑）：当选面**按族别签名分格、取最稀格** =====
-   * 治的是 §十四/§十五 的读数，不是推测：2.0 地形上"带防御/反击族"与"会赢"落在两个不连通的高原，
-   *   而**同一次跑的名人堂里明明有宽粒、却被 fit 制挤掉**——`CBG-s13` 的带内 `band3/band4` = 10 种（带 taunt/holo/proto/tank），
-   *   最后当选的 `band2` 只有 8 种；ZCode 的 `GATE3-s13`（`EPIRUS_HALL_TRACE`）抓到同一形状。
-   * 签名**不自造口径**：一次 `fieldProfile(...)`，与 `SEL_DEF` 同一件、同一调用形状（eps=0 · soft · n=`SEL_GRID_GAMES` · seed 77000 · 'scripts'）
-   *   ⇒ 防御族份额 = `t.def/t.acts`，其定义就是引擎的 `cat === R.CAT.DEFENSE`（`behavior-profile.mjs:135`）；
-   *     种数 = 非ジ且份额 ≥0.5%（`scratch/breadth.mjs:43` 同口径）。
-   * 格档边线也不是拍的：来自今天那两张实测表（`scratch/breadth-17-1103.txt` ‖ `breadth-v7pool-20.txt`）——
-   *   gen-3 当选粒防御族 0~0.6%（CBG-s13=0%）‖ v7 池 3.2~18.7%；种数跨 1~11 ⇒ 防御 <0.5/3/8%、种数 <5/8/11 三刀切四档。
-   * ⚠ 位置在 `SEL_DEF` **之后** ⇒ 两者同开时这根键有最后发言权；它不最大化宽度也不最大化防御，只在**容差带内**惩罚"和已经在当选的那一格挤成一堆"。 */
-  if (SEL_GRID > 0 && sel.best) {
-    if (typeof fieldProfile !== 'function') {
-      console.error('[分格选人] ⛔ 量具 `fieldProfile` 没接进来 ⇒ 拒绝静默空转');
-      process.exit(7);
-    }
-    const RulesG = sb.window.EpirusRules;
-    if (!(RulesG && RulesG.CAT && RulesG.CAT.DEFENSE && RulesG.byKey)) {
-      console.error('[分格选人] ⛔ 引擎规则表里读不到 `CAT.DEFENSE`/`byKey` ⇒ 族别判不了，拒绝按"没定义的族"分格');
-      process.exit(7);
-    }
-    const JI = RulesG.SK && RulesG.SK.JI;
-    const defBucket = function (d) { return d < 0.5 ? 0 : d < 3 ? 1 : d < 8 ? 2 : 3; };
-    const kindBucket = function (k) { return k < 5 ? 0 : k < 8 ? 1 : k < 11 ? 2 : 3; };
-    const sigOf = function (e) {
-      if (e.__sig === undefined) {
-        const t = fieldProfile(e.ref.params, 0, 'soft', SEL_GRID_GAMES, 77000, 'scripts', SEL_GRID_MODE);
-        const acts = t.acts || 0;
-        const dsh = acts ? 100 * (t.def || 0) / acts : 0;
-        const ks = Object.keys(t.keys || {}).filter(function (k) {
-          return k !== JI && acts && ((t.keys[k] || 0) / acts) >= 0.005;
-        }).sort(function (a, b) { return t.keys[b] - t.keys[a]; });
-        e.__gDef = dsh; e.__gKinds = ks.length;
-        e.__gBy = '防御族 ' + dsh.toFixed(1) + '% ‖ 种数 ' + ks.length + '（' + ks.join(' ') + '）';
-        e.__sig = 'D' + defBucket(dsh) + 'K' + kindBucket(ks.length);
-      }
-      return e.__sig;
-    };
-    sigOf(sel.best);   /* 照 SEL_BIGT/SEL_DEF 的在册坑：best 不一定在带内 ⇒ 先单独量一遍，否则下面读 `.__gBy` 会崩在选完人之后 */
-    const gpool = (sel.clean && sel.clean.length) ? sel.clean : [sel.best];
-    const gp = gridPickByRarity(gpool, SEL_GRID, sigOf);
-    /* **整池格表**先印再印带内梯：`gridPickByRarity` 为算稀有度本来就要给每个闸后候选算一次签名
-     *   ⇒ 这一行是免费的，而它让"换个容差带会选谁"能离线重算，不必为试带宽再跑一臂（12 分钟一臂的教训）。 */
-    const gtable = gpool.slice().sort(function (a, b) { return b.score - a.score; }).map(function (e) {
-      return (e.__sig === undefined ? '(闸外未测)' : e.__sig) + ' ' + (e.score * 100).toFixed(1) +
-        (e.gateOk === false ? '[gateOk=false]' : '') + (e === sel.best ? '[原当选]' : '');
-    }).join(' ‖ ');
-    console.log('[分格选人] 整池格表（按重验分降序 ‖ 稀有度就是数这一行的格）：' + gtable);
-    const gladder = gp.band.map(function (e) {
-      return '[' + e.__sig + '] ' + e.__gBy + '（重验分 ' + (e.score * 100).toFixed(1) + (e === sel.best ? '·原当选' : '') + '）';
-    }).join(' ‖ ');
-    SEL_GRID_LOG = { tol: SEL_GRID, games: SEL_GRID_GAMES, mode: SEL_GRID_MODE,
-      band: gp.band.length, of: gpool.length, skippedGate: gp.skipped,
-      /* 整池每粒的 格/重验分/防御族份额/种数 ⇒ "换一条带宽会选谁"可离线重算（分母与出处都在这条账里） */
-      pool: gpool.slice().sort(function (a, b) { return b.score - a.score; }).map(function (e) {
-        return { cell: e.__sig === undefined ? null : e.__sig, score: Number((e.score * 100).toFixed(2)),
-          def: e.__gDef === undefined ? null : Number(e.__gDef.toFixed(1)), kinds: (e.__gKinds === undefined ? null : e.__gKinds),
-          gateOk: e.gateOk === false ? false : (e.gateOk === undefined ? null : true), wasWinner: e === sel.best };
-      }),
-      cells: gp.cells, pickedCell: gp.pickedCell, pickedCount: gp.pickedCount,
-      pickedSig: gp.best ? { def: Number((gp.best.__gDef || 0).toFixed(1)), kinds: gp.best.__gKinds } : null,
-      wasSig: { cell: sel.best.__sig, def: Number(sel.best.__gDef.toFixed(1)), kinds: sel.best.__gKinds },
-      changedWinner: gp.changedWinner, empty: gp.empty,
-      bandCells: gp.band.map(function (e) { return e.__sig; }) };
-    if (gp.empty) {
-      console.log('[分格选人] tol=' + SEL_GRID + 'pt · 带内 0 粒（池 ' + gpool.length + ' 粒 ‖ 其中 gateOk=false 被跳过 ' + gp.skipped + ' 粒）' +
-        ' ⇒ **这根键零作用**（不算"测过且无效"），不改判');
-    } else if (gp.changedWinner) {
-      const oldCount = (gp.cells.filter(function (c) { return c.cell === sel.best.__sig; })[0] || { count: 0 }).count;
-      console.log('[分格选人] 带内格梯：' + gladder +
-        '\n[分格选人] **改判（取最稀格）**：' + gp.best.__sig + '（池里 ' + gp.pickedCount + ' 粒）取代 ' + sel.best.__sig +
-        '（池里 ' + oldCount + ' 粒）⇒ 拿 ' + ((sel.best.score - gp.best.score) * 100).toFixed(1) +
-        'pt 重验分换「' + gp.best.__gBy + '」（原当选者 ' + sel.best.__gBy + '）');
-      const oldSig = sel.best.__sig;
-      sel.best = gp.best;
-      SEL_GRID_LOG.fromCell = oldSig;
-    } else {
-      console.log('[分格选人] 带内格梯：' + gladder +
-        ' ⇒ **未改判**（原当选者已在最稀/并列最稀格 ⇒ 这根键在这条臂上没有边际作用）');
-    }
-  }
   if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; }
   /* ⚠ 下面这条 `else` 的先行词是**上面那句 `if (sel.best)`**。11-01 的 HALL_TRACE 语句曾插在两者之间，
    *   把 `else` 改挂到它身上 ⇒ 默认档（HALL_TRACE 关）下只要名人堂非空就假报"全部退化"并写错 meta，
@@ -3658,25 +2550,6 @@ if (seedParams) {
       '（名人堂 ' + hall.length + ' 席里 ' + HALL_SEED_ENTRIES + ' 席就是起点）⇒ 本臂**零改包**：' +
       '这粒产物的任何读数都是起点的读数，**不能**当本臂旋钮的效果。训练确实跑过（见逐代行），' +
       '但没有任何候选在重验里赢过起点 ⇒ 要看训练出了什么，读 band-save 落盘的那些候选。');
-  }
-}
-
-/* ===== §E798：桌形注入的**作用计数**收口 =====
- * 同 §N11/§N12 那条规矩：横幅读回证明不了作用点发生。两条硬闸：一局未注 ⇒ `exit 8`；
- * 家族席只落在 1 个席位 ⇒ 相位按代旋转没生效（v1.5.186 那条"与 `g % n` 锁死"的病）⇒ 同样 `exit 8`。 */
-if (FAMILY_REQ > 0) {
-  const ff = (typeof T.countFamilyField === 'function') ? T.countFamilyField() : { games: -1, seats: -1, bySeat: {} };
-  const seatKeys = Object.keys(ff.bySeat || {}).sort();
-  FAMILY_REC = { req: FAMILY_REQ, games: ff.games, seats: ff.seats, bySeat: seatKeys };
-  console.log('[family] 作用计数：注入 ' + ff.games + ' 局 · 家族席共 ' + ff.seats + ' 席次 · 覆盖席位 [' +
-    seatKeys.join(',') + ']（familyField=' + FAMILY_REQ + '）');
-  if (!(ff.games > 0)) {
-    console.error('[train-3p] ⛔ 下达了 EPIRUS_FAMILY_FIELD=' + FAMILY_REQ + ' 却**一局未注** ⇒ 本臂作废（作用点没开火）');
-    process.exit(8);
-  }
-  if (seatKeys.length < 2) {
-    console.error('[train-3p] ⛔ 家族席只落在 ' + seatKeys.length + ' 个席位 ⇒ 相位旋转没生效（座位锁死，v1.5.186 同族）⇒ 本臂作废');
-    process.exit(8);
   }
 }
 
@@ -3738,95 +2611,6 @@ if (Number(process.env.EPIRUS_MIXHP_EVERY || 0) > 0) {
   }
 }
 
-/* ===== 10-23（用户裁定）：G4/G5 最坏格否决（EPIRUS_SEL_G45=1，默认关） =====
- * 病：训练/选拔池里只有 9 个脚本，G4 的「只枪·击杀优先」与 G5 的「四席纯防」都是池外桌形 ⇒
- *   强度再高也会被这两种形状打穿（g14-h2-77001：只枪 98%/92%）。这里在**当选面**补一刀：
- *   按名人堂顺序逐粒写临时包、跑 tools/gate-drafts.mjs，G4/G5 任一 FAIL ⇒ 该粒不许当选；
- *   取第一粒全过的；全过不了就保留原当选并打 selG45AllFail（不静默）。
- * 默认关：不设 EPIRUS_SEL_G45=1 时一行都不跑，历史臂逐字可复现。最多试前 3 粒（成本约束）。 */
-let SEL_G45_LOG = null, SEL_G45_CHANGED = false, SEL_G45_ALLFAIL = false;
-if (process.env.EPIRUS_SEL_G45 === '1') {
-  const cands = [];
-  for (const h of hall) {
-    if (!cands.some(function (c) { return c.params === h.params; })) cands.push(h);
-  }
-  if (seedParams && !cands.some(function (c) { return c.params === seedParams; })) cands.push({ params: seedParams, fit: null });
-  cands.sort(function (a, b) { return (a.params === bestParams ? -1 : b.params === bestParams ? 1 : 0); });
-  const gd = function (params, i) {
-    /* ⚠ 路径必须**相对仓库根**：gate-drafts 会把参数按 ROOT 拼（绝对路径会被拼成 ROOT\C:\… ⇒ ENOENT）。 */
-    const f = '.g45-' + process.pid + '-' + i + '.bak';
-    writeFileSync(f, '/* g45 veto */\nwindow.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(params)) + ';\n');
-    const gr = spawnSync(process.execPath, ['tools/gate-drafts.mjs', f], { cwd: process.cwd(), encoding: 'utf8', timeout: 900000, maxBuffer: 1 << 24 });
-    const txt = String(gr.stdout || '') + String(gr.stderr || '');
-    const fails = (txt.match(/^\s*FAIL\s+(G[45]\[[^\n]*)/gm) || []).map(function (s) { return s.trim(); })
-      .filter(function (s) { return !/线上包|元测试/.test(s); });
-    /* 关键：**没跑到** ≠ 通过（v1.8.x 的教训：exit 64/ENOENT 时 FAIL 行一条都没有，旧写法会误判 PASS）。 */
-    const ran = gr.status === 0 && /G4\[/.test(txt) && /G5\[/.test(txt);
-    try { unlinkSync(f); } catch (e) {}
-    return { fails: fails, ran: ran, status: gr.status };
-  };
-  const rows = [];
-  let chosen = null;
-  for (let i = 0; i < Math.min(cands.length, 3); i++) {
-    const r = gd(cands[i].params, i);
-    rows.push({ i: i + 1, fails: r.fails, ran: r.ran, status: r.status });
-    if (r.ran && !r.fails.length) { chosen = cands[i]; break; }
-  }
-  SEL_G45_LOG = rows;
-  if (chosen) {
-    if (chosen.params !== bestParams) {
-      bestParams = chosen.params;
-      const e = hallEntries.find(function (x) { return x.ref.params === bestParams; });
-      if (e) ev = e.ev;
-      SEL_G45_CHANGED = true;
-    }
-  } else { SEL_G45_ALLFAIL = true; }
-  console.log('[G4/G5 否决] ' + rows.map(function (r) { return '#' + r.i + (r.fails.length ? ' FAIL(' + r.fails.length + ')' : ' PASS'); }).join(' ‖ ') +
-    (chosen ? (SEL_G45_CHANGED ? ' ⇒ 换成通过者' : ' ⇒ 原当选者通过，不换') : ' ⇒ 全部候选都过不了，保留原当选并标记 selG45AllFail'));
-}
-
-/* ===== 10-24（用户点名 (b)，DS §5-2 的便宜形状）：G4 long 逐格否决（EPIRUS_SEL_G4LONG=1，默认关） =====
- * 病：SEL_G45 只试 top-3 且跑整份 gate-drafts（四格，贵）⇒ top-3 全灭就 allFail 放弃（g19 两臂正是这样）。
- * 这里只跑**最坏的那一格**（G4 long：1 席只枪 vs 4 席候选），**逐粒走深到 8 粒**，且**进程内**直接调
- * `duelAssembly`（不起子进程、不写临时包 ⇒ 每粒 ~150 局 ≈ 20 秒级）。只枪试两只口径：
- * `gunFocus`（G4 真口径·击杀优先）与 `gunSpam`（打最肥；g19 实测最克的那只）——任一胜率 >60% ⇒ 否决。
- * 与 SEL_G45 的组合：本块排在它**之后** ⇒ G45 已选中通过者时本块 #1 必过（它过了整份 G4 就过这一格）；
- * G45 allFail 时本块才有机会走深。默认关：不设 EPIRUS_SEL_G4LONG=1 时一行不跑，历史臂逐字可复现。 */
-let SEL_G4LONG_LOG = null, SEL_G4LONG_CHANGED = false, SEL_G4LONG_ALLFAIL = false;
-if (process.env.EPIRUS_SEL_G4LONG === '1') {
-  const G4L_GAMES = 150;   /* 与 gate-drafts 的 300 局同分布、半剂量 ⇒ SE≈±4pt，60% 阈值贴线时判语要带这一点 */
-  const deps4 = { S: sb.window.EpirusState, Play: sb.window.EpirusPlay, T: T, R: sb.window.EpirusRules };
-  const guns4 = [['gunFocus', Bots.pickGunFocus], ['gunSpam', Bots.pickGunSpam]].filter(function (g2) { return typeof g2[1] === 'function'; });
-  if (!guns4.length) { console.error('[train-3p] ⛔ EPIRUS_SEL_G4LONG=1 但两只只枪原型都不在 EpirusBots 里 ⇒ 拒绝空转'); process.exit(6); }
-  const cell4 = function (params) {
-    let worst = { name: '-', rate: -1 };
-    for (let gi = 0; gi < guns4.length; gi++) {
-      const r2 = duelAssembly(deps4, params, { games: G4L_GAMES, mode: 'long', seed0: 77000, scripted: guns4[gi][1] });
-      if (r2.winRate > worst.rate) worst = { name: guns4[gi][0], rate: r2.winRate };
-    }
-    return worst;   /* rate = 只枪席胜率%（>60 ⇒ 这一粒被否决） */
-  };
-  const cands4 = [];
-  for (const h of hall) { if (!cands4.some(function (c) { return c.params === h.params; })) cands4.push(h); }
-  if (seedParams && !cands4.some(function (c) { return c.params === seedParams; })) cands4.push({ params: seedParams, fit: null });
-  cands4.sort(function (a, b) { return (a.params === bestParams ? -1 : b.params === bestParams ? 1 : 0); });
-  const rows4 = [];
-  let chosen4 = null;
-  for (let i = 0; i < Math.min(cands4.length, 8); i++) {
-    const w4 = cell4(cands4[i].params);
-    rows4.push({ i: i + 1, worst: w4.name, gunWinPct: Math.round(w4.rate * 10) / 10 });
-    console.log('[G4long 否决] #' + (i + 1) + ' 最克=' + w4.name + ' ' + (Math.round(w4.rate * 10) / 10) + '%（阈值 60 ‖ ' + G4L_GAMES + '局）');
-    if (w4.rate <= 60) { chosen4 = cands4[i]; break; }
-  }
-  SEL_G4LONG_LOG = rows4;
-  if (chosen4) {
-    if (chosen4.params !== bestParams) { bestParams = chosen4.params; SEL_G4LONG_CHANGED = true; }
-    console.log('[G4long 否决] 采纳 #' + rows4.length + (SEL_G4LONG_CHANGED ? '（换了原当选）' : '（原当选者通过，不换）'));
-  } else {
-    SEL_G4LONG_ALLFAIL = true;
-    console.log('[G4long 否决] 走满 ' + rows4.length + ' 粒全 >60% ⇒ 保留原当选并标记 selG4LongAllFail（不静默）');
-  }
-}
 /* ===== 带内候选落盘（v1.5.150 · 移植自 `tools/train-best.mjs` 的 band-save）=====
  * 病：本工具的终局是"名人堂里用新种子重验、只取最优"，**其余候选全被丢掉** ⇒ 一旦重验选中热启动点，
  *     整臂的工作就没了（`v7xn1-31.bak` 与现役**逐字节相同**就是这么来的：候选连看都看不到）。
@@ -3859,9 +2643,6 @@ try {
   const selFirst = hall.findIndex(function (x) { return x.params === bestParams; });
   if (bandDirReady) for (let bi = 0; bi < hall.length; bi++) {
     const hh = hall[bi];
-    /* v1.5.277：`EPIRUS_HALL_SEED` 追加的那一席（`fit === null`）**不写候选文件** —— 它就是线上包本身，
-     * 落一份带内候选只会让下一班以为"训练挖出了一粒 = 现役的粒"。 */
-    if (hh.fit === null) { console.log('[band-save] 第 ' + (bi + 1) + ' 席 = 追加的起点 ⇒ 不另存（线上包本来就在仓里）'); continue; }
     const dupWinner = hh.params === bestParams && bi !== selFirst;
     const bmeta = {
       /* ===== 2026-10-12 DS：热启动的**父权重身份**（与终局产物那条同一把尺，理由见 `const meta` 处的长注释）=====
@@ -3904,21 +2685,6 @@ try {
     console.log('[holdout-seg] ⛔ 目录建不出 ⇒ ' + SEGS.length + ' 段里当场落盘成功的只有 ' + (SEGS.length - SEG_FLUSH_FAIL.length) + ' 个（见上面各 ⚠ 行）');
   }
 } catch (e) { console.log('[band-save] 失败（不影响当选者写盘）：' + e.message); }
-/* ===== qoder 11-02 复核补的付账字据（§十一②/③ 那条病）=====
- * 「下达了」与「付过账」在两行日志里长得一样：DS 的 12 臂只有 `[def-drain] 已下达`，
- *   全程没有一处打印 `games/paid` ⇒ 事后无法区分"奖励把包教坏了"与"这根杠杆恒 0、包只是落进了另一个盆"。
- *   引擎侧计数器（DEF_ADAPT_STAT/DRAIN_HEAL_STAT）本来就在 `economyReward()` 的读回里，这里只是把它念出来。 */
-if (DEF_ADAPT_WANT > 0 || DRAIN_HEAL_WANT > 0 || DEF_IDLE_WANT > 0) {
-  const erNow = T.economyReward() || {};
-  const ds = erNow.defAdaptStat || {}, hs = erNow.drainHealStat || {};
-  const dead = [];
-  if (Number(erNow.defAdaptW) > 0 && !ds.paid) dead.push('DEF_ADAPT');
-  if (Number(erNow.drainHealW) > 0 && !hs.paid) dead.push('DRAIN_HEAL');
-  console.log('[def-drain] **付账字据**：DEF_ADAPT w=' + erNow.defAdaptW + ' 局=' + ds.games + ' 付过账的局=' + ds.paid +
-    ' ‖ DRAIN_HEAL w=' + erNow.drainHealW + ' 局=' + hs.games + ' 付过账的局=' + hs.paid +
-    ' ‖ DEF_IDLE w=' + erNow.defIdleW +
-    (dead.length ? ' ⇒ ⚠ ' + dead.join(' / ') + ' 下达了但**一次没付账**：它在这条轨迹上是死键，塌方与变化都不许记在它头上' : ''));
-}
 console.log('\n=== ' + N + ' 人实测（最终冠军，' + SEL_PAIRS.length + ' 对 × 20 局 × ' + SEL.k + ' 粒 seedBase，座位轮换，temp0.15）===');
 console.log('1st=' + (ev.firstRate * 100).toFixed(1) + '%  top2=' + (ev.top2Rate * 100).toFixed(1) +
   '%   (1st/2nd/3rd = ' + ev.first + '/' + ev.second + '/' + ev.third + ' of ' + ev.games + ')');
@@ -3939,23 +2705,19 @@ const meta = {
    *   的登记基线（默认冷启动的产物），加一个 `null` 字段就等于改了它。 */
   ...(/^[0-9a-f]{16}$/.test(hotstartFrom || '') ? { hotstartFrom: hotstartFrom } : {}),
   selLand: SEL_LAND_LOG,
-  selKeep: SEL_KEEP_LOG,   // v1.5.265b（§E66）：载重 veto 的账（参照/线/剔了谁/改没改判）—— 事后能从产物自证
   selClear: SEL_CLEAR_LOG,   // §E787：场B 清场地板的账（线/逐粒读数/剔几粒/改没改判/**一格没咬到**）；关档 ⇒ null，一行都不跑
   /* v1.5.169：产物自带配方。§N11 的教训是"读日志才知道这臂开了什么"，而日志会滚走、`.bak` 会留下来——
    * 于是事后复盘（和 DS 那边跑对照）只能靠文件名猜。把**下达值 + 开火计数**一起写进 meta，
    * 让每一粒产物能自证"我当时是在什么分布下选出来的"。只加字段，不改任何判定。 */
   recipe: { arm: (process.env.EPIRUS_ARM || null), seed: __SEED, gens: GENS, games: GAMES, pop: POP,
-    ringOpps: (RING_OPPS.length ? { on: true, poolSize: OPPS.length } : null),   // §E127：上桌了才记，没上桌一行都不留
     /* §E635（v1.7.92）：这两张"桌"的账必须能从产物自证 —— 关档 ⇒ `null`（一行都不留，与历史臂逐字相同）。
      * `selPool` 记的是**选拔桌**（终局重验那张表）有没有池席；`poolOpps`（上面那个字段）记的是**训练桌**。
      * 分两处记不是重复：它们本来就是两张桌，而 10-17 那页归因的病正是"只记了一张、另一张没人知道"。 */
     selPool: (SEL_POOL ? { table: SEL_TABLE.length, pairs: SEL_PAIRS.length, poolSeats: POOL_OPPS.length,
       poolIds: POOL_OPPS.map(function (o) { return o.name; }) } : null),
     hallDedup: (HALL_DEDUP ? { dropped: hallDupDropped, seats: hall.length } : null),   // 开过就记次数，0 次也记（0 与"没开"不同形）
-    oppBlock: (typeof T.oppTable === 'function' ? T.oppTable() : null),   // §E124：桌形 + 开火计数（下达值不够，要看真发生了多少局）
     xn2w: XN2W, xn2g: XN2G, selLand: SEL_LAND, selLandGames: SEL_LAND_GAMES, selLandTol: SEL_LAND_TOL,
-    selKeep: SEL_KEEP, selKeepKeys: (SEL_KEEP > 0 ? SEL_KEEP_KEYS : null),
-    selClear: SEL_CLEAR, selClearGames: (SEL_CLEAR > 0 ? SEL_CLEAR_GAMES : null),   // §E787：下达值 + 测量长度（关档 ⇒ 只留 0，读数与历史臂逐字相同）
+    selClear: SEL_CLEAR, selClearGames: SEL_CLEAR > 0 ? SEL_CLEAR_GAMES : null,   // §E787：下达值 + 测量长度（关档 ⇒ 只留 0，读数与历史臂逐字相同）
     /* 11-09 P1/P2（用户裁的形状：白防率**排序键**+ 手数门 / 用卡地板**只筛新候选**）。
      * 关档 ⇒ 两条 `null`，整段一行都不跑；开着就把「逐粒读数 / 改没改判 / placebo 倍差 / 几粒没量到」全记进产物，
      * 因为"这根有没有作用"只能从落盘的账里核，不能从我嘴上说。 */
@@ -3967,7 +2729,6 @@ const meta = {
     /* §E650（千问 · 默认关 ⇒ 两个 `null`，与历史臂同形）：送盾 veto 的账。
      * 记 `games` 是硬要求：§E649 实测这条判定随抽样长度翻（20 局 6.15 / 100 局 4.94），**没带长度的送盾读数不许被引用**。 */
     selGiftVeto: (SEL_GIFT_VETO > 0 ? SEL_GIFT_VETO : null), giftVeto: GIFT_VETO_LOG, giftVetoAllSpam: GIFT_VETO_ALL_SPAM,
-    selKeepCastKeys: (SEL_KEEP > 0 ? SEL_KEEP_CAST_KEYS : null),   // v1.5.266：出手口径名单（环/蓄能不打血）
     /* §十一 C：演化期健康门槛的开没开、审了多少次、饿退几代 —— 关档时整条 null（与历史臂同形）。 */
     gaGate: (GA_GATE > 0 ? { caliber: '两模式 effSkills≥' + GA_KINDS + '（种类那条 = 产品门 broad）∧ 两模式 effSkillsLand≥参照−' + LAND_TOL + '（那条 = pool-frontier-lib.isWideVs）', kindsFloor: GA_KINDS, sameAsBroadKinds: GA_GATE === 3, switch: GA_GATE, games: GA_GATE_GAMES, band: GA_BAND,
       ref: GA_INC ? { gMulti: GA_INC.gMulti, gLong: GA_INC.gLong, landMulti: GA_INC.landMulti, landLong: GA_INC.landLong } : null,
@@ -3977,10 +2738,8 @@ const meta = {
       lastEff1: GA_STAT.lastEff1, gens: GENS } : null),
     /* 11-02（千问）：四把干预档的**生效值**无条件落盘（未下达也记引擎默认）⇒ 以后任何一臂都能直接读出"训练时带不带档"。 */
     deployKnobs: DEPLOY_REC,
-    /* 11-04（DS，千问清单第 5 条）：门闸的**生效值**无条件落盘（未下达也记 0）——
-     *   病：`EFFECTIVE_ENV` 只记"环境里设了的键" ⇒ "没开"与"没登记"同形（HPG-s7 的 recipe 有 EFFSKILL_MIN 却没有 FATAL，只能靠日志尾行判）。 */
-    gateState: { effSkillMin: EFFSKILL_MIN, effSkillShare: EFFSKILL_SHARE, breadthFatal: BREADTH_FATAL ? 1 : 0,
-      breadthFloor: BREADTH_FLOOR, gaGate: GA_GATE, gaGateGames: GA_GATE_GAMES },
+    /* 11-04（DS，千问清单第 5 条）：门闸的**生效值**无条件落盘（未下达也记 0）。 */
+    gateState: { breadthFloor: BREADTH_FLOOR, gaGate: GA_GATE, gaGateGames: GA_GATE_GAMES },
     /* 11-04（千问）：锚定的**目标与棘轮状态**同样无条件落盘（关档也记 `{lambda:0,to:'seed'}`）
      *   —— 否则"锚没生效 / λ 太小空转 / 压根没下达"三种情况在账上又是同形（DS 给 gateState 补的就是这族病，
      *   而他 ANCHOR 那批的 meta 里连 `anchor` 都没有，只有日志能判）。 */
@@ -3990,21 +2749,11 @@ const meta = {
       refG: anchorRef ? anchorRef.g : null, refWideScore: anchorRef ? Number(anchorRef.wideScore.toFixed(2)) : null,
       moves: anchorRefMoves,
       live: ANCHOR > 0 ? ((ANCHOR_TO === 'widest' ? !!anchorRef : !!seedParams) ? 1 : 0) : 0 },
-    /* §A（11-02）：当选面防御下限键的开没开、带内有几粒、防御梯、有没有换人、全不达标旗标。关档时整条 null。 */
-    selDef: SEL_DEF_LOG,
-    /* T1（11-03）：当选面**族别签名分格**（D=防御族份额档 × K=种数档）——带内几格、每格几粒、取的是哪格、有没有换人。关档时整条 null。 */
-    selGrid: SEL_GRID_LOG,
-    kill: KILL_REC, family: FAMILY_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
+    kill: KILL_REC, trainMode: TRAIN_MODE_REQ, trainModeEffective: (typeof T.trainMode === 'function' ? T.trainMode() : null),
     /* v1.7.4 S2a：训练期那档决策期改写也要记账 —— 只记"下达值"不够（本仓的教训：横幅证明变量、证明不了效果）。
      * ⇒ 两个都记：下达的 `h2p` 与写 meta 时消费点仍读到的 `h2pEffective`；两者不等 = 中途被改回去，产物不可信。 */
     h2p: H2P_REQ, h2pEffective: (typeof P.holo2Proto === 'function' ? P.holo2Proto() : null),
     counterOpps: COUNTER_OPPS.map(function (o) { return o.name; }),   // v1.5.172：这臂的训练桌上放了哪几个判据原型
-    /* v1.5.325 §E237：这臂的训练桌上有没有"会攒并且真兑现"的深经济对手（默认关 ⇒ `null`，产物自证）。
-     * ⚠️ 与 `counterOpps` 分开写是故意的：那三个是**行为门原型**（判"被龟壳打死"），这三个是**经济威胁**（判"攒钱值不值"）。 */
-    econOpps: (ECON_OPPS.length ? ECON_OPPS.map(function (o) { return o.name; }) : null),
-    /* §E676（10-21 早班）：这臂的训练桌上有没有**杂货铺**（默认关 ⇒ `null`，一行都不留，与历史臂同形）。
-     * 记份数与上桌后的桌大小 —— 份数改的是**桌内份额**，不是"多几席"（份额不同就是不同的分布）。 */
-    toolkitOpps: (TOOLKIT_N ? { n: TOOLKIT_N, poolSize: OPPS.length } : null),
     /* v1.7.83 §E631：这臂的训练桌上有没有**池成员**（默认关 ⇒ `null`，一行都不留，与历史臂同形）。
      * 记 **wid + 被问到几次**而不是路径 —— 成员 `.bak` 有一批是 gitignore 的，路径在干净克隆里可能指空（那是 `D234` 的活）。 */
     poolOpps: (POOL_OPPS.length ? POOL_OPPS.map(function (o) { return { name: o.name, wid: o.sel.poolWid, asked: o.sel.asked() }; }) : null),
@@ -4019,7 +2768,6 @@ const meta = {
   breadthFloorAllNarrow: BREADTH_ALL_NARROW,   // §N29 走向②的标记：全池塌缩 ⇒ 该改奖励面，不是换排序键
   degenerateOnlyWinner: DEGENERATE_ONLY,   // §N9 退化闸：true=没有合格当选者、promote 会拒收
   productIsSeed: PRODUCT_IS_SEED, hallSeedEntries: HALL_SEED_ENTRIES,   // v1.5.277 §E113：产物=起点逐位 ⇒ 本臂零改包
-  hallSeedReq: HALL_SEED, hallSeedAppended: HALL_SEED_APPENDED,   // v1.5.277 §E114：重验池有没有被补进起点
   source: 'training/train-3p.mjs', n: N, gens: GENS, games: GAMES, pop: POP,
   /* §E322：把"当选键用了几粒 seedBase + 那几粒之间的极差"记进 meta。
    * 理由（§E318 实测）：链上从不印"分差 vs 噪声"的关系，于是 0.49pt 的分差被当判断用。 */
@@ -4091,16 +2839,4 @@ if (process.env.EPIRUS_TRIPLET === '1' && GUARD.wrote) {
   }
 }
 
-/* v1.7.91 自证：落地广度这一项到底有没有付过钱。
- *   `max <= WIDTH_FLOOR(3)` ⇒ 这一项从来没付过钱 ⇒ "没效果"是恒零的必然，不是"奖励无效"。 */
-if (WIDTH_LAND_WANT > 0) {
-  const vs = (T.economyReward() || {}).widthLandStat || {};
-  /* v1.8.16：括号里那句"覆盖率低"原来是**无条件**印的（实测 `blk=648 blkAttr=648` = 100% 覆盖时也照印"覆盖率低"）
-   *   ⇒ 与本晚 `gate-landscape` 那句"第一行是在位包"同一种病：**警告本身在说一件不一定是真的话**。
-   *   现在把百分比算出来，只有真的低（<50%）才带那句归因窗口错。 */
-  const cov = vs.blk ? vs.blkAttr / vs.blk : null;
-  console.log('[width-land] 自证：games=' + vs.games + ' max=' + vs.max + ' paid=' + vs.paid +
-    ' ‖ 归因覆盖：blk=' + vs.blk + ' blkAttr=' + vs.blkAttr +
-    '（覆盖率 ' + (cov == null ? '—' : (100 * cov).toFixed(0) + '%') +
-    (cov != null && cov < 0.5 ? ' ⇒ **低**：归因窗口错，不是饱和压没' : ' ⇒ 覆盖不缺 ⇒ 没付钱只可能是"没到那一格"') + '）');
-}
+

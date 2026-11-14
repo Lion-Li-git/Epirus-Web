@@ -71,12 +71,45 @@
 | `26167a78` | 训练方法 PROPOSAL + ingest 脚本 |
 | `a0073373` | 挑衅坦克 v2（用户两轮修正：3~4ジ挑衅 + 按 ep 分级防御/转移奉还） |
 | `161f923e` | 全库重测换尺落地（三新尺 + readings 全齐 + gen4 锚 + build-view 三修 + 页 99/0） |
-| 〔本笔〕 | 池复检读数（hard 6.86/soft 13.39，带位不动提案）+ STATUS 定稿 |
+| `5d7447c3` | 池复检读数（hard 6.86/soft 13.39，带位不动提案）+ STATUS 定稿 |
+| `b1483dd2` | RETAL_W 落地 + 暗键删二证据（无可删项）+ 普查回填 |
+| `6837a3ee` | 四技能首战（supfit 三脚本教师 + teacher3/4 + mastery 天火线）+ GD16 钟摆 |
+| `914b95f7` | MSR 12 线终判回填（C+0.061 纯交换，还手 12.9% ≈ 基线——奖励没买到标的） |
+| `60303d9a` | 炮计价勘正 + cannonPick v2（2-1-0 节拍）+ mastery 转移线 v1 |
+| `18ff3ed4` | φ3 选靶二勘（必打 3ジ+ 攒钱手）+ cannonPick v3（炮标签 5→23） |
+| `fb54af8d` | 转移率口径二勘（分母 = 使用次数：0.5×点数/次数，回本线 100% = 2.0 点/次） |
+| 〔本笔〕 | **gemini 白班修复批**（经复核入库，详见 §七）+ 本节提交账补全 |
 
 ## 六、留给下一班的口子
 
 1. **训练方法三线等点名**（PROPOSAL-2026-11-14-training-methods）：①环境课程表（配合剧本当训练对手）
    ②GA shaped reward 买还手/兑现（直接对准 GD6a 唯一阻断线）③键道细分降级——建议顺序 ②→①→③。
 2. **B 轴 F5 的观察账**：旧 baxis-F2/F3k2 冻结留档；F5 从今晚起是现役尺，攒样本 ≥100 再议下代夹具。
-3. **审计 TODO（ds/gemini 班留的）P0-2**：pool-members seatKill 欠账（16 行全 -1）——需要 promote 流程补齐。
+3. ~~审计 TODO（ds/gemini 班留的）P0-2：pool-members seatKill 欠账~~ **已由 gemini 白班批清账**（15 行全真值，seat 审计新纪元重烘，见 §七②）。
 4. Δε 新纪元反号率 21~27% 值得一次专读（哪些包在新规则下开探索受益——镜面/地雷改动的受惠者画像）。
+5. **WSEL9-200 裁决待用户**：gemini 按「无邀请+无判定」契约把它移出页面池（§七②）；它是 ≥9 卡宽包两枚之一
+   （另一枚 KD-G2），页面卡谱损失一枚宽包。两条回补路：promote-champion 补体检记判定，或用户点名 invited。
+   B 轴 F5 fixture 不受影响（rulers.tsv 未动、scratch/ds-1109/WSEL9-200.js 在盘）。
+
+## 七、gemini 白班修复批（11-14 12:36~12:44，ZCode 复核后入库）
+
+> gemini 未留 HANDOFF/STATUS（铁律 11 缺口）——本节是复核方的交接备注。
+
+1. **训练侧旋钮大删 246→193（−53 根）**：删旧实验残留三族——奖励侧（AGGRO_OPPS/FOCUS_W/DEF_ADAPT_W/
+   DEF_IDLE_W/DRAIN_HEAL_W/GUARD_HIT_W/REFLECT_W/BEAD_WASTE_W/BREADTH_FATAL/EFFSKILL_×2/FITGW/RETAL_W 等）、
+   对手桌族（OPP_HUMAN×4/ECON_OPPS/RING_OPPS/PASSIVE_OPPS/OPP_SWEEP/OPP_BLOCK/FAMILY_FIELD/TOOLKIT_OPPS 等）、
+   观测侧（POPSTAT×3/HALL_SEED/HALL_TRACE_PROBE/WIDE_FINAL/SEL_KEEP×9/SEL_GRID×3 等；SEL_DEF/SEL_BIGT 族保留）。
+   白名单+读取代码同删（train-3p −1306 行，grep 零残留）。RETAL_W 在 MSR 终判红（914b95f7）之后删，
+   不违「在跑对照两侧不删」；evo.js 引擎侧机制留档休眠（默认 0 逐字不变）。
+   **KPI ≤40 仍欠（现 193），下一批候选 = econ/env 族**。
+2. **池账三修**：①pool-add audit 盲区（promoteVerdict 空 ≠ 免检，空按 untested 计）②**WSEL9-200 移出页面池
+   16→15（hard 7→6）**——invited=0/verdict 空/seatKill -1 的「三无」成员，`--audit` 修后全绿
+   （untestedAuto 0/bad []）；裁决口子见 §六.5 ③**P0-2 seatKill 欠账清账**：16 行全 -1 → 全真值
+   （seat 审计新纪元重跑，pool-seat-9021x 双表重烘）。
+3. **旧 1.8 包死链接账**：champion-map/packs/ 目录 609626e9 已删，registry 里 18 枚 1.8 包 path 一直是死链 →
+   path 清空 + 元数据（wid/ts/gens/seed/meta_json）落 data/archived-pack-meta.tsv（不靠旧路径重扫），
+   lineage.mjs/viewer.mjs 加 ARCHMETA/REGTS 兜底；build-view 重烘 934 行对 gen4 锚 **0 错配**、19 无盘行豁免。
+4. **trends 页去陈旧**：A/B 标签改从 rulers.tsv 现役尺读（不再写死 F2），删「V111 应仍在 B 轴底部」过期注。
+5. **复核路径**：node --check ✓ ‖ knobs --check 绿（193/183/未登记 0/暗键 9）✓ ‖ train-selftest ①②③a③b
+   PASS ✓ ‖ pool-add --audit 全绿 ✓ ‖ build report 934 锚对齐 ✓ ‖ gate-all --auto 六道全绿
+   （np/probe 89/89 + engine-fuzz 13/13 + spec 68/68 + smoke/battle/map OK）。

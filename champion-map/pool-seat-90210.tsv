@@ -1,39 +1,35 @@
-id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
-bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90210	3	8	2	27	2	19	10.17	27.0	只枪压制	6
-bundled-champion-3p	js/bundled-champion-3p.js	long	200	90210	5	13	0	30	5	17	11.67	30.0	只枪压制	3.8333333333333335
-T8-s114	docs/artifacts/e528-out/T8-s114.js	multi	200	90210	3	8	2	27	2	19	10.17	27.0	只枪压制	6
-T8-s114	docs/artifacts/e528-out/T8-s114.js	long	200	90210	5	13	0	30	5	17	11.67	30.0	只枪压制	3.8333333333333335
-win-Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	multi	200	90210	2	5	3	12	4	6	5.33	12.0	只枪压制	3.5
-win-Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	long	200	90210	5	15	0	28	16	10	12.33	28.0	只枪压制	2.5
-e70-out__D02-31	docs/artifacts/kept/e70-out__D02-31.bak	multi	200	90210	6	7	1	25	3	2	7.33	25.0	只枪压制	4.166666666666667
-e70-out__D02-31	docs/artifacts/kept/e70-out__D02-31.bak	long	200	90210	10	7	0	29	8	13	11.17	29.0	只枪压制	2.6666666666666665
-D4a	docs/artifacts/e234-out/D4a.js	multi	200	90210	1	8	0	28	10	23	11.67	28.0	只枪压制	5.333333333333333
-D4a	docs/artifacts/e234-out/D4a.js	long	200	90210	21	18	0	21	11	27	16.33	27.0	重火力+反弹	3.6666666666666665
-E3	docs/artifacts/e234-out/E3.js	multi	200	90210	1	15	1	38	8	38	16.83	38.0	只枪压制	9.166666666666666
-E3	docs/artifacts/e234-out/E3.js	long	200	90210	3	23	1	48	8	36	19.83	48.0	只枪压制	5.666666666666667
-E35-prod-807	docs/artifacts/E35-prod-807.bak	multi	200	90210	1	14	0	48	2	33	16.33	48.0	只枪压制	3.5
-E35-prod-807	docs/artifacts/E35-prod-807.bak	long	200	90210	2	32	0	48	19	28	21.50	48.0	只枪压制	2
-v7l2c-82	docs/artifacts/v7l2c-82.bak	multi	200	90210	17	49	0	94	1	34	32.50	94.0	只枪压制	3.3333333333333335
-v7l2c-82	docs/artifacts/v7l2c-82.bak	long	200	90210	11	92	0	99	0	42	40.67	99.0	只枪压制	3.1666666666666665
-R-s123	docs/artifacts/e521-out/R-s123.js	multi	200	90210	10	13	1	24	4	17	11.50	24.0	只枪压制	5.833333333333333
-R-s123	docs/artifacts/e521-out/R-s123.js	long	200	90210	22	24	0	39	10	20	19.17	39.0	只枪压制	3.6666666666666665
-S-s120	docs/artifacts/e521-out/S-s120.js	multi	200	90210	3	15	0	33	4	24	13.17	33.0	只枪压制	9.166666666666666
-S-s120	docs/artifacts/e521-out/S-s120.js	long	200	90210	5	21	0	52	7	39	20.67	52.0	只枪压制	6.666666666666667
-win-R231	docs/artifacts/eval-out/win-R231.bak	multi	200	90210	8	13	0	57	1	45	20.67	57.0	只枪压制	9.833333333333334
-win-R231	docs/artifacts/eval-out/win-R231.bak	long	200	90210	21	29	0	51	3	47	25.17	51.0	只枪压制	8.333333333333334
-v7beadseed-82	docs/artifacts/v7beadseed-82.bak	multi	200	90210	2	9	1	45	0	10	11.17	45.0	只枪压制	16
-v7beadseed-82	docs/artifacts/v7beadseed-82.bak	long	200	90210	8	28	0	48	1	12	16.17	48.0	只枪压制	3.6666666666666665
-win-R311	docs/artifacts/eval-out/win-R311.bak	multi	200	90210	10	4	1	11	3	9	6.33	11.0	只枪压制	3.5
-win-R311	docs/artifacts/eval-out/win-R311.bak	long	200	90210	18	23	0	27	15	20	17.17	27.0	只枪压制	2.1666666666666665
-e124-out__blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	multi	200	90210	0	3	1	15	6	13	6.33	15.0	只枪压制	1
-e124-out__blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	long	200	90210	2	5	1	23	18	7	9.33	23.0	只枪压制	0.6666666666666666
-E59-land-902	docs/artifacts/E59-land-902.bak	multi	200	90210	4	5	0	17	7	9	7.00	17.0	只枪压制	4.833333333333333
-E59-land-902	docs/artifacts/E59-land-902.bak	long	200	90210	14	18	0	29	14	11	14.33	29.0	只枪压制	3
-SP-s30	docs/artifacts/e504-out/SP-s30.js	multi	200	90210	1	8	0	21	0	8	6.33	21.0	只枪压制	6.166666666666667
-SP-s30	docs/artifacts/e504-out/SP-s30.js	long	200	90210	5	1	0	19	0	7	5.33	19.0	只枪压制	4
-U-s216	docs/artifacts/e539-out/U-s216.js	multi	200	90210	1	6	1	32	0	20	10.00	32.0	只枪压制	5
-U-s216	docs/artifacts/e539-out/U-s216.js	long	200	90210	1	5	1	28	0	29	10.67	29.0	重火力+反弹	4.666666666666667
-sel80	docs/artifacts/eval-out/sel80.bak	multi	200	90210	0	4	0	19	1	30	9.00	30.0	重火力+反弹	4.666666666666667
-sel80	docs/artifacts/eval-out/sel80.bak	long	200	90210	2	5	0	22	7	23	9.83	23.0	重火力+反弹	3
-N5L-30	docs/artifacts/e106-out/N5L-30.bak	multi	200	90210	1	8	1	15	6	6	6.17	15.0	只枪压制	2.8333333333333335
-N5L-30	docs/artifacts/e106-out/N5L-30.bak	long	200	90210	3	13	1	35	20	11	13.83	35.0	只枪压制	2.5
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	规则理解·自适应	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+bundled-champion-3p	js/bundled-champion-3p.js	multi	200	90210	2.5	7.5	2	26.5	25.5	2.5	2.5	9.86	26.5	只枪压制	6.142857142857143
+bundled-champion-3p	js/bundled-champion-3p.js	long	200	90210	5	13	0	29	25	5	5	11.71	29.0	只枪压制	3
+KDG-B-Q-s13	docs/artifacts/night-adapt/KDG-B-Q-s13.js	multi	200	90210	4.5	10	1	2.5	0.5	4.5	4.5	3.93	10.0	全程只防御	9.714285714285714
+KDG-B-Q-s13	docs/artifacts/night-adapt/KDG-B-Q-s13.js	long	200	90210	1.5	8	0.5	2.5	1	1.5	1.5	2.36	8.0	全程只防御	1.8571428571428572
+MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	multi	200	90210	4.5	0	0	0.5	1	4.5	4.5	2.14	4.5	全程刷反弹	2.5714285714285716
+MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	long	200	90210	3.5	0	0	0	1	3.5	3.5	1.64	3.5	全程刷反弹	0.42857142857142855
+MSB11-R2S306293884	docs/artifacts/night-adapt/MSB11-R2S306293884.js	multi	200	90210	22	0	0	1	2	22	22	9.86	22.0	全程刷反弹	0
+MSB11-R2S306293884	docs/artifacts/night-adapt/MSB11-R2S306293884.js	long	200	90210	43.5	0	0	0.5	1	43.5	43.5	18.86	43.5	全程刷反弹	0
+MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	multi	200	90210	9.5	0	0	1.5	2	9.5	9.5	4.57	9.5	全程刷反弹	0
+MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	long	200	90210	15	0	0	0.5	1.5	15	15	6.71	15.0	全程刷反弹	0
+MSB15R-hit-mix-R1S2057836694	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	multi	200	90210	5	0	3	0	1	5	5	2.71	5.0	全程刷反弹	0.5714285714285714
+MSB15R-hit-mix-R1S2057836694	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	long	200	90210	4.5	0	2.5	0	2	4.5	4.5	2.57	4.5	全程刷反弹	0.14285714285714285
+STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	multi	200	90210	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	20.857142857142858
+STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	long	200	90210	0	21.5	0	0.5	0	0	0	3.14	21.5	全程只防御	11
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	multi	200	90210	0.5	16	0	48.5	29	0.5	0.5	13.57	48.5	只枪压制	1.5714285714285714
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	long	200	90210	0	36.5	0	41.5	36.5	0	0	16.36	41.5	只枪压制	0.7142857142857143
+DDEF-s13	docs/artifacts/2p0-pool/DDEF-s13.bak	multi	200	90210	5	20.5	1	28	15	5	5	11.36	28.0	只枪压制	3.7142857142857144
+DDEF-s13	docs/artifacts/2p0-pool/DDEF-s13.bak	long	200	90210	23	3.5	0	22	7	23	23	14.50	23.0	全程刷反弹	2.5714285714285716
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak	multi	200	90210	3	20.5	1	30	21	3	3	11.64	30.0	只枪压制	1.1428571428571428
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak	long	200	90210	3	7	0.5	17	10.5	3	3	6.29	17.0	只枪压制	0.7142857142857143
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	multi	200	90210	3.5	21	1	40.5	24	3.5	3.5	13.86	40.5	只枪压制	1.5714285714285714
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	long	200	90210	1	28	0	52.5	30	1	1	16.21	52.5	只枪压制	1.1428571428571428
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	multi	200	90210	0	19	1	32	18.5	0	0	10.07	32.0	只枪压制	2.857142857142857
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	long	200	90210	0	29.5	0	50	24.5	0	0	14.86	50.0	只枪压制	1.7142857142857142
+EFFG-s41	docs/artifacts/2p0-pool/EFFG-s41.bak	multi	200	90210	4.5	0	1	0	0	4.5	4.5	2.07	4.5	全程刷反弹	19
+EFFG-s41	docs/artifacts/2p0-pool/EFFG-s41.bak	long	200	90210	9.5	0	2.5	0.5	0	9.5	9.5	4.50	9.5	全程刷反弹	14.714285714285714
+EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	multi	200	90210	65	9	5	3	21.5	65	65	33.36	65.0	全程刷反弹	9
+EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	long	200	90210	73.5	0	0	0	0.5	73.5	73.5	31.57	73.5	全程刷反弹	16.857142857142858
+GD6a-TILT-3p	docs/artifacts/night-adapt/GD6a-TILT-3p.bak	multi	200	90210	0	0	0.5	0	0	0	0	0.07	0.5	只攒不打(农民)	8.714285714285714
+GD6a-TILT-3p	docs/artifacts/night-adapt/GD6a-TILT-3p.bak	long	200	90210	0	0	0.5	0	0	0	0	0.07	0.5	只攒不打(农民)	5.857142857142857
+KD-G2	docs/artifacts/night-adapt/KD-G2.bak	multi	200	90210	12	17	0.5	25.5	5.5	12	12	12.07	25.5	只枪压制	7.285714285714286
+KD-G2	docs/artifacts/night-adapt/KD-G2.bak	long	200	90210	8	12.5	0	29	4.5	8	8	10.00	29.0	只枪压制	3.5714285714285716
+WSEL9-200	docs/artifacts/night-adapt/WSEL9-200.js	multi	200	90210	31.5	9	0.5	2	13.5	31.5	31.5	17.07	31.5	全程刷反弹	7.428571428571429
+WSEL9-200	docs/artifacts/night-adapt/WSEL9-200.js	long	200	90210	41	6.5	0.5	10	1	41	41	20.14	41.0	全程刷反弹	3.857142857142857

@@ -7,6 +7,7 @@
 | 文件 | 粒度 | 说明 |
 |---|---|---|
 | registry.tsv | 一行 = 一份权重 | id/path/ver/fam/fam_label/lineage/ts/sha256/status |
+| archived-pack-meta.tsv | 一行 = 一枚归档旧包 | 18 枚归档 1.8 包的 wid/ts/gens/seed/hotstartFrom/meta_json（不靠旧 packs/ 或 archive/ 路径重扫） |
 | rulers.tsv | 一行 = 一把尺 | axis/status(current/reference/frozen)/fixture/batch/formula |
 | batches.tsv | 一行 = 一次考试批次 | batch_id/ruler/axis/fixture/champ/run/source/rows |
 | readings/current.tsv | 长表 | pack_id,ruler_id,cell,horizon,value,n,batch_id |

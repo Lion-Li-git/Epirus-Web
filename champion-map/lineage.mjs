@@ -70,8 +70,23 @@ const PATHOF = {};
   for (const l of CL.slice(1)) { const c = l.split('\t'); if (c[iId] && c[iPath]) PATHOF[c[iId]] = c[iPath]; }
   console.log('路径表（coords.tsv 的 path 列）：' + Object.keys(PATHOF).length + ' 条');
 }
+const ARCHMETA = {};
+{
+  const amP = join(HERE, 'data/archived-pack-meta.tsv');
+  if (existsSync(amP)) {
+    const T = rd(amP).replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
+    const ah = Object.fromEntries(T[0].map((x, i) => [x, i]));
+    for (const r of T.slice(1)) {
+      const id = r[ah.pack_id];
+      if (!id || !r[ah.meta_json]) continue;
+      let m = null;
+      try { m = JSON.parse(r[ah.meta_json]); } catch (e) { m = null; }
+      if (m) ARCHMETA[id] = { m, wid: (r[ah.wid] || '').trim() || null };
+    }
+  }
+}
 const REC = [];
-let nmiss = 0, nByPath = 0;
+let nmiss = 0, nByPath = 0, nArchMeta = 0;
 /* §E503：**声明**是融合粒的枚（包 meta 里写了 `soup.sources`）—— 与"这张表里解析出父边的枚"分开数。
  *   为什么必须分开：融合粒的父多半住在 gitignored 的 `docs/artifacts/…`（本机才有），
  *   干净克隆里 `wid → 节点` 全解不开 ⇒ `psrc` 不再是 'soup' ⇒ **第二父边从 6 条静默塌成 0 条**，
@@ -83,17 +98,21 @@ for (const id of ids) {
   const p = rel ? join(ROOT, rel) : join(ART, id + '.bak');
   if (rel) nByPath++;
   let m = null, wid = null, used = rel || '';
-  if (existsSync(p)) { const txt = readFileSync(p, 'utf8'); m = parseMeta(txt); wid = widOf(txt); }
+  if (ARCHMETA[id] && !rel) {
+    /* 已归档包的新格式元信息住在 data/archived-pack-meta.tsv，不依赖旧 packs/ 或 archive/ 路径 */
+    m = ARCHMETA[id].m; wid = ARCHMETA[id].wid; nArchMeta++;
+  } else if (existsSync(p)) { const txt = readFileSync(p, 'utf8'); m = parseMeta(txt); wid = widOf(txt); }
   else if (/bundled-champion-3p\.js$/.test(String(rel || ''))) { const alt = join(HERE, '..', 'js', 'bundled-champion-3p.js');
     /* §E464 这条兜底**只服务"这一行就是现役那颗"**（SHIPPED-Ldemo 的 path 正是这个文件，只是 ROOT 拼法可能落空）。
      *   原来它挂在"任何文件读不到"的分支上：实测把 e370-out（未入库那批 v7 导出）挪走模拟换台机器 ⇒
      *   16 枚旧槽位冠军全部走进这一支，META/wid 被写成**现役那颗**的（d490dc13…）⇒ 谱系表 711 行的家族签名跟着变。
      *   "读不到"就该是读不到，不许拿别人的身份顶上（同一套判据见 §E330「不许凭一条路径凭空造节点」）。*/
     if (existsSync(alt)) { const txt = readFileSync(alt, 'utf8'); m = parseMeta(txt); wid = widOf(txt); used = 'js/bundled-champion-3p.js'; } }
+  else if (ARCHMETA[id]) { m = ARCHMETA[id].m; wid = ARCHMETA[id].wid; nArchMeta++; }
   if (!m) { nmiss++; REC.push({ id, m: null, wid, rel: used }); continue; }
   REC.push({ id, m, wid, rel: used });
 }
-console.log('按 coords.tsv 的 path 列解析 ' + nByPath + ' 枚 ‖ 其余按 docs/artifacts/<id>.bak 兜底');
+console.log('按 coords.tsv 的 path 列解析 ' + nByPath + ' 枚 ‖ data/archived-pack-meta 补回 ' + nArchMeta + ' 枚 ‖ 其余按 docs/artifacts/<id>.bak 兜底');
 console.log('读到 META ' + REC.filter(r => r.m).length + ' / ' + ids.length + ' 枚（缺 ' + nmiss + '）‖ 算出权重身份 ' +
   REC.filter(r => r.wid).length + ' 枚');
 

@@ -220,7 +220,7 @@ if (has('audit')) {
     if (!tr.has(p)) { untracked++; bad.push({ why: '不在 git', id: id }); }
     const pv = r[t.h.promoteVerdict];
     if (!inv && pv === 'block') { blockedAuto++; bad.push({ why: '自动成员体检 block', id: id }); }
-    if (pv === 'untested' && !inv) untestedProm++;
+    if ((!pv || pv === 'untested') && !inv) untestedProm++;
     const sk = Number(r[t.h.seatKill]);
     if (!inv && sk > 0) { seatKilled++; bad.push({ why: '自动成员人席否决 ' + sk + ' 格', id: id }); }
     if (sk < 0) seatUnknown++;

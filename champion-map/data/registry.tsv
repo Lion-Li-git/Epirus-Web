@@ -793,16 +793,16 @@ v9-46	docs/artifacts/v9-46.bak	1.8	3	对手池步进 B1（09-13：对手池 1→
 W31	docs/artifacts/e234-out/W31.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:33:26	d57b032be5c616bec0e09ca1b5c19eaa93ff653d29a229e1d07a6fb2fe103b78	active
 W71	docs/artifacts/e234-out/W71.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:33:38	b3b82a6316e21a7073825c255f93e4b7a289fa6f4d5c18d2f082eea78ba09370	active
 X1	docs/artifacts/e234-out/X1.js	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-02T16:04:33	6f2aeca881388e301373dbf0c28db14d0d51199b7ca85823cfc3432acf0210f0	active
-e1-teach-77003	champion-map/packs/e1-teach-77003.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:55:16	6e34f2b00aebda25155fed7ab233b7c70da81ffbbd81f154cab3f95547b2b1fd	active
-e1-ctl-77000	champion-map/packs/e1-ctl-77000.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:25:39	45d04236a4659f8c15e0a045304972f58eae243ca03520194f4739a82ff1da5f	active
-e2-grad-77002	champion-map/packs/e2-grad-77002.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:30	1100fb7f50f61f4c0482a78ea853321c9f7f0bae75fcb25eaeb9e34fc10940eb	active
-e2-teach-77000	champion-map/packs/e2-teach-77000.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:57	ad2caa76079b64af1e09133defc8d5232f9397e7ee8e90dda8b9fb7476cbac7b	active
-g12-keep-77000	champion-map/packs/g12-keep-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T11:58:15	947d35608aac63327215ca5920b7654946581ae4cc7a236a39b91075e4157d9b	active
-g14-h2-77001	champion-map/packs/g14-h2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T12:47:19	e0a6c0a6b5f9790f81aaeedfaa55c51767ce5e70dd7a62a74a742809ed65c2e4	active
-g15-long-77001	champion-map/packs/g15-long-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T13:25:43	e7ba72d9358b928648c74a507075b94ad9029a4769cf178171f505dafb2e8372	active
-g16-77001	champion-map/packs/g16-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:14:34	48dc87ad19fcd06c4c96b581508784e9c54c346573008b0b3141a2d1109f6720	active
-g17-77000	champion-map/packs/g17-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:59:57	6563ff8c41fe60c89e2df546a2b574252fdd03243c59ab7104caece813bf604a	active
-g18-77001	champion-map/packs/g18-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T17:36:22	62aaf4bc5ce002563f8f64e704bc3fa68c539984f7675de22dd9a67a0c094a5f	active
+e1-teach-77003		1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:55:16	6e34f2b00aebda25155fed7ab233b7c70da81ffbbd81f154cab3f95547b2b1fd	archived
+e1-ctl-77000		1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-22T05:25:39	45d04236a4659f8c15e0a045304972f58eae243ca03520194f4739a82ff1da5f	archived
+e2-grad-77002		1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:30	1100fb7f50f61f4c0482a78ea853321c9f7f0bae75fcb25eaeb9e34fc10940eb	archived
+e2-teach-77000		1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-23T05:05:57	ad2caa76079b64af1e09133defc8d5232f9397e7ee8e90dda8b9fb7476cbac7b	archived
+g12-keep-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T11:58:15	947d35608aac63327215ca5920b7654946581ae4cc7a236a39b91075e4157d9b	archived
+g14-h2-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T12:47:19	e0a6c0a6b5f9790f81aaeedfaa55c51767ce5e70dd7a62a74a742809ed65c2e4	archived
+g15-long-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T13:25:43	e7ba72d9358b928648c74a507075b94ad9029a4769cf178171f505dafb2e8372	archived
+g16-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:14:34	48dc87ad19fcd06c4c96b581508784e9c54c346573008b0b3141a2d1109f6720	archived
+g17-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T14:59:57	6563ff8c41fe60c89e2df546a2b574252fdd03243c59ab7104caece813bf604a	archived
+g18-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-23T17:36:22	62aaf4bc5ce002563f8f64e704bc3fa68c539984f7675de22dd9a67a0c094a5f	archived
 t5-151-ringon	docs/artifacts/kept/e641-out__t5-151-ringon.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T17:55:23	1aec90e4c1f72dfd91aec0be9cd3374ca4329c16554b48acce7883d461c7f441	active
 t5-151-ringoff	docs/artifacts/kept/e641-out__t5-151-ringoff.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T17:58:13	57ebd5fb04dff001127e54ebb7eb316e643e46e43c7b514220949a9afac29828	active
 t5-G12H1-ringon	docs/artifacts/kept/e641-out__t5-G12H1-ringon.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-10-17T19:05:04	a417cea842739a5b9c52eba57a8becb66b7dd3071d0254b78310bf9335660ea3	active
@@ -816,14 +816,14 @@ night-T1-77002	docs/artifacts/night-T1-77002.bak	1.8	13	激光眼线（g12→g18
 night-A0-77001	docs/artifacts/night-A0-77001.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T16:08:57	0922532e7c62f7213f4fe1d33ac6063c9b7d90ae2ab4e43f5ed028ca17449fd9	active
 night-T3-77002	docs/artifacts/night-T3-77002.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T18:57:18	5476000703e14e4629f67bfea3d9c7ef3707ee6295ccb39027669c4a1949b76b	active
 night-T3-77000	docs/artifacts/night-T3-77000.bak	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-24T18:38:01	444c98d02d910ab5c9fcb83d35ddd94bc5b183f111da91499e61ced7b937a4ee	active
-D1-77000	champion-map/packs/D1-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:39:13	acb907a8e56ebb84b0048748c12cf026a76a4e89284ec953c03febfc4b674c88	active
-C2-77000	champion-map/packs/C2-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:08:11	aef1c778474d9962397caa614ed7df9033bacf875184dc25fea022d3328ba04f	active
-N2-77000	champion-map/packs/N2-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T17:06:48	0a5ca71f229f7e3c50b7c93bc7579c91156f218bc48e8ee974ac26b0d782375a	active
-Q4-77000	champion-map/packs/Q4-77000.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T19:48:58	65a9547c92237a2ea29472aef16be8044a7ef1c56d3b9f22744f9a06490a6b18	active
-U2-77001	champion-map/packs/U2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T22:31:08	33a3a1e0cbc06e124391593126d717facc2ac43de6cbc2e913a4abbdc789d281	active
-RC1-77001	champion-map/packs/RC1-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T03:58:55	1a93057de0835ec2af2b353f070abb03f56887a6b7b0dda8a53bc6b594575c56	active
-V9-77001	champion-map/packs/V9-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T09:58:45	9a4383a08417aabdbaed39a28d04b6edd97b3566ba33bd28687eb16d29ac1264	active
-RW2-77001	champion-map/packs/RW2-77001.js	1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T04:54:43	dfe05233ba902263c566cc0ff77ca61369a703ee747166f6c044e7d8ce2b45d7	active
+D1-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:39:13	acb907a8e56ebb84b0048748c12cf026a76a4e89284ec953c03febfc4b674c88	archived
+C2-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T12:08:11	aef1c778474d9962397caa614ed7df9033bacf875184dc25fea022d3328ba04f	archived
+N2-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T17:06:48	0a5ca71f229f7e3c50b7c93bc7579c91156f218bc48e8ee974ac26b0d782375a	archived
+Q4-77000		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T19:48:58	65a9547c92237a2ea29472aef16be8044a7ef1c56d3b9f22744f9a06490a6b18	archived
+U2-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-25T22:31:08	33a3a1e0cbc06e124391593126d717facc2ac43de6cbc2e913a4abbdc789d281	archived
+RC1-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T03:58:55	1a93057de0835ec2af2b353f070abb03f56887a6b7b0dda8a53bc6b594575c56	archived
+V9-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T09:58:45	9a4383a08417aabdbaed39a28d04b6edd97b3566ba33bd28687eb16d29ac1264	archived
+RW2-77001		1.8	13	激光眼线（g12→g18 · 教师/判据桌 · 冷启破零 · 破密 · 珠闭环） ‖ 18 枚 ‖ 10-23→10-27		2026-10-27T04:54:43	dfe05233ba902263c566cc0ff77ca61369a703ee747166f6c044e7d8ce2b45d7	archived
 BAS-s41	scratch/ga-arms/BAS-s41.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:54:39.277Z	8b5845a5868f34b130396f6b2d88d52b0d03098fbbf692f9dac9ca5755b45f41	active
 CBG-s13	scratch/ga-arms/CBG-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T06:27:00.968Z	f95eeb3c3eea78b98f5b53b52d975cb33425437444a601f30f03c2dedb42a767	active
 G3C-s13	scratch/ga-arms/G3C-s13.js	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T07:38:21.271Z	1dabb8c57866147cbcd25e7c3c5696ad8ab02e63f72e40867db838db142165c9	active
