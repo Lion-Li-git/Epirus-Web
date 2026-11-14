@@ -208,7 +208,7 @@ export function auditCells(W, A, chooser, cellsSpec, games, salt) {
       ringRuns: [],                       /* 本格全部 ok-ring 连段长度（诊断用） */
       chains: { ring: 0, cannon: 0, cannonEpMax: 0 },
       sem: { laserEyeHit: 0, laserEyeN: 0, miniTHit: 0, miniTN: 0 },
-      obs: { proto: 0, transfer: 0, transferHit: 0, transferAmt: 0, holo: 0, protoHeat: 0, protoLead: 0, protoLow: 0, tHeat: 0, tLead: 0, tLow: 0, holoTargets: {} },
+      obs: { proto: 0, transfer: 0, transferHit: 0, transferAmt: 0, dmgIn: 0, holo: 0, protoHeat: 0, protoLead: 0, protoLow: 0, tHeat: 0, tLead: 0, tLow: 0, holoTargets: {} },
     };
     for (let g = 0; g < games; g++) {
       aud.begin();
@@ -254,6 +254,8 @@ export function auditCells(W, A, chooser, cellsSpec, games, salt) {
         }
         /* 观测列：时机旗（对任何出手都算旗，报告时只看 proto/transfer 的） */
         const flags = riskFlags(row, rows, i);
+        /* 夜6班 · 11-14：承伤分母（转移率的分母 = 全部决策行的当回合指向我的伤害） */
+        st.obs.dmgIn += (row.dmgToMe || []).reduce((a, d) => a + (d.amt || 0), 0);
         if (pk.key === R.SK.PROTO) {
           st.obs.proto++;
           if (flags.heat) st.obs.protoHeat++;
@@ -361,6 +363,18 @@ function verdictOf(a) {
     line: L.miniT + '/局（各格）' + (isShort ? '（语义只记录）' : ' ∧ 打 [ep≥2 ∧ 最近 ' + MINIT_WINDOW + ' 回合蓄过珠] 的席≥1/2'),
     semEra: MINIT_ERA };
   v.cannon = { pass: isShort ? canAll >= 1 : minCannonRate(a) >= L.cannon, actual: (isShort ? canAll + ' 段' : pct(minCannonRate(a)) + '/局（对 ep 顶 ' + canEp + ' 段）'), line: isShort ? '批内≥1 段' : L.cannon + '/局（各格，第3下打ep顶）' };
+  /* 夜6班 · 11-14（用户令「转移伤害做成转移率，按转移 1 点 50% 算，看平均转移率能否到 50%」）：
+   *   转移率 = 0.5 × 成功转移点数(transferAmt) / max(1, 承伤总量(dmgIn)) —— 每转走 1 点按半价计减伤当量
+   *   （重定向不是免除：目标还挨着 + 我花 2ジ），门槛 = 平均转移率 50%（= 转走的量与挨的量等量）。
+   *   transfer==0 时按「语义读不出」记（与 miniT 分母 0 同规矩），不写成 0% 反制。 */
+  const tfAll = a.cells.reduce((s, st) => s + (st.obs.transfer || 0), 0);
+  const tfAmt = a.cells.reduce((s, st) => s + (st.obs.transferAmt || 0), 0);
+  const tfDmgIn = a.cells.reduce((s, st) => s + (st.obs.dmgIn || 0), 0);
+  const tfRate = tfDmgIn > 0 ? (0.5 * tfAmt) / tfDmgIn : 0;
+  v.transfer = { pass: minRate('transfer') >= 0.05 && (isShort || tfRate >= 0.5),
+    unreadable: !isShort && tfAll === 0,
+    actual: pct(minRate('transfer')) + '/局，转移 ' + tfAmt + ' 点（当量 ' + (0.5 * tfAmt).toFixed(1) + '）/ 承伤 ' + tfDmgIn + ' ⇒ 转移率 ' + pct(tfRate),
+    line: '0.05/局（各格）' + (isShort ? '' : ' ∧ 转移率≥50%') };
   /* 夜6班 · 11-14（用户令「天火训练把引爆率和电磁炮珠浪费一样当重要门槛」）：**贴而不引**是主浪费形态
    *   （R62 实测 GD3ALL-NGA2R 贴 89 引 1，I/A=0.01）。口径：引爆率 = okUses.firestorm / max(1, okUses.curse)
    *   —— R64 引擎门保证每次成功 firestorm 都有活符可点；**符咒引爆后仍存（可多次引爆）⇒ 每次引爆都计入、
@@ -395,7 +409,7 @@ function printPack(a) {
     console.log('  ' + row);
   }
   const v = verdictOf(a);
-  const names = { ring: '会聚能环', bigT: '会大雷', railgun: '会电磁炮', laserEye: '会激光眼', miniT: '会小雷', cannon: '会过载炮', firestorm: '会天火' };
+  const names = { ring: '会聚能环', bigT: '会大雷', railgun: '会电磁炮', laserEye: '会激光眼', miniT: '会小雷', cannon: '会过载炮', firestorm: '会天火', transfer: '会转移' };
   console.log('  —— 判据（' + (a.table === 'long' ? '长程 PREREG §二' : '短程迁移 PREREG §四 ×1/4') + '）——');
   for (const k of Object.keys(v)) console.log('  ' + (v[k].pass ? '✔' : '✘') + ' ' + names[k].padEnd(5) + '  ' + v[k].actual + '   [线：' + v[k].line + ']');
   if (a.bead) console.log('  珠经济（chargeProfile long 单源）：蓄能/局 ' + a.bead.chargesPerGame.toFixed(1) + '，得 ' + a.bead.gained + ' 花 ' + a.bead.spent + '（电 ' + a.bead.spentElec + '/爆 ' + a.bead.spentBoom + '）过期 ' + a.bead.expired + ' ⇒ 浪费率 ' + pct(a.bead.wasteRate) + '，花珠率 ' + pct(a.bead.spentRate));

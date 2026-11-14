@@ -241,8 +241,19 @@ const detonatePick = (state, pid, cs) => {
   }
   return best;
 };
-/* **过载炮**（R66：穿防御与反弹；φ3 清空目标全部ジ）：有ジ就打，目标交引擎默认（kill-priority）。 */
-const cannonPick = (state, pid, cs) => cs.find((c) => c.key === R.SK.CANNON && c.affordable !== false) || null;
+/* **过载炮**（R66：穿防御与反弹；φ3 清空目标全部ジ）。计价真源（state.js rawCost）：φ1=2ジ、φ2=付光
+ *   （min 1，R55）、φ3=付光+自损 1 血——**"3" 是 pri 不是 cost**（夜6班初版误读，用户勘正）。
+ *   用户口径「最佳 2,1,0」：φ1 攒到 2 就开（付 2）；φ2 付光 ⇒ 捏到只剩 1 再打（付 1）；
+ *   φ3 付光+自损 ⇒ 0 ジ时打 = 只花 1 血白得一个清目标全部ジ的立身击。节拍之间的花费交给 ration 剂量。 */
+const cannonPick = (state, pid, cs) => {
+  const me = state.p[pid];
+  const can = cs.find((c) => c.key === R.SK.CANNON && c.affordable !== false);
+  if (!can) return null;
+  const phase = ((me.cannonCount || 0) % 3) + 1;
+  if (phase === 1) return (me.ep || 0) >= 2 ? can : null;
+  if (phase === 2) return (me.ep || 0) === 1 ? can : null;
+  return (me.ep || 0) === 0 ? can : null;   /* phase 3：0 ジ才打（付 0 + 1 血） */
+};
 /* **转移伤害**（花 2ジ 把将挨的打转给 ep≥2 的对手 = 原路奉还；与 A 轴挑衅坦克的分级防御同口径）。
  *   教师只演示转移那一手，其余局面回落链。 */
 const transferPick = (state, pid, cs) => {
