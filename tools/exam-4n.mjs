@@ -93,7 +93,13 @@ const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'd
   'MSB15R-HITMIX': 'docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js',
   'GD6a-TILT': 'scratch/arms/GD6a-TILT-3p.bak',
   'MSB14-railgun-R1S175656469': 'docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js',
-  'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js' };
+  'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js',
+  /* 11-16 凌晨（用户授权"更符合真实强度的尺"）：obs6 现役冠亚军入夹具——
+   *   全库重测的循环性发现（exam4n-rerun-1116）：Top15 全 MSB/G5/v7 血 ⇒ 单边夹具偏袒血亲；
+   *   混合夹具 = MSB 系三锚 + obs6 双旗（E9=obs6 线原型、P4-S4000=obs6 考卷纪录保持者）。 */
+  'OBS6E9': 'docs/artifacts/obs6-coldstart/OBS6E9.bak',
+  'OBS6P4-S4000': 'docs/artifacts/obs6-coldstart/OBS6P4-S4000.bak',
+  'OBS6P9-S4000': 'docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak' };
 const EPS_TIER_ID = FLAG['eps-tier'] || 'lv:regular';   // = Bots.DIFF_DEFAULT（沙箱还没装，且它将来挪了 subjectSel 会响亮报错）
 const t0 = Date.now();
 

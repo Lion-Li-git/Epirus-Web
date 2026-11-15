@@ -25,6 +25,21 @@
 - **风险**：中——头间 hctx 基旋转问题已有前科（晚班 V3H3 诊断：直接换 skillHead 激活不了 railgun），
   adapter 必须连 hctx 一起隔离。
 
+### 批 5 可行性判词（11-16 凌晨 spike · 只读代码，未动布局）
+
+- **结构定位**（policy2.js）：技能打分 = `sk += Σ skillHead[wRow+j]·hctx[j] + bias`（:671）——hctx 是
+  `lin6(xin, ctxDim→hid)` 的**共享编码**（:644），skillHead 是逐候选行点积。⇒ **每模式加性偏置**
+  （`sk += modeBias[modeKey][skill]`，从 `state.modeKey` 取，§E184 已证实该字段可达）是**最小侵入**形态：
+  不动 hctx 基（规避 V3H3 的基旋转激活死），只学 31×模式数 的偏置表。
+- **预估改动面**：arch2.mjs 布局段 +policyBias（~20 行）‖ policy2.js 两条打分路径（逐候选+批量）各一行
+  ‖ checkPack/指纹/bundle 各接一档 ‖ 训练侧 PG 自动有梯度（偏置进参数向量）。**半天工作量**，
+  缺省全零=老包逐字不变，可灰度。
+- **验证设计**（下一班执行）：shaped1 基座 + modeBias 开启 + multi/long 分轨 PG 各 2000 局 →
+  检验 ①long 档偏置是否学出与 multi 档不同的谱移（跨环境普查尺的换招 JS 应升）②2P 考卷不塌
+  ③全库 exam-4n 双轴不退。
+- **判词**：案② 可行性**成立**（最小侵入形态存在且规避已知死），成本半天级；等案①路由上线拿到
+  各格使用率后，再决定是否值得收进单包（若路由格使用率高且稳定，单包收益有限）。
+
 ## 案 ③：mode embedding 进主干——全重训（架构大改）
 
 - **做法**：obs6 输入面加 (n, mode) 嵌入，从 shaped 血统全重训。
