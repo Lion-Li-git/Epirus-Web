@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -692,10 +692,16 @@ const teacherPick = (state, pid, cs, legal) => {
     if (t && T3KEYS.has(t.key)) { LABEL.t3Hits = (LABEL.t3Hits || 0) + 1; raw = () => t; }
     else { LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1; if (_gameDriver === 3) return null; }
   } else if (_useT2 && _pickRaw2) {
-    const t2 = _pickRaw2(state, pid, cs, legal);
-    /* 键级不相交：teacher2 只在 T2KEYS 道内出标签；step 模式越道回落主教师，game 模式越道跳过以免污染前置轨 */
-    if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
-    else { LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1; if (_gameDriver === 2) return null; }
+    /* 形门（11-15）：teacher2 只在指定人数的桌形出标签；不在名单 ⇒ 本手回落主教师（不记 fallback、
+     *   也不在 game 模式返回 null —— 那会把非目标桌形的整局丢掉）。缺省空集 = 形门关闭，逐字不变。 */
+    if (T2SHAPES.size && !T2SHAPES.has(state.p.length)) {
+      LABEL.t2ShapeSkip = (LABEL.t2ShapeSkip || 0) + 1;
+    } else {
+      const t2 = _pickRaw2(state, pid, cs, legal);
+      /* 键级不相交：teacher2 只在 T2KEYS 道内出标签；step 模式越道回落主教师，game 模式越道跳过以免污染前置轨 */
+      if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
+      else { LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1; if (_gameDriver === 2) return null; }
+    }
   }
   const a = (_selfPick ? (_selfPick(state, pid, cs) || raw(state, pid, cs, legal)) : raw(state, pid, cs, legal));
   if (!_GATE_MODEL) return a;
@@ -730,6 +736,14 @@ function parseSkList(flagName) {
  *   越道（选中键不在名单）回落主教师。GD9/GD9b 的教训：两教师标签在同一键层竞争 ⇒ 部署 argmax 塌回保守
  *   （考卷 99%、行为全零）。缺省（不给旗标）= 不设道（teacher2 的每个标签都算，GD9 语义）。 */
 const T2KEYS = new Set(parseSkList('teacher2keys'));
+/* `--teacher2Shapes=2[,3,…]`（11-15 · 用户令"按桌形分教师"）：teacher2 只在指定**人数**的桌形出标签，
+ *   缺省空 = 不设形门（组级轮替逐字不变）。用于"n=2 用 v7 2P 教师、n≥3 用多人教师"的同包多环境蒸馏：
+ *   `--arenaShapes=2:standard,3:multi,5:multi,8:multi --shapeBal=1 --teacher2Shapes=2`。 */
+const T2SHAPES = new Set(String(arg('teacher2Shapes', arg('teacher2shapes', ''))).split(',').map((s) => s.trim()).filter(Boolean).map(Number));
+for (const n of T2SHAPES) {
+  if (!Number.isInteger(n) || n < 2 || n > 10) { console.error('⛔ --teacher2Shapes 只认 2..10 的整数（收到 ' + n + '）'); process.exit(2); }
+}
+if (T2SHAPES.size && !TEACHER2) { console.error('⛔ --teacher2Shapes 需要同时给 --teacher2'); process.exit(2); }
 /* 夜6班 · 11-14：teacher3/4（N 不相交键道的终局形态——GD5「叠加蒸馏洗键层」否证了串行叠加，
  *   13 班交接的原案：并行不相交键道才是多技能单包的正路）。份额互相独立，键道必须互异。 */
 const TEACHER3 = String(arg('teacher3', ''));
@@ -1068,6 +1082,7 @@ for (let r = 1; r <= DAG; r++) {
       ts: new Date().toISOString(), arm: sp.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
       up: UP, hotstartFrom: HF || UP, snap: r, seed: SEED, steps: STEPS, lr: LR,
       teacher: TEACHER, teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
+      teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,
       teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
       teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
       objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
@@ -1115,7 +1130,7 @@ const FIRE_KEYS = [R.SK.RAILGUN, R.SK.BIG_T, R.SK.LASER_EYE];
   const hist = ks.map((k) => (R.byKey[k] && R.byKey[k].name || k) + '=' + LABEL.byKey[k]).sort((a, b) => b.split('=')[1] - a.split('=')[1]).join(' ‖ ');
   if (TEACHER2) console.log('  ⚑ 组级教师轮替：t1=' + (LABEL.t1Groups || 0) + '（' + TEACHER + '）‖ t2=' + (LABEL.t2Groups || 0) + '（' + TEACHER2 + '，frac ' + TEACHER2_FRAC +
     ' ‖ t2 命中键道 ' + (LABEL.t2Hits || 0) + ' ‖ 越道回落 t1 ' + (LABEL.t2Fallback || 0) +
-    (T2KEYS.size ? ' ‖ t2 键道 = ' + [...T2KEYS].join('/') : '') + '）');
+    (T2KEYS.size ? ' ‖ t2 键道 = ' + [...T2KEYS].join('/') : '') + (T2SHAPES.size ? ' ‖ t2 形门 = ' + [...T2SHAPES].join('/') : '') + '）');
   console.log('  ⚑ 教师标签的种类：共 ' + ks.length + ' 键（非ジ ' + nonJi.length + ' 类）‖ ' + hist);
   const rare = nonJi.length ? nonJi.reduce((a, k) => (LABEL.byKey[k] < LABEL.byKey[a] ? k : a), nonJi[0]) : null;
   console.log('  ⚑ 最稀有的非ジ标签 = ' + (rare ? (R.byKey[rare] && R.byKey[rare].name || rare) + ' ' + LABEL.byKey[rare] + '/' + LABEL.keys +
@@ -1199,6 +1214,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES.length ? arg('arenaShapes', '') || null : null,
   /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
   teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
+  teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,
   teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
   teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },

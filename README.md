@@ -13,7 +13,7 @@
 ## 快速开始
 
 1. 双击 `index.html`。默认「**3 人 · 3 血** + 普通难度」直接开打：点技能出招，所有席位同时行动，回合日志逐条结算；技能按钮按当前资源实时置灰（ジ/珠不足或条件不满足不可点）。
-2. 想自训 AI：运行 `training/train-3p.mjs`（2.0 `obs5` 主线）或双击 `training/start-train-server.cmd` 在页内「训练场」连接 `v7` 本机服务。
+2. 想自训 AI：运行 `training/train-3p.mjs`（2.0 `obs6` 主线）或双击 `training/start-train-server.cmd` 在页内「训练场」连接 `v7` 本机服务。
 3. 冠军策略可「导出 JSON」分享，也可「导入」别人的冠军包。
 
 > 本机包（`localStorage['epirus.champion.v3']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**：当前桌对应的槽有手工载入的包时，池整桌不生效（2P 槽空但有多人本机包时也优先，标签会写「3P 槽回退」）。内置 2P/3P 包只作池失效时的回退；想打「每席随机抽一枚冠军」的桌子，先清空本机包。
@@ -58,7 +58,7 @@ Epirus-Web/
 │   │   └─ play.js                 对局驱动（自动对局 / 合法出招 / 兜底）
 │   ├─ train/                    AI 与训练器
 │   │   ├─ policy.js               v7 策略网络 + 状态特征（FEAT_S=213 ‖ 5689 参数）
-│   │   ├─ policy2.js              2.0 网络（`v:92` ‖ arch `S1o` ‖ obs3b/obs4/obs5）解码与校验
+│   │   ├─ policy2.js              2.0 网络（`v:92` ‖ arch `S1o` ‖ obs3b/obs4/obs5/obs6）解码与校验
 │   │   ├─ evo.js                  对抗进化 + 在线推理与探索层（浏览器与 Node 沙箱共用）
 │   │   ├─ bots.js                 脚本基准 AI 与难度阶梯（DIFF_TIERS 唯一来源）
 │   │   └─ trainer.js              冠军存取（localStorage / 导入导出）+ 训练 CSV
@@ -142,8 +142,9 @@ node training/train-best.mjs 4 600
 | 观测面 | 特征维 | 参数量 | 聚合方式 | 当前用途 |
 |---|---:|---:|---|---|
 | `v7` | 213 | 5689 | 4 槽 + 单标量头 | 旧线单包回退、`2–5` 人页内训练服务 |
-| `obs3b` | 415 | 7993 | `h_self ‖ mean(对手) ‖ max(对手)` | 现役冠军池成员主力 |
-| `obs5` | 292 | 12393 | 1 层自注意力 + PMA 4 seed | 当前训练产线与池内成员（置换不变、跨 `2–8` 人） |
+| `obs3b` | 415 | 7993 | `h_self ‖ mean(对手) ‖ max(对手)` | 旧池成员（兼容保留） |
+| `obs5` | 292 | 12393 | 1 层自注意力 + PMA 4 seed | 上一代训练产线与部分池成员（置换不变、跨 `2–8` 人） |
+| `obs6` | 287 | 16411 | 逐席 111（公开 104）+ 自状态 116（S=30）；3 席池化 + 交叉注意力 + 代 3 键层分组 | **2026-11-15 起训练/入池主力**（`OBS6E9` / `OBS6P9` / `OBS6P4` 等，hard 带新成员） |
 
 浏览器推理侧 `js/train/policy2.js` 与训练侧 `training/proto2/arch2.mjs` 保持双胞胎同步，结构按段名检索；可通过 `training/proto2/browser-parity.mjs` 验证逐位 logits 对齐。
 
@@ -155,7 +156,7 @@ node training/train-best.mjs 4 600
 
 ## 当前已知限制
 
-- **页内训练服务仍接旧 `v7`**：页面「训练场」与 `training/server/train-server.mjs` 仅支持 `2–5` 人 `v7` 训练，尚未接入 `2.0 / obs5`（`2–8` 人）产线。
+- **页内训练服务仍接旧 `v7`**：页面「训练场」与 `training/server/train-server.mjs` 仅支持 `2–5` 人 `v7` 训练，尚未接入 `2.0 / obs6`（`2–8` 人）产线。
 - **`v7` 导入旧包限 `2–5` 人**：旧版 `v7` 策略在 `6–8` 人桌被 `V7_MAX_PLAYERS = 5` 锁定禁用，`6–8` 人局只由 `2.0` 冠军池或 `2.0` 策略装配。
 - **蓄能选珠由界面层代行**：当前网络动作输出不含电珠/爆珠选择，`js/ui/bead-choice.js` 按手头持珠差值交替决定。
 - **新规则指纹（v2.0.9）下的冠军池复检待完成**：核心战斗规则重构后，[pool-members.tsv](champion-map/data/page/pool-members.tsv) 的 `seatKill` 统计、反单一脚本（如 `reflectspam`）抗性及 30 卡覆盖度待按 [`docs/research/TODO-2026-11-13-repo-audit.md`](docs/research/TODO-2026-11-13-repo-audit.md) 重测收口。
