@@ -25,9 +25,9 @@ const PACKS = [
 /* Tier 分组（用户 11-15 课程裁定）：T0 短程保底 / T1 环大雷电磁炮 / T2 转伤+防御+摄魂 / T3 小雷地雷激光眼过载炮 / T4 押后 */
 const TIERS = {
   T0: ['gun', 'sword', 'tank', 'snipe'],
-  T1: ['ring', 'big_t', 'railgun'],
+  T1: ['ring', 'bigT', 'railgun'],
   T2: ['transfer', 'guard', 'reflect', 'bagua', 'holo', 'drain'],
-  T3: ['mini_t', 'mine', 'laser_eye', 'cannon'],
+  T3: ['miniT', 'mine', 'laserEye', 'cannon'],
   T4: ['firestorm', 'taunt', 'curse'],
 };
 const W = sandbox();

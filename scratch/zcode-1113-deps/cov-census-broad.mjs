@@ -21,7 +21,7 @@ const PACKS = [
   ['v7blk1-92', 'docs/artifacts/v7blk1-92.bak'],
   ['v7seat24b-92', 'docs/artifacts/v7seat24b-92.bak'],
 ];
-const KEYS = ['gun', 'sword', 'tank', 'snipe', 'ring', 'big_t', 'railgun', 'transfer', 'guard', 'reflect', 'bagua', 'holo', 'drain', 'mini_t', 'mine', 'laser_eye', 'cannon', 'proto', 'rod', 'charge'];
+const KEYS = ['gun', 'sword', 'tank', 'snipe', 'ring', 'bigT', 'railgun', 'transfer', 'guard', 'reflect', 'bagua', 'holo', 'drain', 'miniT', 'mine', 'laserEye', 'cannon', 'proto', 'rod', 'charge'];
 const W = sandbox();
 const profiles = [];
 for (const [nm, p] of PACKS) {

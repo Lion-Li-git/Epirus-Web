@@ -112,6 +112,21 @@ tank 只 CB3 系 + GD3ALL-G5-8p；**CB3-s13/s7 = 四键现成载体（池成员�
   **v7blk1 主教 + pool 8000/groups 4000 + 8p 重桌 + 链对手 + rareOnly**（课表 T1-1 原案），GD16m
   回键道教师位（≤0.20 + keys）。
 
+## 三⁶、T12 终判与 11-15 白班复核（11:30 · 修两处静默虫 + 定位长程规划失败根因）
+
+1. **T12（课表 T1-1 原案满配，`OBS6E6c` 起点 × `GD16m 0.20` × `CB3 0.15` × `pool 8000/groups 4000` × 8p 长桌）终判**：
+   - `seg-eval`（`100/77000`）：`OBS6T12.bak`（= `snap3`）`C5短=0.1720` / **`C5长=0.2093`** / `X̄₄短=0.1527` / `X̄₄长=0.1775` / `用卡 10` / `防御 27.1%` / **`G_M/G_L=7.15/6.80 ✓✓`**；`snap1` `C5长=0.2420 / 用卡 9 / G=4.87/4.83 / 防御 67.5%`；`snap2` `C5长=0.1624 / 用卡 10 / G=7.26/6.92 / 防御 28.8%`。
+   - 行为与珠账（`probe-bead-loop --games=40 --mode=long --eps=0` + `cardUsageProfile`）：`蓄能 0.37/局, 得珠 22, 花掉 0 (0.0%), 过期 17 (浪费 77.3%)`，且 **`ring/bigT/railgun` 在 `long/multi` 均 0.0%**——与预期相反，并非仅“轨迹不够长”。
+
+2. **白班复核确诊的 2 处静默训练虫（已同笔修复）**：
+   - **虫① `supfit-gd.mjs` `buildTeacherPick` 跨构 2.0 `pack:` 教师权重被静默切坏**：`policy2.js:476` 用 `p.p2` 标记 2.0 布局，而 `supfit-gd.mjs:563` 对 `loadChamp(W0, ...)` 调用了 **`Float64Array.from(...)` 剥掉 `.p2`**，随后交回仅装载 `obs6`（`16411` 参数）的 `W.EpirusTrainer`。结果 `GD16m-D1`（`obs5`, `12393`）与 `CB3-s13`（`obs3b`, `7993`）落回 v7 `policy.js` 按错误偏移切片——实测 **原生 `GD16m-D1` 5 局 `{ji:150, curse:25, firestorm:50, ring:75, bigT:25}`（`chargeProfile 30 局`: `spent=209/209, 0%` 浪费），被剥 `.p2` 后退化成 `{ji:230, gun:211, ...}`（0 ring/0 bigT）**；**原生 `CB3-s13` 被剥 `.p2` 后退化为 66% `guard/reflect/bagua` 龟壳（0 drain/0 ring/0 bigT）**。这解释了 `T12` `GD16m` `40292` 次咨询仅命中 `1` 次、以及昨夜 `E8c/T11`“GD16m 龟化”假象。**已修**：`supfit-gd.mjs` 改为保留 `.p2` 并用 `W0.EpirusTrainer.policyChooserN` 分发跨构教师（实测跨沙箱调用 4 种架构 100% 逐行为对齐，纯 `GD16m-D1` 200 组采得 `ring=27, charge=18, railgun=18, bigT=7`）。
+   - **虫② `big_t / mini_t / laser_eye` 蛇形拼写静默失效**：引擎真值 `R.SK` 为 `bigT / miniT / laserEye / dualGun`；昨夜 `E6–E12 / E9 / T11 / T12 / T21` 的 `--teacher*keys` / `--rareOnly` 与普查脚本 `cov-census-1115.mjs` / `cov-census-broad.mjs` 全用 `big_t / mini_t / laser_eye`，且 `supfit-gd.mjs` 无校验导致静默越道回落、普查误报“7 键零载体”。**已修**：`supfit-gd.mjs` 对 `--teacher2/3/4keys` / `--rareOnly`、`pg-train.mjs` 对 `--shapeKey` / `--klTilt` 均补全 `R.SK` fail-fast 门（含 `big_t -> bigT` 等拼写提示，exit 2），并修正两份普查脚本键名。
+
+3. **为什么即使修完虫，当前蒸馏+PG 仍学不出长程/花珠/重击（三层结构瓶颈，供下一班设计课表）**：
+   - **短视经济陷阱（`maxEp=2`，`ep>=3` 仅 `0.0%`）**：15 局 `long` 自对局统计，`OBS6E5c`（3007 手 `maxEp=2, chg@2=15, chg@3+=0`）、`OBS6E9`（3164 手 `maxEp=3, ep>=3 0.0%, chg@2=20, chg@3+=1`）、`OBS6P9-S4000`（3336 手 `maxEp=2, chg@2=61, chg@3+=0`）全部把钱在 `ep=1–2` 用枪/剑/狙花光，`bigT/ring/railgun` **全剧合法窗口 = `0–1` 次**（对照 `GD16m-D1`：`ep>=3 22.8%, ep>=4 7.6%, ringLeg=293, bigTLeg=73`）。即使在强构造状态 `[ep6+elec1]` 下 `E5c/P9` 给 `ring=100%`，实战仍永远过不去 `ep=2` 的坎。
+   - **`ep=2` 蓄能必废闭环**：`CHARGE_MIN_EP=2` 放行 `ep=2` 蓄能（耗时 1 `ep` 剩 `1 ep`，下回合 `railgun` 需 `2 ep` 必买不起）→ `probe-bead-loop` 实测 `E5c` `77/78 (98.7%)`、`E9` `28/29 (96.6%)`、`P9-S4000` `179/179 (100.0%)` 蓄能后下回合买不起炮，且 `E5c/P9` 在强构造 `[ep2+elec1]` 持有电珠+2ジ 时仍给 `charge#elec=100% / railgun=0.0%`。
+   - **通道回落扼杀前置轨 + PG 零批评者盲区**：① 在 `supfit-gd` 里把高阶教师放 `--teacher2keys=charge,bigT,ring,railgun` 时，`play()`（L818）会因 `GD16m` 在低 EP 选 `ji` 蓄钱而越道回落 `v7blk1/E6c` 把钱花光，自身永远踩不到 `ep>=3`（修复 `.p2` 后跑 `--teacher=v7blk1 --teacher2=GD16m` 仍 `t2Hits=0`，而 `--teacher=GD16m` 单独采 200 组立即出 `ring=27, bigT=7, railgun=18`）；② `pg-train` 基于 `E5c`（`p(railgun)=0`）做 `temp=0.5` REINFORCE，`firePerGame=0` 令 `λf=0.05` 零触发，且无折扣 `return-to-go` + 无价值头 + 无 `beadExpire` 惩罚只把 `P9` 推向纯蓄能（`4.4 次/局`, `99.5%` 过期）。
+
 ## 四、留给下一班 / 待用户裁
 
 1. **链式两段式**：GD16m 主教塑轨迹 → v7blk1 回填——单包 Tier1 的正路（段间快照选点待开）。

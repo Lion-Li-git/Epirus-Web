@@ -76,6 +76,19 @@ const got = packCfgExit(raw, UP);
 const W = sandbox();
 installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;
+const VALID_SK = new Set(Object.values(R.SK));
+const SK_TYPO_HINT = { big_t: R.SK.BIG_T, mini_t: R.SK.MINI_T, laser_eye: R.SK.LASER_EYE, dual_gun: R.SK.DUAL_GUN };
+const resolveSk = (rawKey, flagName) => {
+  if (!rawKey) return null;
+  if (VALID_SK.has(rawKey)) return rawKey;
+  const byEnum = R.SK[String(rawKey).toUpperCase()];
+  if (byEnum && VALID_SK.has(byEnum) && !SK_TYPO_HINT[rawKey]) return byEnum;
+  const hint = SK_TYPO_HINT[rawKey] ? '（规则真值是 ' + SK_TYPO_HINT[rawKey] + '）' : '';
+  console.error('⛔ --' + flagName + ' 含未知技能键 "' + rawKey + '"' + hint);
+  process.exit(2);
+};
+const SHAPE_SK = resolveSk(SHAPE_KEY, 'shapeKey');
+for (const tk of KL_TILT) resolveSk(tk, 'klTilt');
 const pv = Float64Array.from(P.unpack(raw, true));
 const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
 if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
@@ -307,8 +320,6 @@ while (games < GAMES) {
     if (evs.length !== ds.length) { ZIP.bad++; continue; }
     /* 塑形：逐决策对账事件结果（只认 ok），G_t = 终局 + 未折扣塑形回报（return-to-go） */
     const shape = new Float64Array(ds.length);
-    const SHAPE_SK = SHAPE_KEY ? R.SK[String(SHAPE_KEY).toUpperCase()] || null : null;
-    if (SHAPE_KEY && !SHAPE_SK) { console.error('⛔ --shapeKey=' + SHAPE_KEY + ' 不在 R.SK 里'); process.exit(2); }
     for (let i = 0; i < ds.length; i++) {
       const d = ds[i], e = evs[i];
       if (!d.push && e.outcome === 'ok') {

@@ -560,19 +560,28 @@ function buildTeacherPick(name) {
   const isPack = name.indexOf('pack:') === 0;
   let packPick = null;
   if (isPack) {
-    const ptParams = Float64Array.from(loadChamp(W0, name.slice(5), '.'));
+    const ptParams = loadChamp(W0, name.slice(5), '.');
+    if (!ptParams) { console.error('⛔ 教师包读不出：' + name.slice(5)); process.exit(2); }
     /* DS 21:42：教师温度 0.15 → 0.05（与 `breadth.mjs` 同口径）。0.15 下 V7L 的防御族概率被压到 ~0，
      *   800 组标签里 0 条防御 ⇒ 蒸馏把宽度蒸没；同一枚包在 temp 0.05 的量具里 defender 占 9%。 */
     /* DS 21:46：与 `scratch/breadth.mjs` 完全同形（temp 0.05, eps 0, epsK 5, epsMode 'soft'）。
      *   只传 (params,temp) 时 v7 走的是另一条默认 eps 路径 ⇒ 防御族概率被压到 0（800 组 0 条）。 */
-    const ptChooser = T.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
+    /* ⚑ 11-15 修跨代教师失真：loadChamp 返回的 2.0 张量带 .p2 布局标签；原先 Float64Array.from(...)
+     *   剥掉了 .p2，再交给 W（只认学生 obs6 长度）⇒ obs3b/obs5 教师全落回 v7 policy.js 乱切权重
+     *   （实测 GD16m-D1 变成 ji/gun，T12 t2Hits 1/40292；CB3-s13 变成 66% 龟壳）。
+     *   用 W0 原生双代分发器 + 保留 .p2 ⇒ 任意代/观测面教师逐字保真。 */
+    const ptChooser = W0.EpirusTrainer.policyChooserN(ptParams, 0.05, 0, 5, 'soft');
     packPick = (state, pid, cs, legalIn) => {
       /* ⚠ 传 `cs` 给 chooser 会全落 ji：v7 chooser 要的是**合法键表**（entry.affordable），而 cs 是候选（带 target/bead）。
        * ⚑ DS 21:40：优先用调用方递进来的**引擎原始 legal**（含 v7 chooser 需要的全部字段）；
        *   之前一律从 cs 重建 ⇒ 防御族被系统性丢掉（11-03 实测：V7L-s13 教师 800 组标签里 0 条防御）。 */
       const legal = (legalIn && legalIn.length >= 2) ? legalIn : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
       const got = ptChooser(state, pid, legal);
-      const mp = keyToCand(cs, got && (got.key || got)) || null;
+      const gk = got && (got.key || got);
+      const exactTgt = (got && got.target != null)
+        ? cs.find((c) => c.key === gk && c.target === got.target && (got.target2 == null || c.target2 === got.target2))
+        : null;
+      const mp = exactTgt || keyToCand(cs, gk) || null;
       if (!mp && process.env.SUPFIT_DBG && (globalThis.__dbgN = (globalThis.__dbgN || 0) + 1) <= 8) console.error('[dbg] teacher=' + (got && got.key) + ' cs=' + cs.map((c) => c.key).join(','));
       return mp;
     };
@@ -698,18 +707,31 @@ if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { cons
  *   但不打 bigT/环 ⇒ 单教师各有天花板，轮替各取所长。teacher2 缺省 ⇒ 路径逐字节不变。 */
 const TEACHER2 = String(arg('teacher2', ''));
 const TEACHER2_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher2frac', 0.5)) || 0.5));
+const VALID_SK = new Set(Object.values(R.SK));
+const SK_TYPO_HINT = { big_t: R.SK.BIG_T, mini_t: R.SK.MINI_T, laser_eye: R.SK.LASER_EYE, dual_gun: R.SK.DUAL_GUN };
+function parseSkList(flagName) {
+  const arr = String(arg(flagName, '')).split(',').map((s) => s.trim()).filter(Boolean);
+  for (const k of arr) {
+    if (!VALID_SK.has(k)) {
+      const hint = SK_TYPO_HINT[k] ? '（规则真值是 ' + SK_TYPO_HINT[k] + '）' : '';
+      console.error('⛔ --' + flagName + ' 含未知技能键 "' + k + '"' + hint + '（合法集合见 R.SK：' + [...VALID_SK].join(',') + '）');
+      process.exit(2);
+    }
+  }
+  return arr;
+}
 /* `--teacher2Keys=k1,k2,…`（11-13 深夜）：**键级不相交**——teacher2 只在它的键道内出标签，
  *   越道（选中键不在名单）回落主教师。GD9/GD9b 的教训：两教师标签在同一键层竞争 ⇒ 部署 argmax 塌回保守
  *   （考卷 99%、行为全零）。缺省（不给旗标）= 不设道（teacher2 的每个标签都算，GD9 语义）。 */
-const T2KEYS = new Set(String(arg('teacher2keys', '')).split(',').filter(Boolean));
+const T2KEYS = new Set(parseSkList('teacher2keys'));
 /* 夜6班 · 11-14：teacher3/4（N 不相交键道的终局形态——GD5「叠加蒸馏洗键层」否证了串行叠加，
  *   13 班交接的原案：并行不相交键道才是多技能单包的正路）。份额互相独立，键道必须互异。 */
 const TEACHER3 = String(arg('teacher3', ''));
 const TEACHER3_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher3frac', 0.15)) || 0.15));
-const T3KEYS = new Set(String(arg('teacher3keys', '')).split(',').filter(Boolean));
+const T3KEYS = new Set(parseSkList('teacher3keys'));
 const TEACHER4 = String(arg('teacher4', ''));
 const TEACHER4_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher4frac', 0.1)) || 0.1));
-const T4KEYS = new Set(String(arg('teacher4keys', '')).split(',').filter(Boolean));
+const T4KEYS = new Set(parseSkList('teacher4keys'));
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
@@ -732,7 +754,7 @@ const _pickRaw4 = TEACHER4 ? buildTeacherPick(TEACHER4) : null;
 let _useT2 = false, _useT3 = false, _useT4 = false;
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
-const RARE = String(arg('rareOnly', '')).split(',').filter(Boolean);
+const RARE = parseSkList('rareOnly');
 const RARE_FRAC = Math.min(0.95, Math.max(0, Number(arg('rareFrac', 0)) || 0));
 if (RARE.length && !(RARE_FRAC > 0)) { console.error('⛔ --rareOnly 要配 --rareFrac>0'); process.exit(2); }
 /* oracleDef（DS · 11-02 晚）：事后先知的「打过来什么→该出哪张防」标签表（与用户口径一致）。 */
