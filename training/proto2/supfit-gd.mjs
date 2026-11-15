@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -680,16 +680,16 @@ const teacherPick = (state, pid, cs, legal) => {
   if (_useT4 && _pickRaw4) {
     const t = _pickRaw4(state, pid, cs, legal);
     if (t && T4KEYS.has(t.key)) { LABEL.t4Hits = (LABEL.t4Hits || 0) + 1; raw = () => t; }
-    else LABEL.t4Fallback = (LABEL.t4Fallback || 0) + 1;
+    else { LABEL.t4Fallback = (LABEL.t4Fallback || 0) + 1; if (_gameDriver === 4) return null; }
   } else if (_useT3 && _pickRaw3) {
     const t = _pickRaw3(state, pid, cs, legal);
     if (t && T3KEYS.has(t.key)) { LABEL.t3Hits = (LABEL.t3Hits || 0) + 1; raw = () => t; }
-    else LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1;
+    else { LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1; if (_gameDriver === 3) return null; }
   } else if (_useT2 && _pickRaw2) {
     const t2 = _pickRaw2(state, pid, cs, legal);
-    /* 键级不相交：teacher2 只在 T2KEYS 道内出标签，越道回落主教师（道未设 = GD9 语义，全收） */
+    /* 键级不相交：teacher2 只在 T2KEYS 道内出标签；step 模式越道回落主教师，game 模式越道跳过以免污染前置轨 */
     if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
-    else LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1;
+    else { LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1; if (_gameDriver === 2) return null; }
   }
   const a = (_selfPick ? (_selfPick(state, pid, cs) || raw(state, pid, cs, legal)) : raw(state, pid, cs, legal));
   if (!_GATE_MODEL) return a;
@@ -732,6 +732,8 @@ const T3KEYS = new Set(parseSkList('teacher3keys'));
 const TEACHER4 = String(arg('teacher4', ''));
 const TEACHER4_FRAC = Math.min(0.95, Math.max(0.01, Number(arg('teacher4frac', 0.1)) || 0.1));
 const T4KEYS = new Set(parseSkList('teacher4keys'));
+const ROLLOUT_MODE = String(arg('rolloutMode', 'step'));
+if (ROLLOUT_MODE !== 'step' && ROLLOUT_MODE !== 'game') { console.error('⛔ --rolloutMode 只认 step|game（收到 ' + ROLLOUT_MODE + '）'); process.exit(2); }
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
@@ -752,6 +754,16 @@ const _pickRaw2 = TEACHER2 ? buildTeacherPick(TEACHER2) : null;
 const _pickRaw3 = TEACHER3 ? buildTeacherPick(TEACHER3) : null;
 const _pickRaw4 = TEACHER4 ? buildTeacherPick(TEACHER4) : null;
 let _useT2 = false, _useT3 = false, _useT4 = false;
+let _gameDriver = 0;   /* rolloutMode=game 时每局锁定 1|2|3|4，0=未锁(step 模式逐手切) */
+const pickBresenham = (idx) => {
+  const prev2 = Math.floor(idx * TEACHER2_FRAC), cur2 = Math.floor((idx + 1) * TEACHER2_FRAC);
+  const prev3 = Math.floor(idx * TEACHER3_FRAC), cur3 = Math.floor((idx + 1) * TEACHER3_FRAC);
+  const prev4 = Math.floor(idx * TEACHER4_FRAC), cur4 = Math.floor((idx + 1) * TEACHER4_FRAC);
+  if (_pickRaw4 && cur4 > prev4) return 4;
+  if (_pickRaw3 && cur3 > prev3) return 3;
+  if (_pickRaw2 && cur2 > prev2) return 2;
+  return 1;
+};
 /* `--rareOnly=miniT,ring --rareFrac=0.7`（靶向采集，ZCode · 11-01 凌晨）：普通配额（NGRP×(1−Frac)）收满后
  *   **只收教师选中稀有键的组**——稀有事件语义的 10× 富集器（miniT 选靶 / ring 三连都在这格）。 */
 const RARE = parseSkList('rareOnly');
@@ -770,21 +782,17 @@ function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
   let gN = 0;   /* 组级计数：N 教师轮替的 Bresnham 游标 */
+  let gameN = 0;   /* 局级游标（--rolloutMode=game 时每局锁定同一位驾驶教师） */
+  const setTeacherMask = (d) => {
+    _useT4 = d === 4; _useT3 = d === 3; _useT2 = d === 2;
+    if (_pickRaw4 && _useT4) LABEL.t4Groups = (LABEL.t4Groups || 0) + 1;
+    if (_pickRaw3 && _useT3) LABEL.t3Groups = (LABEL.t3Groups || 0) + 1;
+    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (!_pickRaw3 && !_pickRaw4 && d === 1) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
+  };
   const record = (state, pid, legal) => {
     lastG = null;
-    /* N 教师轮替（组级边界穿越法，夜6班从双教师推广）：各教师按自己的 frac 独立检测穿越，
-     *   同时穿越时高号优先（t4>t3>t2）——份额小 ⇒ 冲突罕见，实现份额记在 LABEL.tNGroups 里对账。
-     *   teacher2/3/4 全缺省 ⇒ 恒 t1 ⇒ 主路径逐字节不变。 */
-    const prev2 = Math.floor(gN * TEACHER2_FRAC), cur2 = Math.floor((gN + 1) * TEACHER2_FRAC);
-    const prev3 = Math.floor(gN * TEACHER3_FRAC), cur3 = Math.floor((gN + 1) * TEACHER3_FRAC);
-    const prev4 = Math.floor(gN * TEACHER4_FRAC), cur4 = Math.floor((gN + 1) * TEACHER4_FRAC);
-    _useT4 = !!(_pickRaw4 && cur4 > prev4);
-    _useT3 = !_useT4 && !!(_pickRaw3 && cur3 > prev3);
-    _useT2 = !_useT4 && !_useT3 && !!(_pickRaw2 && cur2 > prev2);
-    if (_pickRaw4) { if (_useT4) LABEL.t4Groups = (LABEL.t4Groups || 0) + 1; }
-    if (_pickRaw3) { if (_useT3) LABEL.t3Groups = (LABEL.t3Groups || 0) + 1; }
-    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (!_pickRaw3 && !_pickRaw4) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
-    gN++;
+    /* N 教师轮替：step 模式按决策步轮替（缺省）；game 模式按局锁定驾驶教师 */
+    setTeacherMask(_gameDriver > 0 ? _gameDriver : pickBresenham(gN++));
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
     if (cs.length < 2) return;
@@ -837,7 +845,9 @@ function collectInto(dst, srcParams, idBase) {
     play = (state, pid, legal) => {
       if (dst.length < NGRP) record(state, pid, legal);
       const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
-      const a = teacherPick(state, pid, cs3, legal);
+      /* game 模式下驾驶教师走全轨（不过滤 TkKEYS），否则前置攒气手被主教师截断⇒永远到不了高 ep 态 */
+      const drvPick = _gameDriver === 4 ? _pickRaw4 : _gameDriver === 3 ? _pickRaw3 : _gameDriver === 2 ? _pickRaw2 : (_gameDriver === 1 ? _pickRaw : null);
+      const a = drvPick ? drvPick(state, pid, cs3, legal) : teacherPick(state, pid, cs3, legal);
       return a ? { key: a.key, target: a.target == null ? null : a.target, target2: a.target2 == null ? null : a.target2, bead: a.bead || null } : { key: R.SK.JI };
     };
   } else {
@@ -866,20 +876,25 @@ function collectInto(dst, srcParams, idBase) {
       return act;
     };
   }
-  /* 稀有期的每形局数上限放宽（60 ⇒ 2500）：稀有标签要靠局数堆出来 */
-  const GCAP = RARE.length ? 2500 : 60;
+  /* 稀有期的每形局数上限放宽（60 ⇒ 2500）；game 模式下略放宽到 240 以补齐跳过非键道手的配额 */
+  const GCAP = RARE.length ? 2500 : (ROLLOUT_MODE === 'game' && (TEACHER2 || TEACHER3 || TEACHER4) ? 240 : 60);
+  const runOneGame = (s, g) => {
+    _gameDriver = ROLLOUT_MODE === 'game' ? pickBresenham(gameN++) : 0;
+    try { A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
+    finally { _gameDriver = 0; }
+  };
   if (SHAPEBAL) {
     /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
     const q = Math.max(2, Math.ceil(NGRP / A2.shapes.length));
     for (let s = 0; s < A2.shapes.length; s++) {
       curShp = s;
       const before = dst.length;
-      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
+      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; runOneGame(s, g); }
     }
   } else {
     for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
       curShp = s;
-      for (let g = 0; g < GCAP && dst.length < NGRP; g++) A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook);
+      for (let g = 0; g < GCAP && dst.length < NGRP; g++) runOneGame(s, g);
     }
   }
 }

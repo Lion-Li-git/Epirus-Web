@@ -18,7 +18,7 @@ import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -27,6 +27,7 @@ const LR = Number(arg('lr', 3e-4)) || 3e-4;
 const SEED = Number(arg('seed', 7)) || 7;
 const LAMC = Number(arg('lamC', 0.005)) || 0;
 const LAMF = Number(arg('lamF', 0.05)) || 0;
+const LAM_EXP = Number(arg('lamExp', 0)) || 0;
 const TEMP = Number(arg('temp', 0.5)) || 0.5;
 const OUT = String(arg('out', 'scratch/arms/PG1-s' + SEED + '.bak'));
 const TAG = String(arg('tag', ''));
@@ -87,7 +88,15 @@ const resolveSk = (rawKey, flagName) => {
   console.error('⛔ --' + flagName + ' 含未知技能键 "' + rawKey + '"' + hint);
   process.exit(2);
 };
-const SHAPE_SK = resolveSk(SHAPE_KEY, 'shapeKey');
+const SHAPE_ITEMS = SHAPE_KEY
+  ? SHAPE_KEY.split(',').map((s) => s.trim()).filter(Boolean).map((ent) => {
+      const parts = ent.split(':');
+      const k = resolveSk(parts[0].trim(), 'shapeKey');
+      const w = parts.length > 1 ? Number(parts[1]) : SHAPE_W;
+      if (parts.length > 2 || !Number.isFinite(w)) { console.error('⛔ --shapeKey 格式错 "' + ent + '"（认 key 或 key:weight）'); process.exit(2); }
+      return { key: k, w };
+    })
+  : [];
 for (const tk of KL_TILT) resolveSk(tk, 'klTilt');
 const pv = Float64Array.from(P.unpack(raw, true));
 const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
@@ -266,7 +275,7 @@ function collector(state, pid, legal) {
   const FEAT = PROBE_CAP ? [Math.min(1, state.round / 40), (me ? (me.hp || 0) / ((state.mode && state.mode.hp) || 3) : 0),
     (me ? Math.min(me.ep, 12) / 12 : 0), (me && me.elec ? 1 : 0), (me && me.boom ? 1 : 0),
     (me ? (me.ringStreak || 0) / 3 : 0), (me ? (me.cannonCount || 0) / 3 : 0)] : null;
-  curGame.decs.push({ push: false, tape: fr.tape, idx, key: cands[idx].key, ep: me ? (me.ep || 0) : 0, elec: me ? (me.elec || 0) : 0, H, q: fr.q,
+  curGame.decs.push({ push: false, tape: fr.tape, idx, key: cands[idx].key, bead: cands[idx].bead || null, ep: me ? (me.ep || 0) : 0, elec: me ? (me.elec || 0) : 0, H, q: fr.q,
       xinArr: PROBE_CAP ? Float64Array.from(fr.tape.xin) : null, hctxArr: null, feat: FEAT, gid: curGame.gid,
       qR: BASELINE === 'ridge' ? (RFIT ? ridgeV(RFIT, (RFEAT === 'small' ? FEAT : fr.tape.xin)) : null) : null });
   return asAct(cands[idx]);
@@ -282,10 +291,12 @@ const VOF = (d, mu) => (BASELINE === 'ridge' ? (d.qR == null ? mu : d.qR) : mu);
 let capDone = false, vDiag = { mv: 0, sv: 0, mg: 0, sg: 0 };
 if (BASELINE === 'ridge') console.log('  ⚑ 基线 = 观测侧闭式岭回归 V(xin)（住在训练器里，不进包 ‖ l2 ' + RL2 + ' ‖ 每批重拟合 ‖ 采集用上一次拟合 ⇒ 不自家打分自家）');
 let games = 0, upd = 0, zeroGrad = 0;
-const stat = { score: 0, fire: 0, charge: 0, ent: 0, decs: 0, snap8k: false };
+const stat = { score: 0, fire: 0, charge: 0, beadExp: 0, beadSpent: 0, shapeHits: {}, ent: 0, decs: 0, snap8k: false };
 const ZIP = { games: 0, bad: 0 };
 console.log('# pg-train（B 臂） ‖ 起点 ' + UP.replace(/^.*[\\/]/, '') + ' ‖ 面=' + (got.cfg.input || '?') +
   ' ‖ 局 ' + GAMES + ' ‖ 批 ' + BATCH + ' ‖ lr ' + LR + ' ‖ temp ' + TEMP + ' ‖ λc ' + LAMC + ' ‖ λf ' + LAMF +
+  (LAM_EXP > 0 ? ' ‖ λexp ' + LAM_EXP : '') +
+  (SHAPE_ITEMS.length ? ' ‖ shape ' + SHAPE_ITEMS.map((x) => x.key + ':' + x.w).join(',') : '') +
   ' ‖ 基线 ' + BASELINE + ' ‖ seed ' + SEED);
 console.log('  口径：arena2 mild(cap2/mix0.5) salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度');
 
@@ -325,11 +336,26 @@ while (games < GAMES) {
       if (!d.push && e.outcome === 'ok') {
         if (d.key === R.SK.RAILGUN) { shape[i] += LAMF; stat.fire++; }
         else if (d.key === R.SK.CHARGE && d.ep >= 3 && d.elec === 0) { shape[i] += LAMC; stat.charge++; }
-        /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：任意键的塑形分量——
-         *   λf/λc 的同族泛化（ring 在 PG 里被机会+优势双重饿死，0.02-0.05 的小分量养住键道）。 */
-        if (SHAPE_SK && d.key === SHAPE_SK) shape[i] += SHAPE_W;
+        /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：支持单键或 key:w 多键列表 */
+        for (const it of SHAPE_ITEMS) if (d.key === it.key) { shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1; }
       }
       if (!d.push) { stat.ent += d.H; stat.decs++; }
+    }
+    if (LAM_EXP > 0) {
+      let ai = -1;
+      const lastChg = { elec: -1, boom: -1 };
+      for (const e of (row.evs || [])) {
+        if (e.pid !== seat) continue;
+        if (e.type === 'action') { ai++; continue; }
+        if (e.type === 'bead') {
+          if (e.delta > 0 && ai >= 0 && ai < ds.length && !ds[ai].push && ds[ai].key === R.SK.CHARGE) lastChg[e.kind] = ai;
+          else if (e.delta < 0 && lastChg[e.kind] >= 0) { lastChg[e.kind] = -1; stat.beadSpent++; }
+        } else if (e.type === 'beadExpire' && lastChg[e.kind] >= 0) {
+          shape[lastChg[e.kind]] -= LAM_EXP;
+          stat.beadExp++;
+          lastChg[e.kind] = -1;
+        }
+      }
     }
     let acc = 0;
     for (let i = ds.length - 1; i >= 0; i--) {
@@ -429,8 +455,10 @@ while (games < GAMES) {
   }
   upd++;
   if (upd % 25 === 0 || games >= GAMES) {
+    const shStr = SHAPE_ITEMS.length ? (' ‖ ' + SHAPE_ITEMS.map((it) => it.key + ' ' + ((stat.shapeHits[it.key] || 0) / Math.max(1, games)).toFixed(2)).join('/')) : '';
     console.log('  局 ' + games + ' ‖ 步 ' + upd + ' ‖ 平均净分 ' + (stat.score / Math.max(1, games)).toFixed(3) +
       ' ‖ 炮 ' + (stat.fire / Math.max(1, games)).toFixed(2) + '/局 ‖ 纪律蓄 ' + (stat.charge / Math.max(1, games)).toFixed(2) + '/局' +
+      (LAM_EXP > 0 ? ' ‖ 花珠 ' + (stat.beadSpent / Math.max(1, games)).toFixed(2) + '/废珠 ' + (stat.beadExp / Math.max(1, games)).toFixed(2) : '') + shStr +
       ' ‖ 熵 ' + (stat.ent / Math.max(1, stat.decs)).toFixed(3) + 'nats ‖ zip坏 ' + ZIP.bad + '/' + ZIP.games +
       (KL_W > 0 ? ' ‖ 锚L1 ' + (klN ? (klL1 / klN).toFixed(3) : '-') : '') +
       (BASELINE !== 'mean' ? ' ‖ **R² ' + lastR2.toFixed(3) + '** ‖ V ' + vDiag.mv.toFixed(2) + '±' + vDiag.sv.toFixed(2) + ' ‖ G ' + vDiag.mg.toFixed(2) + '±' + vDiag.sg.toFixed(2) + ' ‖ 回滚 ' + rbCount : ''));
@@ -453,16 +481,17 @@ while (games < GAMES) {
 const secs = (Date.now() - t0) / 1000;
 console.log('  终：局 ' + games + ' ‖ 平均净分 ' + (stat.score / Math.max(1, games)).toFixed(3) +
   ' ‖ 炮/局 ' + (stat.fire / Math.max(1, games)).toFixed(3) + ' ‖ 纪律蓄/局 ' + (stat.charge / Math.max(1, games)).toFixed(3) +
+  (LAM_EXP > 0 ? ' ‖ 花珠/废珠 ' + (stat.beadSpent / Math.max(1, games)).toFixed(2) + '/' + (stat.beadExp / Math.max(1, games)).toFixed(2) : '') +
   ' ‖ zip 坏 ' + ZIP.bad + '/' + ZIP.games + ' ‖ 耗时 ' + secs.toFixed(0) + 's');
 savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),
-  loop: { meanScore: stat.score / Math.max(1, games), firePerGame: stat.fire / Math.max(1, games), discChargePerGame: stat.charge / Math.max(1, games), entropy: stat.ent / Math.max(1, stat.decs), zipBad: ZIP.bad },
+  loop: { meanScore: stat.score / Math.max(1, games), firePerGame: stat.fire / Math.max(1, games), discChargePerGame: stat.charge / Math.max(1, games), beadSpentPerGame: LAM_EXP > 0 ? stat.beadSpent / Math.max(1, games) : null, beadExpPerGame: LAM_EXP > 0 ? stat.beadExp / Math.max(1, games) : null, shapeHits: Object.keys(stat.shapeHits).length ? stat.shapeHits : null, entropy: stat.ent / Math.max(1, stat.decs), zipBad: ZIP.bad },
   container: { v: packed.v, input: got.cfg.input, dof: got.cfg.dof, gen: packed.dims.gen, keySplit: packed.dims.keySplit || 0, n: packed.n },
   lineage: { parent: UP, gen: packed.dims.gen, recipe: { objective: (LAMC || LAMF) ? 'scoreNet + λc·discCharge + λf·railgun (resident)' : 'scoreNet only (λ=0 negative control)', solver: 'REINFORCE+Adam (pg-lib, selftest3 6 legs)', baseline: BASELINE } },
 }, null, 1), 'utf8');
