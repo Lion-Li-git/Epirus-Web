@@ -4,19 +4,19 @@
  *   --pack=<权重路径> --id=<id> --ver=<1.8|2.0> [--fam=] [--fam-label=] [--lineage=]
  *   --readings=<长表：ruler_id,cell,horizon,value,n>  （A/B 当前读数）
  *   --display=<一行 display 表，表头必须等于 data/display.tsv>  （--bake 时必给）
- *   [--batch=] [--fixture=] [--source=] [--bake] [--dry]
+ *   [--batch=] [--fixture=] [--source=] [--parent=<id>] [--bake] [--dry]
  * 行为：登记 registry → 追加 batch/readings/display（+ features/projections）→ build-view
  *       →（--bake）rebuild-map → shot 98/0。
  * 注：本脚本不跑测量；读数/display 由 ruler-measure / 门禁产出后喂进来。
  */
-import { readFileSync, existsSync, statSync } from 'node:fs';
-import { resolve, join, basename } from 'node:path';
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
+import { resolve, join, basename, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
 import { loadRulers } from './rulers.mjs';
 import { buildView, buildCoordsView } from './build-view.mjs';
-import { widOf } from '../pack-id.mjs';
+import { parseMeta, widOf } from '../pack-id.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DRY = process.argv.includes('--dry');
@@ -34,6 +34,7 @@ const PJ = arg('projections', '') ? resolve(arg('projections', '')) : '';
 const BATCH = String(arg('batch', '')).trim();
 const FIXTURE = String(arg('fixture', '-')).trim();
 const SOURCE = String(arg('source', 'manual')).trim();
+const PARENT_ARG = String(arg('parent', '')).trim();
 if (!PACK || !ID) { console.error('⛔ 需要 --pack= 和 --id='); process.exit(2); }
 if (!existsSync(PACK)) { console.error('⛔ pack 不在：' + PACK); process.exit(2); }
 if (!RD) { console.error('⛔ 需要 --readings=<长表>'); process.exit(2); }
@@ -49,13 +50,37 @@ const display = readTable(join(DATA, 'display.tsv'));
 if (reg.rows.some((r) => r[reg.ix.pack_id] === ID)) { console.error('⛔ registry 已有 ' + ID); process.exit(2); }
 
 /* 自动谱系行（11-12 用户：新点不能只进地图；id/fam/ts/wid/seed/parent 一次写全）。
- *   fam 未给：沿用同名 --lineage 标签，找不到就新开一个号（max+1）；父边从 pack meta.hotstartFrom
- *   的 wid 反查既有 lineage 的宽表；查不到时保留原 wid 并标 unknown-wid（不假装有父）。 */
+ *   fam 未给：沿用同名 --lineage 标签，找不到就新开一个号（max+1）；父边优先取 --parent=，
+ *   否则先按 meta.hotstartFrom 直接查图，查不到时再沿局部包目录多跳回溯至图上最近祖先（中间 SFT
+ *   产物未入图时不再断链，按 `seedpack` 落盘，守 `viewer.mjs` 来路白名单），仍找不到才保留 unknown-wid。 */
+/** Walk hotstartFrom links through unplotted packs in local dirs to find the nearest ancestor on map. */
+function findAncestorOnMap(startWid, dirs, wid2id, dispIds) {
+  const widParent = new Map();
+  const seenDirs = new Set();
+  for (const dir of dirs) {
+    if (!dir || seenDirs.has(dir) || !existsSync(dir)) continue;
+    seenDirs.add(dir);
+    for (const name of readdirSync(dir)) {
+      if (!name.endsWith('.bak') && !name.endsWith('.js')) continue;
+      const txt = readFileSync(join(dir, name), 'utf8');
+      const w = widOf(txt), m = w && parseMeta(txt);
+      if (w && m && m.hotstartFrom) widParent.set(w, String(m.hotstartFrom).trim());
+    }
+  }
+  const visited = new Set();
+  let cur = startWid;
+  for (let hop = 0; hop < 16 && cur && !visited.has(cur); hop++) {
+    visited.add(cur);
+    const id = wid2id.get(cur);
+    if (id && dispIds.has(id)) return id;
+    cur = widParent.get(cur) || '';
+  }
+  return '';
+}
+
 const packText = readFileSync(PACK, 'utf8');
 const now = new Date().toISOString();
-let meta = {};
-{ const mm = /window\.EPIRUS_CHAMPION_3P_META\s*=\s*(\{[\s\S]*?\});/.exec(packText);
-  if (mm) { try { meta = JSON.parse(mm[1]); } catch (e) { meta = {}; } } }
+const meta = parseMeta(packText) || {};
 const linMain = readTable(join(DATA, 'page/lineage.tsv'));
 const linG3 = readTable(join(DATA, 'page/lineage-g3.tsv'));
 const wid2id = new Map();
@@ -76,9 +101,20 @@ else if (!FAMLAB) {
 if (LINEAGE === 'new') LINEAGE = '';
 const parentWid = String(meta.hotstartFrom || '').trim();
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
-const cand = parentWid ? wid2id.get(parentWid) : '';
-const parentId = cand && dispIds.has(cand) ? cand : '';   /* 只连图上存在的父；否则页面会报“父边指向不存在的枚” */
-const parentSrc = parentWid ? (parentId ? 'seedpack-wid' : 'unknown-wid') : 'root';
+let parentId = '', parentSrc = 'root';
+if (PARENT_ARG) {
+  if (!dispIds.has(PARENT_ARG)) { console.error('⛔ --parent 指向不在图上的节点：' + PARENT_ARG); process.exit(2); }
+  parentId = PARENT_ARG; parentSrc = 'seedpack';
+} else if (parentWid) {
+  const direct = wid2id.get(parentWid);
+  if (direct && dispIds.has(direct)) { parentId = direct; parentSrc = 'seedpack-wid'; }
+  else {
+    const root = resolve(DATA, '../..');
+    const anc = findAncestorOnMap(parentWid, [dirname(PACK), join(root, 'scratch/arms'), join(root, 'docs/artifacts/obs6-coldstart')], wid2id, dispIds);
+    if (anc) { parentId = anc; parentSrc = 'seedpack'; }
+    else parentSrc = 'unknown-wid';
+  }
+}
 const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unknown');
 const pointWid = widOf(packText);
 const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || statSync(PACK).mtime.toISOString()), metaSeed, nameSeed: '',

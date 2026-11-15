@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher4', 'teacher4frac', 'teacher4keys', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -51,6 +51,12 @@ const POOL = Math.max(NGRP, Number(arg('pool', 1200)) || 1200);
 /* `--shapeBal=1`：把采集配额**摊到全部桌形**（默认 0 = 现役顺序档：够 NGRP 就停 ⇒ 800 组只落在前 2 个桌形里，
  *   这是 10-31 夜里查出来的采集覆盖洞：考场 11 个桌形、采集只见 2 个）。 */
 const SHAPEBAL = Number(arg('shapeBal', 0)) ? 1 : 0;
+/* `--classPow=<p> --classCap=<m>`：类频幂次（默认 1 ⇒ 1/n 逐字同）与相对最频类的单样本权重倍率上限（默认 0=不封顶）。
+ *   p=0.35~0.5 + cap=6~8 可抑制 5 样本极稀有键将强攻防底座冲垮。 */
+const CLASS_POW = Number(arg('classPow', 1));
+const CLASS_CAP = Number(arg('classCap', 0));
+if (!Number.isFinite(CLASS_POW) || CLASS_POW < 0 || CLASS_POW > 2) { console.error('⛔ --classPow 需落在 [0, 2]（收到 ' + arg('classPow', '') + '）'); process.exit(2); }
+if (!Number.isFinite(CLASS_CAP) || CLASS_CAP < 0) { console.error('⛔ --classCap 需 >= 0（收到 ' + arg('classCap', '') + '）'); process.exit(2); }
 /* `--keySplit=1`：把上游按**代 3**（v:92，键层按决策键分组）装载并出货 ⇒ 用来直接检验 Stage A：
  *   同一个**键级**目标，旧口径下珠种靠起点抽签、新口径下珠种进入键层。参数量不变（DK 只改分组）。 */
 const KS = Number(arg('keySplit', 0)) ? 1 : 0;   /* 训练池上限（教师 600 永远保留，学生态按新旧裁） */
@@ -912,7 +918,20 @@ function weightOf(list) {
   const c = {};
   for (const gr of list) { const k = cls(gr); c[k] = (c[k] || 0) + 1; }
   const DEFKEYS = new Set([R.SK.REFLECT, R.SK.GUARD, R.SK.TRANSFER, R.SK.HOLO, R.SK.ARMOR, R.SK.PROTO, R.SK.BAGUA, R.SK.SHIFT, R.SK.JINSHIELD]);
-  const w = {}; for (const k in c) w[k] = TEACHER === 'oracleDef' ? (DEFKEYS.has(k) ? DEFW : 1) : 1 / c[k];   /* oracleDef：均匀权重（1/类频会把少数防御类放得过大 ⇒ 刷防御） */
+  const w = {};
+  if (TEACHER === 'oracleDef') {
+    for (const k in c) w[k] = DEFKEYS.has(k) ? DEFW : 1;   /* oracleDef：均匀权重（1/类频会把少数防御类放得过大 ⇒ 刷防御） */
+  } else {
+    let minW = Infinity;
+    for (const k in c) {
+      w[k] = CLASS_POW === 1 ? 1 / c[k] : Math.pow(c[k], -CLASS_POW);
+      if (w[k] < minW) minW = w[k];
+    }
+    if (CLASS_CAP > 0 && Number.isFinite(minW)) {
+      const cap = minW * CLASS_CAP;
+      for (const k in w) if (w[k] > cap) w[k] = cap;
+    }
+  }
   return w;
 }
 let WKEY = weightOf(train0);
@@ -1175,7 +1194,7 @@ writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
 }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
-  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
+  objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, rolloutMode: ROLLOUT_MODE, classPow: CLASS_POW, classCap: CLASS_CAP, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
   teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
   teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,

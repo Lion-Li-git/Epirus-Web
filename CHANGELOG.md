@@ -4,6 +4,12 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.0.8 — 11-15（**`obs6` 冠军入池 + 结算优先级对齐 + 长程/电磁炮训练基建**）
+
+- **引擎与规则对齐（`3a32e551`）**：修复地雷/镜面/避雷针/回合末死亡结算优先级并更新规则指纹；`spec` 用例增至 **68/68**，重测内置包与门禁夹具。
+- **冠军池与演化图更新（`a30f1098`、`48f93700` 至今）**：移除未判定三无成员 `WSEL9-200`，新晋三枚 `obs6` 冠军包（`OBS6E9` / `OBS6P9-S4000` / `OBS6P4-S4000`（`KD-G2 invited`））入 `hard` 带、线上合并池重烘为 **18 枚** `{hard 9, soft 9}`；强平衡长程代表 `OBS6-LH6P`（`S=2.12`、3/4 类满长程花珠、`mem-probe-e6 Gap -3.4pt`）入 `champion-map` 并自动沿未入图中间底座 `OBS6-LH6` 回溯连回父节点 `OBS6E9`（`shot.mjs 100/0`）。
+- **训练与入图工具链增量（`e3bec149` 至今）**：`supfit-gd.mjs` 新增 `--rolloutMode=step|game` 与 `--classPow` / `--classCap`（抑制极稀疏键 `1/class` 权重冲垮强攻防底座）；`pg-train.mjs` 新增 `--lamExp` 死珠过期定向惩罚、多键加权 `--shapeKey` 及 `--penDeadElec`（保留 `ep=2` 爆珠激光眼的同时单向惩罚死胡同 `ep<3#elec`）；`champion-map/pipeline/add-point.mjs` 支持 `--parent=<id>` 与跨未入图中间包多跳 `hotstartFrom` 回溯、`measure-point.mjs` 新增 `--reuse` 子产物缓存跳过与外部 `--readings=`/`--display=` 复用；`knobs.mjs` 旋钮精简至 193（在用 183）；白班长程与电磁炮排查交接见 [STATUS-2026-11-15-day-longhorizon-zcode.md](docs/research/STATUS-2026-11-15-day-longhorizon-zcode.md)。
+
 ## v2.0.7 — 11-13 夜（**规则文档对齐 + R66 过载炮编号化 + 量具/门禁收口 + 训练基建**）
 
 - **规则文档对齐两处（代码自 2026-09 起即如此，本次只改文档——"先文档后代码"的文档补课）**：

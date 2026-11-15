@@ -40,8 +40,28 @@
 
 ---
 
-## 三、下班前验证与接力建议
+## 三、午后收口：`OBS6-LH6P` 进图 + 激光眼有效率审计 + 鼓励电磁炮模式（`LH8R`–`LH8R4`）
 
-- `node training/knobs.mjs --check`：**通过**（全集 193 ‖ 在用 183 ‖ 未登记 0 ‖ 无注解 0）。
-- `node tools/gate-all.mjs --auto`：**在最终改动后重跑收尾**（非整轮认证）。
-- **下一棒建议**：若要同时守住 `C5长 >= 0.20` 与长程/`60%+` 花珠，可验证两件事：(a) 给 `supfit-gd` 加 `--classPow` / 类权重封顶，避免 `1/class` 权重把稀疏长程样本放大几十倍冲垮 `OBS6E9` 防御反射；(b) 在 `pg-train` 用带真实强对抗对手（如 `names:OBS6E9,...` + 滚局价值头基线）从 `OBS6-LH4` / `OBS6-LH2` 起步爬坡，而不靠正负叠加过多塑形贿赂动作。
+> 时区：本机 `2026-11-15 13:41 +08:00`
+
+1. **`supfit-gd.mjs` `--classPow` / `--classCap` 与 `OBS6-LH6P` 进图**：
+   - 使用 `--classPow=0.5 --classCap=12` 蒸馏 `OBS6-LH6` 后接 `product` PG 产出 `OBS6-LH6P`（`docs/artifacts/obs6-coldstart/OBS6-LH6P.bak`），在保有强战力与反过拟合（`mem-probe-e6` `Gap < 0`）下打通 `long/multi` 双模式 `13` 卡广度，已正式写入 `champion-map`（`a-multi h5=30.95 x5=0.1368` / `b-long h5=49.14 x5=0.3643 x8=0.2943` / `x-long h5=50.00 x5=0.3750 x8=0.3343` / `H=36.8 S=2.12` / `100 PASS 0 FAIL`）。
+   - 修复 `add-point.mjs` 只查直接一跳 `hotstartFrom` 导致跨过未入图底座（`OBS6-LH6`）时父边断成 `unknown-wid` 的问题：新增 `--parent=` 与局部包目录多跳回溯（自动连接 `OBS6-LH6P -> OBS6E9`，`parentSrc=seedpack`）；`measure-point.mjs` 新增 `--reuse`（命中 staging 子产物即跳过重测）、`--readings=` / `--display=` 复用已有数据与 `--parent=` 透传。
+2. **激光眼有效率专项分析（`80g × 5p`, `temp=0.2`, 2026-11-15 口径：命中防御系=1 分，同回合同目标另有其他伤害=2 分，光伤穿命中无防=0 分）**：
+   - `OBS6-LH6P` 加权有效率全项过 50%：`long self5` **57.9%**（132/228）、`long prod5` **85.4%**（41/48）、`multi self5` **53.3%**（49/92）、`multi prod5` **59.1%**（13/22）；反观未接 PG 的纯 SFT `OBS6-LH5` 低于 50%（`long self5` 43.9%、`multi self5` 47.1%）。
+   - 激光眼远多于电磁炮的根因在于回合经济边界：`charge` 消耗 1 ep 且能量珠回合末清空（[resolve.js](file:///d:/code/Epirus-Web/js/core/resolve.js#L1320-L1325)），因此 `ep=2` 蓄能后次回合只有 `ep=1`——只买得起 `laserEye`（1 ep + 1 boom），买不起 `railgun`（2 ep + 1 elec，[state.js](file:///d:/code/Epirus-Web/js/core/state.js#L155-L157)）；只要 `ep >= 3` 且有电珠，`OBS6-LH6P` 的 `canRail` 实放率极高。
+3. **鼓励电磁炮 PG 模式（`pg-train.mjs` `--penDeadElec`）实验结果**：
+   - 实现：`--penDeadElec=<w>` 保留 `ep=2#boom`（护住激光眼），单向惩罚死胡同 `ep<3#elec`（`-PEN_DEAD_ELEC`），并将 `--lamC` 奖励收紧到 `bead==='elec'` 的 `ep>=3` 纪律蓄电珠。
+   - 混合 `:r1` 补贴桌（`OBS6-LH8R2`、`OBS6-LH8R3`）会把训练集 `炮/局` 拉高到 `0.198–0.204`，但大部分 `ep>=3` 来自规则白送能量；`OBS6-LH8R2`（`mem-probe-e6` `Gap -10.4pt`、`C5短=0.1744 C5长=0.1880`、`花珠率 75.4%`、`G_M=7.77 G_L=4.99`）在 `promote-champion --dry` 上因反弹墙 `0.00`、场A 还手 `13.7%`、无档 G5 `long` `33%` 被阻断，未换现役槽。
+   - 纯 `r0` 强诱导 `OBS6-LH8R4`（`5:long,5:multi`, `6000g`, `--penDeadElec=0.25 --lamC=0.15 --lamF=0.25`）全检查点 `mem-probe-e6 Gap < 0`（`-6.9pt` 到 `-0.4pt`）：
+     - **`OBS6-LH8R4.seg1500.bak`**：`C5短=0.1714 / C5长=0.1756`、`用卡=13`、`Gap=-6.9pt`；在 80 局 `r0 multi` 中将 `ep=2#elec` 从 `84` 压半至 **`37`**，并将 `ep>=3#elec` 从 `18` 拉升 3.5× 至 **`63`**（`affRail 59`，实放 `13` vs `LH6P 11`）。
+     - **`OBS6-LH8R4.bak`（6k 终点）**：`C5长=0.1956`（本系列最高 `C5长`，`Gap=-0.4pt`，`用卡=13`，`防御%=48.1`）；80 局 `r0 long` 中 `ep>=3#elec=5`、`rail=5`（vs `LH6P 1/1`）。
+     - 结论：`--penDeadElec` 在 `multi`（通过 `ring` 提速 ep）与纯 `r0 long`（`ep>=3#elec` 与 `rail` 同时增至 5×）上验证有效；但因 `ep=2 -> charge#boom -> laserEye` 天生比"多攒一手 `ji` 再 `ep=3 -> charge#elec -> railgun`"少花 1 回合节奏，常态 `r0 long` 里激光眼仍将自然占优，除非同时配更强的多步价值基线。
+
+---
+
+## 四、收工验证与接力
+
+- `node training/knobs.mjs --check`：**通过**（全集 193 ‖ 在用 183 ‖ 未登记 0 ‖ 无注解 0 ‖ 暗键 9）。
+- `champion-map` `shot.mjs` 自检（含 `OBS6-LH6P` + `--reuse` + 父边回溯）：**100 PASS ‖ 0 FAIL**。
+- `node tools/gate-all.mjs --auto`：见终局提交前实测结果。
