@@ -159,6 +159,11 @@ PG 的炮 0.025/局+纪律蓄 0.025/局——charge 经济在 PG 循环自然生
 （T0 保底层自以为满员，其实坦克是真空）——下一轮的靶向采集要把 8P 地雷经济、prototransfer/
 beadburst 对手桌、tank 桌排进课程表。E10 的 Gap +4.5（P8 血统带了点考卷侧摆动）记档。
 
+> **⚑ 勘误（11-15 白班补，见夜班 STATUS §三⁶ 虫②）**：本表 `big_t / mini_t / laser_eye` 三行是
+> **键名假零**——脚本用了蛇形键而引擎真值是 `bigT/miniT/laserEye`，查不到 pct 列全落 `·`。
+> 修正脚本后重跑（11-15 14:0x）：**bigT 实为 2/17（GD16m ● + GD6a-TILT ●）**，miniT/mine/
+> laserEye/cannon 仍真 0/17。其余行（tank/transfer/drain 0、ring 3、railgun 2）不受影响。
+
 ## 八″、靶向突袭批（E10/E11/E12/PG10）：三个洞打下一个，一条放大律
 
 - **E10**（P8 charge 基座 + GD16m 链道两段式）：GD16m 键道命中 1→**52**（轨迹终于到访）、charge
