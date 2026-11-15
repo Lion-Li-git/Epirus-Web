@@ -1,6 +1,6 @@
 # STATUS · 2026-11-15 训练交接：分环境拟合、长程反证与当前最佳包
 
-> 范围：v2.0.9 规则/UI 修复已推送；本文件记录之后的训练侧状态。时间：2026-11-15 18:4x（Asia/Shanghai）。
+> 范围：v2.0.9 规则/UI 修复已推送；本文件记录之后的训练侧状态。时间：2026-11-15 20:57（Asia/Shanghai）。
 
 ## 一、产品侧（已推送 8c58095a）
 
@@ -39,12 +39,26 @@
 2. **长程规划不能靠换教师/加蒸馏标签合进来**；需要 PG/价值基线/ critic 或状态设计。
 3. 2P 与多人用同一池的裁定不变；池准入四列：2P 考卷全 >50% + 3P/5P/8P 不低于 E9 3pt。
 
-## 五、下一步
+## 五、下一步（20:57 晚班续接交接）
 
-1. 结构提案：`pg-train` 的学习型 MLP value head（`--baseline=mlp`），先做价值容量探针；R² 不过 0 不进训练。
-2. shaped1 `groups=2400 + dagger=1`，补 5P 短 −0.020 与 `guardgun/reflectmix`。
-3. `2:standard` 正式进 `arena2.SHAPES`（新列族 §E597），训练/考卷同形。
-4. `rareOnly` 只对自然密度 >0 的键开；`collectJobs` 先计时后实现。
+> 详表与机制诊断见 [FINDING-2026-11-15-shapedist-v2.md](./FINDING-2026-11-15-shapedist-v2.md)（含 §一–§五完整同尺读数）。本轮已完成两组工作：
+>
+> **前序基建修复**：
+> 1. 修复 `supfit-gd.mjs` 在 `--shapeBal=1` 下 `train0/test` 未按桌形分层切片 Bug，并新增 `--snapEvery` `snap0` 快照；
+> 2. 将 `pg-train.mjs` 的 `small` 岭回归价值基线从 7 标量扩为 14 维桌形/残局标量（混桌批内 `R²` 从 `-0.006` 翻正至 `+0.116 / +0.163`）；
+>
+> **多 `v7` 强包按环境分工蒸馏与同盆子空间合成（`V3a`/`V3b`/`V3c` + `V3S1`–`V3S4` + `V3H1`–`V3H3`）**：
+> 3. **多 `v7` 教师突破 `railgun=0` 天花板**：在 $N \le 5$ 引入 `v7` 强包团队（`bundled-champion` 仅锁 `2:standard`；`v7blk1-92` / `U-s205` 管 `2:long/3P/5P` 攻防长盘；`T8-s114` / `Q-s47` 管 `3P/5P` 电磁炮+大雷+聚能环链；`OBS6-SHAPEDIST` 管 `8P`）。实测 **`V3a`（r1）** 在 `5:long` 80 局打出 **`score=0.320, railgun=20, bigT=4, ring=1`**（`5:multi score=0.320, railgun=10`），**`V3b`（r1）** 打出 **`2:long 0.850（bigT=68, railgun=7）`** 与 `5:long` **`bigT=35, railgun=17, ring=3`**，而 **`V3a.snap0` / `V3c`** 分别把 **2P 20×120 考卷推高到 `91.1%` / `91.6%`**。
+> 4. **同盆权重融合 + 子空间路由刷新短/长/记忆三项全史新高**：
+>    - **`OBS6-SHAPEDIST-V3S2`**（同盆 6 粒融合）：4N **短 C = `0.2761`**（较 `SHAPEDIST 0.2454` `+3.07pt`）、4N **长 C = `0.2465`**（2/3/5/8 四格全正：`0.385/0.268/0.167/0.167`）、`2:long 0.900`、`mem-probe-e6 R 90.3% / H 76.8%`、2P `87.2%`；
+>    - **`OBS6-SHAPEDIST-V3S3`**：`mem-probe-e6 R 96.1% / H 81.3%`（全库 R+H 最高）、2P `89.1%`；
+>    - **`OBS6-SHAPEDIST-V3H3`**（融合主干 + `skillHead`/`actEnc` 89 维技能子空间路由）：4N **短 A/B/C = `0.3410 / 0.3557 / 0.3483`**（较 `SHAPEDIST` `+10.29pt`、较 `V2.snap0` `+5.73pt`，四格人数 `0.756/0.259/0.211/0.167` 全正），且 `5:long` 保持 `0.234`（`ring=1`）；
+>    - 诊断边界：`v7` 占 `3P/5P` 96% 时会稀释抗 `obs5/obs6`（B 轴）与跨回合记忆（`mem R`）；而融合后直接替换 `skillHead` 会因 `hctx` 基旋转无法直接激活 20 发 `railgun`。
+>
+> **下一步动作**：
+> 1. 以 `OBS6-SHAPEDIST-V3S2` 或 `V3H3` 为起点，用 `V2.snap0` 占主干（50–60%）+ `bundled-2p@0.70`（仅 `2:standard`）+ `v7blk1-92@0.35` + `T8-s114`/`Q-s47` 配 `--rareOnly=ring,railgun,bigT --rareFrac=0.22 --classPow=0.35 --classCap=5 --lr=0.0005 --steps=180 --dagger=0` 做端到端稀有链+主干对齐（让 `hctx` 与 `skillHead` 同基收敛）；
+> 2. 从对齐产物（或 `V3S2` / `V3a`）接 `pg-train --baseline=ridge --ridgeFeat=small --ridgeL2=0.1 --anchorWeight=0.25`（提高 `2:standard` 抽样占比并保留 `2:standard` 回锚），将短/长/链/记忆合一入池竞争。
+> 3. `2:standard` 正式进 `arena2.SHAPES`（新列族 §E597），训练/考卷同形；验收固定四列与 `champ=MSB15R-HITMIX,GD6a-TILT,Q-s47` 同看。
 
 ## 六、提交账
 

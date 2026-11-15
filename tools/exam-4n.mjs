@@ -224,6 +224,13 @@ else if (AXIS === 'B') emit('[冠军4N-B]', evalAxis(Number.MAX_SAFE_INTEGER));
 else {
   const a = evalAxis(0), b = evalAxis(Number.MAX_SAFE_INTEGER);
   emit('[冠军4N]', a); emit('[冠军4N-B]', b);
-  const mix = {}; for (const n of NS) mix[n] = { h: ((+a[n].h + +b[n].h) / 2).toFixed(2), x: ((+a[n].x + +b[n].x) / 2).toFixed(4), G: a[n].G };
+  const mix = {}; for (const n of NS) {
+    /* C 尺 = A/B 同权平均；seatFirst/seatGames 必须逐座相加，否则 emit 的逐座行会 q.seatFirst.map 崩
+     * （2026-11-15 本班撞上：--exam=both 在打印 C 行时 TypeError，C 的 h/x 已经算出但整条命令挂）。 */
+    const seatFirst = a[n].seatFirst.map((v, i) => v + b[n].seatFirst[i]);
+    const seatGames = a[n].seatGames.map((v, i) => v + b[n].seatGames[i]);
+    mix[n] = { h: ((+a[n].h + +b[n].h) / 2).toFixed(2), x: ((+a[n].x + +b[n].x) / 2).toFixed(4),
+      G: a[n].G + b[n].G, first: a[n].first + b[n].first, seatFirst, seatGames };
+  }
   emit('[冠军4N-v2]', mix);
 }

@@ -34,8 +34,8 @@ import { REMOVED_TRAIN_KEYS, TRAIN_ENV_KEYS } from './train-env.mjs';
  * 所以 worker 与并行池里读得到的键，服务端也是认的 ⇒ 一并算进读集，否则会把活键误报成黑键。
  * 三个 `*-env.mjs` 名单模块的键**必须显式声明**（`knob-guard` 不从名单模块自动继承读权，
  * 否则"只 import 名单来点名"会被当成真读 ⇒ 假阴性）。 */
-enforceKnobs({ tool: 'train-server', env: process.env, entry: 'server/train-server.mjs',
-  selfFiles: ['server/train-worker.mjs', 'server/paralleltrain.mjs'],
+enforceKnobs({ tool: 'train-server', env: process.env, entry: 'training/server/train-server.mjs',
+  selfFiles: ['training/server/train-worker.mjs', 'training/server/paralleltrain.mjs'],
   extraReadKeys: ECON_ENV_KEYS.concat(FIGHT_ENV_KEYS, TRAIN_ENV_KEYS),
   removed: REMOVED_TRAIN_KEYS });
 

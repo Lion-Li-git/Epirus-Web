@@ -294,12 +294,15 @@
 
   function mulberry32(seed) {
     let a = seed >>> 0;
-    return function () {
+    function rng() {
       a |= 0; a = (a + 0x6D2B79F5) | 0;
       let t = Math.imul(a ^ (a >>> 15), 1 | a);
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-    };
+    }
+    rng.getState = function () { return a >>> 0; };
+    rng.setState = function (s) { a = s >>> 0; };
+    return rng;
   }
 
   function policyChooser(params, temp) {
@@ -553,7 +556,9 @@
   function pickTarget2N(state, pid, key, t1) {
     if (key !== R.SK.DUAL_GUN && key !== R.SK.MIRROR) return null;
     const opps = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
-    return opps.length ? opps[0] : null;
+    if (opps.length <= 1) return opps.length ? opps[0] : null;
+    const r = (state && state.rng && typeof state.rng.next === 'function') ? state.rng.next() : Math.random();
+    return opps[Math.min(opps.length - 1, Math.floor(r * opps.length))];
   }
 
   /* N 人版策略 chooser（v7：**候选**= (技能, 目标, 珠类型)，目标由网络自己选，不再走 pickTargetN）。
@@ -4041,11 +4046,10 @@ function countVariety(events, seat) {
    * ⇒ 惩罚**从未触发**、v16 那 6 个 seed 是在"惩罚关闭"下跑的（又是静默空操作）。
    * 故独立取样：默认 6 局（`EPIRUS_SEAT_GAMES` 可调），守卫放宽到 `>= 4`。 */
   let SEAT_GAMES = 6;
-  function setSeatGames(v) { if (isFinite(v) && v >= 0) SEAT_GAMES = v | 0; return SEAT_GAMES; }   // 模块级（内层那个同名定义不可见）
+  function setSeatGames(v) { if (isFinite(v) && v >= 0) SEAT_GAMES = v | 0; return SEAT_GAMES; }
   function setMirrorGames(k) {
     const v = Number(k);
     if (isFinite(v) && v >= 0) MIRROR_GAMES = v | 0;
-  function setSeatGames(v) { if (isFinite(v) && v >= 0) SEAT_GAMES = v | 0; return SEAT_GAMES; }
     return MIRROR_GAMES;
   }
   function mirrorGames() { return MIRROR_GAMES; }

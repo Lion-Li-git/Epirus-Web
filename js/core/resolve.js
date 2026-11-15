@@ -363,7 +363,7 @@
   function rawDamage(state, to, amt, reason, via, opts) {
     opts = opts || {};
     const p = state.p[to];
-    if (!isAliveInRound(state, to)) return false;
+    if (!opts.allowDead && !isAliveInRound(state, to)) return false;
     let hit = amt;
     // 藤甲火弱：一切火焰伤害+1（坦克/天火/地雷等，R22）
     if ((opts.type === R.DMG.FIRE || opts.type === R.DMG.FIRELIGHT) && p.fireWeakNow) {
@@ -623,8 +623,7 @@
           if (judge(state)) {
             const src = dmg.source;
             if (src != null && src !== to && isAliveInRound(state, src)) {
-              state.p[src].hp -= 1;
-              ev(state, { type: 'damage', to: src, amt: 1, reason: '金刚盾反击', via: 'counter' });
+              rawDamage(state, src, 1, '金刚盾反击', 'counter', { type: R.DMG.NORMAL, source: to });
             }
           }
           ev(state, { type: 'blocked', to, by: '金刚盾', amt: dmg.amt, via });
@@ -778,11 +777,12 @@
   /* 大雷统一结算（真实 pri4 与镜面复制大雷共用，按入口快照消除先后顺序偏置） */
   function runBigTBatch(state, entries) {
     if (!entries.length) return;
-    const snapK = [], snapT = [];
+    const snapK = [], snapRawK = [], snapT = [];
     for (const i of turnOrder(state)) {
       const ea = effectiveAction(state, i);
       const a = actionOf(state, i);
       snapK[i] = ea ? ea.key : (a ? a.key : null);
+      snapRawK[i] = a ? a.key : null;
       snapT[i] = ea ? ea.target : (a ? targetOf(state, i) : null);
     }
     for (const ent of entries) {
@@ -811,10 +811,8 @@
         const qTargetsT = snapK[q] != null && snapT[q] === t;
         const tTargetsQ = !!ta && tTgt === q;
         if (!qTargetsT && !tTargetsQ) continue;
-        const qUsed = snapK[q];
+        const qUsed = snapRawK[q] || snapK[q];
         const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
-        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
-        ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
         let qHit = q;
         if (qIsDef) {
           const qTgt = snapT[q];
@@ -826,6 +824,13 @@
             qHit = qTgt;
           }
         }
+        if (state.p[qHit].rodGuard > 0) {
+          state.p[qHit].rodGuard = 0;
+          ev(state, { type: 'rodBlock', pid: qHit, by: SK.BIG_T });
+          continue;
+        }
+        if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
+        ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
         const qres = deliverDamage(state, {
           amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
         }, qHit, { reason: '真正的落雷·连带' });
@@ -835,7 +840,7 @@
         }
       }
       const banApplies = res.result === 'land' || guardKind === 'proto';
-      if (banApplies) bigTBan(state, t, ta ? ta.key : null);
+      if (banApplies) bigTBan(state, t, snapRawK[t] || (ta ? ta.key : null));
     }
   }
 
@@ -898,10 +903,8 @@
   }
 
   /* ---------- 回合中结算 ---------- */
-  const roundTaunts = [];
-
   function resolveActions(state) {
-    roundTaunts.length = 0;
+    state._roundTaunts = [];
     state._roundAlive = [];
     for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i], a = state.actions[i];
@@ -1127,7 +1130,7 @@
       const ea = effectiveAction(state, i);
       if (!ea || skillPri(ea.key) !== 3) continue;
       if (ea.key === SK.LASER_EYE && laserConsumed[i]) continue;
-      if (R.byKey[ea.key] && (R.byKey[ea.key].cat === R.CAT.ENERGY || R.byKey[ea.key].cat === R.CAT.DEF)) continue;
+      if (R.byKey[ea.key] && (R.byKey[ea.key].cat === R.CAT.ENERGY || R.byKey[ea.key].cat === R.CAT.DEFENSE)) continue;
       if (ea.key === SK.HOLO || ea.key === SK.MINE || ea.key === SK.ROD) continue;
       const t = effTarget(state, ea);
       if (t == null && ea.key !== SK.FIRESTORM) continue;
@@ -1215,7 +1218,7 @@
         case SK.TAUNT: {
           you.tauntPending = true;
           if (you.tauntByPending.indexOf(i) < 0) you.tauntByPending.push(i);
-          roundTaunts.push({ caster: i, target: t });
+          (state._roundTaunts = state._roundTaunts || []).push({ caster: i, target: t });
           ev(state, { type: 'taunt', pid: i, target: t });
           break;
         }
@@ -1231,7 +1234,10 @@
       if (t == null) continue;
       const eb = effectiveAction(state, t);
       if (eb && eb.key === SK.DRAIN && effTarget(state, eb) === i) {
-        state.p[i].chains = [t]; state.p[t].chains = [i];
+        state.p[i].chains = state.p[i].chains || [];
+        state.p[t].chains = state.p[t].chains || [];
+        if (state.p[i].chains.indexOf(t) < 0) state.p[i].chains.push(t);
+        if (state.p[t].chains.indexOf(i) < 0) state.p[t].chains.push(i);
         if (i < t) ev(state, { type: 'hidden', name: '铁索连环' });
       }
     }
@@ -1309,7 +1315,9 @@
        * 修：与 `actionOf`（:15-18）**同口径**加 `!a.voided`。
        * ⚠️ 注意区别：**过载炮**有明文 R43"被无效化仍计入次数"（`state.js:190` 的 `p.cannonCount++`，用户裁定）⇒ 那条**不动**；
        * 聚能环**没有**对应明文，按原版"连续使用"的语义，被废的那次不该算"用成了"。 */
-      if (!(a && a.outcome === 'ok' && !a.voided && a.key === SK.RING)) p.ringStreak = 0;
+      const ringEa = effectiveAction(state, i);
+      const ringEffK = ringEa ? ringEa.key : (a ? a.key : null);
+      if (!(a && a.outcome === 'ok' && !a.voided && ringEffK === SK.RING)) p.ringStreak = 0;
       /* v1.5.129（**R61**，用户裁定：与 R10 同族）：**被无效化的一手不算"最后用过的招"**。
        * 病（第三方复核 `docs/REVIEW-QODER-2026-09-19.md` §2-1）：`setVoid`（本文件 :22-29）只置
        * `voided`、**不动** `outcome` ⇒ 这一行原来看不出差别，于是"被雷击之枪废掉的那一手"照样写进
@@ -1386,7 +1394,7 @@
         const effTgt = mr ? mr.target : (a && a.target);
         const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(effKey) >= 0
           && p.tauntBy.indexOf(effTgt) >= 0);
-        if (!ok) { p.hp -= 1; ev(state, { type: 'damage', to: i, amt: 1, reason: '挑衅违约', via: 'taunt' }); }
+        if (!ok) rawDamage(state, i, 1, '挑衅违约', 'taunt', { type: R.DMG.NORMAL, allowDead: true });
         p.tauntActive = false; p.tauntBy = [];
         ev(state, { type: 'tauntCheck', pid: i, ok });
       }
@@ -1409,7 +1417,7 @@
     }
     // 隐藏技能触发（回魂/梦魇，两遍结算以保证互挑同死时不依赖座位顺序）R48/R50
     const curseDead = [];
-    for (const tc of roundTaunts) {
+    for (const tc of (state._roundTaunts || [])) {
       const c = state.p[tc.caster], t = state.p[tc.target];
       if (c.hp <= 0 && !c.reviveNext && !c.infiniteEnergy) { c.reviveNext = true; ev(state, { type: 'hidden', name: '回魂', pid: tc.caster }); }
       if (t.hp <= 0 && !t.infiniteEnergy) curseDead.push(tc);

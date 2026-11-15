@@ -60,7 +60,7 @@
     state: null, modeKey: 'standard', diff: 'lv:regular', players: 2, hp: 3, multi: false,
     roundStarted: false, locked: false, snap: null, aiKey: null,
     evCursor: 0, transcript: [], aiHistory: [],
-    roundStartSnapshot: null, warnedChampNoTrain: false, undoUsed: false,
+    roundStartSnapshot: null, roundStartRngState: null, warnedChampNoTrain: false, undoUsed: false,
     /* §E667（2026-10-20，用户："给导出对局记录里面加上本次的对手"）：开局/换档**当场**记下的历史，
      *   导出的头部只读这几格，不在那里重推（理由见 `seatOppLabel` 头上那段）。`diffLabel` 跟着一起快照，
      *   否则 `难度=`（活读）会与 `对手=`（快照）不同档 ⇒ 一张头部自相矛盾。 */
@@ -166,7 +166,7 @@
     B.state.slotSalt = (Math.imul(B.matchSeed, 2654435761)) >>> 0;
     B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null; B.resolvePending = false;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
-    B.roundStartSnapshot = null; B.warnedChampNoTrain = false; B.undoUsed = false;
+    B.roundStartSnapshot = null; B.roundStartRngState = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
@@ -966,6 +966,7 @@
          * （取此刻=事后快照会让 undo 双跑 startTurn；不置 null 会让 undo 悔到上上回合）。下一回合开始时
          * doPickMulti 会照常重设快照 ⇒ 只损失复活回合这一下的悔棋权。 */
         B.roundStartSnapshot = null;
+        B.roundStartRngState = null;
         B.locked = false;
         buildSkillGrid(); renderSide(0); renderSide(1);
         hint('回魂复活（R48）—— 本回合由你出招（无限能量，回合结束即消散）。');
@@ -1060,7 +1061,11 @@
       target = opps.length ? opps[0] : null;
     }
     B.locked = true;
-    if (!B.roundStarted) B.roundStartSnapshot = S.cloneState(B.state);
+    if (!B.roundStarted) {
+      B.roundStartSnapshot = S.cloneState(B.state);
+      B.roundStartRngState = (B.state && B.state.rng && B.state.rng.next && typeof B.state.rng.next.getState === 'function')
+        ? B.state.rng.next.getState() : null;
+    }
     ensureRound();
     if (B.state.over) { B.locked = false; return; }
     const idx0 = B.state.events.length;
@@ -1143,6 +1148,9 @@
     }
     B.undoUsed = true;
     B.state = S.cloneState(B.roundStartSnapshot);
+    if (B.roundStartRngState != null && B.state && B.state.rng && B.state.rng.next && typeof B.state.rng.next.setState === 'function') {
+      B.state.rng.next.setState(B.roundStartRngState);
+    }
     B.roundStarted = false;
     B.transcript.pop();
     B.evCursor = B.state.events.length;
@@ -1319,7 +1327,7 @@
           : { cls: 'ev blue', html: '☂ ' + who + ' 架起避雷针（3 回合内免雷一次）' };
       }
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
-      case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（防御/反弹/金刚盾/ジ 除外）' };
+      case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（基础防御/反弹/金刚盾/ジ/吸除外）' };
       case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
       /* v1.5.253：不再硬编码"受 2 点电伤" —— 是否真打中要按同回合的连带伤害事件反推（见 `bigTChainText`）。 */
       case 'bigTChain': return bigTChainText(e, roundEvents);
@@ -1716,18 +1724,20 @@
     const pl = $('sel-players');
     if (!pl) return;
     const gen = localPackGen();
+    const tier = tierOf(B.diff);
+    const scriptDiff = !tier || tier.kind === 'style';
     for (const opt of pl.options) {
       const v = parseInt(opt.value, 10);
-      const lock = gen === 'v7' && v > V7_MAX_PLAYERS;
+      const lock = !scriptDiff && gen === 'v7' && v > V7_MAX_PLAYERS;
       if (lock && !opt.dataset.label0) opt.dataset.label0 = opt.textContent;   // 幂等：先存原标签
       opt.textContent = lock ? (opt.dataset.label0 + '（v7 包锁）') : (opt.dataset.label0 || opt.textContent);
       opt.disabled = lock;
     }
-    /* 本机换成 v7 包时若当前人数已越界：回落到阈值并把模式同步掉（与用户手动换人数同一条路）。 */
-    if (gen === 'v7' && (B.players || 2) > V7_MAX_PLAYERS) {
+    /* 本机换成 v7 包或切回吃包档时若当前人数已越界：回落到阈值并把模式同步掉（与用户手动换人数同一条路）。 */
+    if (!scriptDiff && gen === 'v7' && (B.players || 2) > V7_MAX_PLAYERS) {
       pl.value = String(V7_MAX_PLAYERS);
       applyAxes();
-      if (B.state) newGame();                                  // 局中导入 ⇒ 按换人数同款重开
+      if (B.state) newGame();                                  // 局中导入/切档 ⇒ 按换人数同款重开
     }
   }
   function exportChamp() {
@@ -1861,7 +1871,13 @@
     $('sel-hp').onchange = function () { newGame(); };
     $('sel-diff').onchange = function () {
       const prev = B.diff;
+      const prevPlayers = B.players;
       B.diff = $('sel-diff').value;
+      applyPackTypeLock();
+      if (B.players !== prevPlayers) {
+        hint('已切换为 ' + diffName(B.diff) + '（v7 包上限 ' + V7_MAX_PLAYERS + ' 人，已同步降回 ' + B.players + ' 人重开）');
+        return;
+      }
       /* §E667：换档**不换局**（这条本来就写着"对局中即时生效"）⇒ 一局可能是两档拼的。
        *   导出的头部若只写开局对手就把"前面 K 回合由 A 打、之后由 B 打"说成"全程由 A 打"，
        *   所以这里当场把换档后的逐席也记一行（开局那一格不动，它记的是开局）。 */

@@ -118,7 +118,7 @@ export function importClosure(entry) {
  *    **闸静默失效**：实测全集 149 → 142 键，D180 ④ 与 D165 当场红（返回 0，期望非零 / 期望 6）。
  *    ⇒ 改成递归（与头注对齐）。实测 `tools/` 下只有 `gates/`、`server/` 没有子目录 ⇒ 无旁伤，全集回到 147 键。 */
 export function repoKnobUniverse(roots) {
-  const rr = (roots || ['tools', 'server']).map(abs);
+  const rr = (roots || ['tools', 'training']).map(abs);
   const files = [];
   const walk = function (dir) {
     let es;

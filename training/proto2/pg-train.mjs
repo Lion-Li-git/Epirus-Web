@@ -190,7 +190,7 @@ function valueCapacity(A2, P, ly, samples) {
   const gX = ridgeR2(list.map((r) => r.x), y, 1e-2);
   const gF = ridgeR2(list.map((r) => r.f), y, 1e-2);
   console.log('  ⚑ 价值容量（岭回归**按局** 2 折留出 R²，n=' + list.length + ' ‖ 局=' + nG + '）：读 xin(' + list[0].x.length +
-    ' 维) = ' + gX.toFixed(3) + ' ‖ 读手挑 7 标量 = ' + gF.toFixed(3));
+    ' 维) = ' + gX.toFixed(3) + ' ‖ 读手挑 ' + list[0].f.length + ' 标量 = ' + gF.toFixed(3));
   return { gX, gF };
 }
 
@@ -272,11 +272,37 @@ function collector(state, pid, legal) {
   for (let i = 0; i < fr.probs.length; i++) { acc += fr.probs[i]; if (r < acc) { idx = i; break; } }
   let H = 0; for (let i = 0; i < fr.probs.length; i++) if (fr.probs[i] > 1e-12) H -= fr.probs[i] * Math.log(fr.probs[i]);
   const me = state.p[pid];
-  /* 手挑的 7 个价值标量（回合/血/ジ/电珠/爆珠/环连/炮数）——容量探针与 small 档基线都用它，
-   *   好处是**不靠 Xin 的列号考古**（列号一变就静默读错），字段全从这里直取。 */
-  const FEAT = PROBE_CAP ? [Math.min(1, state.round / 40), (me ? (me.hp || 0) / ((state.mode && state.mode.hp) || 3) : 0),
-    (me ? Math.min(me.ep, 12) / 12 : 0), (me && me.elec ? 1 : 0), (me && me.boom ? 1 : 0),
-    (me ? (me.ringStreak || 0) / 3 : 0), (me ? (me.cannonCount || 0) / 3 : 0)] : null;
+  /* 桌形/残局/自身状态标量基线（14 维）：跨人数/模式混训时把初始人数、存活人数、模式血量、血差与 1v1 残局标识一并送入岭回归。 */
+  const modeHp = (state.mode && state.mode.hp) || 3;
+  let aliveLen = 0, leadHp = 0, sumOppHp = 0, oppN = 0, oppMaxEp = 0;
+  if (PROBE_CAP) {
+    for (let i = 0; i < state.p.length; i++) {
+      const q = state.p[i];
+      if (!q || q.hp <= 0) continue;
+      aliveLen++;
+      if (i === pid) continue;
+      if (q.hp > leadHp) leadHp = q.hp;
+      if ((q.ep || 0) > oppMaxEp) oppMaxEp = q.ep || 0;
+      sumOppHp += q.hp; oppN++;
+    }
+  }
+  const meanOppHp = oppN > 0 ? sumOppHp / oppN : (me ? me.hp : 0);
+  const FEAT = PROBE_CAP ? [
+    Math.min(1, state.round / 40),
+    (me ? (me.hp || 0) / modeHp : 0),
+    (me ? Math.min(me.ep, 12) / 12 : 0),
+    (me && me.elec ? 1 : 0),
+    (me && me.boom ? 1 : 0),
+    (me ? (me.ringStreak || 0) / 3 : 0),
+    (me ? (me.cannonCount || 0) / 3 : 0),
+    state.p.length / 10,
+    aliveLen / 10,
+    modeHp / 6,
+    (me ? (me.hp - leadHp) / 5 : 0),
+    (me ? (me.hp - meanOppHp) / 5 : 0),
+    aliveLen <= 2 ? 1 : 0,
+    Math.min(oppMaxEp, 6) / 6,
+  ] : null;
   curGame.decs.push({ push: false, tape: fr.tape, idx, key: cands[idx].key, bead: cands[idx].bead || null, ep: me ? (me.ep || 0) : 0, elec: me ? (me.elec || 0) : 0, H, q: fr.q,
       xinArr: PROBE_CAP ? Float64Array.from(fr.tape.xin) : null, hctxArr: null, feat: FEAT, gid: curGame.gid,
       qR: BASELINE === 'ridge' ? (RFIT ? ridgeV(RFIT, (RFEAT === 'small' ? FEAT : fr.tape.xin)) : null) : null });

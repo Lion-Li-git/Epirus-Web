@@ -5,6 +5,9 @@
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
 ## v2.0.9 — 11-15（**规则边界修复 + 2P/UI 收口**）
+- **规则与产品侧联动收口**：
+  - **镜面复制 & N6/N9/R65 边界对齐**：`resolve.js` 修正 `R.CAT.DEFENSE`（镜面复制防御类不再误走攻击分支/二次发 `mirror` 事件）；`bigTBan` 记录原技能 `mirror` 而非复制产物；大雷连带先检查第三方承伤者 `rodGuard`（免疫 2 电与禁用并消耗避雷针，发 `rodBlock`）；镜面复制 `ring` 保留 `ringStreak`；多人 `chains` 改为双向追加而非覆盖；`金刚盾反击` 与 `挑衅违约` 走 `rawDamage` 参与 `铁索连环`；`roundTaunts` 迁至 `state._roundTaunts`；同步更新 `RULES-NP.md`（并纠偏镜面复制双枪 `pri 3` 文案）与 `RULES-2P.md`。
+  - **产品与工具修复**：修复 `rules-panel.js` 小雷/挑衅 FAQ 过时描述；`ui.js` 悔一步保存/恢复 `mulberry32` RNG 状态、脚本风格放开 6/7/8 人上限（切包档时自动同步降回并重开）、修正 `ban` 豁免名单日志文案；`evo.js` 多目标第二目标随机兜底并删嵌套重复 `setSeatGames`；`trainer.js` `quickEval` 补齐 `tankline`；`train-server.mjs`/`knob-guard.mjs` 修正迁移后 `training/server` 默认路径；补全 `tests/spec.js` 6 条回归并更新内置包 `rulesFingerprint` 为 `1e59bb28`。
 
 - **规则引擎三处边界修**（`js/core/resolve.js`；均有回归用例，`spec 71/71`）：
   - **大雷禁用覆盖多人专用卡**：`bigTBan` 删掉 `R.MULTI_ONLY` 整类跳过 ⇒ 双枪/镜面/全息被大雷命中后按 R29 禁用 3 回合（豁免名单仍只有 防御/反弹/金刚盾/ジ + 小雷）。

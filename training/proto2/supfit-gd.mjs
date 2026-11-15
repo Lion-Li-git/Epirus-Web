@@ -958,8 +958,27 @@ const groups = [];
 collectInto(groups, null, 300000);
 function shapeCov(list) { const m = {}; for (const g of list) m[g.shp] = (m[g.shp] || 0) + 1; const ks = Object.keys(m); return ks.length + '/' + A2.shapes.length + ' 形（逐形 ' + ks.map((k) => m[k]).join(',') + '）'; }
 if (groups.length < 60) { console.error('⛔ 只抓到 ' + groups.length + ' 组 ⇒ 不做'); process.exit(2); }
-const cut = Math.floor(groups.length * 0.75);
-const train0 = groups.slice(0, cut), test = groups.slice(cut);
+function splitByShape(list) {
+  if (!SHAPEBAL) {
+    const c = Math.floor(list.length * 0.75);
+    return { train: list.slice(0, c), test: list.slice(c) };
+  }
+  const byS = new Map();
+  for (const g of list) {
+    let arr = byS.get(g.shp);
+    if (!arr) { arr = []; byS.set(g.shp, arr); }
+    arr.push(g);
+  }
+  const train = [], test = [];
+  for (const arr of byS.values()) {
+    const c = Math.floor(arr.length * 0.75);
+    for (let i = 0; i < c; i++) train.push(arr[i]);
+    for (let i = c; i < arr.length; i++) test.push(arr[i]);
+  }
+  return { train, test };
+}
+const { train: train0, test } = splitByShape(groups);
+const cut = train0.length;
 /* 1/类频 权重：`key` 路径按 wantKey（与 chain-supfit 同式，逐字不变）；
  *   `cand` 路径按"键#珠"伪类 ⇒ 让 `charge#elec` 不被 `charge#boom` 的数量吃掉（ji 本来占 6 成）。 */
 const cls = (gr) => (OBJ === 'cand' ? gr.wantKey + (gr.wantBead ? '#' + gr.wantBead : '') : gr.wantKey);
@@ -1075,19 +1094,36 @@ let trainList = train0.slice();
 let stuTrain = [], stuTest = [];
 const ROUNDS = [];
 const ROUNDS_MOVED = [];   /* 每轮『粒子真的动了』的坐标级自证 */
+function writeSnap(r, pvSnap) {
+  const sp = OUT.replace(/\.(bak|js)$/, '') + '.snap' + r + '.bak';
+  mkdirSync(dirname(sp), { recursive: true });
+  writeFileSync(sp, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
+    ts: new Date().toISOString(), arm: sp.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
+    up: UP, hotstartFrom: HF || UP, snap: r, seed: SEED, steps: STEPS, lr: LR,
+    teacher: TEACHER, teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
+    teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,
+    teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
+    teacher3shapes: T3SHAPES.size ? [...T3SHAPES].join(',') : null,
+    teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
+    teacher4shapes: T4SHAPES.size ? [...T4SHAPES].join(',') : null,
+    objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
+  }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pvSnap)) + ';\n', 'utf8');
+  console.log('  ⚑ 轮 ' + r + ' 快照 → ' + sp);
+}
 pvCur = adamFit(pvCur, trainList, base.ll, 0);
 {
   const r0 = like(pvCur, test);
   ROUNDS.push({ round: 0, trainG: trainList.length, teacherAgree: r0.agree, teacherLl: r0.ll, studentAgree: null, studentN: 0 });
+  if (SNAP_EVERY > 0 && DAG > 0) writeSnap(0, pvCur);
 }
 for (let r = 1; r <= DAG; r++) {
   const before = { keys: LABEL.keys, gone: LABEL.gone, moved: LABEL.moved };
   const gS = [];
   collectInto(gS, pvCur, 500000 + r * 1000);
   if (gS.length < 60) { console.log('  ⚑ 轮 ' + r + ' 学生自访只抓到 ' + gS.length + ' 组 ⇒ 停在第 ' + (r - 1) + ' 轮'); break; }
-  const c = Math.floor(gS.length * 0.75);
-  stuTrain = stuTrain.concat(gS.slice(0, c));
-  stuTest = stuTest.concat(gS.slice(c));
+  const spS = splitByShape(gS);
+  stuTrain = stuTrain.concat(spS.train);
+  stuTest = stuTest.concat(spS.test);
   const cap = Math.max(0, POOL - train0.length);
   if (stuTrain.length > cap) stuTrain = stuTrain.slice(stuTrain.length - cap);
   trainList = train0.concat(stuTrain);
@@ -1111,21 +1147,7 @@ for (let r = 1; r <= DAG; r++) {
   console.log('  轮 ' + r + ' ‖ 学生态 +' + gS.length + ' 组（池 ' + trainList.length + ' ‖ 标签对账 ' + (LABEL.keys - before.keys) + '，作废 ' + (LABEL.gone - before.gone) + '）' +
     ' ‖ 教师留出 ' + (100 * tr.agree).toFixed(1) + '% ‖ **学生自访留出 ' + (100 * ts.agree).toFixed(1) + '%（' + ts.n + ' 组）**');
   ROUNDS.push({ round: r, studentG: gS.length, trainG: trainList.length, teacherAgree: tr.agree, teacherLl: tr.ll, studentAgree: ts.agree, studentLl: ts.ll, studentN: ts.n });
-  if (SNAP_EVERY > 0 && r % SNAP_EVERY === 0) {
-    const sp = OUT.replace(/\.(bak|js)$/, '') + '.snap' + r + '.bak';
-    writeFileSync(sp, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
-      ts: new Date().toISOString(), arm: sp.split(/[\\/]/).pop().replace(/\.(bak|js)$/, ''),
-      up: UP, hotstartFrom: HF || UP, snap: r, seed: SEED, steps: STEPS, lr: LR,
-      teacher: TEACHER, teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
-      teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,
-      teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
-      teacher3shapes: T3SHAPES.size ? [...T3SHAPES].join(',') : null,
-      teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
-      teacher4shapes: T4SHAPES.size ? [...T4SHAPES].join(',') : null,
-      objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
-    }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pvCur)) + ';\n', 'utf8');
-    console.log('  ⚑ 轮 ' + r + ' 快照 → ' + sp);
-  }
+  if (SNAP_EVERY > 0 && r % SNAP_EVERY === 0) writeSnap(r, pvCur);
 }
 /* 终评：按**训练似然最好**的那份粒报留出（lr 挑档不许偷看 test 的纪律同一源头） */
 const finalPv = pvCur;

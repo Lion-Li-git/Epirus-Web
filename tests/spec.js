@@ -1281,6 +1281,135 @@
     eq(st.p[1].hp, 2, '没有八卦阵，枪应命中（若残留八卦则判定胜、HP 仍 3）');
   });
 
+  t('N14b 镜面复制防御类：只在防御阶段发射1次 mirror 事件', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 5; st.p[1].ep = 5; st.p[2].ep = 5;
+    st.events = [];
+    X.startTurn(st);
+    S.attemptAction(st, 0, SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(st, 1, SK.GUARD, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st);
+    X.endTurn(st);
+    const mirSelf = st.events.filter(function (e) { return e.type === 'mirrorCopySelf' && e.pid === 0; });
+    const mirAtk = st.events.filter(function (e) { return e.type === 'mirror' && e.pid === 0; });
+    eq(mirSelf.length, 1, '镜面复制防御类应在防御阶段发射 1 次 mirrorCopySelf 事件');
+    eq(mirAtk.length, 0, '镜面复制防御类不应在攻击层二次发射 mirror 事件');
+  });
+
+  t('N9b 多人铁索连环：追加连边不覆盖既有连环', function () {
+    const st = S.createState('multi', noJudge(), 4);
+    st.p.forEach(function (p) { p.hp = 1; p.ep = 5; });
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.DRAIN, { target: 1 });
+    S.attemptAction(st, 1, SK.DRAIN, { target: 0 });
+    S.attemptAction(st, 2, SK.JI, null);
+    S.attemptAction(st, 3, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.p[0].chains.indexOf(1) >= 0 && st.p[1].chains.indexOf(0) >= 0, '首轮应建立 0-1 连环');
+    st.p.forEach(function (p) { p.hp = 1; p.ep = 5; });
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.HOLO, { target: 1 });
+    S.attemptAction(st, 1, SK.DRAIN, { target: 2 });
+    S.attemptAction(st, 2, SK.DRAIN, { target: 1 });
+    S.attemptAction(st, 3, SK.HOLO, { target: 2 });
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.p[1].chains.indexOf(0) >= 0 && st.p[1].chains.indexOf(2) >= 0, 'P1 应同时连向 P0 与 P2');
+    ok(st.p[0].chains.indexOf(1) >= 0 && st.p[2].chains.indexOf(1) >= 0, 'P0 与 P2 各自的连边均应保留');
+    st.p.forEach(function (p) { p.hp = 3; p.ep = 5; });
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.JI, null);
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    S.attemptAction(st, 3, SK.GUN, { target: 1 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[1].hp, 2, 'P1 受直击扣 1 血');
+    eq(st.p[0].hp, 2, 'P0 通过 0-1 连环分摊扣 1 血');
+    eq(st.p[2].hp, 2, 'P2 通过 1-2 连环分摊扣 1 血');
+    eq(st.p[1].chains.length, 0, '一次性连边触发后应解除');
+  });
+
+  t('R65b 金刚盾反击与挑衅违约参与铁索连环', function () {
+    const st1 = S.createState('multi', seqRng([0.1]), 3);
+    st1.p.forEach(function (p) { p.hp = 3; p.ep = 5; });
+    st1.p[0].chains = [2]; st1.p[2].chains = [0];
+    st1.events = []; X.startTurn(st1);
+    S.attemptAction(st1, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st1, 1, SK.JINSHIELD, null);
+    S.attemptAction(st1, 2, SK.JI, null);
+    X.resolveActions(st1); X.endTurn(st1);
+    eq(st1.p[0].hp, 2, '金刚盾判定胜：攻击者 P0 受 1 点反击伤');
+    eq(st1.p[2].hp, 2, '金刚盾反击应通过铁索连环传导给 P2');
+    eq(st1.p[0].chains.length, 0, '金刚盾反击传导后连环应解除');
+
+    const st2 = S.createState('multi', noJudge(), 3);
+    st2.p.forEach(function (p) { p.hp = 3; p.ep = 5; });
+    st2.events = []; X.startTurn(st2);
+    S.attemptAction(st2, 0, SK.TAUNT, { target: 1 });
+    S.attemptAction(st2, 1, SK.JI, null);
+    S.attemptAction(st2, 2, SK.JI, null);
+    X.resolveActions(st2); X.endTurn(st2);
+    st2.p[1].chains = [2]; st2.p[2].chains = [1];
+    st2.events = []; X.startTurn(st2);
+    S.attemptAction(st2, 0, SK.JI, null);
+    S.attemptAction(st2, 1, SK.JI, null);
+    S.attemptAction(st2, 2, SK.JI, null);
+    X.resolveActions(st2); X.endTurn(st2);
+    eq(st2.p[1].hp, 2, 'P1 挑衅违约扣 1 血');
+    eq(st2.p[2].hp, 2, '挑衅违约应通过铁索连环传导给 P2');
+    eq(st2.p[1].chains.length, 0, '挑衅违约传导后连环应解除');
+  });
+
+  t('N6c 大雷连带命中挂避雷针的第三方：消耗避雷针并免疫连带伤害与禁用', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 5; st.p[1].ep = 5; st.p[2].ep = 5;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.JI, null);
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.ROD, null);
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.p[2].rodGuard > 0, 'P2 应获得避雷针保护');
+    st.p[0].ep = 6; st.p[1].ep = 3; st.p[2].ep = 3;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.BIG_T, { target: 1 });
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.GUN, { target: 1 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[2].hp, 3, '避雷针应挡下大雷连带 2 点电伤');
+    eq(st.p[2].rodGuard, 0, '挡下后应消耗避雷针');
+    eq(st.p[2].cooldown[SK.GUN] || 0, 0, '避雷针挡下后不应禁用 P2 的技能');
+    ok(st.events.some(function (e) { return e.type === 'rodBlock' && e.pid === 2 && e.by === SK.BIG_T; }), '应发出 rodBlock 事件');
+  });
+
+  t('N14c 大雷命中镜面反射使用者：禁用记录原技能镜面反射', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 6; st.p[1].ep = 5; st.p[2].ep = 5;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.BIG_T, { target: 1 });
+    S.attemptAction(st, 1, SK.MIRROR, { target: 2, target2: 0 });
+    S.attemptAction(st, 2, SK.GUN, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    ok((st.p[1].cooldown[SK.MIRROR] || 0) >= 3, '大雷应禁用实际打出的镜面反射');
+    eq(st.p[1].cooldown[SK.GUN] || 0, 0, '不应误禁镜面复制出来的枪');
+  });
+
+  t('N14d 镜面复制聚能环：回合末保留 ringStreak 连击计数', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 5; st.p[1].ep = 5; st.p[2].ep = 5;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(st, 1, SK.RING, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].ringStreak, 1, '首轮镜面复制聚能环后不应被回合末清零');
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(st, 1, SK.RING, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].ringStreak, 2, '连续两回合镜面复制聚能环应累计为 2');
+  });
+
   /* ============ 输出 ============ */
   const pass = results.filter(r => r.ok).length;
   const html = '<div class="sum">通过 ' + pass + ' / ' + results.length + '</div><ol>' +
