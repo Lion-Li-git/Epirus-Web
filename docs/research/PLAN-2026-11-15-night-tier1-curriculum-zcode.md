@@ -81,8 +81,14 @@ T2-1（30 min）→ T3-1（20 min）→ T1-1（40 min）→ 评估验收 → T1-
 
 | 批 | 臂 | 配方要点 | 验收判据 | 状态 |
 |---|---|---|---|---|
-| A | **E8cR** | E5c ← GD16m-D1 主教全克隆（game 模式，教师已修真）+ 全桌形矩阵，pool 2400/dagger 1 | 只回答一个问题：真 GD16m 当主教洗不洗基座（原 E8c −0.1486 是坏教师假象） | 🏃 |
-| A | **T2-1R** | 课表 T2-1：E6c 自蒸馏主教 + GD16m 0.20（charge,ring,bigT,railgun）+ CB3 0.15（drain,holo,tank,transfer）+ rareOnly transfer,drain 0.30 + classPow 0.25/cap 3（LH7 边界内） | transfer ≥2% ∧ Gap ≤ −10 ∧ C5长 ≥ 0.20 | 🏃 |
-| B | **T1-2R** | 课表 T1-2 修复版重测：v7blk1 0.55 + **GD16m 0.30 放开道（game 驾驶）** + CB3 0.15 + 链对手 + 8p 重桌 + snapEvery=1——T11 的"mega 龟化"是坏教师假象，真 GD16m 高份额重验 | ring/bigT/railgun 任一 long 桌部署 ≥1% ∧ G 门不塌 ∧ Gap ≤ −10 | 待 A 后 |
-| B | **LH9-A** | 白班倒挂修正臂（gemini §七.1）：干净 LH2 基座 ← GD16m 主教（game）+ v7blk1 0.25 + classPow 0.25/cap 3 + long 重桌——E9 系 long 反射绕开 | long 桌 ring/rail 部署 > multi ∧ ep≥3 供给恢复 | 待 A 后 |
-| C | 视 B 结果 | LH9-B（PG 强度回填：product 池 + klW + lamExp，seg 级 Gap 巡检）或 critic 路线（需先提案，动 pg-train 结构） | C5长 ≥ 0.20 ∧ 链道存活 | 待裁 |
+| A | **E8cR** | E5c ← GD16m-D1 主教全克隆（game 模式，教师已修真）+ 全桌形矩阵，pool 2400/dagger 1 | 只回答一个问题：真 GD16m 当主教洗不洗基座 | ✅ **判负但机制修正**：Gap +16.5 背诵（非龟化）/C5 0.0714/防御 0；**railgun 部署 4% obs6 线首现**——主教路线死，game 模式确实能把链招打进部署 |
+| A | **T2-1R** | E6c 自蒸馏 + GD16m 0.20（charge,ring,bigT,railgun）+ CB3 0.15（drain,holo,tank,transfer）+ rareOnly transfer,drain 0.30 + classPow 0.25/cap 3，**game 模式** | transfer ≥2% ∧ Gap ≤ −10 ∧ C5长 ≥ 0.20 | ✅ **drain ✓ transfer ✗**：drain 标签 290/自访 54% 复现；**transfer 0**——CB3 自己招表无 transfer，game 模式只采教师自轨迹 ⇒ 供给断。**E11 的 1008 transfer 是 step 模式道内咨询给的**（采集语义分化：game 养链道 / step 养道内咨询）→ T2-1S 补 step 版 |
+| B | **T12R**（=T1-2R） | v7blk1 0.55 + GD16m 0.30 放开道（game 驾驶）+ CB3 0.15 + 链对手 + 8p 重桌 | 链键 long 部署 ≥1% ∧ G 门 ∧ Gap | ✅ Gap +0.4 干净/C5长 0.1553，但**链标签饿死**（环 17/大雷 4/电磁炮 1）——教师是真的，**链对手桌把 GD16m 自己的环风格压没了** |
+| B | **T12H** | T12R 唯一变量翻转：链对手桌→缺省对手+全矩阵 | 链标签供给是否恢复 | ✅ 供给仅 2×（环 36/炮 10/雷 8）——**链键状态本质稀有，换桌救不了量**；rareOnly 才是供给杠杆 |
+| B | **LH9-A** | 干净 LH2 基座 ← GD16m 主驾 71%（game）+ v7blk1 0.25 + classPow/cap 守边界 + 全矩阵 | long ring/rail > 0 ∧ ep≥3 供给 | ✅ **部分达标（本轮最佳）**：ring 部署 long 2.9%/multi 5.4%（long 破零首现）/railgun multi 2.7%/bigT multi 1.4%；**Gap −4.8 干净**（同主驾 E5c 底座 +16.5 ⇒ 干净底座定律再现）；C5长 0.1665 未达 0.20；buy-not-fire 0-2.4% 但 **long 98.6% 蓄完买不起 = ep=2 死珠复发 → penDeadElec 靶** |
+| B | **LH9-B** | LH9-A + rareOnly ring,bigT,railgun 0.7（GCAP 2500 富集） | 链标签供给 10× | ✅ 标签 3×+（环 782/炮 227/雷 202）/自访 ring 99%/**部署爆发 ring 27%/大雷 7%**——但标签盘被稀有键倒挂（ジ 250/防御 0）⇒ C5 0.0438/5卡/防御 0% **强度塌，链极判负**；平衡粒 = LH9-A |
+| C | **LH9-C** | LH9-A + PG（product 池 4000 局 + klW 0.08 锚 + **penDeadElec 0.15** + lamExp 0.05，segEvery 1000） | C5长 ≥ 0.20 ∧ ring 双桌 ≥2% ∧ Gap ≤ −10 | ✅ **当前最佳粒 = seg1000**：C5长 0.1732/13卡/G 9.74+8.27/ring 双桌 2.8-3.3%/**Gap −13.6 ✓**（验收四过三，只差强度）；梯度 0.1732→0.1421→0.1464→0.1345（PG 久练反而衰减）——**LH2 血强度天花板 ~0.17，PG 推不动**；ring 在锚定 PG 下全程存活（PG≠蒸馏回填，跷跷板不洗锚定 PG 的键道） |
+| C | **LH9-D** | v7blk1 升 0.40 + rareFrac 0.35 中间档 | 强度↑ ∧ 链道保 | ✅ 判负：标签盘理想（环 414/炮 130/雷 109/防御 185）但 C5 0.0594/防御 1%——**LH2 线上 rareOnly 富集没有中间点，富集即塌** |
+| C | **LH10** | 强度基座 shot：E6c ← GD16m 主驾 + v7blk1 0.25 + rareOnly 0.7 | C5 ≥ 0.20 ∧ ring 部署 ∧ Gap ≤ −10 | ✅ 判负：ring 23% 部署 + charge 15% 保住，但 C5 0.0834/**Gap +22.9 背诵**——GD16m 主驾 × E5c 底座 +16.5 / × E6c 底座 +22.9 / × LH2 底座 −4.8：**主驾背诵与否由基座血决定，考卷适配的强底座必翻** |
+| C | **LH11** | 链道移植 shot：强净基座 LH6P（0.2058/13卡/Gap −9.2）← **LH9-A 作链教师**（自轨迹带 ring/bigT/railgun）+ v7blk1 0.30 + rareOnly 0.30 | C5 ≥ 0.20 ∧ ring 双桌 ≥2% ∧ Gap ≤ −10 | 🏃 |
+| T2 | **T2-1S** | E11 配方原样（**step 模式**——道内咨询语义）+ E6c 干净基座 + 修真 CB3/键名 | transfer ≥2% ∧ Gap ≤ −10 ∧ C5长 ≥ 0.20 | 🏃 |
