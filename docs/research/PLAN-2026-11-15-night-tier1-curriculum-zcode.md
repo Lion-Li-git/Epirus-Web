@@ -12,6 +12,12 @@
 3. **G4[multi] 是 E5c 血脉系统性质**——要 G4 干净走 v7blk1 蒸馏前缀（E6c→P9 线已证）。
 4. **标签跟随轨迹**——键道教师只在学生轨迹到访的状态出标签；轨迹 = 学生基座 × 对手表 × 桌形。
 5. 多师 frac **必须互异**（t2frac=t3frac ⇒ Bresnham 同穿饿死低号）。
+6. **基座模式反射（11-15 白班 · 用户令"后面训练要注意"）**：E9 系在 long 桌 `ep=2` 即时消费反射固化
+   （80 局×5 席：long 16882 手 ring=1/rail=0/ep≥3=7），高权重作长程臂基座会把 GD16m 链道空间挤进
+   multi（LH6 倒挂根因：multi ring=2856 vs long 184）——**长程/Tier1 臂不用 E9 系高权重基座**：
+   要么走干净冷启动（LH2/GA2PG-8K 线保留了 long>multi 的 ep≥3 倾向），要么压低 E9 权重；
+   **评估一律 long/multi 分列**（池级聚合会藏倒挂），recipe 约束 `classPow≤0.25/classCap≤3`
+   （LH7 0.33/4.5 即 Gap +10.1 翻正）。详见 [FINDING-2026-11-15-day-obs6-longhorizon-zcode.md](FINDING-2026-11-15-day-obs6-longhorizon-zcode.md) §五/§七。
 
 ## 一、T2 层（最快见效：transfer/drain——载体已存在）
 
