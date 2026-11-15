@@ -90,4 +90,12 @@
 
 **Tier1 终局格局**：单包验收（C5≥0.20 ∧ ring/bigT/railgun ≥2% ∧ Gap≤−10）尚未全齐——**两粒格局**：LH11（强极）+ LH12（链全极），差最后一代；**D-02 池并集已盖 Tier1**（强度三旗 + LH11/LH12 + WSEL9/GD16m）。**待用户裁**：LH11 / LH12 / LH9C.seg1000 进图（fam23）与池带分配；下一班主线 = LH6P 直系 ← LH12 链教师反移植对冲臂，或 critic/多步价值基线（动 pg-train 结构，需先提案）。
 
-**工具**：supfit-gd meta 补 `arenaPool/arenaShapes` 两字段（`96694495`）；课表 PLAN §七 全表 14 臂战况（`b28b6664` + 终笔）。
+**工具**：supfit-gd meta 补 `arenaPool/arenaShapes` 两字段（`96694495`）；课表 PLAN §七 全表 18 臂战况（`b28b6664` + `572f0a1f` + 终笔）。
+
+### 五′、T2 层终判 + 单臂效率提案（16:0x 收尾补）
+
+- **T2-1S（step 版 E11 on E6c）判负**（snap1 粒，终点轮省机杀掉）：C5长 0.2114 ✓ 但 **transfer/drain 部署 0%** + **Gap +12.3**（R 91.7% 失真背诵像）。E6c 轨迹上 transfer 同样无人出 ⇒ **道内咨询的供给前提是学生轨迹能到访该键状态**，step 模式不例外；空键道 rareOnly 在采集侧复现 LH14 微律。**T2 终局**：transfer 唯一 working 配方仍是 E11 本体（P9 基座）；drain 载体成立（T2-1R game 自访 54%）；transfer 单包路线待 oracle 攻击注入（`--hpSeed` 类入口，在册缺口）或 transfer-rich 教师。
+- **单臂训练效率（用户点名：要的是单臂提速，不是吞吐补臂）**——单臂墙钟 ≈ 采集局数 × 单局模拟成本，采集纯串行（supfit-gd 无 fork）。三个杠杆：
+  1. **工作量手术（零代码，已生效）**：rareOnly 只对教师轨迹有自然密度的键开（五′微律的采集侧前提）；空键道走 oracleDef 或直接不开。T2-1S 的 65 分钟大头是空 transfer 配额 grind。
+  2. **`--collectJobs=W` 轮内采集进程池（下一班结构提案）**：supfit-gd 拆 collect/train 两段——collect-only 模式 fork W 子进程（引擎+教师+夹具只读，各采 NGRP/W 组，逐 shard 固定 seed 保确定性，Bresnham 轮替按 shardIdx 偏移铺满），父进程合并后照旧训练。缺省 W=1 逐字不变。预期 T2 级臂 65min → ~10min。动 supfit-gd 结构，按铁律先提案（本条即提案），用户点头再动。
+  3. 评估侧已并行（seg-eval/mem-probe --jobs=8），不是瓶颈。臂级并行照旧（本轮 4 进程并发常规操作）。
