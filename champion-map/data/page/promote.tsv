@@ -175,4 +175,5 @@ OBS6-GA2PG-8K	block	field-a,breadth-multi,breadth-long,behavior-gate
 OBS6-GA2PG-12K	block	reflect-wall,field-a,seat-symmetry,breadth-multi,breadth-long,behavior-gate,behavior-gate			
 OBS6E5c	block	behavior-gate			
 OBS6E4c	pass	—			
+OBS6-LH6	block	field-a,breadth-multi,behavior-gate			
 OBS6-LH6P	block	reflect-wall,field-a,behavior-gate			

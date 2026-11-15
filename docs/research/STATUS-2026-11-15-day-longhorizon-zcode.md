@@ -44,9 +44,10 @@
 
 > 时区：本机 `2026-11-15 13:41 +08:00`
 
-1. **`supfit-gd.mjs` `--classPow` / `--classCap` 与 `OBS6-LH6P` 进图**：
-   - 使用 `--classPow=0.5 --classCap=12` 蒸馏 `OBS6-LH6` 后接 `product` PG 产出 `OBS6-LH6P`（`docs/artifacts/obs6-coldstart/OBS6-LH6P.bak`），在保有强战力与反过拟合（`mem-probe-e6` `Gap < 0`）下打通 `long/multi` 双模式 `13` 卡广度，已正式写入 `champion-map`（`a-multi h5=30.95 x5=0.1368` / `b-long h5=49.14 x5=0.3643 x8=0.2943` / `x-long h5=50.00 x5=0.3750 x8=0.3343` / `H=36.8 S=2.12` / `100 PASS 0 FAIL`）。
-   - 修复 `add-point.mjs` 只查直接一跳 `hotstartFrom` 导致跨过未入图底座（`OBS6-LH6`）时父边断成 `unknown-wid` 的问题：新增 `--parent=` 与局部包目录多跳回溯（自动连接 `OBS6-LH6P -> OBS6E9`，`parentSrc=seedpack`）；`measure-point.mjs` 新增 `--reuse`（命中 staging 子产物即跳过重测）、`--readings=` / `--display=` 复用已有数据与 `--parent=` 透传。
+1. **`supfit-gd.mjs` `--classPow` / `--classCap` 与 `OBS6-LH6` + `OBS6-LH6P` 串链进图**：
+   - 使用 `--classPow=0.25 --classCap=3` 蒸馏出 `OBS6-LH6`（`docs/artifacts/obs6-coldstart/OBS6-LH6.bak`，`ruler H=40 S=1.25`）后接 `product` PG 产出 `OBS6-LH6P`（`docs/artifacts/obs6-coldstart/OBS6-LH6P.bak`，`H=36.8 S=2.12`）。两者已一同入 `champion-map`，在 [lineage-g3.tsv](file:///d:/code/Epirus-Web/champion-map/data/page/lineage-g3.tsv) 上形成直连双实线 **`OBS6E9 —> OBS6-LH6 —> OBS6-LH6P`**（均为 `seedpack-wid`，`shot.mjs` 自检 **100 PASS ‖ 0 FAIL**）。
+   - 修复 `add-point.mjs` 只查直接一跳 `hotstartFrom` 导致跨过未入图底座时断成 `unknown-wid` 的问题：新增 `--parent=` 与局部包目录多跳回溯（按 `viewer.mjs` 白名单记 `seedpack`）；`measure-point.mjs` 新增 `--reuse`（命中 staging 子产物即跳过重测）、`--readings=` / `--display=` 复用已有数据与 `--parent=` 透传。
+   - **长程 vs 短程 `ring/railgun` 倒挂根因对照**：原始教师 `GD16m-D1` 与 `OBS6-LH2` 本身均符合“5 血长程更敢用聚能环”的直觉（`GD16m-D1` 80 局：`long ring=1108 rail=504` vs `multi ring=844 rail=118`）；但 `OBS6-LH6` 以 `OBS6E9` 为起点且按 `76% OBS6E9 + 14% GD16m-D1` 混合微调后，`OBS6E9` 在 `long` 下的高密度 `ep=2` 消费反射（`snipe/sword/shift`、`ep=2` 仅 `ji:66`）把 `OBS6-LH6` 的 `ring/rail` 挤到了 `multi` 分支（`LH6`：`multi ring=2856, rail=49` vs `long ring=184, rail=9`），后续 KL 锚定到 `LH6` 的 `LH6P` / `LH8R4` 因而延续该模式偏置。
 2. **激光眼有效率专项分析（`80g × 5p`, `temp=0.2`, 2026-11-15 口径：命中防御系=1 分，同回合同目标另有其他伤害=2 分，光伤穿命中无防=0 分）**：
    - `OBS6-LH6P` 加权有效率全项过 50%：`long self5` **57.9%**（132/228）、`long prod5` **85.4%**（41/48）、`multi self5` **53.3%**（49/92）、`multi prod5` **59.1%**（13/22）；反观未接 PG 的纯 SFT `OBS6-LH5` 低于 50%（`long self5` 43.9%、`multi self5` 47.1%）。
    - 激光眼远多于电磁炮的根因在于回合经济边界：`charge` 消耗 1 ep 且能量珠回合末清空（[resolve.js](file:///d:/code/Epirus-Web/js/core/resolve.js#L1320-L1325)），因此 `ep=2` 蓄能后次回合只有 `ep=1`——只买得起 `laserEye`（1 ep + 1 boom），买不起 `railgun`（2 ep + 1 elec，[state.js](file:///d:/code/Epirus-Web/js/core/state.js#L155-L157)）；只要 `ep >= 3` 且有电珠，`OBS6-LH6P` 的 `canRail` 实放率极高。
