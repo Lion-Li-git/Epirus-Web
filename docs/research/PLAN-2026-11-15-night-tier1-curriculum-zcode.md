@@ -72,3 +72,17 @@ T1/T2 落地后（同一套 T1-1/T1-2 机器换键道即可），**不单独立�
 
 T2-1（30 min）→ T3-1（20 min）→ T1-1（40 min）→ 评估验收 → T1-2/T1-3 按结果接力。
 每步的产物/meta/Gap 按本班惯例（fam23 + meta 九字段 + mem-probe-e6 --subj）。
+
+## 七、白班续训批（11-15 14:3x，ZCode 实跑——虫修后第一批，两判罚复测 + 课表开动）
+
+前提：§零 6 条（含新补的基座模式反射）。**全部 short arm + 节点评估**（用户令），
+评估三件套 = `seg-eval`（C5/X̄₄/用卡/G门）+ `probe-bead-loop` 行为账（**long/multi 分列**）+
+`mem-probe-e6 --subj`（Gap）。产物 `scratch/arms/OBS6*.bak`，验收过线才谈进图。
+
+| 批 | 臂 | 配方要点 | 验收判据 | 状态 |
+|---|---|---|---|---|
+| A | **E8cR** | E5c ← GD16m-D1 主教全克隆（game 模式，教师已修真）+ 全桌形矩阵，pool 2400/dagger 1 | 只回答一个问题：真 GD16m 当主教洗不洗基座（原 E8c −0.1486 是坏教师假象） | 🏃 |
+| A | **T2-1R** | 课表 T2-1：E6c 自蒸馏主教 + GD16m 0.20（charge,ring,bigT,railgun）+ CB3 0.15（drain,holo,tank,transfer）+ rareOnly transfer,drain 0.30 + classPow 0.25/cap 3（LH7 边界内） | transfer ≥2% ∧ Gap ≤ −10 ∧ C5长 ≥ 0.20 | 🏃 |
+| B | **T1-2R** | 课表 T1-2 修复版重测：v7blk1 0.55 + **GD16m 0.30 放开道（game 驾驶）** + CB3 0.15 + 链对手 + 8p 重桌 + snapEvery=1——T11 的"mega 龟化"是坏教师假象，真 GD16m 高份额重验 | ring/bigT/railgun 任一 long 桌部署 ≥1% ∧ G 门不塌 ∧ Gap ≤ −10 | 待 A 后 |
+| B | **LH9-A** | 白班倒挂修正臂（gemini §七.1）：干净 LH2 基座 ← GD16m 主教（game）+ v7blk1 0.25 + classPow 0.25/cap 3 + long 重桌——E9 系 long 反射绕开 | long 桌 ring/rail 部署 > multi ∧ ep≥3 供给恢复 | 待 A 后 |
+| C | 视 B 结果 | LH9-B（PG 强度回填：product 池 + klW + lamExp，seg 级 Gap 巡检）或 critic 路线（需先提案，动 pg-train 结构） | C5长 ≥ 0.20 ∧ 链道存活 | 待裁 |
