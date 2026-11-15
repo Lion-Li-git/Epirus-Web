@@ -2,7 +2,7 @@
 
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）实现的网页版：2–8 人对局 + 可选的自训练冠军 AI。
 
-> **当前版本：v2.0.8** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
+> **当前版本：v2.0.9** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；版本历史与实验记录见 [`CHANGELOG.md`](CHANGELOG.md) 与 `docs/research/`。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。
@@ -16,7 +16,7 @@
 2. 想自训 AI：运行 `training/train-3p.mjs`（2.0 `obs5` 主线）或双击 `training/start-train-server.cmd` 在页内「训练场」连接 `v7` 本机服务。
 3. 冠军策略可「导出 JSON」分享，也可「导入」别人的冠军包。
 
-> 本机包（`localStorage['epirus.champion']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**；本机包在场时冠军池整桌不生效（判定只在 `js/ui/ui.js` 的 `poolPlan` 一处）。想打「每席随机抽一枚冠军」的桌子，先清空本机包。
+> 本机包（`localStorage['epirus.champion.v3']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**：当前桌对应的槽有手工载入的包时，池整桌不生效（2P 槽空但有多人本机包时也优先，标签会写「3P 槽回退」）。内置 2P/3P 包只作池失效时的回退；想打「每席随机抽一枚冠军」的桌子，先清空本机包。
 
 ## 功能
 
@@ -158,7 +158,7 @@ node training/train-best.mjs 4 600
 - **页内训练服务仍接旧 `v7`**：页面「训练场」与 `training/server/train-server.mjs` 仅支持 `2–5` 人 `v7` 训练，尚未接入 `2.0 / obs5`（`2–8` 人）产线。
 - **`v7` 导入旧包限 `2–5` 人**：旧版 `v7` 策略在 `6–8` 人桌被 `V7_MAX_PLAYERS = 5` 锁定禁用，`6–8` 人局只由 `2.0` 冠军池或 `2.0` 策略装配。
 - **蓄能选珠由界面层代行**：当前网络动作输出不含电珠/爆珠选择，`js/ui/bead-choice.js` 按手头持珠差值交替决定。
-- **新规则 `120fca4d` 下的冠军池复检待完成**：核心战斗规则重构后，[pool-members.tsv](champion-map/data/page/pool-members.tsv) 的 `seatKill` 统计、反单一脚本（如 `reflectspam`）抗性及 30 卡覆盖度待按 [`docs/research/TODO-2026-11-13-repo-audit.md`](docs/research/TODO-2026-11-13-repo-audit.md) 重测收口。
+- **新规则指纹（v2.0.9）下的冠军池复检待完成**：核心战斗规则重构后，[pool-members.tsv](champion-map/data/page/pool-members.tsv) 的 `seatKill` 统计、反单一脚本（如 `reflectspam`）抗性及 30 卡覆盖度待按 [`docs/research/TODO-2026-11-13-repo-audit.md`](docs/research/TODO-2026-11-13-repo-audit.md) 重测收口。
 - **启发式先验与旋钮债务**：推理层 `js/train/evo.js` 仍包含若干部署先验开关（如 `BIGT_PUSH` / `DRAIN_PUSH` / `SUPPORT_PRIOR`），训练环境变量总量亦尚在向 KPI `≤ 40` 压减中。
 - **多把评测尺不可混减**：按档位装配量、单枚镜像探测与 `results/` 真机日志三者分母与采样对象不同，只可并排对照。
 

@@ -461,6 +461,13 @@
       return { ok: false, reason: 'dof', got: o.dims.dof, want: wantDof };
     }
     if (o.a.length !== L.n) return { ok: false, reason: 'length', got: o.a.length, want: L.n };
+    /* v2.0.9（2026-11-15）：权重必须是**有限数值**。旧实现只对账形状 ⇒ 全 "NaN" 字符串的包
+     *   `checkPack {ok:true}`、`loadGame` 得到 NaN 张量，AI 静默退化成"恒取第一候选"而界面照报导入成功。
+     *   这条只在新容器（v92）上跑；v7 的同类校验在 js/train/policy.js。 */
+    for (let i = 0; i < o.a.length; i++) {
+      const w = o.a[i];
+      if (typeof w !== 'number' || !Number.isFinite(w)) return { ok: false, reason: 'weights', got: i, want: 'finite number' };
+    }
     if (o.layout) {
       const bad = segAgrees(L, o.layout.seg);
       if (bad) return { ok: false, reason: 'seg', detail: bad };

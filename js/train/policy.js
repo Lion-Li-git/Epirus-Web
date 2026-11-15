@@ -803,6 +803,10 @@
     if (o.v !== PACK_VERSION) return { ok: false, reason: 'version', got: o.v, want: PACK_VERSION };
     const n = paramCount();
     if (o.a.length !== n) return { ok: false, reason: 'length', got: o.a.length, want: n };
+    /* v2.0.9：与 policy2 同一条 —— 权重必须是有限数值（防"形状对、内容 NaN"的包被当成功导入）。 */
+    for (let i = 0; i < o.a.length; i++) {
+      if (typeof o.a[i] !== 'number' || !Number.isFinite(o.a[i])) return { ok: false, reason: 'weights', got: i, want: 'finite number' };
+    }
     if (typeof o.f === 'number' && o.f !== FEAT_S) return { ok: false, reason: 'feature', got: o.f, want: FEAT_S };
     /* v7：动作段宽度也进包（旧包没有这个键 ⇒ 视为 14，见 VER_SHAPES） */
     if (typeof o.fa === 'number' && o.fa !== FEAT_A) return { ok: false, reason: 'action-feature', got: o.fa, want: FEAT_A };

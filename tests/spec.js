@@ -1226,6 +1226,61 @@
     eq(st.p[0].ep, 1.67, '5 - 4 + 0.67 = 1.67（无长浮点误差）');
   });
 
+  /* ===== v2.0.9（2026-11-15）：三处边界修复的回归用例 ===== */
+  t('R29b 大雷禁用覆盖多人专用卡（双枪/镜面/全息）；防御仍豁免', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    for (const p of st.p) { p.hp = 9; p.ep = 9; }
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.BIG_T, { target: 2 });
+    S.attemptAction(st, 1, R.SK.JI, {});
+    S.attemptAction(st, 2, R.SK.DUAL_GUN, { target: 0, target2: 1 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[2].cooldown[R.SK.DUAL_GUN], 3, '双枪被大雷命中后应禁用 3 回合（R29 豁免名单不含多人专用）');
+
+    const st2 = S.createState('multi', noJudge(), 3);
+    for (const p of st2.p) { p.hp = 9; p.ep = 9; }
+    X.startTurn(st2);
+    S.attemptAction(st2, 0, R.SK.BIG_T, { target: 2 });
+    S.attemptAction(st2, 1, R.SK.JI, {});
+    S.attemptAction(st2, 2, R.SK.GUARD, {});
+    X.resolveActions(st2); X.endTurn(st2);
+    eq(st2.p[2].cooldown[R.SK.GUARD], undefined, '防御在大雷豁免名单内，不进禁用');
+  });
+
+  t("N6b 大雷连带：被目标攻击的第三方用自指防御也要按直击口径判定/禁用（N6/R28/R23'）", function () {
+    const st = S.createState('multi', noJudge(), 3);
+    for (const p of st.p) { p.hp = 9; p.ep = 9; }
+    X.startTurn(st);
+    S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });
+    S.attemptAction(st, 1, R.SK.GUN, { target: 2 });
+    S.attemptAction(st, 2, R.SK.PROTO, {});
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[2].hp, 9, '原型制御挡下连带 2 电');
+    eq(st.p[2].cooldown[R.SK.PROTO], 3, '原型制御被连带命中后仍禁用 3 回合');
+
+    const st2 = S.createState('multi', noJudge(), 3);
+    for (const p of st2.p) { p.hp = 9; p.ep = 9; }
+    X.startTurn(st2);
+    S.attemptAction(st2, 0, R.SK.BIG_T, { target: 1 });
+    S.attemptAction(st2, 1, R.SK.GUN, { target: 2 });
+    S.attemptAction(st2, 2, R.SK.GUARD, {});
+    X.resolveActions(st2); X.endTurn(st2);
+    eq(st2.p[2].hp, 9, '防御挡下连带 2 电');
+    eq(st2.p[2].cooldown[R.SK.GUARD], undefined, '防御在大雷豁免名单内');
+  });
+
+  t('R21b 被激光眼作废的无极变速不得在下一回合留下八卦阵（作废无副作用）', function () {
+    const st = game('standard', noJudge());
+    st.p[0].ep = 9; st.p[0].boom = 1; st.p[1].ep = 5;
+    play(st, R.SK.LASER_EYE, R.SK.SHIFT, { target: 1 }, null);
+    eq(st.actions[1].voided, true, '无极变速被激光眼作废');
+    eq(st.p[1].guardNext, false, '作废的无极变速不得留下下一回合的八卦');
+    st.p[0].ep = 9; st.p[1].ep = 9;
+    st.rng = seqRng([0.1]);
+    play(st, R.SK.GUN, R.SK.JI, { target: 1 }, null);
+    eq(st.p[1].hp, 2, '没有八卦阵，枪应命中（若残留八卦则判定胜、HP 仍 3）');
+  });
+
   /* ============ 输出 ============ */
   const pass = results.filter(r => r.ok).length;
   const html = '<div class="sum">通过 ' + pass + ' / ' + results.length + '</div><ol>' +

@@ -441,29 +441,35 @@
       const raw = localStorage.getItem('epirus.champion3p');
       if (raw) pack = JSON.parse(raw);
     } catch (e) { /* ignore */ }
-    multiChampCache = P.loadGame(pack);                      // 严格 → 状态段只增的旧包**逐位等价嵌入**（v8 兼容）
+    /* v2.0.9：解包放在 try 里 —— 缺 js/train/policy.js（或它抛异常）时，旧实现会把 TypeError 抛到
+     * newGame/首手，页面静默半死；这里降级为"本机包不可用"并如实回 null。 */
+    try { multiChampCache = P.loadGame(pack); } catch (e) { multiChampCache = null; }  // 严格 → 状态段只增的旧包逐位等价嵌入（v8 兼容）
     multiChampFrom = multiChampCache ? 'local' : null;
     if (!multiChampCache && typeof window.EPIRUS_CHAMPION_3P !== 'undefined') {
-      multiChampCache = P.loadGame(window.EPIRUS_CHAMPION_3P);   // 回退内置包
+      try { multiChampCache = P.loadGame(window.EPIRUS_CHAMPION_3P); } catch (e) { multiChampCache = null; }   // 回退内置包
       multiChampFrom = multiChampCache ? 'builtin' : null;
     }
     return multiChampCache;
   }
-  /* ===== v1.6.6：2 人桌的底层包 = 2P 那颗（v1.0 为 1v1 训的），≥3 人 = 3P 那颗 =====
-   * 理由不是"历来如此"，是 §E286 的实测：3P 那颗在 1v1 上是**分布外**的
-   *   （同一把尺、贪心档：3P 包让替身夺冠 27.5% ‖ 2P 包只让 15.5%），
-   *   而且剂量梯在 2 人桌上**反号**（3P 包 ε=0 的 27.5% 竟比 ε=.5 的 19.4% 还软）⇒ 用它当"困难"档是假档。
-   * 换成 2P 那颗之后同一串剂量重新单调（15.5 → 20.1 → 24.1 → 24.5，见 `DIFF_TIERS` 的 note）。
-   * 附带好处：「训练场」练出来的 2P 冠军重新有地方可玩（v1.6.6 之前页面只有"困难"一个槽用它，而那个槽已被剂量阶梯取代）。
-   * ⚠ 两槽的"本机优先"语义保持一致：2P 走 `Champ.store.load()`（键 `epirus.champion.v3`，来源由它自己回传）。 */
+  /* ===== 2 人桌的单包槽 = 2P 那颗（v1.0 为 1v1 训的），≥3 人 = 3P 那颗 =====
+   * v2.0.9（用户 11-15）：**只有"手工载入"的单包才压池**；内置 2P/3P 只作池失效时的回退。
+   * 背景（§E286，历史）：3P 包在 1v1 上分布外、剂量梯反号 ⇒ 2P 槽曾专用 2P 原生包；
+   * 11-13 统一池之后页面 2P 也走池，本函数只决定"池失效时回退哪颗单包"。
+   * ⚠ 2P 本机键 `epirus.champion.v3`，来源由 `Champ.store.lastSource` 回传（不要在 UI 重判）。 */
   function champForCount(n) {
     if ((n || 2) > 2) {
       const p = loadMultiChamp();
       return { params: p || null, from: p ? multiChampFrom : null };
     }
+    /* v2.0.9（用户 2026-11-15：「所有'现役'都作废，永远只用池，只有手工载入包的时候用」）：
+     * 旧顺序是「2P 槽（含**内置**）先赢」⇒ 手工载入的 3P 包在 2P 桌永远轮不到，而且内置 2P 包会
+     * 把池整桌盖掉（与"现役作废"相反）。现在：**只有 local（手工载入）才压池**；
+     * 内置 2P 只在池失效时当回退单包。 */
     const c = Champ.store.load();
-    if (c) return { params: c, from: Champ.store.lastSource };
-    const p3 = loadMultiChamp();   // 2P 那颗也没有 ⇒ 回退 3P 并**明说**（不许静默换包）
+    if (c && Champ.store.lastSource === 'local') return { params: c, from: 'local' };
+    const p3 = loadMultiChamp();
+    if (p3 && multiChampFrom === 'local') return { params: p3, from: 'local·回退(2P 槽空)' };
+    if (c) return { params: c, from: Champ.store.lastSource };   // 内置 2P：仅作池失效时的回退
     return { params: p3 || null, from: p3 ? multiChampFrom + '·回退(2P 槽空)' : null };
   }
   /* ===== v1.6.63（§E590）冠军池：≥3 人桌逐席各抽一枚 =====
@@ -596,7 +602,9 @@
     if (!tier || !tier.pool) return { on: false, local: false, two: false, why: null, draw: null };
     const two = !(n > 2);
     const single = champForCount(n);
-    if (single.from === 'local') return { on: false, local: true, two: two, why: '本机导入优先 ⇒ 池不生效（' + (two ? '对手用你这枚' : aiSeatWord() + '都用你这枚') + '）', draw: null };
+    /* v2.0.9：2P 槽空时 champForCount 回传的是 `local·回退(2P 槽空)` —— 旧实现用等值比较
+     * `=== 'local'` 判不中 ⇒ 手工载入的 3P 包在 2P 桌被池盖掉（README 的"本机包优先"在 2P 不成立）。 */
+    if (single.from && String(single.from).indexOf('local') === 0) return { on: false, local: true, two: two, why: '本机导入优先 ⇒ 池不生效（' + (two ? '对手用你这枚' : aiSeatWord() + '都用你这枚') + '）', draw: null };
     const draw = poolDrawFor(state, tier, n);
     if (!draw || !draw.seats.length) {
       return { on: false, local: false, two: two, draw: null,
@@ -711,7 +719,9 @@
     }).join('  ');
     return who + (d.scriptSeats ? '（掺脚本 ' + d.scriptSeats + ' 席）' : '') +
       (d.mixNote ? ' ⚠' + d.mixNote : '') + (d.bandNote ? ' ⚠' + d.bandNote : '') +
-      (d.allSame ? ' ⚠各席全同：该档成员不足' : '');
+      /* v2.0.9：2P 只有 1 个 AI 席 ⇒ compose 的 allSame 必然为 true（数学必然，不是降级）。
+       * 这里与 champForSeat/aiInfo 一样加 `!one`，否则最常见的 2 人桌每局都误报"该档成员不足"。 */
+      (d.allSame && !one ? ' ⚠各席全同：该档成员不足' : '');
   }
 
   function aiInfo() {
@@ -724,7 +734,8 @@
       return { source: '风格·' + (st ? st.name : tier.style) + '（' + tier.name + '）', champ: false, tier: tier.id };
     }
     const cf = champForCount(B.players || 2);
-    const packLabel = (B.players || 2) > 2 ? '3P' : '2P';
+    /* v2.0.9：2P 槽空、回退到手工载入的 3P 包时，标签跟着实际来源写成 3P（别让"2P 冠军(local·回退…)"自相矛盾）。 */
+    const packLabel = ((B.players || 2) > 2 || (cf.from && String(cf.from).indexOf('回退') >= 0)) ? '3P' : '2P';
     /* v1.6.63（§E590）池生效时这里**必须说得出逐席是谁**（契约 §4：降级不许静默）。
      *   组成与 `champForSeat` 用的是同一个纯派生（同 slotSalt 同答案）⇒ 回显与实际决策不会分叉。 */
     if (tier.pool) {
@@ -758,9 +769,12 @@
       }
     }
     if (!cf.params) return { source: fallbackNameFor(B.players || 2), champ: false, fallback: true, tier: tier.id };
-    const from = cf.from === 'local' ? '本机自训/导入' : cf.from === 'builtin' ? '内置' : String(cf.from);
+    const from = cf.from === 'local' ? '本机自训/导入'
+      : cf.from === 'builtin' ? '内置'
+      : (cf.from && String(cf.from).indexOf('local') === 0) ? '本机导入（3P 槽回退）'
+      : String(cf.from);
     const poolOff = tier.pool
-      ? (cf.from === 'local'
+      ? (cf.from && String(cf.from).indexOf('local') === 0
         ? '（池未生效：本机导入优先 ⇒ ' + ((B.players || 2) > 2 ? aiSeatWord() + '用你这枚' : '对手用你这枚') + '）'
         : '（' + poolOffReason(tier, !((B.players || 2) > 2)) + '）') : '';
     return {
@@ -911,9 +925,11 @@
       /* 本回合没出手 + 已死 ⇒ 已淘汰。⚠️ 本回合刚死但出过手的人仍要显示他用了什么。 */
       if (!(a && a.key) && p.hp <= 0) { parts.push(p.name + '=【已淘汰】'); continue; }
       const tg = (a && a.target != null && a.target !== pid) ? '→' + B.state.p[a.target].name : '';
+      /* v2.0.9：双枪/镜面的第二目标也要进回合行与导出（此前只显示 target 1，复盘与实际出招不符）。 */
+      const tg2 = (a && a.target2 != null && a.target2 !== pid && a.target2 !== a.target) ? '、' + B.state.p[a.target2].name : '';
       const mk = (!a || a.outcome === 'ok') ? ''
         : (a.outcome === 'insufficient' ? '（ジ不足·未发动）' : a.outcome === 'banned' ? '（禁用无效）' : '（无效）');
-      parts.push(p.name + '=【' + skillName(a ? a.key : R.SK.JI) + tg + '】' + mk);
+      parts.push(p.name + '=【' + skillName(a ? a.key : R.SK.JI) + tg + tg2 + '】' + mk);
     }
     return parts;
   }
@@ -1002,6 +1018,20 @@
     hint('请为【' + R.byKey[key].name + '】选择' + (key === R.SK.MIRROR ? '输出对象' : '目标 2') + '（Esc 或「取消」可放弃整手）。');
   }
 
+  /* v2.0.9：结算路径的兜底 —— 旧实现里任一异常（解包/选择/结算）都会把 B.locked 留在 true，
+   * 之后每次点击只回"本回合正在结算…"，只能刷新页面。现在统一解锁并给一个可操作出口。 */
+  function battleFatal(err) {
+    B.resolvePending = false;
+    B.locked = false;
+    const msg = (err && err.message) ? err.message : String(err);
+    try { addLog('div', 'ev dim', '⚠ 结算异常：' + esc(msg)); } catch (e) { /* ignore */ }
+    try {
+      openOverlay('<h2 style="color:var(--red)">结算异常</h2><p>' + esc(msg) +
+        '</p><p style="color:var(--dim);font-size:13px">本局状态可能已不完整，建议开新对局。</p>',
+        [{ label: '开新对局', fn: newGame }]);
+    } catch (e) { alert('结算异常：' + msg); }
+  }
+
   function doPickMulti(key, bead, target, target2) {
     if (B.locked || B.state.over) return;
     const def = R.byKey[key];
@@ -1037,10 +1067,12 @@
     const preState = S.cloneState(B.state);
     const N = B.state.p.length;
     const picks = [];
-    for (let pid = 1; pid < N; pid++) {
-      picks.push(preState.p[pid].hp > 0 ? chooseAIMulti(preState, pid, Play.legalActions(preState, pid)) : null);
-    }
-    S.attemptAction(B.state, 0, key, { bead: bead, target: target, target2: target2 });
+    try {
+      for (let pid = 1; pid < N; pid++) {
+        picks.push(preState.p[pid].hp > 0 ? chooseAIMulti(preState, pid, Play.legalActions(preState, pid)) : null);
+      }
+      S.attemptAction(B.state, 0, key, { bead: bead, target: target, target2: target2 });
+    } catch (err) { battleFatal(err); return; }
     hint('你选择了【' + skillName(key) + (target != null ? ' → ' + B.state.p[target].name : '') + '】，对手思考中…');
     /* v1.8.45（11-06 夜 · 用户实测复现）：结算在 160~280ms 的 setTimeout 里补交 AI 出招并 resolve。
      * 这个窗口内点「新对局」/换人数/换血量 ⇒ newGame 换掉 `B.state` 与 `B.transcript`，
@@ -1054,27 +1086,31 @@
     B.resolvePending = true;
     setTimeout(function () {
       if (B.state !== myState || B.transcript !== myTranscript) return;   // 已换局 ⇒ 本份结算作废
-      B.resolvePending = false;
-      for (let pid = 1; pid < N; pid++) {
-        if (!picks[pid - 1]) continue;
-        const b = B.state.p[pid];
-        S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: BeadChoice.of(b, picks[pid - 1].bead), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+      try {
+        B.resolvePending = false;
+        for (let pid = 1; pid < N; pid++) {
+          if (!picks[pid - 1]) continue;
+          const b = B.state.p[pid];
+          S.attemptAction(B.state, pid, picks[pid - 1].key, { bead: BeadChoice.of(b, picks[pid - 1].bead), target: picks[pid - 1].target, target2: picks[pid - 1].target2 });
+        }
+        X.resolveActions(B.state);
+        X.endTurn(B.state);
+        const events = B.state.events.slice(idx0);
+        const parts = roundLineParts();
+        addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：' + parts.join('  '));
+        logEvents(events);
+        pushTranscript(parts, events);
+        persistBattle();
+        B.evCursor = B.state.events.length;
+        buildSkillGrid(); renderSide(0); renderSide(1);
+        B.locked = false;
+        B.roundStarted = false;
+        if (B.state.over) { finish(); return; }
+        if (B.state.p[0].hp <= 0) { hint('你已被淘汰，自动观战至结束…'); autoRunRest(); return; }
+        hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
+      } catch (err) {
+        battleFatal(err);
       }
-      X.resolveActions(B.state);
-      X.endTurn(B.state);
-      const events = B.state.events.slice(idx0);
-      const parts = roundLineParts();
-      addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：' + parts.join('  '));
-      logEvents(events);
-      pushTranscript(parts, events);
-      persistBattle();
-      B.evCursor = B.state.events.length;
-      buildSkillGrid(); renderSide(0); renderSide(1);
-      B.locked = false;
-      B.roundStarted = false;
-      if (B.state.over) { finish(); return; }
-      if (B.state.p[0].hp <= 0) { hint('你已被淘汰，自动观战至结束…'); autoRunRest(); return; }
-      hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
     }, 160 + Math.random() * 120);
   }
 
@@ -1394,7 +1430,7 @@
   function doEval() {
     const rows = Champ.quickEval(EVAL_GAMES, Date.now() % 100000);
     if (!rows) { $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有冠军可评测，先训练。</p>'; return; }
-    renderEval(rows, '评测：冠军 vs 8 脚本基准（各 ' + EVAL_GAMES + ' 局）');
+    renderEval(rows, '评测：冠军 vs ' + rows.length + ' 脚本基准（各 ' + EVAL_GAMES + ' 局）');
   }
   function renderEval(rows, title) {
     let h = '<h4 style="margin:12px 0 2px">' + title + '</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';
@@ -1695,12 +1731,29 @@
     }
   }
   function exportChamp() {
-    const c = Champ.store.load();
-    if (!c) { alert('还没有冠军可导出'); return; }
-    const blob = new Blob([Champ.store.exportJSON(c)], { type: 'application/json' });
+    /* v2.0.9：导出按**当前桌面**的 AI 槽走。旧实现永远读 2P 槽（Champ.store.load）⇒
+     * 3P/多人桌上点「导出冠军 JSON」拿到的是 2P 包（或内置 2P），与 README「冠军策略可导出分享」不符。 */
+    const n = B.players || 2;
+    const cf = champForCount(n);
+    /* 槽位与实际 AI 来源一致：2P 槽空但用了手工载入的 3P 包时，导出的是那枚 3P 包。 */
+    const sel = { params: cf.params, tag: null };
+    if (cf.from && String(cf.from).indexOf('local') === 0) {
+      sel.tag = String(cf.from).indexOf('回退') >= 0 ? '3p' : (n > 2 ? '3p' : '2p');
+    } else {
+      sel.tag = n > 2 ? '3p' : '2p';
+    }
+    if (!sel.params) {
+      const alt = (n > 2) ? { params: Champ.store.load(), tag: '2p' } : { params: loadMultiChamp(), tag: '3p' };
+      sel.params = alt.params; sel.tag = alt.tag;
+    }
+    if (!sel.params) { alert('还没有冠军可导出'); return; }
+    const text = sel.tag === '3p'
+      ? JSON.stringify(P.pack(sel.params), null, 1)
+      : Champ.store.exportJSON(sel.params);
+    const blob = new Blob([text], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'epirus-champion.json';
+    a.download = 'epirus-champion-' + sel.tag + '.json';
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   }
@@ -1773,6 +1826,7 @@
       case 'arch': return '架构档不符（' + got + want + '）';
       case 'empty': return '文件为空或没有可解出的权重';
       case 'shell': return '外壳不认（既不是纯 JSON 也不是 window.EPIRUS_CHAMPION* 赋值）';
+      case 'weights': return '权重数组含非数值/NaN（第 ' + (info.got != null ? info.got : '?') + ' 个）—— 包已损坏或不是训练产物';
       default: return '不是有效的冠军 JSON（' + (reason || 'unknown') + '）';
     }
   }

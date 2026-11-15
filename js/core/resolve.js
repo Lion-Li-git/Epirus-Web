@@ -49,6 +49,13 @@
         state.p[pid].copiedGuard = null;
         state.p[pid]._copiedTransfer = null;
       }
+      /* v2.0.9（2026-11-15）：无极变速的"下一回合八卦"也是**出招副作用** ⇒ 被作废时必须回滚。
+       * 快照在 ④b 写入（`ea.act.guardNextPrev`），与 `fireWeakPrev` 同族；漏了它 = 被激光眼废掉的
+       * 变速下一回合仍白送一次八卦阵（实测：作废后 hp 3，应为 2）。 */
+      if (acted.guardNextPrev !== undefined && state.p[pid]) {
+        state.p[pid].guardNext = acted.guardNextPrev;
+        delete acted.guardNextPrev;
+      }
       if (state._mirrorResolved) delete state._mirrorResolved[pid];
       /* v1.8.29（用户裁定 10-23「失效技能应该都要给奖励」）：事件里补**被作废的是哪张卡**（`voids`）。
        * 为什么必须落在 `setVoid` 这一处而不是各调用点：这里是全仓**唯一**发 `voided` 的地方
@@ -395,7 +402,10 @@
    * + 小雷 MINI_T（pri5 已先结算，追溯禁用是错的）。 */
   const BIG_T_EXEMPT = [SK.GUARD, SK.REFLECT, SK.JINSHIELD, SK.JI, SK.MINI_T];
   function bigTBan(state, pid, usedKey) {
-    if (usedKey && R.MULTI_ONLY.indexOf(usedKey) < 0 && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
+    /* v2.0.9（2026-11-15）：多人专用三张（双枪/镜面/全息）**不在** R29 的豁免名单内 ⇒ 照常禁用。
+     * 旧实现用 `R.MULTI_ONLY.indexOf(usedKey) < 0` 把它们整类跳过（无裁定记录；2P 用不到，
+     * 但 N≥3 被大雷命中后 3 回合不禁 = 与 R29 不符）。 */
+    if (usedKey && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
       state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
     }
     ev(state, { type: 'ban', pid: pid, by: SK.BIG_T, turns: 3, skill: usedKey });
@@ -808,8 +818,13 @@
         let qHit = q;
         if (qIsDef) {
           const qTgt = snapT[q];
-          if (qTgt == null || qTgt === q || !isAliveInRound(state, qTgt)) continue;
-          qHit = qTgt;
+          /* v2.0.9（N6 字面）：自指防御（八卦/原型/全息）没有"作用目标"可承接 ⇒ 连带伤害落到防御者本人，
+           * 并按 R28①/R23' 照常判定/禁用；旧实现把这一整类 `continue` 掉 = 既不判伤也不禁用。
+           * 有作用目标的防御（藤甲/金刚盾）仍把伤害转给其目标（N22c）；目标已失效时才跳过。 */
+          if (qTgt != null && qTgt !== q) {
+            if (!isAliveInRound(state, qTgt)) continue;
+            qHit = qTgt;
+          }
         }
         const qres = deliverDamage(state, {
           amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
@@ -1018,7 +1033,10 @@
       const me = state.p[i];
       if (!ea.isMirror) {
         switch (ea.key) {
-          case SK.SHIFT: me.guardNext = true; /* fallthrough */
+          case SK.SHIFT:
+            ea.act.guardNextPrev = me.guardNext;
+            me.guardNext = true;
+            /* fallthrough */
           case SK.GUARD: case SK.REFLECT: case SK.BAGUA:
           case SK.JINSHIELD: case SK.ARMOR: case SK.PROTO: {
             if (ea.key === SK.ARMOR) {
@@ -1039,7 +1057,7 @@
       } else {
         if (copiedGuardKind(ea.key)) {
           me.copiedGuard = ea.key;
-          if (ea.key === SK.SHIFT) me.guardNext = true;
+          if (ea.key === SK.SHIFT) { ea.act.guardNextPrev = me.guardNext; me.guardNext = true; }
           if (ea.key === SK.ARMOR && ea.target != null) applyArmorFireWeak(state, ea.act, ea.target);
           ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: ea.key });
           ev(state, { type: 'guardSet', pid: i, key: ea.key, copied: true, early: true });
