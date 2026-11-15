@@ -81,3 +81,29 @@ for (const sid of SUBJECTS.map((s) => s[0])) {
   const avg = (set) => rows.filter((x) => x.set === set).reduce((a, x) => a + x.subjWin, 0) / Math.max(1, rows.filter((x) => x.set === set).length);
   console.log(sid.padEnd(12) + ' R ' + avg('R').toFixed(1) + '% ‖ H ' + avg('H').toFixed(1) + '% ‖ Gap ' + (avg('R') - avg('H')).toFixed(1) + 'pt');
 }
+/* 11-16 凌晨（Qoder §七建议的对照版）：对手中心配对读数——每对手跨包基线，读每包在该对手上的偏差。
+ *   动机：在册 7 枚真产物 Gap 全距 67.6pt/SD 22.9（FINDING-2026-11-15-gap-instrument）⇒ 单点 Gap
+ *   不能当选包判据；对手中心的逐对手偏差才是可判读数。旧 R/H/Gap 语义逐字不动。 */
+if (process.argv.includes('--paired')) {
+  const opps = [...new Set(pairs.map((p) => p.oppId))];
+  const base = {};
+  for (const o of opps) {
+    const rs = pairs.filter((p) => p.oppId === o);
+    base[o] = rs.reduce((a, x) => a + x.subjWin, 0) / Math.max(1, rs.length);   /* 跨包基线 = 本批全体在该对手的平均胜率 */
+  }
+  console.log('\n=== 对手中心配对（--paired：同批全体均值为基线，读偏差 pt）===');
+  console.log('（对照样本 <3 包时基线噪声大，仅作对照样张不作判据）');
+  const head = '包'.padEnd(12) + opps.map((o) => o.slice(0, 7).padStart(8)).join('') + '   |dev|均值';
+  console.log(head);
+  for (const sid of SUBJECTS.map((s) => s[0])) {
+    const rows = pairs.filter((p) => p.sid === sid);
+    const devs = opps.map((o) => {
+      const rs = rows.filter((x) => x.oppId === o);
+      const w = rs.reduce((a, x) => a + x.subjWin, 0) / Math.max(1, rs.length);
+      return +(w - base[o]).toFixed(1);
+    });
+    const mad = devs.reduce((a, d) => a + Math.abs(d), 0) / Math.max(1, devs.length);
+    console.log(sid.padEnd(12) + devs.map((d) => ((d >= 0 ? '+' : '') + d.toFixed(1)).padStart(8)).join('') + '   ' + mad.toFixed(1));
+  }
+  console.log('基线行: ' + opps.map((o) => base[o].toFixed(1).padStart(8)).join(''));
+}
