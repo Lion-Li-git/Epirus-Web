@@ -1,4 +1,23 @@
-# STATUS · 2026-11-16 凌晨（ZCode · 承 11-15 白班/晚班，整夜班 23:15–01:5x）
+# STATUS · 2026-11-16 凌晨（ZCode · 承 11-15 白班/晚班，整夜班 23:15–02:5x）
+
+## 〇、obs6.5 首战战报（02:5x 补，用户令"接着修改训练 + obs6.5 设计测试"）
+
+**基建（全部落地并验证）**：modeBias 段三处打分同式（arch2 段表/policy2 forwardObs6+layoutOfPack+packDims
+/pg-lib layoutOf+tapeForward6+**tapeBackward6 反传补 Bias**）+ grow 脚本（16411→16531 回读自证：
+前缀逐位同/尾段全零）+ supfit `--onlySeg` 坐标冻结 + 零扰动 parity ✅（MB 包 vs 原包卡谱逐位同）。
+四道坑：layoutOfPack 收容器/blob 顶层 skills 缺失/packDims 白名单漏段/**tape 生产者在 arch2 不在
+policy2**（modeIdx 捕获加错站 ⇒ 偏置落到 standard 行——修后精确落 long 行 −8.96，其余三行按构造不动）。
+
+**实验读数**：
+- **bias-only**：偏置方向正确（railgun +41→+90/bigT +78）但部署 0 ⇒ **候选不存在**（shaped1 血
+  无蓄能经济，电磁炮从未进 legal）——条件化只解决 argmax 冲突，**经济是候选存在性的另一半**（串联实证）；
+- **SHPL（数据门控）判负**：long 专项蒸馏的链行为**跨模式泛化**（multi ring 19.6%）⇒ 网络无模式门，
+  权重级 modeBias 必要性坐实；
+- **B2MB（正确形态）**：B2 长出 modeBias + 经济塑形 PG 4000 局 ⇒ charge long +73%/multi +180%，
+  链转化 0（代际不够）⇒ B2MB2 12000 局：charge 5.5-5.9% 双模式、**seg6000 multi ring 0.55% 首苗**、
+  强度回落（0.115）⇒ **B2MB3 第三代在跑**（从 seg6000 ring 苗续 12000 局 + 链塑形）。
+- **判读**：modeBias 机器全通、经济与条件化**必须同时练**（串联）、链转化 = 代际 grind
+  （每代 +0.5% 级苗头）——**obs6.5 路线活，长程合一开始有机制可走的路**。
 
 > 接力链：[PLAN-2026-11-15-night2-crossmode-longhorizon-zcode.md]（23:15 前哨批）→
 > 用户令"排满到九点+四项全批"⇒ [PLAN-2026-11-16-overnight-zcode.md]（本夜执行稿，执行列已回填）。
