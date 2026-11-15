@@ -1501,7 +1501,16 @@ function loadPackParamsAny(p) {
   const src = readFileSync(p, 'utf8');
   const m = src.match(/window\.EPIRUS_CHAMPION(?:_3P)?\s*=\s*(\{[\s\S]*?\})\s*;/);
   if (!m) throw new Error('没有 window.EPIRUS_CHAMPION[_3P] 外壳');
-  const raw = P.unpack(JSON.parse(m[1]), true);
+  const blob = JSON.parse(m[1]);
+  /* 11-15 修接线：这里原来只有 `P.unpack` 一条路。arch2 装上之后 `P` 就是**当前架构**（paramCount 5225），
+   *   而池成员是 gen-3 的 v:92 包（实测 a.len = 7993 / 12393）⇒ 被长度守卫拒成 null，
+   *   调用方拿 null 就报「外壳解不出来（没有 EPIRUS_CHAMPION[_3P] 对象）」——**外壳其实解得好好的，谎报把方向带偏了**。
+   *   同一个坑 11-12 已经在 `EPIRUS_PACK_OPP`（:1351）与 `EPIRUS_COURSE_PACK`（:1606）上各修过一次，
+   *   漏了这一份 ⇒ `EPIRUS_POOL_OPPS`（把冠军池放上训练桌）这条路一直是死的，谁开谁 exit 4。
+   * ⚠ 只在 POOL_OPPS>0 / XN2W>0 时被调用 ⇒ 默认关的历史臂一个字节都不变。 */
+  if (blob && blob.v === 92 && sb.window.EpirusPolicy2) return sb.window.EpirusPolicy2.unpack(blob, sb.window) || null;
+  if (blob && (blob.v === 7 || (blob.a && blob.v == null))) return Float64Array.from(blob.a);
+  const raw = P.unpack(blob, true);
   return raw ? P.embedLegacy(raw) : null;
 }
 function champChooser(params) {

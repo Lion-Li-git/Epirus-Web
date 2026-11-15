@@ -1117,3 +1117,39 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **门（定向，不是整轮；工具原话都带"不许当认证引用"）**：`np/probe` **89/89**（417.5s）‖ `np/meta` **16/16**（17.8s）‖ 各配 spec 63/63 · smoke · battle · map ⇒ 两组各自 5 道全绿；`np/ship` 还在跑（本班不等它就收尾，因为改动面没碰 promote/pool 产物）。
 - **留给下一批（等点头）**：A `docs/KNOBS.tsv` 台账 + **一条**门腿（读集每根键必须登记且有非空说明 + 合法状态 ⇒ "加了旋钮没人知道"当场红；118 条现成注释可机械搬）‖ B `--knobs` 自述 + `EPIRUS_RECIPE` 命名配方（STR-B 手抄块 `msbatch2.mjs:36-49` **不含**今天的 `CARD_ABORT`；`FIT_CHAMP_EVERY` 代码缺省 4 vs 驱动传 1（:49）；横幅 :3630 印 `env||'4'` 而不是引擎回读值 ⇒ 与"下达后必须读回"不一致）‖ D 化石处置清单（`measureFromLedger()` 空壳、**646 个在册的旧 `tools/` 树副本**：`gen1-tree` 208 ‖ `hc3` 225 ‖ `preDispatch` 210 ‖ `mutgrid` 3——它让我一次 grep 直接命中过期文件、把 `EPIRUS_NO_DEFQ` 误判成"只有副本在读"，实际 `tools/promote-champion.mjs:375` 在读）。
 - 账：`docs/research/FINDING-2026-11-10-knob-bloat-qoder.md`。
+
+## 11-15 夜班追记（Qoder · 跨环境/Gap 量具审）
+
+- **线：活。** 起点是用户的观察「obs6 学习能力更强了，但跨环境还是不好，分析一下原因」。
+  账：`docs/research/FINDING-2026-11-15-gap-instrument-obs6-qoder.md` ‖ 过程与作废批次：`scratch/qoder-1115-xfer/MANIFEST.md`。
+- **两条读数（都用同一把 `scratch/probes/mem-probe-e6.mjs`，`games=200`）**：
+  ① **尺的自然散布比要测的效应大**：在册 7 枚真 obs6 产物 Gap 全距 **−37.8 … +29.8（跨度 67.6）‖ SD 22.9**；
+  而 11-14 那份 FINDING 当成结论用的"PG 段引入约 16pt"落在**这把尺自己的抖动里面**。
+  跨轮参照 `GD6a-TILT` 本轮复读 **−10.9**，与在册逐字一致 ⇒ 尺没漂。
+  ② **R 与 H 几乎不共变**（r≈−0.23，n=7 不显著，只能说看不出正相关）⇒ "会打脚本名册"与"会打真包"
+  在这个群体里接近两根轴。**这就是用户那句观察的机制层解释**：把学习能力推陡不会顺带抬起跨环境。
+- **A/B 判"不可用"，不判方向**：真包上训练桌 vs 席位对齐的脚本席（两臂 `OPPS` 都是 14），
+  3 粒独立起点的配对差 **+44.5 / −9.3 / −74.3** ⇒ 均值 −13.0 ‖ SD 59.5 ‖ SE 34.3 ‖ **t≈−0.38**。
+  要分辨 16pt 每组约需 **n≈55** 粒（单臂实测 324.9s）。另有两臂明显欠训（对脚本 0.0% / 对真包 0.6%）。
+- **训练侧代码本班只动了 1 处（未提交）**：`loadPackParamsAny` 走 `P.unpack` ⇒ 装了 arch2 面之后
+  池成员（异面，`a.len` 7993/12393）被长度守卫拒成 null，却报「外壳解不出来」。**范围说清楚**：
+  只在 arch2 臂里死，不带 arch2 一直是通的（我最初写成"一直是死的"，已在那份 FINDING §五 订正）。
+  同坑 11-12 已在 `EPIRUS_PACK_OPP:1351` / `EPIRUS_COURSE_PACK:1606` 各修过一次，漏了这一份。
+  默认沙箱无 `EpirusPolicy2` ⇒ 不装 arch2 时行为逐字不变。修后 obs6 面处理臂 4 枚池席
+  **被问到 22892 次、13/13 可达**（修前该配置直接 `exit 4`）。
+- **⚑ 在册那条"冒烟臂两个都钉 scratch"的规矩不够用，还有第三个泄漏面**：本班 8 次臂运行照钉了
+  `EPIRUS_T3P_OUT` + `EPIRUS_BAND_DIR`，**但仍往在册 `champion-map/pack-aliases.tsv` 追加了 21 行**，
+  全部指向 gitignore 的 scratch 路径（这一族归 D191 管）。已核账（21 行全是本校臂、零删除、零他人改动）
+  → 备份到 `scratch/qoder-1115-xfer/pack-aliases.pollution.txt` 后 `git checkout HEAD --` 还原。
+  **要不要落成规矩等裁**：给别名账一个改道口，或"目标在 scratch 就不登记"，否则每班跑几支臂就得手清一次。
+- **本班两个自己的错，都写进账了**：① 第一批臂 `EPIRUS_ARCH2=1` 却没在 spec 里点输入面 ⇒ 装成
+  `v7/5225`，与 obs6 家族不同面、`mem-probe` 读参数为 null 而当场崩（不是静默出错）——那批作废留 `bands/`；
+  ② 汇报里说过"六臂 Gap 全部落在真产物区间内"，**算下来是错的**：`C4.s23` 的 +45.0 超出上界 +29.8（6 臂里 5 枚在区间内）。
+- **门：本批一道都没跑。** 只做了语法核（`node --check`）与文档结构核（GUARD 报警一次：我改了 §六 的标题
+  文本被读成"吃掉"，已把原标题逐字补回、把"实际三条"的说明挪进正文）。
+  ⚠ 唯一改了在册代码的这一笔（`train-3p.mjs` 的 `loadPackParamsAny`）**还没过任何门**，
+  要合之前至少该跑 `--group=train` 相关腿与 `D191`（别名账）——**别拿"没红"当"过了"**。
+- **等点头**：① 先修尺（改成**对手中心**配对读数：每对手一条跨包基线，读相对偏差）还是先加剂量；
+  ② 要不要把"对真包的胜率"放进当选键/promote 地板——`tools/pick-best.mjs:102` 的 `selGapNote` 那个 "gap"
+  是**第 1 与第 2 名分差**，跟 R−H 迁移 Gap 是两个量、只是共词；在 `train-3p.mjs`/`pick-best.mjs` 里搜
+  `mem-probe`/H 集/非名册 全为空。③ `--force-copy` 那条注释与入口 :40 的无条件拒 `--` 互相打脸，要不要修。
