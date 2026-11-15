@@ -65,7 +65,7 @@ if (ONLY_FILE) {
 if (existsSync(OUT)) { console.error('⛔ ' + OUT + ' 已存在 ⇒ 先删再跑，别把两批混成一张表'); process.exit(2); }
 
 /* 11-11：行里原先漏写 pool ⇒ 19 格对 20 列表头，sec 串进 pool 列（所有历史批表都带着这个错位）；顺手补 champ 列（B 夹具戳——不同夹具的 B 读数不许混一张表，FINDING-2026-11-11 §三）。 */
-const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec'];
+const HDR = ['id', 'h2', 'h3', 'h5', 'h8', 'x2', 'x3', 'x5', 'x8', 'n2', 'n3', 'n5', 'n8', 'seed', 'rounds', 'mode', 'dose', 'exam', 'pool', 'champ', 'sec', 'skU', 'skE'];   // 11-16：跨环境技能数骑进考卷（skU=出过的键数；skE=≥3手且≥3格的有效键数）
 writeFileSync(OUT, HDR.join('\t') + '\n', 'utf8');
 
 function one(id) {
@@ -92,12 +92,19 @@ if (PLAN_V) a.push('--plan=' + PLAN_V);
       (e, so) => {
         if (e) return res({ err: String(e.message || e).slice(0, 120) });
         /* v2.0.6（11-10）：--exam=B 时子进程印的是 `[冠军4N-B] ` ⇒ 旧正则解析 0 行还 exit 0（全图 B 扫因此出过两张空表）。
-     *   收宽到 -B；--exam=both 时第一条命中的是 A 行（默认行为不变）。 */
-        const m = String(so).match(/\[冠军4N(?:-B)?\] (.*)/);
+     *   收宽到 -B；--exam=both 时第一条命中的是 A 行（默认行为不变）。
+     *   ⚑ 11-16 凌晨修（ZCode）：exam=both 的官方 C = **复合（-v2 行）**——旧正则把 A 行（脚本桌、champ 无关）
+     *   记进表 ⇒ --champ 换夹具整批空转（混合夹具表逐位等于旧表就是这么来的）。优先 -v2，回退 -B/-A，
+     *   三种 exam 口径行为不变；axis 列如实记取的行。 */
+        const L4 = String(so).split('\n');
+        const pick4 = (pfx) => L4.find((l) => l.indexOf('[' + pfx + '] ') === 0);
+        const line4 = pick4('冠军4N-v2') || pick4('冠军4N-B') || pick4('冠军4N');
+        const m = line4 ? line4.match(/\[冠军4N[^\]]*\] (.*)/) : null;
+        const axis4 = line4 && /\[冠军4N-v2\]/.test(line4) ? 'both(v2)' : (line4 && /-B\]/.test(line4) ? 'B' : 'A');
         if (!m) return res({ err: '输出没有 [冠军4N] 行: ' + String(so).slice(0, 80) });
         const kv = {};
         for (const tok of m[1].split(/\s+/)) { const p = tok.split('='); if (p.length === 2) kv[p[0]] = p[1]; }
-        res({ kv, axis: m.axis, sec: ((Date.now() - t0) / 1000).toFixed(1) });
+        res({ kv, axis: axis4, sec: ((Date.now() - t0) / 1000).toFixed(1) });
       });
   });
 }
@@ -109,7 +116,7 @@ async function worker() {
     done++;
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
-      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.kv.pool, r.kv.champ, r.sec];
+      r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.kv.pool, r.kv.champ, r.sec, r.kv.skU, r.kv.skE];
     appendFileSync(OUT, row.join('\t') + '\n', 'utf8');
     if (done % 25 === 0) console.error('  … ' + done + '/' + ids.length + '（失败 ' + fail + '）');
   }

@@ -153,6 +153,31 @@ function subjectSel() {
  *   --exam=A|B|both；both 先跑 A 再跑 B，[冠军4N] 仍是 A（旧解析器不受影响），B 用 [冠军4N-B]，组合分用 [冠军4N-v2]。 */
 if (CHAMP_CHOOSERS.length) console.error('[exam-v2] 冠军席 = ' + CHAMP_IDS.join(','));
 const SUBJ = subjectSel();
+/* 11-16 凌晨（用户令"真技能覆盖骑进考卷，省得跑两遍"）：被测席 chooser 包装计数——
+ *   skU = 出过的不同技能数（≥1 手）；skE = 有效技能数（总 ≥3 手 ∧ 出现在 ≥3 个不同环境格，
+ *   格 = (n, mode, plan 行=对手阵容)——考卷自身就是多样环境网格：脚本+冠军席 × 2/3/5/8 人 × 双模式）。
+ *   A/B 两轴累计，[冠军4N-v2] 行（驱动解析取的行）携带全程总量。对局核心不动（零行为扰动）。 */
+const SKUSE = { use: {}, cell: {} };
+let CUR_CELL = '';
+const SUBJW = function (state, pid, legal) {
+  const got = SUBJ(state, pid, legal);
+  const key = got && (got.key || got);
+  if (key != null) {
+    SKUSE.use[key] = (SKUSE.use[key] || 0) + 1;
+    const cs = SKUSE.cell[key] = SKUSE.cell[key] || {};
+    cs[CUR_CELL] = (cs[CUR_CELL] || 0) + 1;
+  }
+  return got;
+};
+function skStats() {
+  let u = 0, e = 0;
+  for (const k of Object.keys(SKUSE.use)) {
+    u++;
+    const cells = Object.keys(SKUSE.cell[k]).filter((c) => SKUSE.cell[k][c] >= 3).length;
+    if (SKUSE.use[k] >= 3 && cells >= 3) e++;
+  }
+  return { skU: u, skE: e };
+}
 function evalAxis(champN) {
 const out = {};
 for (const n of NS) {
@@ -160,12 +185,13 @@ for (const n of NS) {
   let first = 0;
   const seatFirst = new Array(n).fill(0), seatGames = new Array(n).fill(0);
   for (let j = 0; j < plan.length; j++) {
+    CUR_CELL = n + ':' + (MODE || 'multi') + ':' + j;   // 技能普查的环境格键（11-16）
     const seat = j % n;
     const rot = j % (n - 1);
     const field = plan[j].seats.slice(rot).concat(plan[j].seats.slice(0, rot));   // 对手槽相对座位旋转（解耦座位率×脚本强度）
     const choosers = [];
     let oi = 0;
-    const sel = SUBJ;                                                            // 考卷臂(ε=0) 或 页面剂量；见 subjectSel()
+    const sel = SUBJW;                                                           // 考卷臂(ε=0) 或 页面剂量；见 subjectSel()（11-16 技能普查包装）
     for (let pid = 0; pid < n; pid++) {
       if (pid === seat) { choosers.push(sel); continue; }
       /* exam-v2：第一个对手席是冠军（自适应）；其余是脚本。N=2 时隔局换冠军。 */
@@ -222,6 +248,7 @@ function emit(prefix, o) {
     /* 11-10（千问）：同一张池可以配两种抽席规则、也可以配带不带冠军席 ⇒ **只钉池的那枚戳不足以判"是不是同一把尺"**
      *   （v3 分层卷与 v2 老规则同池 ⇒ 戳逐字相同）。把会换尺的另两维一并印出来，批量器与表都能按它筛。 */
     ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0') +
+    ' skU=' + skStats().skU + ' skE=' + skStats().skE +
     ' coop=' + (COOP ? 'v3x' + COOP_G : 'off'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }

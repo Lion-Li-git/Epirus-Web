@@ -431,6 +431,13 @@
     if (!is6 && L.interK > 0) seg.push({ name: 'inter', len: L.interK * (L.actH + L.hid + 2) });
     if (!is6 && L.tinterK > 0) seg.push({ name: 'tinter', len: L.tinterK * (L.actH + L.seatH + 2) });
     if (!is6 && L.keyHeadOn > 0) seg.push({ name: 'keyHead', len: skills * (L.hid + 1) });
+    /* 11-16 凌晨（obs6.5 第一刀）：modeBias 段——与 arch2 段表逐字同源（dims.modeBias=1 + dims.modeKeys）。
+     *   追加在 policyHead 之后 ⇒ 老包（无该 dims）偏移逐位不变。 */
+    if (is6 && d.modeBias > 0 && Array.isArray(d.modeKeys) && d.modeKeys.length) {
+      seg.push({ name: 'modeBias', len: skills * d.modeKeys.length });
+      L.modeBiasOn = 1; L.modeKeys = d.modeKeys.slice();
+      L.modeIdx = {}; for (let i = 0; i < L.modeKeys.length; i++) L.modeIdx[L.modeKeys[i]] = i;
+    }
     let off = 0;
     for (const s of seg) { s.off = off; off += s.len; }
     L.seg = seg; L.n = off;
@@ -489,6 +496,7 @@
     const R = W.EpirusRules;
     const dof = L.input === 'obs6' ? (137 + 5 * R.skills.length) : (DOF[L.input] || 208);
     const dims = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK, tinter: L.tinterK || 0, keyHead: L.keyHeadOn || 0, gen: GEN, keySplit: L.keySplit, dof };
+    if (L.modeBiasOn) { dims.modeBias = 1; dims.modeKeys = L.modeKeys.slice(); }   // 11-16 obs6.5：模式偏置段随包走
     if (L.norm) dims.norm = L.norm;
     return {
       v: V_GEN3, arch: 'S1o', n: L.n, dims,
@@ -552,6 +560,10 @@
     const oAct = segOff('actEnc'), oCtx = segOff('ctx');
     const oSK = segOff('skillHead'), oTB = segOff('tBilin');
     const oCand = segOff('cand'), oHead = segOff('policyHead');
+    /* 11-16（obs6.5）：modeBias 偏移 + 当前模式下标（state.modeKey → dims.modeKeys 冻结序）；
+     *   无该段的老包 L.modeBiasOn 未定义 ⇒ 加性项跳过，逐位不变。 */
+    const oMB = L.modeBiasOn ? segOff('modeBias') : 0;
+    const mbMi = L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0;
 
     const selfVec = new Float64Array(L.selfDim);
     let sp = 0;
@@ -640,6 +652,7 @@
     const xin = new Float64Array(L.ctxDim);
     xin.set(hSelf, 0); xin.set(cross, L.hid); xin.set(oppMax, L.hid + FFH);
     if (TP) TP.xin = Float64Array.from(xin);
+    if (TP && L.modeBiasOn) TP.modeIdx = mbMi;   // pg-lib tapeForward6 重放加性偏置用（老 tape 无此字段 ⇒ 按 0）
     if (L.norm) { const mu = L.norm.mean, sd = L.norm.std; for (let i = 0; i < L.ctxDim; i++) xin[i] = (xin[i] - mu[i]) / sd[i]; }
     const hctx = lin6(params, xin, L.ctxDim, L.hid, oCtx, true);
 
@@ -669,6 +682,7 @@
         let sk = params[skB + ki];
         const wRow = oSK + ki * L.hid;
         for (let j = 0; j < L.hid; j++) sk += params[wRow + j] * hctx[j];
+        if (L.modeBiasOn) sk += params[oMB + mbMi * L.skills + ki];
         v += sk;
       }
       let b1 = 0, b2 = 0;

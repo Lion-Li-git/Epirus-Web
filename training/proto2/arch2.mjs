@@ -182,6 +182,13 @@ export function layout(opts) {
   if (Number(o.tinter) > 0 && !isO3) throw new Error('layout: tinter 只接 obs3/obs3b 输入面（input=' + input + '）');
   const tinterStride = actH + seatH + 2;                 // 每通道：u(actH) ‖ w(seatH) ‖ g ‖ b
   const FFH = 2 * seatH;
+  /* 11-16 凌晨（ZCode，obs6.5 第一刀）：modeBias = 每模式技能加性偏置（skills × 模式数）——
+   *   实验动机：SHPL 长桌专项蒸馏的链行为**跨模式泛化**（multi ring 也 19.6%）⇒ 网络没有模式门，
+   *   强度梯度与链行为共用同一个 argmax。modeBias 给每个模式自己的偏好向量（零初始化 = 老包逐位不变）。
+   *   dims.modeBias=1 + dims.modeKeys=[…]（冻结序，评分时 state.modeKey 查下标）。 */
+  const modeBiasOn = is6 && Number(o.modeBias || 0) > 0 && Array.isArray(o.modeKeys) && o.modeKeys.length > 0;
+  if (Number(o.modeBias || 0) > 0 && !is6) throw new Error('layout: modeBias 只接 obs6 输入面（input=' + input + '）');
+  if (Number(o.modeBias || 0) > 0 && (!Array.isArray(o.modeKeys) || !o.modeKeys.length)) throw new Error('layout: modeBias 需要 dims.modeKeys=[…]（模式冻结序）');
   const seg = is6 ? [
     { name: 'selfEnc', off: 0, len: hid * selfDim + hid },
     { name: 'seatEnc', off: 0, len: seatH * seatIn + seatH },
@@ -216,6 +223,7 @@ export function layout(opts) {
   if (interK > 0) seg.push({ name: 'inter', off: 0, len: interK * interStride });
   if (tinterK > 0) seg.push({ name: 'tinter', off: 0, len: tinterK * tinterStride });
   if (keyHeadOn) seg.push({ name: 'keyHead', off: 0, len: skills * (hid + 1) });
+  if (modeBiasOn) seg.push({ name: 'modeBias', off: 0, len: skills * o.modeKeys.length });
   let off = 0;
   for (const s of seg) { s.off = off; off += s.len; }
   /* E1（DS · 11-02 晚，用户裁「输入标准化」）：ctx 输入的逐维标准化统计量（由固定语料离线算，随包存取）
@@ -225,6 +233,9 @@ export function layout(opts) {
     arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE, norm,
     poolN,
     seatH, actH, hid, hid2, selfDim, ctxDim, candIn, interK, interStride, tinterK, tinterStride, keyHeadOn, seg, n: off, keySplit,
+    /* 11-16：modeBias 元数据（训练/评分按 modeKeys 查下标；pg-lib layoutOf 从这里透传） */
+    modeBiasOn, modeKeys: modeBiasOn ? o.modeKeys.slice() : null,
+    modeIdx: modeBiasOn ? Object.fromEntries(o.modeKeys.map((k, i) => [k, i])) : null,
     /* 每段的"扇入"—— 段感知变异要用它给 σ 定标（扇入越大、同样 σ 造成的输出扰动越大） */
     fanIn: {
       selfEnc: selfDim, seatEnc: seatIn,
@@ -232,6 +243,7 @@ export function layout(opts) {
       rff1: seatH, rff2: FFH, xattnQ: hid, xattnK: seatH, xattnV: seatH,
       actEnc: actIn, ctx: ctxDim, skillHead: hid, tBilin: actH,
       cand: candIn, policyHead: hid2, inter: hid, tinter: seatH, keyHead: hid, attn: seatH, pma: seatH,
+      modeBias: 1,
     },
   };
 }
@@ -715,7 +727,10 @@ export function install(W, opts) {
     if (sp !== L.selfDim) throw new Error('obs6 布局不自洽：selfVec=' + sp + ' ‖ selfDim=' + L.selfDim);
     const hSelf = lin6(params, selfVec, L.selfDim, L.hid, oSelf, true);
 
-    const TP = (opts2 && opts2.wantTape) ? { is6: 1, self: Float64Array.from(selfVec), svs: [], afs: [], t1: [], t2: [], skillIdx: [], keys: [], xin: null } : null;
+    const TP = (opts2 && opts2.wantTape) ? { is6: 1, self: Float64Array.from(selfVec), svs: [], afs: [], t1: [], t2: [], skillIdx: [], keys: [], xin: null,
+      /* 11-16（obs6.5）：模式偏置的档位下标随 tape 走（tapeBackward6/tapeForward6 按它取 modeBias 行）；
+       *   老包/无偏置布局该字段缺省 ⇒ 反传侧按 0。 */
+      modeIdx: L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0 } : null;
     const svs6 = [], isSelfArr = [], ids6 = [], e0s = [];
     const PUBN = sc.seatN;
     for (const s of sc.seats) {
@@ -801,6 +816,9 @@ export function install(W, opts) {
     const phis = (opts2 && opts2.wantPhi) ? new Array(n) : null;
     const afbuf = new Float64Array(L.actIn), ci = new Float64Array(L.candIn), zeroSeat = BUF.zeroSeat;
     const tb1 = oTB, tb2 = oTB + H6 * L.actH, skB = oSK + L.skills * L.hid;
+    /* 11-16（obs6.5）：modeBias 偏移与当前模式档（提到循环外，段查找每次决策一次） */
+    const oMB6 = L.modeBiasOn ? segOff('modeBias') : 0;
+    const mbMi6 = L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0;
     for (let i = 0; i < n; i++) {
       const cp = obs3CandOf(sc, cands[i]);
       let m2 = 0;
@@ -823,6 +841,8 @@ export function install(W, opts) {
         let sk = params[skB + ki];
         const wRow = oSK + ki * L.hid;
         for (let j = 0; j < L.hid; j++) sk += params[wRow + j] * hctx[j];
+        /* 11-16（obs6.5）：modeBias 推理侧加性项——与 policy2 forwardObs6 / pg-lib tapeForward6 同式（三处打分同源） */
+        if (L.modeBiasOn) sk += params[oMB6 + mbMi6 * L.skills + ki];
         v += sk;
       }
       let b1 = 0, b2 = 0;
@@ -1048,6 +1068,7 @@ export function install(W, opts) {
    *   挡不住"有人照 arch 装错档再按长度报错"这种绕路。⇒ 标签一律**由实际布局写**，读的时候当场对账。 */
   function packDims() {
     const d = { seatH: L.seatH, actH: L.actH, hid: L.hid, hid2: L.hid2, input: L.input, inter: L.interK || 0, tinter: L.tinterK || 0, keyHead: L.keyHeadOn || 0, gen: L.gen, keySplit: L.keySplit };
+    if (L.modeBiasOn) { d.modeBias = 1; d.modeKeys = L.modeKeys.slice(); }   /* 11-16（obs6.5）：模式偏置段随包走（漏了 ⇒ checkPack 按 16411 拒 16531） */
     if (L.input === 'obs4' || L.input === 'obs5') d.dof = 292;   /* obs4/obs5：同一张特征 manifest（8×29 公开 + 60 自块，见 obs3.mjs dims） */
     else if (isO3Input(L.input)) d.dof = obs3Dims(R, L.input);
     if (L.norm) d.norm = L.norm;     /* 观测面维数由引擎卡表算，不让调用方手填（obs3b=505）*/

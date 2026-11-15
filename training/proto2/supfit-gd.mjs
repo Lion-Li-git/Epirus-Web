@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -1052,9 +1052,19 @@ const SEAT_DROP = Math.max(0, Math.min(1, Number(arg('seatDrop', 0)) || 0));
 const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
 const seatEncSeg = ly.L.seg.find((s) => s.name === 'seatEnc');
 const se0 = seatEncSeg ? seatEncSeg.off : -1, se1 = seatEncSeg ? (seatEncSeg.off + seatEncSeg.len) : -1;
+const ONLY_SEG = String(arg('onlySeg', ''));
+let ONLY_MASK = null;   /* 掩码在 adamFit 首轮回填（DIM 要到那时才知道） */
+let DIM0 = 0;
 function adamFit(pvStart, trainList, sentinelLl, roundTag) {
   WKEY = weightOf(trainList);
   const DIM = pvStart.length;
+  DIM0 = DIM;   /* onlySeg 掩码按首轮回填（掩码 IIFE 在 DIM0 赋值前执行过一次 ⇒ 这里重建为真尺寸） */
+  if (ONLY_SEG && (!ONLY_MASK || ONLY_MASK.length !== DIM)) {
+    const sgm = ly.L.seg.find((x) => x.name === ONLY_SEG);
+    ONLY_MASK = new Float64Array(DIM);
+    for (let d = sgm.off; d < sgm.off + sgm.len; d++) ONLY_MASK[d] = 1;
+    console.log('⚑ onlySeg=' + ONLY_SEG + ' ⇒ 只训坐标 [' + sgm.off + ',' + (sgm.off + sgm.len) + ')，其余冻结（掩码重建 ' + DIM + ' 维）');
+  }
   const pvR = Float64Array.from(pvStart);
   const m = new Float64Array(DIM), v = new Float64Array(DIM);
   let best = { ll: sentinelLl, pv: Float64Array.from(pvStart) };
@@ -1073,6 +1083,7 @@ function adamFit(pvStart, trainList, sentinelLl, roundTag) {
     }
     const denom = Math.max(1, trainList.length);
     for (let d = 0; d < DIM; d++) {
+      if (ONLY_MASK && !ONLY_MASK[d]) continue;   // onlySeg：冻结段坐标（动量/参数都不动）
       const g = grad[d] / denom;
       m[d] = B1 * m[d] + (1 - B1) * g;
       v[d] = B2 * v[d] + (1 - B2) * g * g;
