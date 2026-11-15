@@ -1195,6 +1195,8 @@ writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, rolloutMode: ROLLOUT_MODE, classPow: CLASS_POW, classCap: CLASS_CAP, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
+  /* 11-15 白班：训练环境（对手表/桌形）入 meta——环境轮换配方的复现与"1/8 形覆盖"类事故的查账依据 */
+  arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES.length ? arg('arenaShapes', '') || null : null,
   /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
   teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
   teacher3: TEACHER3 || null, teacher3frac: TEACHER3 ? TEACHER3_FRAC : null, teacher3keys: T3KEYS.size ? [...T3KEYS].join(',') : null,
