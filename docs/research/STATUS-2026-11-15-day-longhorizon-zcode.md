@@ -1,6 +1,7 @@
 # 2026-11-15 白班交接 —— `obs6` 长程技能与珠经济整治（`ep=2` 保留激光眼蓄能）
 
-> 时区：本机 `2026-11-15 12:40 +08:00` ‖ 接力自：[STATUS-2026-11-15-night-zcode.md](file:///d:/code/Epirus-Web/docs/research/STATUS-2026-11-15-night-zcode.md)
+> 时区：本机 `2026-11-15 14:25 +08:00` ‖ 接力自：[STATUS-2026-11-15-night-zcode.md](file:///d:/code/Epirus-Web/docs/research/STATUS-2026-11-15-night-zcode.md)
+> 完整早/白班发现总录：[FINDING-2026-11-15-day-obs6-longhorizon-zcode.md](file:///d:/code/Epirus-Web/docs/research/FINDING-2026-11-15-day-obs6-longhorizon-zcode.md)
 > 铁律：`CHARGE_MIN_EP = 2`（[evo.js](file:///d:/code/Epirus-Web/js/train/evo.js)）未动——`ep=2` 蓄爆珠可合法接 `laserEye`（1 ep + 1 boom），问题只在于夜训包把 `ep=2` 全用来蓄**电珠**（`charge#elec`）导致次回合 `ep=1 < 2` 买不起电磁炮而 100% 过期。
 
 ---
@@ -63,6 +64,8 @@
 
 ## 四、收工验证与接力
 
+- 早/白班总览详账与统一口径对照表已落盘至 [FINDING-2026-11-15-day-obs6-longhorizon-zcode.md](file:///d:/code/Epirus-Web/docs/research/FINDING-2026-11-15-day-obs6-longhorizon-zcode.md)。
+- 线上代码/图谱已推送至 `origin/main`（`abfefc9f`；前置 `e2816572` 已通过全量 `engine` `gate-all` 5 道全绿：`np 172/172 · spec 68/68 · smoke OK · battle OK · map OK`）。
 - `node training/knobs.mjs --check`：**通过**（全集 193 ‖ 在用 183 ‖ 未登记 0 ‖ 无注解 0 ‖ 暗键 9）。
-- `champion-map` `shot.mjs` 自检（含 `OBS6-LH6P` + `--reuse` + 父边回溯）：**100 PASS ‖ 0 FAIL**。
-- `node tools/gate-all.mjs --auto`：见终局提交前实测结果。
+- `champion-map` `shot.mjs` 自检（含 `OBS6-LH6` + `OBS6-LH6P` + `--reuse` + 父边回溯）：**100 PASS ‖ 0 FAIL**。
+- `node tools/gate-all.mjs --auto`（纯文档收档，骑 `e2816572` 全量认证）：`meta` 组 **5 道全绿**（按用户指令纯文档仅本地收档，不执行 `git push`）。
