@@ -135,6 +135,14 @@
 - **SOUP4**（4 粒等权）：C̄=0.2997 全场最强综合，G5[long] 26%/25% 超 1pt block + selftest3 腿C 1.66e-3（插值 ReLU 折点已知工件，不能开 PG 臂）。
 - **SOUP4b**（0.30/0.30/0.20/0.20）：**全门 ✅**——1pt 边际被权重微扰翻过；强度读数见下。
 
+## 九、gen6/g7：真空清零冲刺（02:5x–03:3x）
+
+- **MX5-GD-LE40**（lasereye@0.40 强攻）：全门 + **laserEye 命中**——T3 真空 laserEye 0→1，**已注册入图 + 入池 hard**（C̄=0.173）。T3 三键全通：cannon 2 / miniT 1 / laserEye 1（mine 见下）。
+- **MX5-GD-T4STR**（GD16m@0.10 轻触）：全门 + firestorm,curse 保活（C 0.200/0.086）——T4 强度回收可行，留 scratch 记档。
+- **MX5-GD-T2STR**：全门 **C̄=0.2953 全场最强全门综合**（C长 0.3151 最强长程），已注册入图。
+- **soup 线结论**：等权 C̄ 0.300 被 G5[long] 26%/25% 超 1pt 拦；权重版（0.3/0.3/0.2/0.2）全门但 C̄ 0.2665 **弱于自己最强成分**（GD6ATEACH 0.2798）——soup 强度加成不稳健，scratch 记档不再追。
+- **gen7（跑中）**：`ration6` mega 复合教师（ration 骨架 + DOSE6 剂量门内建 mine/armor/taunt/rod/cannon/curse 全清单）@0.35 混入 multi 桌形——一发臂打剩余全部真空（teacher 早就在册，只差接线）。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
