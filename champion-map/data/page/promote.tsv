@@ -230,7 +230,6 @@ MX1-GD-ST	pass	—
 MX2-US1-BA	pass	—			
 MX2-US1-ST	pass	—			
 MX4-GD-T1B	pass	—			
-MX4-GD-T2	pass	—			
 MX4-GD-T3L	block	1			
 MX4-GD-T3M	pass	—			
 MX4-GD-T4	pass	—			
@@ -243,3 +242,12 @@ MX5-GD-T4STR	pass	—
 MX5-SOUP4	block	1			
 MX5-SOUP4b	pass	—			
 MX3-GDEQ-GD	pass	—			
+MX5-GD-R6	block	1			
+MX5-GD-R6B	pass	—			
+MX5-GD-R6C	block	1			
+MX6-GD-TF05	block	1			
+MX6-GD-TF15	pass	—			
+MX6-GD-TF20	pass	—			
+MX7-GD-R6B	block	2			
+MX7-T2-R	pass	—			
+MX7-T4-R	block	1			
