@@ -546,7 +546,15 @@
     return w;
   }
 
-  function forwardObs6(W, state, pid, cands, params, opts2) {
+  /* 11-16：modeBias 行选择（与 arch2.mbRowOf 逐字同式）。新包 '2:long' 独立行；老包回落 'long'。 */
+function mbRowOf(L, state) {
+  if (!L || !L.modeBiasOn) return 0;
+  const mk = state && state.modeKey;
+  const n = state && state.p ? state.p.length : 0;
+  if (n === 2 && mk === 'long' && L.modeIdx && L.modeIdx['2:long'] != null) return L.modeIdx['2:long'];
+  return L.modeIdx && L.modeIdx[mk] != null ? L.modeIdx[mk] : 0;
+}
+function forwardObs6(W, state, pid, cands, params, opts2) {
     const L = params.p2, R = W.EpirusRules;
     const CHARGE_KEY = (R.SK && R.SK.CHARGE) || 'charge';
     const DK = (c) => (c && L.keySplit && c.key === CHARGE_KEY && c.bead) ? (c.key + '#' + c.bead) : (c ? c.key : null);
@@ -563,7 +571,7 @@
     /* 11-16（obs6.5）：modeBias 偏移 + 当前模式下标（state.modeKey → dims.modeKeys 冻结序）；
      *   无该段的老包 L.modeBiasOn 未定义 ⇒ 加性项跳过，逐位不变。 */
     const oMB = L.modeBiasOn ? segOff('modeBias') : 0;
-    const mbMi = L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0;
+    const mbMi = L.modeBiasOn ? mbRowOf(L, state) : 0;
 
     const selfVec = new Float64Array(L.selfDim);
     let sp = 0;

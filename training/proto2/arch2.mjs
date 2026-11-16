@@ -705,7 +705,16 @@ export function install(W, opts) {
     for (let j = 0; j < row.length; j++) w[j] /= s;
     return w;
   }
-  function forwardObs6(state, pid, cands, params, opts2) {
+  /* 11-16：modeBias 行选择。新包可有 '2:long' 独立行；老包只有 'long' 时逐字回落。
+ *   2P 标准局 modeKey='standard'，2P 长局 modeKey='long' 且 state.p.length=2 ⇒ 优先 '2:long'。 */
+function mbRowOf(L, state) {
+  if (!L || !L.modeBiasOn) return 0;
+  const mk = state && state.modeKey;
+  const n = state && state.p ? state.p.length : 0;
+  if (n === 2 && mk === 'long' && L.modeIdx && L.modeIdx['2:long'] != null) return L.modeIdx['2:long'];
+  return L.modeIdx && L.modeIdx[mk] != null ? L.modeIdx[mk] : 0;
+}
+function forwardObs6(state, pid, cands, params, opts2) {
     CNT.forwards++; CNT.cands += cands.length;
     const sc = obs3Scene(W, state, pid, 'obs6');
     const H6 = L.seatH, FFH = 2 * H6;
@@ -730,7 +739,7 @@ export function install(W, opts) {
     const TP = (opts2 && opts2.wantTape) ? { is6: 1, self: Float64Array.from(selfVec), svs: [], afs: [], t1: [], t2: [], skillIdx: [], keys: [], xin: null,
       /* 11-16（obs6.5）：模式偏置的档位下标随 tape 走（tapeBackward6/tapeForward6 按它取 modeBias 行）；
        *   老包/无偏置布局该字段缺省 ⇒ 反传侧按 0。 */
-      modeIdx: L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0 } : null;
+      modeIdx: L.modeBiasOn ? mbRowOf(L, state) : 0 } : null;
     const svs6 = [], isSelfArr = [], ids6 = [], e0s = [];
     const PUBN = sc.seatN;
     for (const s of sc.seats) {
@@ -818,7 +827,7 @@ export function install(W, opts) {
     const tb1 = oTB, tb2 = oTB + H6 * L.actH, skB = oSK + L.skills * L.hid;
     /* 11-16（obs6.5）：modeBias 偏移与当前模式档（提到循环外，段查找每次决策一次） */
     const oMB6 = L.modeBiasOn ? segOff('modeBias') : 0;
-    const mbMi6 = L.modeBiasOn ? (L.modeIdx[state.modeKey] != null ? L.modeIdx[state.modeKey] : 0) : 0;
+    const mbMi6 = L.modeBiasOn ? mbRowOf(L, state) : 0;
     for (let i = 0; i < n; i++) {
       const cp = obs3CandOf(sc, cands[i]);
       let m2 = 0;
