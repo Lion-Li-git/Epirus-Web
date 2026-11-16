@@ -154,7 +154,15 @@ for (const id of ids) {
         const pwid = prow ? String(prow[lin.ix.wid] || '') : '';
         const hf = String(meta.hotstartFrom);
         const prefixOk = pwid && (pwid.startsWith(hf) || hf.startsWith(pwid));
-        const chainOk = !prefixOk && hf && WALK_PARENT(hf) === claimedParent;
+        const chainOk = !prefixOk && hf && (() => {
+          const w = WALK_PARENT(hf);
+          if (!w) return false;
+          if (w === claimedParent) return true;
+          /* 同粒两名（dupWid 对，如 MX1-E9-GD ≡ EQ-S4-GD6ATEACH）：爬到的 id 与父节点 wid 前缀兼容即算命中 */
+          const lw = (id2) => { const r2 = linOf[id2]; return r2 ? String(r2[lin.ix.wid] || '') : ''; };
+          const a = lw(w), b = lw(claimedParent);
+          return !!(a && b && (a.startsWith(b.slice(0, 12)) || b.startsWith(a.slice(0, 12))));
+        })();
         if (prow && pwid && !prefixOk && !chainOk) {
           add(id, 'parent', 'hotstartFrom(' + hf.slice(0, 12) + ') 与父节点(' + claimedParent + ') wid(' + pwid.slice(0, 12) + ') 前缀不符且链爬不到 ⇒ 假父嫌疑');
         }
