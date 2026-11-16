@@ -176,7 +176,9 @@ function skStats() {
     const cells = Object.keys(SKUSE.cell[k]).length;
     if (SKUSE.use[k] >= 3 && cells >= 3) e++;
   }
-  return { skU: u, skE: e };
+  /* 11-17：发射用过的键清单（T2/T3/T4 层验证要"哪把钥匙用了"，只有 skU 计数不够） */
+  const keys = Object.keys(SKUSE.use).filter((k) => SKUSE.use[k] >= 1).sort().join(',');
+  return { skU: u, skE: e, keys };
 }
 function evalAxis(champN) {
 const out = {};
@@ -249,6 +251,7 @@ function emit(prefix, o) {
      *   （v3 分层卷与 v2 老规则同池 ⇒ 戳逐字相同）。把会换尺的另两维一并印出来，批量器与表都能按它筛。 */
     ' plan=' + (FLAG.plan || 'v2') + ' champ=' + (CHAMP_IDS.length ? CHAMP_IDS.join('+') + 'x' + CHAMP_N : '0') +
     ' skU=' + skStats().skU + ' skE=' + skStats().skE +
+    ' keys=' + skStats().keys +
     ' coop=' + (COOP ? 'v3x' + COOP_G : 'off'));   // ← 考卷版本戳：两版池的读数不许混进同一张表（11-09 换席事故的直接补丁）
   for (const n of NS) { const q = o[n]; console.error('  N=' + n + ': ' + q.first + '/' + q.G + ' 夺1 ‖ 各座 ' + q.seatFirst.map((f, i) => f + '/' + q.seatGames[i]).join(' ') + ''); }
 }
