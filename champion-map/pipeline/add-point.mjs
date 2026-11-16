@@ -51,10 +51,11 @@ if (reg.rows.some((r) => r[reg.ix.pack_id] === ID)) { console.error('⛔ registr
 
 /* 自动谱系行（11-12 用户：新点不能只进地图；id/fam/ts/wid/seed/parent 一次写全）。
  *   fam 未给：沿用同名 --lineage 标签，找不到就新开一个号（max+1）；父边优先取 --parent=，
- *   否则先按 meta.hotstartFrom 直接查图，查不到时再沿局部包目录多跳回溯至图上最近祖先（中间 SFT
- *   产物未入图时不再断链，按 `seedpack` 落盘，守 `viewer.mjs` 来路白名单），仍找不到才保留 unknown-wid。 */
-/** Walk hotstartFrom links through unplotted packs in local dirs to find the nearest ancestor on map. */
-function findAncestorOnMap(startWid, dirs, wid2id, dispIds) {
+ *   否则先按 meta.hotstartFrom 直接查图，查不到时再沿局部包目录多跳回溯至图上最近祖先（每一跳
+ *   都按 widOf === hotstartFrom 逐包核过权重指纹 ⇒ 升为 `seedpack-wid` 实线；仅靠手填 --parent=
+ *   且无权重链可证时才落 `seedpack` 虚线），仍找不到才保留 unknown-wid。 */
+/** Walk verified widOf/hotstartFrom links through local unplotted packs to find an ancestor on map. */
+function findAncestorOnMap(startWid, dirs, wid2id, dispIds, targetId = '') {
   const widParent = new Map();
   const seenDirs = new Set();
   for (const dir of dirs) {
@@ -72,7 +73,7 @@ function findAncestorOnMap(startWid, dirs, wid2id, dispIds) {
   for (let hop = 0; hop < 16 && cur && !visited.has(cur); hop++) {
     visited.add(cur);
     const id = wid2id.get(cur);
-    if (id && dispIds.has(id)) return id;
+    if (id && dispIds.has(id) && (!targetId || id === targetId)) return id;
     cur = widParent.get(cur) || '';
   }
   return '';
@@ -140,17 +141,21 @@ if (!FAM) {
 if (LINEAGE === 'new') LINEAGE = '';
 const parentWid = String(meta.hotstartFrom || '').trim();
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
+const rootDir = resolve(DATA, '../..');
+const ancDirs = [dirname(PACK), join(rootDir, 'scratch/arms'), join(rootDir, 'docs/artifacts/obs6-coldstart')];
 let parentId = '', parentSrc = 'root';
 if (PARENT_ARG) {
   if (!dispIds.has(PARENT_ARG)) { console.error('⛔ --parent 指向不在图上的节点：' + PARENT_ARG); process.exit(2); }
-  parentId = PARENT_ARG; parentSrc = 'seedpack';
+  parentId = PARENT_ARG;
+  const directOk = Boolean(parentWid && wid2id.get(parentWid) === PARENT_ARG);
+  const chainOk = !directOk && Boolean(parentWid && findAncestorOnMap(parentWid, ancDirs, wid2id, dispIds, PARENT_ARG) === PARENT_ARG);
+  parentSrc = (directOk || chainOk) ? 'seedpack-wid' : 'seedpack';
 } else if (parentWid) {
   const direct = wid2id.get(parentWid);
   if (direct && dispIds.has(direct)) { parentId = direct; parentSrc = 'seedpack-wid'; }
   else {
-    const root = resolve(DATA, '../..');
-    const anc = findAncestorOnMap(parentWid, [dirname(PACK), join(root, 'scratch/arms'), join(root, 'docs/artifacts/obs6-coldstart')], wid2id, dispIds);
-    if (anc) { parentId = anc; parentSrc = 'seedpack'; }
+    const anc = findAncestorOnMap(parentWid, ancDirs, wid2id, dispIds);
+    if (anc) { parentId = anc; parentSrc = 'seedpack-wid'; }
     else parentSrc = 'unknown-wid';
   }
 }

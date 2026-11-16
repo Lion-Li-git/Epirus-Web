@@ -605,6 +605,35 @@ function buildTeacherPick(name) {
     }
     return null;
   };
+  /* 11-16：全防型反制教师——同时反制反弹系(reflect/bagua/shift)与护盾系(guard/jinshield/proto/armor)，并优先锁防席；平时落回 v7/链 */
+  const GUARD_BREAK = new Set([R.SK.GUARD, R.SK.JINSHIELD, R.SK.PROTO, R.SK.ARMOR]);
+  const REFL_BREAK = new Set([R.SK.REFLECT, R.SK.BAGUA, R.SK.SHIFT]);
+  const breakAllPick = (state, pid, cs) => {
+    const foes = (state.p || []).filter((q) => q && q.id !== pid && q.hp > 0);
+    const guardFoes = new Set();
+    const reflFoes = new Set();
+    for (const q of foes) {
+      const cur = state.actions && state.actions[q.id] && state.actions[q.id].key;
+      if (GUARD_BREAK.has(q.lastSkill) || GUARD_BREAK.has(cur)) guardFoes.add(q.id);
+      if (REFL_BREAK.has(q.lastSkill) || REFL_BREAK.has(cur)) reflFoes.add(q.id);
+    }
+    const pickOn = (keys, targetSet) => {
+      for (const k of keys) {
+        const hit = cs.find((c) => c.key === k && targetSet.has(c.target));
+        if (hit) return hit;
+        const any = pickKey(cs, k);
+        if (any) return any;
+      }
+      return null;
+    };
+    if (reflFoes.size > 0) {
+      return pickOn([R.SK.LASER_EYE, R.SK.RAILGUN, R.SK.SNIPE, R.SK.CANNON, R.SK.BIG_T, R.SK.SWORD], reflFoes);
+    }
+    if (guardFoes.size > 0) {
+      return pickOn([R.SK.LASER_EYE, R.SK.RAILGUN, R.SK.SNIPE, R.SK.TANK, R.SK.CANNON, R.SK.BIG_T], guardFoes);
+    }
+    return null;
+  };
   return isPack
   ? (state, pid, cs, legal) => packPick(state, pid, cs, legal) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'v7mix'
@@ -654,6 +683,8 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => transferPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'antiReflect'
     ? (state, pid, cs) => antiReflectPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'breakAll'
+    ? (state, pid, cs) => breakAllPick(state, pid, cs) || v7Pick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'oracleDef'
     ? (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
@@ -735,7 +766,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
@@ -1422,7 +1453,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, rolloutMode: ROLLOUT_MODE, classPow: CLASS_POW, classCap: CLASS_CAP, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   /* 11-15 白班：训练环境（对手表/桌形）入 meta——环境轮换配方的复现与"1/8 形覆盖"类事故的查账依据 */
-  arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES.length ? arg('arenaShapes', '') || null : null,
+  arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES && A2_SHAPES.length ? arg('arenaShapes', '') || null : null,
   /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
   teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
   teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,

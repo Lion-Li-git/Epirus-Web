@@ -18,7 +18,7 @@ import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -30,6 +30,12 @@ const LAMF = Number(arg('lamF', 0.05)) || 0;
 const LAM_EXP = Number(arg('lamExp', 0)) || 0;
 const PEN_DEAD_ELEC = Number(arg('penDeadElec', 0));
 if (!Number.isFinite(PEN_DEAD_ELEC) || PEN_DEAD_ELEC < 0) { console.error('⛔ --penDeadElec 需 ≥ 0（收到 ' + arg('penDeadElec', '') + '）'); process.exit(2); }
+const DMG_W = Number(arg('dmgW', 0));
+if (!Number.isFinite(DMG_W) || DMG_W < 0) { console.error('⛔ --dmgW 需 ≥ 0（收到 ' + arg('dmgW', '') + '）'); process.exit(2); }
+const BEAD_SPEND_W = Number(arg('beadSpendW', 0));
+if (!Number.isFinite(BEAD_SPEND_W) || BEAD_SPEND_W < 0) { console.error('⛔ --beadSpendW 需 ≥ 0（收到 ' + arg('beadSpendW', '') + '）'); process.exit(2); }
+const DEF_TAX = Number(arg('defTax', 0));
+if (!Number.isFinite(DEF_TAX) || DEF_TAX < 0) { console.error('⛔ --defTax 需 ≥ 0（收到 ' + arg('defTax', '') + '）'); process.exit(2); }
 const TEMP = Number(arg('temp', 0.5)) || 0.5;
 const OUT = String(arg('out', 'scratch/arms/PG1-s' + SEED + '.bak'));
 const TAG = String(arg('tag', ''));
@@ -104,6 +110,11 @@ const SHAPE_MODES_RAW = String(arg('shapeModes', '') || '').trim();
 const SHAPE_MODES = new Set(SHAPE_MODES_RAW ? SHAPE_MODES_RAW.split(',').map((s) => s.trim()).filter(Boolean) : []);
 for (const md of SHAPE_MODES) {
   if (!R.MODES[md]) { console.error('⛔ --shapeModes 含未知模式 "' + md + '"（合法：' + Object.keys(R.MODES).join(',') + '）'); process.exit(2); }
+}
+const KL_MODES_RAW = String(arg('klModes', '') || '').trim();
+const KL_MODES = new Set(KL_MODES_RAW ? KL_MODES_RAW.split(',').map((s) => s.trim()).filter(Boolean) : []);
+for (const md of KL_MODES) {
+  if (!R.MODES[md]) { console.error('⛔ --klModes 含未知模式 "' + md + '"（合法：' + Object.keys(R.MODES).join(',') + '）'); process.exit(2); }
 }
 const pv = Float64Array.from(P.unpack(raw, true));
 const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
@@ -338,12 +349,15 @@ const VOF = (d, mu) => (BASELINE === 'ridge' ? (d.qR == null ? mu : d.qR) : mu);
 let capDone = false, vDiag = { mv: 0, sv: 0, mg: 0, sg: 0 };
 if (BASELINE === 'ridge') console.log('  ⚑ 基线 = 观测侧闭式岭回归 V(xin)（住在训练器里，不进包 ‖ l2 ' + RL2 + ' ‖ 每批重拟合 ‖ 采集用上一次拟合 ⇒ 不自家打分自家）');
 let games = 0, upd = 0, zeroGrad = 0;
-const stat = { score: 0, fire: 0, charge: 0, deadElec: 0, beadExp: 0, beadSpent: 0, shapeHits: {}, ent: 0, decs: 0, snap8k: false };
+const stat = { score: 0, fire: 0, charge: 0, deadElec: 0, beadExp: 0, beadSpent: 0, dmgAmt: 0, shapeHits: {}, ent: 0, decs: 0, snap8k: false };
 const ZIP = { games: 0, bad: 0 };
 console.log('# pg-train（B 臂） ‖ 起点 ' + UP.replace(/^.*[\\/]/, '') + ' ‖ 面=' + (got.cfg.input || '?') +
   ' ‖ 局 ' + GAMES + ' ‖ 批 ' + BATCH + ' ‖ lr ' + LR + ' ‖ temp ' + TEMP + ' ‖ λc ' + LAMC + ' ‖ λf ' + LAMF +
   (LAM_EXP > 0 ? ' ‖ λexp ' + LAM_EXP : '') +
   (PEN_DEAD_ELEC > 0 ? ' ‖ 死电罚 ' + PEN_DEAD_ELEC : '') +
+  (DMG_W > 0 ? ' ‖ dmgW ' + DMG_W : '') +
+  (BEAD_SPEND_W > 0 ? ' ‖ beadSpendW ' + BEAD_SPEND_W : '') +
+  (DEF_TAX > 0 ? ' ‖ defTax ' + DEF_TAX : '') +
   (SHAPE_ITEMS.length ? ' ‖ shape ' + SHAPE_ITEMS.map((x) => x.key + ':' + x.w).join(',') : '') +
   (SHAPE_MODES.size ? ' ‖ shapeModes ' + [...SHAPE_MODES].join(',') : '') +
   (ONLY_SEG.length ? ' ‖ onlySeg ' + ONLY_SEG.join(',') : '') +
@@ -390,19 +404,29 @@ while (games < GAMES) {
         else if (PEN_DEAD_ELEC > 0 && d.key === R.SK.CHARGE && (d.bead || 'elec') === 'elec' && d.ep < 3) { shape[i] -= PEN_DEAD_ELEC; stat.deadElec++; }
         /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：支持单键或 key:w 多键列表 */
         for (const it of SHAPE_ITEMS) if (d.key === it.key && (it.w < 0 || allowPosShape)) { shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1; }
+        if (DEF_TAX > 0 && allowPosShape && (d.key === R.SK.GUARD || d.key === R.SK.REFLECT || d.key === R.SK.BAGUA)) { shape[i] -= DEF_TAX; }
       }
       if (!d.push) { stat.ent += d.H; stat.decs++; }
     }
-    if (LAM_EXP > 0) {
+    if (LAM_EXP > 0 || (allowPosShape && (DMG_W > 0 || BEAD_SPEND_W > 0))) {
       let ai = -1;
       const lastChg = { elec: -1, boom: -1 };
       for (const e of (row.evs || [])) {
+        if (DMG_W > 0 && allowPosShape && e.type === 'damage' && e.source === seat && e.target !== seat && (e.amt || 0) > 0 && ai >= 0 && ai < ds.length && !ds[ai].push) {
+          shape[ai] += DMG_W * Math.min(2, e.amt);
+          stat.dmgAmt += e.amt;
+        }
         if (e.pid !== seat) continue;
         if (e.type === 'action') { ai++; continue; }
         if (e.type === 'bead') {
-          if (e.delta > 0 && ai >= 0 && ai < ds.length && !ds[ai].push && ds[ai].key === R.SK.CHARGE) lastChg[e.kind] = ai;
-          else if (e.delta < 0 && lastChg[e.kind] >= 0) { lastChg[e.kind] = -1; stat.beadSpent++; }
-        } else if (e.type === 'beadExpire' && lastChg[e.kind] >= 0) {
+          if (BEAD_SPEND_W > 0 && allowPosShape && e.delta < 0 && ai >= 0 && ai < ds.length && !ds[ai].push) {
+            shape[ai] += BEAD_SPEND_W;
+          }
+          if (LAM_EXP > 0) {
+            if (e.delta > 0 && ai >= 0 && ai < ds.length && !ds[ai].push && ds[ai].key === R.SK.CHARGE) lastChg[e.kind] = ai;
+            else if (e.delta < 0 && lastChg[e.kind] >= 0) { lastChg[e.kind] = -1; stat.beadSpent++; }
+          }
+        } else if (LAM_EXP > 0 && e.type === 'beadExpire' && lastChg[e.kind] >= 0) {
           shape[lastChg[e.kind]] -= LAM_EXP;
           stat.beadExp++;
           lastChg[e.kind] = -1;
@@ -410,9 +434,10 @@ while (games < GAMES) {
       }
     }
     let acc = 0;
+    const allowKl = !KL_MODES.size || KL_MODES.has(slot.mode);
     for (let i = ds.length - 1; i >= 0; i--) {
       acc += shape[i];
-      if (!ds[i].push) decsBatch.push({ d: ds[i], G: row.scoreNet + acc });
+      if (!ds[i].push) decsBatch.push({ d: ds[i], G: row.scoreNet + acc, inKl: allowKl });
     }
     if (PROBE_CAP && !capDone) for (const x of decsBatch) {
       if (!x.d.hctxArr) { const act = tapeForward(x.d.tape, pv, ly); x.d.hctxArr = Float64Array.from(act.hctx); x.d.G = x.G; CAP.push(x.d); }
@@ -442,7 +467,7 @@ while (games < GAMES) {
   /* 优势的分母 = 批内 **G 的标准差**（`mean` 档残差即 G−mu ⇒ 与现役逐字同；在册的 6 枚 ridge 臂吃的也是这个分母，
    *   删掉可微 critic 档后不再有"残差分母"那套热身/兜底逻辑——见 §十九：那条路判不采纳，结构也一起删了）。 */
   const sdUse = sd;
-  for (const { d, G } of decsBatch) {
+  for (const { d, G, inKl } of decsBatch) {
     const V = VOF(d, mu);
     const A = (G - V) / sdUse;
     if (!Number.isFinite(A)) { console.error('⛔ 优势非有限（G=' + G + ' mu=' + mu + ' sd=' + sd + '）⇒ 拒绝静默训练'); process.exit(9); }
@@ -452,7 +477,7 @@ while (games < GAMES) {
     const g = dLogPi(d.idx, act.logits, tp.keys, TEMP, t);
     for (let j = 0; j < g.length; j++) g[j] *= A;
     tapeBackward(tp, pv, ly, act, g, grad);
-    if (KL_W > 0) {
+    if (KL_W > 0 && inKl) {
       /* 批级键频锚：对**全键**同时拉向冻结起点的键分布（CE，mode-covering）——不依赖键被采样
        *   （第二轮 --shapeKey 的死因就是采样塌缩）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
       const act0 = tapeForward(d.tape, pv0, ly);
@@ -512,6 +537,7 @@ while (games < GAMES) {
     console.log('  局 ' + games + ' ‖ 步 ' + upd + ' ‖ 平均净分 ' + (stat.score / Math.max(1, games)).toFixed(3) +
       ' ‖ 炮 ' + (stat.fire / Math.max(1, games)).toFixed(2) + '/局 ‖ 纪律蓄 ' + (stat.charge / Math.max(1, games)).toFixed(2) + '/局' +
       (PEN_DEAD_ELEC > 0 ? ' ‖ 死电 ' + (stat.deadElec / Math.max(1, games)).toFixed(2) + '/局' : '') +
+      (DMG_W > 0 ? ' ‖ 伤 ' + (stat.dmgAmt / Math.max(1, games)).toFixed(2) + '/局' : '') +
       (LAM_EXP > 0 ? ' ‖ 花珠 ' + (stat.beadSpent / Math.max(1, games)).toFixed(2) + '/废珠 ' + (stat.beadExp / Math.max(1, games)).toFixed(2) : '') + shStr +
       ' ‖ 熵 ' + (stat.ent / Math.max(1, stat.decs)).toFixed(3) + 'nats ‖ zip坏 ' + ZIP.bad + '/' + ZIP.games +
       (KL_W > 0 ? ' ‖ 锚L1 ' + (klN ? (klL1 / klN).toFixed(3) : '-') : '') +
@@ -542,7 +568,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, shapeModes: SHAPE_MODES_RAW || null, onlySeg: ONLY_SEG_RAW || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, dmgW: DMG_W || null, beadSpendW: BEAD_SPEND_W || null, defTax: DEF_TAX || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, shapeModes: SHAPE_MODES_RAW || null, klModes: KL_MODES_RAW || null, onlySeg: ONLY_SEG_RAW || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),

@@ -1153,3 +1153,28 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   ② 要不要把"对真包的胜率"放进当选键/promote 地板——`tools/pick-best.mjs:102` 的 `selGapNote` 那个 "gap"
   是**第 1 与第 2 名分差**，跟 R−H 迁移 Gap 是两个量、只是共词；在 `train-3p.mjs`/`pick-best.mjs` 里搜
   `mem-probe`/H 集/非名册 全为空。③ `--force-copy` 那条注释与入口 :40 的无条件拒 `--` 互相打脸，要不要修。
+
+## 11-16 深夜追记（Qoder · main 尖端 CI 修红 + 前线尺登记提案）
+
+- **红在哪**：`e681f332`（22:05，已在 `origin/main`）上 `gates` ‖ `part ship-pool` ‖ `browser` 三作业红，两条腿：
+  ① `D234 ⑩c`——提交里的 `champion-map/index.html` 写着 `var NRAW = 970`，而 HEAD 的 `registry.tsv` 只有 965 行数据
+  ⇒ **产物进了仓、它吃的那 5 行 EQ 表行还悬在工作树上**（18:0x 起一直没提交）；
+  ② browser 池层——`图上没有或没有档的：EQ-S4-GD6ATEACH` ‖ `环 23 ‖ 表 24` ⇒ 那枚池成员进了池和 bundle，**从没接机**。
+- **修的是数据，不是判据**：`measure-point` 接机 `EQ-S4-GD6ATEACH`（父 `EQ-S4-E9`，wid 链 `a847eb3a41a160bb` 实测相等 ⇒ `seedpack-wid`）
+  + 那 5 枚 EQ 点的数据行落册 + `rebuild-map.mjs` 唯一入口重烘。
+  **PR #5 / 分支 `qoder-1116-map-ci-fix`：CI 在干净克隆里 14/14 全 pass**（run 43887283889）。
+  本地定向 `100 PASS ‖ 0 FAIL`（CI 原为 `98 PASS ‖ 2 FAIL`）——**定向不是整轮**，真绿以 PR 的 CI 为准。
+- **刻意没碰**：`champion-map/pipeline/add-point.mjs` 与 `training/proto2/{pg-train,supfit-gd}.mjs` 是在别的班次手上的在制改动，留在工作树未提交。
+  ⚠ 代价如实写在这：那条父边的 `parentSrc=seedpack-wid` 目前**在干净克隆里不可复算**（用已提交的 add-point 重跑会得到 `seedpack` 虚线）；
+  已在 commit 说明里点名，等那笔代码落册自动闭合。**别把"CI 绿"读成"这格已经有 provenance"**。
+- **V3S2 有两个文件，但不是两枚权重（我上一版这么写是错的，已逐位比过撤回）**：两份的权重数组 sha12 同为 `517b89dc139e`（`arch/dims/a.len` 也一致），整文件差 106 字节全在 META——
+  `docs/artifacts/…` 那份比 `scratch/arms/…` 多出 `up` / `hotstartFrom` / `seed=1131` 三个字段，`ts` 还被写成整分钟 `14:20:00.000Z`（scratch 那份是带毫秒的 `12:47:43.513Z`）。
+  同批补拷的 `V2` / `V2.snap0` / `V3a` / `shaped1` 两份 META 逐字段一致 ⇒ **V3S2 是唯一被手写补过出处字段的件**，来历对得上夜班 00:43 那句"V3S2 缓入池，META 无标准出处字段——等晚班补融合谱系"。
+  ⇒ ① 前线尺的对手路径**改指在册件是安全的纯路径修**，不必重测（我上一版"会换掉对手身份"作废）；
+  ⇒ ② 更要紧：填进去的 `hotstartFrom=94f1343cd158ebb1`（V3a 的 wid）与该包自己的 `recipe` 打脸——`{sd.2, v2s0.25, v2s1.15, v3as0.15, v3as1.15, v3bs1.1}` 合计 1.000，**六路线性融合、V3a 系只占 0.30，不存在热启动父包**。
+  而 `add-point` 判 `seedpack-wid` 读的正是这个字段 ⇒ 图上 `V3a→V3S2`、`V3S2→U1` 两条**实线**核的是手填值，**这条边不可当独立证据引用**（按融合应走 `parentOf2/parentOf3`，按热启动应把字段删回原样落 `unknown`——属裁件归属，不自专）。
+- **提案落盘**：`PROPOSAL-2026-11-16-frontline-ruler-into-objective-qoder.md`（正面接上本班上一节"等点头②"那条）：
+  前线/真包胜率这把尺先**登记**（对手件改指在册、`--out` 默认落盘、夹具身份走 `rulers.tsv`+`batches.tsv` 单源、噪声地板 3 遍×5 枚实测），
+  再接 `promote` 记录腿或 `EPIRUS_SEL_FRONT` 排序键。**不定线、不动产品装配**；按 11-16 21:5x 裁定它属于筛选顺序的**最后一段（强度）**，不做成早期硬地板。
+- **等点头**：① PR #5 要不要并 `main`（要点名；tag 不随合并授权）；② **V3S2 那条父边按哪种语义画**——按融合补 `parentOf2/parentOf3`（⑫d 管的就是这个），还是把 `hotstartFrom` 删回原样让父边落 `unknown`；顺带决定 docs 那份手填壳要不要入库；
+  ③ 第 2 步那次约 15–20 分钟的分布测量开不开——**没分布就没名次**，今天已经拿 1.0pt 的差排过"全库第一"。
