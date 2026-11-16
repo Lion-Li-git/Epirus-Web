@@ -956,3 +956,11 @@ OBS6-SHAPEDIST-V2S0	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V2.snap0.bak	2.
 OBS6-SHAPEDIST-V3a	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3a.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:26:26.763Z	8172d931413f4cade73ae8855afd67654a696f1b0ea2fbf346e63edb8bb30895	active
 OBS6-SHAPEDIST-V3b	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3b.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:27:57.962Z	1ece3523a357a8d860eac7f4aa369c76efc5ffb3c36b83e256c12ae90a154f64	active
 OBS6B2	docs/artifacts/obs6-coldstart/OBS6B2.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:29:31.084Z	b5f46c1abee632a765198945e79ae5ee39ac951298aea3353d5ebd3c25ff33c9	active
+OBS6-SHAPEDIST-V3S2	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3S2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-16T03:26:03.149Z	ad6312fab577996739f5a0d59a537eddc7b9e8c8d6e2ad50b019deb81b70559c	active
+OBS6-SHAPEDIST-V3H3	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3H3.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-16T03:26:30.397Z	a223e38c80d08dd5524137099181fa522225ef8a3c18e8967c09fadefe48d115	active
+OBS6-UNIFIED-U1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U1.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:26:46.170Z	411b2d9e766898daea354a7607441236666b451256820b411a77574d70b6caab	active
+OBS6-UNIFIED-U2S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U2.snap0.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:01.731Z	3f29a3584b50a0f598aaa1d7e47fcfab9d018729b3716ca29d4ab8eb8ac44dff	active
+OBS6-UNIFIED-U4S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.snap0.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:17.363Z	179428a8740722b2b00596642ca31cf66687d8e74a45d806b9a8ba27bcf5007b	active
+OBS6-UNIFIED-U4	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:32.994Z	d1cb54c39e5bace88c10c33be775c7f679a4c93370215b5b90d742bedeb7f4a9	active
+OBS6-UNIFIED-US1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US1.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:48.707Z	8fc881b1e25dafd048754426dba71aae5d8d53bd2b3a7a2488b21bbf8a406c42	active
+OBS6-UNIFIED-US5	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US5.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:28:04.389Z	f5abc3b932aee4f6fcf3ddecb6505e2786ecdc69336d9a1407de4e2a53694050	active

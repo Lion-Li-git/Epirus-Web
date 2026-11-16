@@ -27,6 +27,35 @@ for (const l of L.slice(1)) {
   rows.push(o);
 }
 rows.sort((a,b) => (Number.isFinite(a.t) ? a.t : 0) - (Number.isFinite(b.t) ? b.t : 0));
+/* C 轴不是独立测量：C<n>R=(P<n>+P<n>R)/2、C<n>RL=(P<n>L+P<n>RL)/2。
+ *   两侧齐必须有 C 且逐位相等；单侧不许有 C；违者直接报错，不许 fallback 出图。 */
+function assertC() {
+  const bad = [];
+  for (const r of rows) {
+    const has = (k) => r[k] !== '' && r[k] !== undefined && Number.isFinite(Number(r[k]));
+    for (const n of [2, 3, 5, 8]) {
+      for (const [a, b, c, hz] of [
+        ['P' + n, 'P' + n + 'R', 'C' + n + 'R', 'short'],
+        ['P' + n + 'L', 'P' + n + 'RL', 'C' + n + 'RL', 'long'],
+      ]) {
+        const aok = has(a), bok = has(b), cok = has(c);
+        if (aok && bok) {
+          if (!cok) { bad.push(r.id + ' 缺 ' + c + '（' + a + '/' + b + ' 两侧齐）'); continue; }
+          const want = (+r[a] + +r[b]) / 2;
+          if (Math.abs(want - +r[c]) > 1e-9) bad.push(r.id + ' ' + c + '=' + r[c] + ' ≠ (' + a + '+' + b + ')/2=' + want + '（' + hz + '）');
+        } else if (cok) {
+          bad.push(r.id + ' 有 ' + c + ' 但 ' + a + '/' + b + ' 单侧缺');
+        }
+      }
+    }
+  }
+  if (bad.length) {
+    console.error('⛔ C 列关系校验失败（' + bad.length + ' 处；不允许 fallback）：');
+    for (const x of bad.slice(0, 20)) console.error('   ' + x);
+    process.exit(2);
+  }
+}
+assertC();
 const N = rows.length;
 const W = 1240, Hh = 330, Lp = 62, Rp = 20, Tp = 34, Bp = 46;
 const xAt = (i) => Lp + (N <= 1 ? 0 : i / (N - 1)) * (W - Lp - Rp);

@@ -103,3 +103,12 @@ policy2 结构定位：skill 打分 = skillHead·hctx 点积，hctx 共享编码
 | `ebd6a6dc` | 批 3 四粒进池 + bundle 重烘 |
 | `178e9fa7` | 批 2c 全库双轴表 + 批 3a 六点绘图 |
 | 本笔 | STATUS 终笔 + PROPOSAL 案②判词 + 混合夹具表（跑完补） |
+
+## 八、晨班续接：统一单包全模式突破（11:15 收口）
+
+- 已完成 `04190937` 提交推送至 `origin/main`（含晨班 5 处修复、`V2/V2.snap0` 与相对路径 `registry.tsv` + 重烘视图）。
+- 已为 `supfit-gd.mjs` 新增 `--shapeTeachers`（按 `n:mode` 直派强包专家组合）及 `--shapeBal=1 --rareOnly` 平滑回退，为 `pg-train.mjs` 新增 `--onlySeg` 与 `--shapeModes` 门控。
+- 端到端联合训练 `obs6.5`（`trunk + modeBias`）在**不按模式拆包**的前提下取得关键突破（完整实验与对照见 [FINDING-2026-11-16-unified-allmode.md](./FINDING-2026-11-16-unified-allmode.md)）：
+  - [OBS6-UNIFIED-U1.bak](../../scratch/arms/OBS6-UNIFIED-U1.bak)：2P `93.6%` / `exam-4n` 短 C `0.3059` · 长 C **`0.3282`** / 前线 `0.3708` / `mem-probe-e6` `78.4/79.2`（`Gap -0.8pt`）。
+  - [OBS6-UNIFIED-U4.bak](../../scratch/arms/OBS6-UNIFIED-U4.bak)：首次在 `ε=0` 下的 `5:long` 80 局打出 `ring=108, railgun=9, bigT=31`（同包 `2:std 0.800 / 2:long 0.825 / 5:multi 0.297`）。
+  - 同盆地融合 [OBS6-UNIFIED-US1.bak](../../scratch/arms/OBS6-UNIFIED-US1.bak) 达成 `2:std 0.875 / 2:long 0.775 / 5:multi 0.313 / 5:long 0.344 (ring4/rg9/bigT6) / H 81.6% (Gap +3.7pt)`；[OBS6-UNIFIED-US5.bak](../../scratch/arms/OBS6-UNIFIED-US5.bak) 刷新现役 8 强前线第一 **`0.4250`**（`2P 92.8%`）。

@@ -18,7 +18,7 @@ import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
@@ -100,11 +100,30 @@ const SHAPE_ITEMS = SHAPE_KEY
     })
   : [];
 for (const tk of KL_TILT) resolveSk(tk, 'klTilt');
+const SHAPE_MODES_RAW = String(arg('shapeModes', '') || '').trim();
+const SHAPE_MODES = new Set(SHAPE_MODES_RAW ? SHAPE_MODES_RAW.split(',').map((s) => s.trim()).filter(Boolean) : []);
+for (const md of SHAPE_MODES) {
+  if (!R.MODES[md]) { console.error('⛔ --shapeModes 含未知模式 "' + md + '"（合法：' + Object.keys(R.MODES).join(',') + '）'); process.exit(2); }
+}
 const pv = Float64Array.from(P.unpack(raw, true));
 const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
 if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
+const ONLY_SEG_RAW = String(arg('onlySeg', '') || '').trim();
+const ONLY_SEG = ONLY_SEG_RAW ? ONLY_SEG_RAW.split(',').map((s) => s.trim()).filter(Boolean) : [];
+let segMask = null;
+if (ONLY_SEG.length) {
+  const knownSegs = new Set(ly.L.seg.map((s) => s.name));
+  for (const name of ONLY_SEG) {
+    if (!knownSegs.has(name)) {
+      console.error('⛔ --onlySeg 含未知段 "' + name + '"（当前模型合法段：' + [...knownSegs].join(',') + '）');
+      process.exit(2);
+    }
+  }
+  segMask = new Uint8Array(pv.length);
+  for (const s of ly.L.seg) if (ONLY_SEG.indexOf(s.name) >= 0) for (let i = s.off; i < s.off + s.len; i++) segMask[i] = 1;
+}
 /* 11-15 深夜（ZCode · 用户令"多换训练环境防背诵"）：PG 的自对局桌也能换对手表/桌形——
  *   缺省逐字不变（stratified cap2/mix0.5 = 千问配对批口径）；--arenaPool=names:… 摆特化族对手
  *   （避开考卷名册脚本），--arenaShapes=3:multi,5:long 等轮换桌形。 */
@@ -326,6 +345,8 @@ console.log('# pg-train（B 臂） ‖ 起点 ' + UP.replace(/^.*[\\/]/, '') + '
   (LAM_EXP > 0 ? ' ‖ λexp ' + LAM_EXP : '') +
   (PEN_DEAD_ELEC > 0 ? ' ‖ 死电罚 ' + PEN_DEAD_ELEC : '') +
   (SHAPE_ITEMS.length ? ' ‖ shape ' + SHAPE_ITEMS.map((x) => x.key + ':' + x.w).join(',') : '') +
+  (SHAPE_MODES.size ? ' ‖ shapeModes ' + [...SHAPE_MODES].join(',') : '') +
+  (ONLY_SEG.length ? ' ‖ onlySeg ' + ONLY_SEG.join(',') : '') +
   ' ‖ 基线 ' + BASELINE + ' ‖ seed ' + SEED);
 console.log('  口径：arena2 mild(cap2/mix0.5) salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度');
 
@@ -360,14 +381,15 @@ while (games < GAMES) {
     if (evs.length !== ds.length) { ZIP.bad++; continue; }
     /* 塑形：逐决策对账事件结果（只认 ok），G_t = 终局 + 未折扣塑形回报（return-to-go） */
     const shape = new Float64Array(ds.length);
+    const allowPosShape = !SHAPE_MODES.size || SHAPE_MODES.has(slot.mode);
     for (let i = 0; i < ds.length; i++) {
       const d = ds[i], e = evs[i];
       if (!d.push && e.outcome === 'ok') {
-        if (d.key === R.SK.RAILGUN) { shape[i] += LAMF; stat.fire++; }
-        else if (d.key === R.SK.CHARGE && d.ep >= 3 && d.elec === 0 && (!PEN_DEAD_ELEC || (d.bead || 'elec') === 'elec')) { shape[i] += LAMC; stat.charge++; }
+        if (allowPosShape && d.key === R.SK.RAILGUN) { shape[i] += LAMF; stat.fire++; }
+        else if (allowPosShape && d.key === R.SK.CHARGE && d.ep >= 3 && d.elec === 0 && (!PEN_DEAD_ELEC || (d.bead || 'elec') === 'elec')) { shape[i] += LAMC; stat.charge++; }
         else if (PEN_DEAD_ELEC > 0 && d.key === R.SK.CHARGE && (d.bead || 'elec') === 'elec' && d.ep < 3) { shape[i] -= PEN_DEAD_ELEC; stat.deadElec++; }
         /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：支持单键或 key:w 多键列表 */
-        for (const it of SHAPE_ITEMS) if (d.key === it.key) { shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1; }
+        for (const it of SHAPE_ITEMS) if (d.key === it.key && (it.w < 0 || allowPosShape)) { shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1; }
       }
       if (!d.push) { stat.ent += d.H; stat.decs++; }
     }
@@ -452,13 +474,14 @@ while (games < GAMES) {
       klN++;
     }
   }
-  { let mx = 0; for (let q = 0; q < DIM; q++) { const a = Math.abs(grad[q]); if (a > mx) mx = a; }
+  { let mx = 0; for (let q = 0; q < DIM; q++) { if (segMask && !segMask[q]) continue; const a = Math.abs(grad[q]); if (a > mx) mx = a; }
     if (mx === 0) { zeroGrad++; if (zeroGrad >= 3) { console.error('⛔ 连续 ' + zeroGrad + ' 步 grad 全零 ⇒ 训练在空转，拒绝继续'); process.exit(9); } }
     else zeroGrad = 0; }
   adam.t++;
   const seSeg = SEAT_L2 > 0 ? ly.L.seg.find((s) => s.name === 'seatEnc') : null;
   const se0 = seSeg ? seSeg.off : -1, se1 = seSeg ? (seSeg.off + seSeg.len) : -1;
   for (let d = 0; d < DIM; d++) {
+    if (segMask && !segMask[d]) continue;
     const gg = grad[d] / Math.max(1, decsBatch.length);
     adam.m[d] = 0.9 * adam.m[d] + 0.1 * gg;
     adam.v[d] = 0.999 * adam.v[d] + 0.001 * gg * gg;
@@ -519,7 +542,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, shapeModes: SHAPE_MODES_RAW || null, onlySeg: ONLY_SEG_RAW || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),

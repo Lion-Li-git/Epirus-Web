@@ -10,7 +10,7 @@
  * 注：本脚本不跑测量；读数/display 由 ruler-measure / 门禁产出后喂进来。
  */
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { resolve, join, basename, dirname } from 'node:path';
+import { resolve, join, basename, dirname, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
@@ -81,18 +81,57 @@ function findAncestorOnMap(startWid, dirs, wid2id, dispIds) {
 const packText = readFileSync(PACK, 'utf8');
 const now = new Date().toISOString();
 const meta = parseMeta(packText) || {};
+/* 11-16：自动进图必须认架构，不许把 obs6.5/modeBias 包默认塞进 fam23（v7 蒸馏）。
+ *   modeBias 包的容器 dims.modeBias=1；族标签是稳定键，按标签找已存在的族号，找不到才开新号。 */
+function packDims(txt) {
+  const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(txt);
+  if (!m) return null;
+  try { const o = JSON.parse(m[1]); return o && o.dims ? o.dims : null; } catch { return null; }
+}
+const PACK_DIMS = packDims(packText) || {};
+const AUTO_FAM_LABEL = PACK_DIMS.modeBias === 1 ? '2.0 obs6.5 统一单包（11-16）' : '';
+function famRows() {
+  const out = [];
+  for (const t of [linMain, linG3]) {
+    const fi = t.ix.fam, li = t.ix.famLabel, ii = t.ix.id;
+    if (fi === undefined || li === undefined) continue;
+    for (const r of t.rows) if (r[fi] && r[li]) out.push({ fam: String(r[fi]), label: String(r[li]), id: String(r[ii]) });
+  }
+  return out;
+}
+function findFamByLabel(label) { return famRows().find((x) => x.label === label) || null; }
+function findFamByNum(fam) { return famRows().find((x) => x.fam === String(fam)) || null; }
 const linMain = readTable(join(DATA, 'page/lineage.tsv'));
 const linG3 = readTable(join(DATA, 'page/lineage-g3.tsv'));
 const wid2id = new Map();
 for (const t of [linMain, linG3]) { const iw = t.ix.wid, ii = t.ix.id; if (iw === undefined) continue;
   for (const r of t.rows) { if (r[iw] && r[ii]) wid2id.set(r[iw], r[ii]); } }
-if (!FAM) { let mx = 0; for (const t of [linMain, linG3]) for (const r of t.rows) { const n = Number(r[t.ix.fam]); if (Number.isFinite(n) && n > mx) mx = n; }
-  FAM = String(mx + 1); FAMLAB = FAMLAB || (LINEAGE !== 'new' ? LINEAGE : '自动新点 ' + now.slice(0, 10)); }
-else if (!FAMLAB) {
-  for (const t of [linMain, linG3]) {
-    const r = t.rows.find((x) => String(x[t.ix.fam]) === FAM && x[t.ix.famLabel]);
-    if (r) { FAMLAB = r[t.ix.famLabel]; break; }
+let FAM_MAX = 0;
+for (const t of [linMain, linG3]) for (const r of t.rows) { const n = Number(r[t.ix.fam]); if (Number.isFinite(n) && n > FAM_MAX) FAM_MAX = n; }
+if (!FAM) {
+  if (AUTO_FAM_LABEL) {
+    const hit = findFamByLabel(AUTO_FAM_LABEL);
+    if (hit) { FAM = hit.fam; FAMLAB = AUTO_FAM_LABEL; }
+    else { FAM = String(FAM_MAX + 1); FAMLAB = AUTO_FAM_LABEL; }
+    console.log('自动家族：modeBias=1 ⇒ ' + FAM + ' / ' + FAMLAB);
+  } else {
+    FAM = String(FAM_MAX + 1); FAMLAB = FAMLAB || (LINEAGE !== 'new' ? LINEAGE : '自动新点 ' + now.slice(0, 10));
   }
+} else {
+  if (AUTO_FAM_LABEL) {
+    const ex = findFamByNum(FAM);
+    if (ex && ex.label !== AUTO_FAM_LABEL) {
+      console.error('⛔ 架构=FAM' + FAM + '（' + ex.label + '）与 modeBias=1 期望族「' + AUTO_FAM_LABEL + '」不符；不许把 obs6.5 混进旧族'); process.exit(2);
+    }
+    if (!ex && FAMLAB && FAMLAB !== AUTO_FAM_LABEL) {
+      console.error('⛔ --fam=' + FAM + ' --fam-label=' + FAMLAB + ' 与 modeBias=1 期望族「' + AUTO_FAM_LABEL + '」不符'); process.exit(2);
+    }
+    FAMLAB = FAMLAB || AUTO_FAM_LABEL;
+  } else if (!FAMLAB) {
+    const ex = findFamByNum(FAM);
+    if (ex) FAMLAB = ex.label;
+  }
+  if (!FAMLAB) { console.error('⛔ --fam=' + FAM + ' 在册但找不到 famLabel；拒绝静默新建'); process.exit(2); }
 }
 /* 11-15 深夜（ZCode）：lineage 列**不再收族名**——11-07 裁定"血统列不再兼记产物来源"，但这里的缺省把
  *   FAMLAB 写进 lineage ⇒ 11-12/11-14 的进图全部带族名入列，页面 keep 式 `!!d.lin` 钉住把 19 枚 2.0 新点
@@ -133,6 +172,39 @@ for (const r of RT.rows) {
   if (rulerById.get(rid)[rulers.ix.status] === 'frozen') { console.error('⛔ frozen 尺不许写：' + rid); process.exit(2); }
   newReadings.push([ID, rid, cell, hor, String(v), String(r[RT.ix.n] || ''), BATCH || ('add-' + ID + '-' + new Date().toISOString().slice(0, 10).replace(/-/g, '')), '']);
 }
+/* C 列不是独立测量：C<n>R=(P<n>+P<n>R)/2，C<n>RL=(P<n>L+P<n>RL)/2。
+ *   C 轴就是 A/B 平均 ⇒ 自动进图时**直接合成**这 8 列（不是静默 fallback）：
+ *   - 两侧齐：缺则写平均值，已写则逐位校验（不一致报错，绝不覆盖已有错值）；
+ *   - 单侧缺：C 留空 = 未测（不许单侧冒充综合；若已有 C 则报错）；
+ *   - C 列本身不在 display 表头：报错，不许悄悄跳过。 */
+function fillDisplayC(row, id) {
+  const val = (c) => row[display.ix[c]];
+  const has = (c) => display.ix[c] !== undefined && val(c) !== undefined && val(c) !== '';
+  const filled = [], oneSided = [];
+  for (const n of [2, 3, 5, 8]) {
+    const pairs = [
+      ['P' + n, 'P' + n + 'R', 'C' + n + 'R', 'short'],
+      ['P' + n + 'L', 'P' + n + 'RL', 'C' + n + 'RL', 'long'],
+    ];
+    for (const [a, b, c, hz] of pairs) {
+      if (display.ix[c] === undefined) { console.error('⛔ display 表头缺 C 列 ' + c + '（自动进图不能跳过 C 合成）'); process.exit(2); }
+      const aok = has(a), bok = has(b), cok = has(c);
+      if (aok && bok) {
+        const want = String((+val(a) + +val(b)) / 2);
+        if (!cok) { row[display.ix[c]] = want; filled.push(c); }
+        else if (Math.abs(+want - +val(c)) > 1e-9) {
+          console.error('⛔ ' + id + ' ' + c + '=' + val(c) + ' ≠ (' + a + '+' + b + ')/2=' + want + '（' + hz + '）；拒绝覆盖已有 C'); process.exit(2);
+        }
+      } else if (cok) {
+        console.error('⛔ ' + id + ' 有 ' + c + ' 但 ' + a + '/' + b + ' 单侧缺（单侧不许冒充综合）'); process.exit(2);
+      } else if (aok !== bok) {
+        oneSided.push(c);
+      }
+    }
+  }
+  if (filled.length) console.log('  C 自动合成（' + id + '）：' + filled.join(',') + ' = (P + P·R)/2');
+  if (oneSided.length) console.log('  C 未合成（' + id + '）：单侧缺，留空=未测：' + oneSided.join(','));
+}
 let dispRow = null;
 if (DISP) {
   const D = readTable(DISP);
@@ -140,11 +212,13 @@ if (DISP) {
   if (D.rows.length !== 1) { console.error('⛔ display 必须恰好 1 行'); process.exit(2); }
   if (D.rows[0][D.ix.id] !== ID) { console.error('⛔ display.id=' + D.rows[0][D.ix.id] + ' ≠ --id=' + ID); process.exit(2); }
   dispRow = D.rows[0].slice();
+  fillDisplayC(dispRow, ID);
   /* 新点不继承旧 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账，页面按 C·R 重算。 */
   for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5', 'F', 'rank']) if (display.ix[c] !== undefined) dispRow[display.ix[c]] = '';
 }
 const sha = createHash('sha256').update(readFileSync(PACK)).digest('hex');
-const newReg = [ID, PACK, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'];
+const relPack = relative(resolve(DATA, '../..'), PACK).replace(/\\/g, '/');
+const newReg = [ID, relPack, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'];
 const bid = BATCH || ('add-' + ID + '-' + now.slice(0, 10).replace(/-/g, ''));
 const newBatch = [bid, rd.rows.length ? rd.rows[0][rd.ix.ruler_id] : 'a-v2-page-1109', 'A', FIXTURE, '-', bid, basename(RD), String(RT.rows.length), now, 'add-point'];
 console.log('add-point: ' + ID + ' ‖ pack ' + basename(PACK) + ' ‖ readings ' + newReadings.length + ' ‖ display ' + (dispRow ? '有' : '无') + ' ‖ batch ' + bid);

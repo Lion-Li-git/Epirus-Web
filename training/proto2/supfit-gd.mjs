@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
@@ -680,33 +680,35 @@ if (_SELF_PACK) {
   };
 }
 const teacherPick = (state, pid, cs, legal) => {
-  let raw = _pickRaw;
+  let raw = _activeShapeSlot ? _activeShapeSlot.pick : _pickRaw;
   /* N 教师键道派发（夜6班）：优先级 t4 > t3 > t2（份额小时同时越界者让位；组级归属在 collectInto 里定），
    *   各教师只在自己的键道内出标签，越道回落主教师（道必设——teacher3/4 的响亮闸）。 */
-  if (_useT4 && _pickRaw4) {
-    if (!shapeGateHit(T4SHAPES, state)) { LABEL.t4ShapeSkip = (LABEL.t4ShapeSkip || 0) + 1; }
-    else {
-      const t = _pickRaw4(state, pid, cs, legal);
-      if (t && (T4KEYS.size === 0 || T4KEYS.has(t.key))) { LABEL.t4Hits = (LABEL.t4Hits || 0) + 1; raw = () => t; }
-      else { LABEL.t4Fallback = (LABEL.t4Fallback || 0) + 1; if (_gameDriver === 4) return null; }
-    }
-  } else if (_useT3 && _pickRaw3) {
-    if (!shapeGateHit(T3SHAPES, state)) { LABEL.t3ShapeSkip = (LABEL.t3ShapeSkip || 0) + 1; }
-    else {
-      const t = _pickRaw3(state, pid, cs, legal);
-      if (t && (T3KEYS.size === 0 || T3KEYS.has(t.key))) { LABEL.t3Hits = (LABEL.t3Hits || 0) + 1; raw = () => t; }
-      else { LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1; if (_gameDriver === 3) return null; }
-    }
-  } else if (_useT2 && _pickRaw2) {
-    /* 形门（11-15）：teacher2 只在指定人数的桌形出标签；不在名单 ⇒ 本手回落主教师（不记 fallback、
-     *   也不在 game 模式返回 null —— 那会把非目标桌形的整局丢掉）。缺省空集 = 形门关闭，逐字不变。 */
-    if (!shapeGateHit(T2SHAPES, state)) {
-      LABEL.t2ShapeSkip = (LABEL.t2ShapeSkip || 0) + 1;
-    } else {
-      const t2 = _pickRaw2(state, pid, cs, legal);
-      /* 键级不相交：teacher2 只在 T2KEYS 道内出标签；step 模式越道回落主教师，game 模式越道跳过以免污染前置轨 */
-      if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
-      else { LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1; if (_gameDriver === 2) return null; }
+  if (!_activeShapeSlot) {
+    if (_useT4 && _pickRaw4) {
+      if (!shapeGateHit(T4SHAPES, state)) { LABEL.t4ShapeSkip = (LABEL.t4ShapeSkip || 0) + 1; }
+      else {
+        const t = _pickRaw4(state, pid, cs, legal);
+        if (t && (T4KEYS.size === 0 || T4KEYS.has(t.key))) { LABEL.t4Hits = (LABEL.t4Hits || 0) + 1; raw = () => t; }
+        else { LABEL.t4Fallback = (LABEL.t4Fallback || 0) + 1; if (_gameDriver === 4) return null; }
+      }
+    } else if (_useT3 && _pickRaw3) {
+      if (!shapeGateHit(T3SHAPES, state)) { LABEL.t3ShapeSkip = (LABEL.t3ShapeSkip || 0) + 1; }
+      else {
+        const t = _pickRaw3(state, pid, cs, legal);
+        if (t && (T3KEYS.size === 0 || T3KEYS.has(t.key))) { LABEL.t3Hits = (LABEL.t3Hits || 0) + 1; raw = () => t; }
+        else { LABEL.t3Fallback = (LABEL.t3Fallback || 0) + 1; if (_gameDriver === 3) return null; }
+      }
+    } else if (_useT2 && _pickRaw2) {
+      /* 形门（11-15）：teacher2 只在指定人数的桌形出标签；不在名单 ⇒ 本手回落主教师（不记 fallback、
+       *   也不在 game 模式返回 null —— 那会把非目标桌形的整局丢掉）。缺省空集 = 形门关闭，逐字不变。 */
+      if (!shapeGateHit(T2SHAPES, state)) {
+        LABEL.t2ShapeSkip = (LABEL.t2ShapeSkip || 0) + 1;
+      } else {
+        const t2 = _pickRaw2(state, pid, cs, legal);
+        /* 键级不相交：teacher2 只在 T2KEYS 道内出标签；step 模式越道回落主教师，game 模式越道跳过以免污染前置轨 */
+        if (t2 && (T2KEYS.size === 0 || T2KEYS.has(t2.key))) { LABEL.t2Hits = (LABEL.t2Hits || 0) + 1; raw = () => t2; }
+        else { LABEL.t2Fallback = (LABEL.t2Fallback || 0) + 1; if (_gameDriver === 2) return null; }
+      }
     }
   }
   const a = (_selfPick ? (_selfPick(state, pid, cs) || raw(state, pid, cs, legal)) : raw(state, pid, cs, legal));
@@ -805,8 +807,78 @@ if (TEACHER4) {
 const _pickRaw2 = TEACHER2 ? buildTeacherPick(TEACHER2) : null;
 const _pickRaw3 = TEACHER3 ? buildTeacherPick(TEACHER3) : null;
 const _pickRaw4 = TEACHER4 ? buildTeacherPick(TEACHER4) : null;
+/* `--shapeTeachers=2:standard=pack:A@0.75+pack:B@0.25;5:long=...`（11-16：按 (n,mode) 直派专科教师名单，
+ *   支持每位教师 @权重、game/step 双游标、未列入桌形平滑回落全局 --teacher）。 */
+const _teacherCache = new Map([[TEACHER, _pickRaw]]);
+if (TEACHER2 && _pickRaw2) _teacherCache.set(TEACHER2, _pickRaw2);
+if (TEACHER3 && _pickRaw3) _teacherCache.set(TEACHER3, _pickRaw3);
+if (TEACHER4 && _pickRaw4) _teacherCache.set(TEACHER4, _pickRaw4);
+const cachedTeacherPick = (name) => {
+  if (!_teacherCache.has(name)) _teacherCache.set(name, buildTeacherPick(name));
+  return _teacherCache.get(name);
+};
+const SHAPE_TEACHERS_RAW = String(arg('shapeTeachers', '')).trim();
+const SHAPE_TEACHERS = new Map();
+if (SHAPE_TEACHERS_RAW) {
+  const entries = SHAPE_TEACHERS_RAW.split(/[;|]|,(?=\s*\d+(?::[a-z0-9]+)?=)/i).map((s) => s.trim()).filter(Boolean);
+  for (const ent of entries) {
+    const eq = ent.indexOf('=');
+    if (eq <= 0) { console.error('⛔ --shapeTeachers 格式错（需 <shape>=<teacher>[@w][+...]）：' + ent); process.exit(2); }
+    const sk = ent.slice(0, eq).trim();
+    const m = /^(\d+)(?::([a-z0-9]+))?$/i.exec(sk);
+    if (!m) { console.error('⛔ --shapeTeachers 桌形键只认 n 或 n:mode（收到 "' + sk + '"）'); process.exit(2); }
+    const n = Number(m[1]);
+    if (n < 2 || n > 10) { console.error('⛔ --shapeTeachers 人数只认 2..10（收到 ' + n + '）'); process.exit(2); }
+    if (m[2] && !R.MODES[m[2]]) { console.error('⛔ --shapeTeachers 的 mode 不在 R.MODES：' + m[2]); process.exit(2); }
+    const rhs = ent.slice(eq + 1).trim();
+    const specs = rhs.split('+').map((s) => s.trim()).filter(Boolean);
+    if (!specs.length) { console.error('⛔ --shapeTeachers 桌形 "' + sk + '" 教师列表为空'); process.exit(2); }
+    const slots = [];
+    let wSum = 0;
+    for (const sp of specs) {
+      const at = sp.lastIndexOf('@');
+      const tName = (at > 0 ? sp.slice(0, at) : sp).trim();
+      const w = at > 0 ? Number(sp.slice(at + 1)) : 1;
+      if (TEACHER_KNOWN.indexOf(tName) < 0 && tName.indexOf('pack:') !== 0) {
+        console.error('⛔ --shapeTeachers[' + sk + '] 含未知教师 "' + tName + '"'); process.exit(2);
+      }
+      if (!Number.isFinite(w) || w <= 0) {
+        console.error('⛔ --shapeTeachers[' + sk + '] 权重需 > 0（收到 "' + sp + '"）'); process.exit(2);
+      }
+      slots.push({ name: tName, w, pick: cachedTeacherPick(tName) });
+      wSum += w;
+    }
+    for (const sl of slots) sl.w /= wSum;
+    SHAPE_TEACHERS.set(sk, {
+      key: sk,
+      slots,
+      gameSched: { counts: new Int32Array(slots.length), total: 0 },
+      stepSched: { counts: new Int32Array(slots.length), total: 0 },
+    });
+  }
+}
+const getShapeTeacherEntry = (stOrSh) => {
+  if (!SHAPE_TEACHERS.size || !stOrSh) return null;
+  const n = stOrSh.p ? stOrSh.p.length : stOrSh.n;
+  const mode = stOrSh.modeKey || stOrSh.mode;
+  return SHAPE_TEACHERS.get(n + ':' + mode) || SHAPE_TEACHERS.get(String(n)) || null;
+};
+const nextShapeSlot = (entry, mode) => {
+  if (!entry) return null;
+  const sched = mode === 'game' ? entry.gameSched : entry.stepSched;
+  let best = 0, bestDef = -Infinity;
+  for (let i = 0; i < entry.slots.length; i++) {
+    const def = entry.slots[i].w * (sched.total + 1) - sched.counts[i];
+    if (def > bestDef) { bestDef = def; best = i; }
+  }
+  sched.counts[best]++;
+  sched.total++;
+  const sl = entry.slots[best];
+  return { shpKey: entry.key, name: sl.name, pick: sl.pick };
+};
 let _useT2 = false, _useT3 = false, _useT4 = false;
 let _gameDriver = 0;   /* rolloutMode=game 时每局锁定 1|2|3|4，0=未锁(step 模式逐手切) */
+let _activeShapeSlot = null;   /* --shapeTeachers 当前活跃槽 { shpKey, name, pick } */
 const pickBresenham = (idx, sh) => {
   const prev2 = Math.floor(idx * TEACHER2_FRAC), cur2 = Math.floor((idx + 1) * TEACHER2_FRAC);
   const prev3 = Math.floor(idx * TEACHER3_FRAC), cur3 = Math.floor((idx + 1) * TEACHER3_FRAC);
@@ -835,12 +907,13 @@ const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
 function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
-  let shapeStart = 0, shapeQuota = NGRP;   /* 按桌形摊配额：--shapeBal=1 时逐形按配额切 rareOnly，不让末形独吞稀有期 */
+  let shapeStart = 0, shapeQuota = NGRP, forceNormalForShape = false;   /* 按桌形摊配额 + rareOnly 缺货兜底 */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
   let gN = 0;   /* 组级计数：N 教师轮替的 Bresnham 游标 */
   let gameN = 0;   /* 局级游标（--rolloutMode=game 时每局锁定同一位驾驶教师） */
   const setTeacherMask = (d) => {
     _useT4 = d === 4; _useT3 = d === 3; _useT2 = d === 2;
+    if (_activeShapeSlot) return;
     if (_pickRaw4 && _useT4) LABEL.t4Groups = (LABEL.t4Groups || 0) + 1;
     if (_pickRaw3 && _useT3) LABEL.t3Groups = (LABEL.t3Groups || 0) + 1;
     if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (d === 1) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
@@ -848,7 +921,8 @@ function collectInto(dst, srcParams, idBase) {
   const record = (state, pid, legal) => {
     lastG = null;
     /* N 教师轮替：step 模式按决策步轮替（缺省）；game 模式按局锁定驾驶教师 */
-    setTeacherMask(_gameDriver > 0 ? _gameDriver : pickBresenham(gN++));
+    if (!_activeShapeSlot) setTeacherMask(_gameDriver > 0 ? _gameDriver : pickBresenham(gN++));
+    else setTeacherMask(0);
     if (!(legal && legal.length >= 2)) return;
     const cs = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
     if (cs.length < 2) return;
@@ -869,9 +943,9 @@ function collectInto(dst, srcParams, idBase) {
     /* 稀有期：只收教师选中稀有键的决策点。⚑ 11-01 千问：**学生自访轮也要过同一道筛**
      *   （原先带 `srcParams == null` 条件 ⇒ DAgger 轮不受筛，稀有类被自访态淹掉——昨夜 mt-dag 的
      *    "DAgger 稀释稀有类"就是这个条件造成的，不是 DAgger 本身的错）。
-     *   11-16：--shapeBal=1 时按单形配额切稀有期，避免全部落进末尾桌形把其余桌形的稀有教师架空。 */
+     *   11-16：--shapeBal=1 时按单形配额切稀有期，且若该桌形稀有键绝迹/极稀则平滑退回正常采集。 */
     const inRare = SHAPEBAL
-      ? ((dst.length - shapeStart) >= Math.floor(shapeQuota * (1 - RARE_FRAC)))
+      ? (!forceNormalForShape && (dst.length - shapeStart) >= Math.floor(shapeQuota * (1 - RARE_FRAC)))
       : (dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)));
     if (RARE.length && inRare && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
@@ -879,6 +953,11 @@ function collectInto(dst, srcParams, idBase) {
     lastG = dst[dst.length - 1];
     LABEL.keys++;
     LABEL.byKey[again.key] = (LABEL.byKey[again.key] || 0) + 1;
+    if (_activeShapeSlot) {
+      LABEL.shapeTeacherHits = LABEL.shapeTeacherHits || {};
+      const mp = LABEL.shapeTeacherHits[_activeShapeSlot.shpKey] || (LABEL.shapeTeacherHits[_activeShapeSlot.shpKey] = {});
+      mp[_activeShapeSlot.name] = (mp[_activeShapeSlot.name] || 0) + 1;
+    }
     if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
   };
   /* oracleDef：选完/结算前看别人这一手打谁，回头把**上一组**的标签改成对应的防御（用户口径）。 */
@@ -900,19 +979,28 @@ function collectInto(dst, srcParams, idBase) {
     g.wantKey = rep; g.wantIdx = idx; g.wantBead = null;
     return null;
   } : undefined;
+  const wrapPlay = (fn) => (state, pid, legal) => {
+    if (ROLLOUT_MODE === 'step' && SHAPE_TEACHERS.size) {
+      const prev = _activeShapeSlot;
+      _activeShapeSlot = nextShapeSlot(getShapeTeacherEntry(state), 'step');
+      try { return fn(state, pid, legal); } finally { _activeShapeSlot = prev; }
+    }
+    return fn(state, pid, legal);
+  };
   let play;
   if (srcParams == null) {
-    play = (state, pid, legal) => {
+    play = wrapPlay((state, pid, legal) => {
       if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
       const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
       /* game 模式下驾驶教师走全轨（不过滤 TkKEYS），否则前置攒气手被主教师截断⇒永远到不了高 ep 态 */
-      const drvPick = _gameDriver === 4 ? _pickRaw4 : _gameDriver === 3 ? _pickRaw3 : _gameDriver === 2 ? _pickRaw2 : (_gameDriver === 1 ? _pickRaw : null);
+      const drvPick = _activeShapeSlot ? _activeShapeSlot.pick
+        : (_gameDriver === 4 ? _pickRaw4 : _gameDriver === 3 ? _pickRaw3 : _gameDriver === 2 ? _pickRaw2 : (_gameDriver === 1 ? _pickRaw : null));
       const a = drvPick ? drvPick(state, pid, cs3, legal) : teacherPick(state, pid, cs3, legal);
       return a ? { key: a.key, target: a.target == null ? null : a.target, target2: a.target2 == null ? null : a.target2, bead: a.bead || null } : { key: R.SK.JI };
-    };
+    });
   } else {
     const ch = A2.chooserOf(srcParams, DAG_TEMP);
-    play = (state, pid, legal) => {
+    play = wrapPlay((state, pid, legal) => {
       if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
       const act = ch(state, pid, legal);
       /* ⚑ Played-action 一致率（10-31 夜里加，因为"自访留出 100%"与考场读数打脸才补的这条）：
@@ -934,14 +1022,16 @@ function collectInto(dst, srcParams, idBase) {
         }
       }
       return act;
-    };
+    });
   }
   /* 稀有期的每形局数上限放宽（60 ⇒ 2500）；game 模式下略放宽到 240 以补齐跳过非键道手的配额 */
-  const GCAP = RARE.length ? 2500 : (ROLLOUT_MODE === 'game' && (TEACHER2 || TEACHER3 || TEACHER4) ? 240 : 60);
+  const GCAP = RARE.length ? 2500 : ((ROLLOUT_MODE === 'game' && (TEACHER2 || TEACHER3 || TEACHER4)) || SHAPE_TEACHERS.size > 0 ? 240 : 60);
   const runOneGame = (s, g) => {
-    _gameDriver = ROLLOUT_MODE === 'game' ? pickBresenham(gameN++, A2.shapes[s]) : 0;
+    const shpEnt = ROLLOUT_MODE === 'game' ? getShapeTeacherEntry(A2.shapes[s]) : null;
+    _activeShapeSlot = shpEnt ? nextShapeSlot(shpEnt, 'game') : null;
+    _gameDriver = (!_activeShapeSlot && ROLLOUT_MODE === 'game') ? pickBresenham(gameN++, A2.shapes[s]) : 0;
     try { A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
-    finally { _gameDriver = 0; }
+    finally { _gameDriver = 0; _activeShapeSlot = null; }
   };
   if (SHAPEBAL) {
     /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
@@ -950,7 +1040,25 @@ function collectInto(dst, srcParams, idBase) {
       curShp = s;
       shapeStart = dst.length;
       shapeQuota = q;
-      for (let g = 0; g < GCAP && dst.length - shapeStart < q; g++) { if (dst.length >= NGRP) break; runOneGame(s, g); }
+      forceNormalForShape = !!(RARE.length && A2.shapes[s].mode === 'standard');
+      let rareStall = 0;
+      for (let g = 0; g < GCAP && dst.length - shapeStart < q; g++) {
+        if (dst.length >= NGRP) break;
+        const nBefore = dst.length;
+        runOneGame(s, g);
+        if (RARE.length && !forceNormalForShape && (dst.length - shapeStart) >= Math.floor(q * (1 - RARE_FRAC))) {
+          if (dst.length === nBefore) {
+            if (++rareStall >= 40) {
+              forceNormalForShape = true;
+              LABEL.rareFallbackShapes = LABEL.rareFallbackShapes || {};
+              const sk = A2.shapes[s].n + ':' + A2.shapes[s].mode;
+              LABEL.rareFallbackShapes[sk] = (LABEL.rareFallbackShapes[sk] || 0) + (dst.length - shapeStart);
+            }
+          } else {
+            rareStall = 0;
+          }
+        }
+      }
     }
   } else {
     for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
@@ -1127,6 +1235,7 @@ function writeSnap(r, pvSnap) {
     teacher3shapes: T3SHAPES.size ? [...T3SHAPES].join(',') : null,
     teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
     teacher4shapes: T4SHAPES.size ? [...T4SHAPES].join(',') : null,
+    shapeTeachers: SHAPE_TEACHERS_RAW || null,
     objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
   }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(P.pack(pvSnap)) + ';\n', 'utf8');
   console.log('  ⚑ 轮 ' + r + ' 快照 → ' + sp);
@@ -1213,6 +1322,11 @@ const FIRE_KEYS = [R.SK.RAILGUN, R.SK.BIG_T, R.SK.LASER_EYE];
     (T2KEYS.size ? ' ‖ t2 键道 = ' + [...T2KEYS].join('/') : '') + (T2SHAPES.size ? ' ‖ t2 形门 = ' + [...T2SHAPES].join('/') : '') + '）');
 if (TEACHER3) console.log('  ⚑ teacher3 = ' + TEACHER3 + '，frac ' + TEACHER3_FRAC + (T3SHAPES.size ? '，形门 = ' + [...T3SHAPES].join('/') : '') + (T3KEYS.size ? '，键道 = ' + [...T3KEYS].join('/') : ''));
 if (TEACHER4) console.log('  ⚑ teacher4 = ' + TEACHER4 + '，frac ' + TEACHER4_FRAC + (T4SHAPES.size ? '，形门 = ' + [...T4SHAPES].join('/') : '') + (T4KEYS.size ? '，键道 = ' + [...T4KEYS].join('/') : ''));
+  if (LABEL.shapeTeacherHits) {
+    console.log('  ⚑ 分形专科教师采样：' + Object.entries(LABEL.shapeTeacherHits).map(([sk, mp]) =>
+      sk + '=[' + Object.entries(mp).map(([tn, c]) => tn.replace(/^.*[\\/]/, '') + ':' + c).join('+') + ']').join(' ‖ '));
+  }
+  if (LABEL.rareFallbackShapes) console.log('  ⚑ rareOnly 缺货平滑回退正常：' + JSON.stringify(LABEL.rareFallbackShapes));
   console.log('  ⚑ 教师标签的种类：共 ' + ks.length + ' 键（非ジ ' + nonJi.length + ' 类）‖ ' + hist);
   const rare = nonJi.length ? nonJi.reduce((a, k) => (LABEL.byKey[k] < LABEL.byKey[a] ? k : a), nonJi[0]) : null;
   console.log('  ⚑ 最稀有的非ジ标签 = ' + (rare ? (R.byKey[rare] && R.byKey[rare].name || rare) + ' ' + LABEL.byKey[rare] + '/' + LABEL.keys +
@@ -1301,6 +1415,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
       teacher3shapes: T3SHAPES.size ? [...T3SHAPES].join(',') : null,
   teacher4: TEACHER4 || null, teacher4frac: TEACHER4 ? TEACHER4_FRAC : null, teacher4keys: T4KEYS.size ? [...T4KEYS].join(',') : null,
       teacher4shapes: T4SHAPES.size ? [...T4SHAPES].join(',') : null,
+  shapeTeachers: SHAPE_TEACHERS_RAW || null,
   playedAgree: { n: PLAY.n, hit: PLAY.hit, stuckCharge: PLAY.stuckCharge, missCharge: PLAY.missCharge, missFire: PLAY.missFire },
   label: LABEL, supfitGd: { objective: OBJ, dagger: DAG, rounds: ROUNDS, roundsMoved: ROUNDS_MOVED, startAgree: base.agree, startLl: base.ll, agree: fin.agree, ll: fin.ll, wAgree: fin.wAgree, nTest: fin.n, nTrain: finTrain.n, testClassNotInTrain: fin.noW || 0, startClassNotInTrain: base.noW || 0,
     studentAgree: finStudent ? finStudent.agree : null, studentN: finStudent ? finStudent.n : 0,
