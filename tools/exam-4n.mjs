@@ -128,9 +128,21 @@ if (!params) { console.error('冠军包不兼容: ' + JSON.stringify(P.checkPack
 /* ===== exam-v2：冠军席（冻结夹具 · 用户 11-09 裁 A）=====
  * 每局把**第一个对手席**换成 champion（自适应），其余仍是脚本 ⇒ 反射墙再也不能靠「脚本互相消耗」farm。
  * N=2 时隔局换（否则 N=2 变成纯 1v1）；缺省 --champ 空 ⇒ 与 v1 逐位相同。 */
+/* 11-17：champ 席解析加 **registry 兜底**——id 不在 CHAMP_PATHS 时查 registry.tsv 的在册路径
+ *   （池分带要按"整桌从带里抽"量桌强度，带员大多是注册包而非历史夹具；未注册 id 照旧拒绝）。 */
+const REG_PATHS = (() => {
+  try {
+    const L = readFileSync('champion-map/data/registry.tsv', 'utf8').replace(/\r\n/g, '\n').split('\n');
+    const ix = Object.fromEntries(L[0].split('\t').map((c, i) => [c, i]));
+    const m = {};
+    for (const l of L.slice(1)) { const c = l.split('\t'); if (c[ix.pack_id] && c[ix.path] && c[ix.status] !== 'archived') m[c[ix.pack_id]] = c[ix.path]; }
+    return m;
+  } catch (e) { return {}; }
+})();
 const CHAMP_CHOOSERS = CHAMP_IDS.map(function (id) {
-  const p2 = CHAMP_PATHS[id];
-  if (!p2) { console.error('⛔ --champ 里有不认识的 id：' + id + '（在册：' + Object.keys(CHAMP_PATHS).join(',') + '）'); process.exit(2); }
+  let p2 = CHAMP_PATHS[id];
+  if (!p2 && REG_PATHS[id]) { p2 = REG_PATHS[id]; console.error('[exam-v2] champ 席 ' + id + ' 从 registry 解析：' + p2); }
+  if (!p2) { console.error('⛔ --champ 里有不认识的 id：' + id + '（在册：' + Object.keys(CHAMP_PATHS).join(',') + ' + registry）'); process.exit(2); }
   const s2 = readFileSync(p2, 'utf8');
   const m2 = s2.match(/window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\})\s*;/);
   if (!m2) { console.error('⛔ 冠军席包读不出 EPIRUS_CHAMPION_3P：' + p2); process.exit(2); }
