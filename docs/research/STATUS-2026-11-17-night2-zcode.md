@@ -188,6 +188,12 @@
 - **exam-4n champ 解析加 registry 兜底**：在册 id 即可当冠军席（池分带桌量测的前提），未注册照拒。
 - pool audit 全绿：29 枚 **hard 14 / soft 15**。
 
+## 十五、gen9 + 新版当选键上图（05:0x）
+
+- **gen9 三臂**：①**MX7-T2-R 全门+transfer 活**（T2 强度回收成功：基座 0.111→C̄ 0.169）——已注册入图入池（soft 载体），MX4-GD-T2 十表退役换代；②MX7-GD-R6B（ration6b taunt/armor 归零）：block×2 但 **mine/rod/cannon 全首打**（mine 0→1）+ C 0.221/0.249 skE 16/16——**G5[long] 喂养源不在 taunt/armor，减剂量路线排除**；③MX7-T4-R block×1 但 firestorm/curse 活且 C长 0.227。
+- **新版当选键上图**（用户令）：当选键 UI 档整体切读 **mxsc=(MxC+MxCL)/2**（mixed 夹具复合 C̄ = 池分带那把"当选"尺，973 枚全库有读数 vs 旧版 Sc 仅 41 枚）；旧版 Sc 四列留表当账；色域=窗口内实测 p02..p98；剖面卡/明细卡/图例/计数器同步切新。
+- **audit 爬链同粒判定**：dupWid 对（MX1-E9-GD ≡ GD6ATEACH 同权重两名）按粒（wid 前缀）判同——MX7-T2-R 父边误报修复（§E378 悬垂边由 rebuild 牙先抓到：父 MX4-GD-T2 退役 → 重指向最近图上祖先 GD6ATEACH）。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
