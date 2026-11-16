@@ -177,3 +177,8 @@ OBS6E5c	block	behavior-gate
 OBS6E4c	pass	—			
 OBS6-LH6	block	field-a,breadth-multi,behavior-gate			
 OBS6-LH6P	block	reflect-wall,field-a,behavior-gate			
+EQ-E9-A1	pass	—			
+EQ-S4-E9	pass	—			
+EQ-SPL-75_S6m1	pass	—			
+EQ-G-75S6	pass	—			
+EQ-S5-P9	block	behavior-gate			
