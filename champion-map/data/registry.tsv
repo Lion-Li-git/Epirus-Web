@@ -964,3 +964,9 @@ OBS6-UNIFIED-U4S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.snap0.bak	2.0	25
 OBS6-UNIFIED-U4	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:32.994Z	d1cb54c39e5bace88c10c33be775c7f679a4c93370215b5b90d742bedeb7f4a9	active
 OBS6-UNIFIED-US1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US1.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:48.707Z	8fc881b1e25dafd048754426dba71aae5d8d53bd2b3a7a2488b21bbf8a406c42	active
 OBS6-UNIFIED-US5	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US5.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:28:04.389Z	f5abc3b932aee4f6fcf3ddecb6505e2786ecdc69336d9a1407de4e2a53694050	active
+EQ-E9-A1	docs/artifacts/obs6-coldstart/EQ-E9-A1.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:27:04.766Z	9bbe83337cd7884759d2798b011d129fb14fbbae477a31dc5a063cc189d743a5	active
+EQ-S4-E9	docs/artifacts/obs6-coldstart/EQ-S4-E9.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:30:52.237Z	983deeecb6ac5dbd12f790f84117504d931bfd89869a4c31e99892887078c036	active
+EQ-SPL-75_S6m1	docs/artifacts/obs6-coldstart/EQ-SPL-75_S6m1.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:35:07.622Z	e1e000c1559223c2634420d49661792636e83dc246d9cff965c2373a01227697	active
+EQ-G-75S6	docs/artifacts/obs6-coldstart/EQ-G-75S6.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:39:17.102Z	7899cd2d821a60662d4e70a43afeb48467f2ab7e8c83bc2cd08f12e4d279d5aa	active
+EQ-S5-P9	docs/artifacts/obs6-coldstart/EQ-S5-P9.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:44:07.245Z	78cbff9fb80b68b097d989186ce984bffbde4cba149dee5558cc217ee5a4c72a	active
+EQ-S4-GD6ATEACH	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	2.0	25	2.0 obs6.5 统一单包（11-16）		2026-11-16T14:30:21.387Z	10d52c605949367f8dd540b3a4a63f4f44d02bce03000ec877759d376e9d21cd	active
