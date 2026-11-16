@@ -50,3 +50,7 @@ measure-EQ-SPL-75_S6m1	a-v2-page-1109	A	-	-	measure-EQ-SPL-75_S6m1	EQ-SPL-75_S6m
 measure-EQ-G-75S6	a-v2-page-1109	A	-	-	measure-EQ-G-75S6	EQ-G-75S6-readings.tsv	24	2026-11-16T09:39:17.102Z	add-point
 measure-EQ-S5-P9	a-v2-page-1109	A	-	-	measure-EQ-S5-P9	EQ-S5-P9-readings.tsv	24	2026-11-16T09:44:07.245Z	add-point
 measure-EQ-S4-GD6ATEACH	a-v2-page-1109	A	-	-	measure-EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH-readings.tsv	24	2026-11-16T14:30:21.387Z	add-point
+b-f2-eps0-1113	b-f2-eps0-1113	B	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-charge-R1S1861674281+Q-s47x1	1113	scratch/zcode-1113-deps/exam4-F2-eps0-1113.tsv	915	2026-11-13	补登批行（validate 报 7321 条 readings 孤儿引用修复；ε=0 半边，ruler b-f2-eps0-1113 早已在册）
+measure-EQ-S3-E9	a-v2-page-1109	A	-	-	measure-EQ-S3-E9	EQ-S3-E9-readings.tsv	24	2026-11-16T16:09:56.918Z	add-point
+measure-BASE-E9-MB5	a-v2-page-1109	A	-	-	measure-BASE-E9-MB5	BASE-E9-MB5-readings.tsv	24	2026-11-16T16:11:46.510Z	add-point
+measure-BASE-P9-MB5	a-v2-page-1109	A	-	-	measure-BASE-P9-MB5	BASE-P9-MB5-readings.tsv	24	2026-11-16T16:13:38.834Z	add-point

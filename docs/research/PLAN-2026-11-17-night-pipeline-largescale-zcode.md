@@ -74,4 +74,22 @@ GD6a 教师只在 5long/8long 出标签，但它教的是**多席位长局的珠
 
 ## 执行记录
 
-（随批回填）
+### 批 1 管线打通（00:00–00:30，已落地大半）
+
+- **新工具**：`tools/pipeline-audit.mjs`（10 站端到端自检）+ `tools/sync-page-coords.mjs`（名册同步）+ `tools/attach-exam4n-mixed.mjs`（批 2 贴列）。
+- **审计自身三次纠偏**（都拿实测背书后才改）：①checkPack 吃整包容器非 META，成功返 `{ok:true}`；②registry.ts=注册时刻、META.ts=lineage.ts=出产时刻（两套合法并存），旧 ts 无时区标 UTC 归一 + 2s 容差；③wid 有 12 位旧格式/16 位新格式两代——父边/pool 比较改**前缀兼容**，爬链（与 add-point findAncestorOnMap 同语义）双键。
+- **审计终账（971 枚全库）**：coords 缺 136 → **名册同步 825→971 后清零**；legacy(v6) 55＝历史遗产；promote 缺 28 → 13 blob 回填+12 池转录+15 枚家族真跑（后台）；archived 墓碑 18；**真矛盾仅 4 枚**——EFFG-s41（池件 cdeb=tracked 真值 vs scratch 件 21f5 漂移，registry/lineage 已对齐池件）‖ MSB10 sha 过期（已同步）‖ MSB12 文件丢失（按 a30f1098 先例转墓碑+archived-pack-meta）‖ MSB15-SOUPB 假父嫌疑（旧时代，待认领）。
+- **batches 补登 b-f2-eps0-1113**：validate 的 7321 条 readings 孤儿引用修复（ruler 早就在册，只有批行漏登）。
+- **EQ 链考古**：S4-E9 的 lineage 父边=EQ-E9-A1 是 add-point"最近图上祖先"设计行为（非假父）；真链 = OBS6E9 → BASE-E9-MB5（未注册！）→ EQ-E9-A1 → **EQ-S3-E9（未注册！）** → EQ-S4-E9。三枚中间代正走 measure-point→add-point 正式入口（后台）。
+- **图本体本来就是全的**：coords-view 972 行、index.html 已含 EQ/US 全家——"进图缺漏"只在 page/coords.tsv 测量名册层。
+
+### 批 2 当选键回填（00:30–00:45）
+
+- **口径**：mixed 夹具表 exam4n-mixedfix-1116-{multi,long}（rounds=6 seed=77000 dose=exam 5锚 champ）→ coords 新列族 `mx1116`：MxC/MxCL（两桌形复合 C=(A+B)/2 均值）+ MxSkU/MxSkE（两模式取大=并集下界）。**947 枚 × 4 列全贴**；EQ5 元老（E9-A1/S4-E9/SPL/G-75S6/S5-P9）补跑两桌形 10 局考卷（skE 11–15）。
+- **viewer 并列档**（不撤旧 Sc 账）：色档新增 `ske`（有效技能数·跨环境）+ 剖面卡 +2 行（有效技能/混合C）；色域=窗口内实测 p02..p98，灰=未测。
+- 旧当选键结论维持：41 枚旧 GA 选举读数留表当账，不复活旧仪。
+
+### 批 3 矩阵（脚本就绪，00:45 待发车）
+
+- `scratch/zcode-1113-deps/run-matrix-1117.mjs`：**MX1 过线波**（底座 E9/GD6ATEACH）→ **MX2 T1 波**（底座 US1/U4，ring/rg9/bigT6 持有者；长程臂禁 E9 高权重基座——铁律遵守）。每波 2 底座 × 4 教师组合（EQ 均衡原方/ST 补 2:multi/GD6a 经济道/breakAll 加权）= 16 臂，1500 组/180 步。
+- 预注册：promote 全门 ∧ mixed skE ≥ 4 ⇒ 进 Next；T2/T3 层今晚不开，等 T1 粒站稳。
