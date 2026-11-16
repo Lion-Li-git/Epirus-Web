@@ -447,6 +447,8 @@ const ration5Pick = (state, pid, cs) => {
  * 干预全关协议：本教师供 GD3-ALL 训练 ⇒ 训练侧四键必须 0；教师标签不依赖任何引擎注入。
  * 剂量：DOSE6 每格每局上限（连招/功能卡全部窄剂量，让配给骨架管经济、门管语义）。 */
 const DOSE6 = { firestorm: 2, curse: 4, armor: 3, taunt: 2, transfer: 2, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 8, charge: 1, drain: 3 };
+/* 11-17：ration6b = ration6 的减剂量变体——taunt/armor 归零（实测它们喂 G5[long] 防席夺冠门：R6 31%/25%、SOUP4 26%/25% 同一道门），mine 加倍（池真空目标）。其余同 DOSE6。 */
+const DOSE6B = { ...DOSE6, taunt: 0, armor: 0, mine: 2 };
 /* ⚑ 珠经济流（04:5x 第三修）：炮配额 3→6（珠的主花口）、持珠只在 ep<2 才攥（ep≥2 有珠就该打炮）、
  *   蓄能 4/局配额——"蓄→花"要成环，否则持珠态的 JI 标签就是囤积签名（四发产物花珠全 0 的病根）。 */
 /* ⚑ railgun 也要配额：富桌（:r2）上无配额的炮会单线吃满标签（11-02 shake3 实测 103/240），
@@ -469,7 +471,7 @@ const myStickersOn = (state, pid) => {   /* 我贴出去、还挂着的符咒数
   }
   return n;
 };
-const ration6Pick = (state, pid, cs) => {
+const ration6Pick = (state, pid, cs, DOSE = DOSE6) => {
   const me = state.p[pid] || {};
   /* —— 长程骨架（ration5 原样：激光眼防席门 → 大雷配给 → 电磁炮 → 攥着等 → 蓄能）—— */
   const laser = cs.filter((c) => c.key === R.SK.LASER_EYE)
@@ -478,18 +480,18 @@ const ration6Pick = (state, pid, cs) => {
   const bt = pickKey(cs, R.SK.BIG_T);
   if (bt && castCount(state, pid, R.SK.BIG_T) < RATION.bigT) return bt;
   const rg = pickKey(cs, R.SK.RAILGUN, 'elec') || pickKey(cs, R.SK.RAILGUN);
-  if (rg && castCount(state, pid, R.SK.RAILGUN) < DOSE6.railgun) return rg;
+  if (rg && castCount(state, pid, R.SK.RAILGUN) < DOSE.railgun) return rg;
   const hasBead = ((me.elec || 0) > 0) || ((me.boom || 0) > 0);
   if (hasBead && me.ep < 2) return cs.find((c) => c.key === R.SK.JI) || null;   /* ep<2 攥到能打炮；ep≥2 有珠 = 炮的 */
   /* —— 批2 ⑦ 激光眼供弹（11-03 深夜）：**激光眼标签从始至终 0 的根 = 只蓄电珠**（教师 charge 门偏好 elec、
    *      采集桌没人蓄爆珠 ⇒ 激光眼从未进过标签集）。修法：场上存在防席目标（guard/反弹族 lastSkill）
    *      ∧ 自己没爆珠 ⇒ 教 **charge#boom**（keySplit 下独立决策键）⇒ 激光眼供弹线打通。 —— */
-  if (!hasBead && !(me.boom || 0) && castCount(state, pid, R.SK.CHARGE) < DOSE6.charge) {
+  if (!hasBead && !(me.boom || 0) && castCount(state, pid, R.SK.CHARGE) < DOSE.charge) {
     const leTargetNear = state.p.some((q) => q && q.hp > 0 && q.id !== pid && GUARD_FAMILY.indexOf(q.lastSkill) >= 0);
     if (leTargetNear) { const cb = pickKey(cs, R.SK.CHARGE, 'boom'); if (cb) return cb; }
   }
   /* 蓄能天花板+配额（03:4x/04:5x）：ep≤4 且 ≤4 次/局才教蓄——无限蓄能标签把产物教成"只攒不花" */
-  if (!hasBead && me.ep >= 2 && me.ep <= 4 && castCount(state, pid, R.SK.CHARGE) < DOSE6.charge) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
+  if (!hasBead && me.ep >= 2 && me.ep <= 4 && castCount(state, pid, R.SK.CHARGE) < DOSE.charge) { const ch = pickKey(cs, R.SK.CHARGE, 'elec') || pickKey(cs, R.SK.CHARGE); if (ch) return ch; }
   /* —— 收割块（时敏：转化**已有**投资，过期作废 ⇒ 保持在前；都是窄门，不破蓄钱阶梯）——
    * ① 天火：引爆自己贴的符咒（符咒停留 ≤3 回合，过期白贴）；
    * ② 坦克集火：目标已被藤甲贴（fireWeakNow）⇒ 火伤+1 穿防转移不走；
@@ -497,24 +499,24 @@ const ration6Pick = (state, pid, cs) => {
    * ④ 全息（均势盾/队友盾）：将死之席（hp≤1）且**别的敌人**上一手正打它 ⇒ 送盾否认终结
    *    （队伍模式 = 给队友送盾；README 理想形态同一张卡，目标选择差在桌制）。 */
   const fsm = pickKey(cs, R.SK.FIRESTORM);
-  if (fsm && myStickersOn(state, pid) >= 1 && castCount(state, pid, R.SK.FIRESTORM) < DOSE6.firestorm) return fsm;
+  if (fsm && myStickersOn(state, pid) >= 1 && castCount(state, pid, R.SK.FIRESTORM) < DOSE.firestorm) return fsm;
   const tkWeak = cs.find((c) => c.key === R.SK.TANK && state.p[c.target] && state.p[c.target].fireWeakNow);
   if (tkWeak) return tkWeak;
   const owes = state.p.some((q) => q && q.hp > 0 && (q.tauntBy || []).indexOf(pid) >= 0);
   if (owes) {
     const tr = highestHpEnemy(state, pid, cs, R.SK.TRANSFER);
-    if (tr && castCount(state, pid, R.SK.TRANSFER) < DOSE6.transfer) return tr;
+    if (tr && castCount(state, pid, R.SK.TRANSFER) < DOSE.transfer) return tr;
     const pr = pickKey(cs, R.SK.PROTO);
-    if (pr && castCount(state, pid, R.SK.PROTO) < DOSE6.proto) return pr;
+    if (pr && castCount(state, pid, R.SK.PROTO) < DOSE.proto) return pr;
   }
   /* —— 批2 ⑥ 摄魂（11-02 深夜补回——早前重写时丢失，标签因此一直为 0）：**自保回血**（用户裁：不是终结技）。
    *      门 = 自身缺血（hp<modeHp）∧ 引擎窗口候选存在（cs 里有 drain = 目标 HP≤drainHpMax 且 3ジ 付得起）；
    *      放收割位（时敏：残血时机稍纵即逝）。剂量 3/局。 —— */
   const dr = pickKey(cs, R.SK.DRAIN);
-  if (dr && me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.DRAIN) < DOSE6.drain) return dr;
+  if (dr && me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.DRAIN) < DOSE.drain) return dr;
   const finishingOn = (t) => state.p.some((q) => q && q.hp > 0 && q.id !== t.id &&
     q.lastTarget === t.id && q.lastSkill && R.byKey[q.lastSkill] && R.byKey[q.lastSkill].cat === 'attack');
-  const holo = (castCount(state, pid, R.SK.HOLO) < DOSE6.holo)
+  const holo = (castCount(state, pid, R.SK.HOLO) < DOSE.holo)
     ? cs.find((c) => c && c.key === R.SK.HOLO && state.p[c.target] &&
         state.p[c.target].hp <= 1 && finishingOn(state.p[c.target]))
     : null;
@@ -538,22 +540,22 @@ const ration6Pick = (state, pid, cs) => {
    *    大雷/电磁炮的蓄钱窗口永不出现（2400 组开火线标签=0、珠浪费 100%）。 —— */
   if (canAffordLater(state, pid)) {
     const cu = pickKey(cs, R.SK.CURSE);                                        /* 给天火备弹 */
-    if (cu && castCount(state, pid, R.SK.CURSE) < DOSE6.curse) return cu;
+    if (cu && castCount(state, pid, R.SK.CURSE) < DOSE.curse) return cu;
     const ar = highestHpEnemy(state, pid, cs, R.SK.ARMOR);                     /* 贴最大威胁：自得反弹 + 目标火弱 */
-    if (ar && castCount(state, pid, R.SK.ARMOR) < DOSE6.armor) return ar;
+    if (ar && castCount(state, pid, R.SK.ARMOR) < DOSE.armor) return ar;
     const tn = highestHpEnemy(state, pid, cs, R.SK.TAUNT);                     /* 连招前半：挂必打义务 */
-    if (tn && castCount(state, pid, R.SK.TAUNT) < DOSE6.taunt) return tn;
+    if (tn && castCount(state, pid, R.SK.TAUNT) < DOSE.taunt) return tn;
     const mn = pickKey(cs, R.SK.MINE);
-    if (mn && castCount(state, pid, R.SK.MINE) < DOSE6.mine) return mn;
+    if (mn && castCount(state, pid, R.SK.MINE) < DOSE.mine) return mn;
     const rodThreat = state.p.some((q) => q && q.hp > 0 && (q.ep || 0) >= 5);  /* 桌上有买得起大雷的敌人 */
     const rd = pickKey(cs, R.SK.ROD);
-    if (rd && rodThreat && castCount(state, pid, R.SK.ROD) < DOSE6.rod) return rd;
+    if (rd && rodThreat && castCount(state, pid, R.SK.ROD) < DOSE.rod) return rd;
     const cn = cs.find((c) => c.key === R.SK.CANNON && state.p[c.target] && state.p[c.target].lastSkill === R.SK.REFLECT);
-    if (cn && castCount(state, pid, R.SK.CANNON) < DOSE6.cannon) return cn;    /* 炮穿防穿反弹（激光眼管其余防席） */
+    if (cn && castCount(state, pid, R.SK.CANNON) < DOSE.cannon) return cn;    /* 炮穿防穿反弹（激光眼管其余防席） */
   }
   /* —— 防御系保底（横切，用户裁"防御类不能完全没有"）：缺血就挡一手；
    *      穷拍豁口 = hp≤1 的绝望挡（保命优先于攒钱），其余照经济门。 —— */
-  if (me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.PROTO) < DOSE6.proto &&
+  if (me.hp < ((state.mode && state.mode.hp) || 3) && castCount(state, pid, R.SK.PROTO) < DOSE.proto &&
       (me.hp <= 1 || canAffordLater(state, pid))) {
     const pr2 = pickKey(cs, R.SK.PROTO);
     if (pr2) return pr2;
@@ -668,6 +670,8 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => laserPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把它拖回电珠/电磁炮那一维 */
   : name === 'detonate'
     ? (state, pid, cs) => detonatePick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把引爆段拖回攒钱 */
+  : name === 'ration6b'
+    ? (state, pid, cs) => ration6Pick(state, pid, cs, DOSE6B)
   : name === 'rationdet'
     ? (state, pid, cs) => rationPick(state, pid, cs) || detonatePick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'rationdet2'
@@ -766,7 +770,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）

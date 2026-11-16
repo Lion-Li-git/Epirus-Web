@@ -176,6 +176,18 @@
 - `knobs --check` ✅（193 全集 · 0 未登记 · 0 无注解）；rebuild-map 100 PASS；audit 982 枚零现行缺漏。
 - 夜班共 **9 个提交**（管线打通 → 代表性入图 → 池分带 → 覆盖普查 → T2/T3/T4 打通 → 强度线）。
 
+## 十四、两带终切按桌强度量测（04:0x，用户二令）
+
+> 用户：①两带数量要接近；②强度看**桌强度**不看单包；③切法要拉难度差距 + 最大化覆盖。
+
+- **仪器（新）**：固定外部参照席（MX2-U4-EQ，未入池）打**整桌带员**（exam-4n `--champn=7` = 每格 N−1 席全挂带员轮换）——参照席胜率差 = 纯带难度差，无桌内竞争混杂。
+- **实测**：hard 桌 C̄=0.112 vs soft 桌 C̄=0.258 ⇒ **难度差 0.146**（long 0.2099）。
+- **切点**：C̄ 排名 14/15（均衡数下最大差距——任何边界互换都缩差距）。hard 14（T2STR/GD6ATEACH/GDEQ-GD/E9/GD-EQ/OBS6P4/KD-G2/V3a/SHAPEDIST/LE40/MSB14/MSB15R/OBS6B2/KDG）；soft 15（V3b/MSB11×2/DEF-s16/OBS6E9/P9/COMBO/STR-B/EFFG-s7/MX4-GD-T2/DEF-s15/EFFG-s41/GD6a-TILT/DEF-s13/DDEF）。
+- **覆盖审计**：union 全层级齐——transfer/cannon/miniT/ring 载体在 soft，laserEye/mine/firestorm/curse 兼在 hard（EQ 系）。
+- **换装确认**：profile 卡 keys（自对局）→ ske（跨环境）✅；attach 补了 display.tsv Mx 同步的洞（coords-view 模板=display，新注册包此前 viewer 读空）。
+- **exam-4n champ 解析加 registry 兜底**：在册 id 即可当冠军席（池分带桌量测的前提），未注册照拒。
+- pool audit 全绿：29 枚 **hard 14 / soft 15**。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
