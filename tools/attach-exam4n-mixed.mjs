@@ -77,3 +77,25 @@ if (DRY) { console.log('--dry：未写'); process.exit(0); }
 const nl = CRLF ? '\r\n' : '\n';
 writeFileSync(CO, outRows.map((r) => r.join('\t')).join('\n') + '\n'.replace('\n', nl), 'utf8');
 console.log('✅ page/coords.tsv 列族 mx1116 就位（' + outRows.length + ' 行 × ' + outRows[0].length + ' 列）');
+/* display.tsv 同步（coords-view 模板=display ⇒ viewer 的 ske/mxc 档吃这里；新注册包的 display 行 Mx 列为空，必须一并补） */
+const DP = join(ROOT, 'champion-map/data/display.tsv');
+const draw = readFileSync(DP, 'utf8');
+const DCRLF = draw.includes('\r\n');
+const dl = draw.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
+const dh = dl[0].split('\t');
+const dfix = Object.fromEntries(dh.map((c, i) => [c, i]));
+let dUpdated = 0;
+const dOut = dl.map((l, li) => {
+  const c = l.split('\t');
+  const id = li === 0 ? null : c[dfix.id];
+  if (!id || !M[id] && !L[id]) return c;
+  const m = M[id], g = L[id];
+  const vals = [m ? m.C : '', g ? g.C : '',
+    m && g ? String(Math.max(+m.skU || 0, +g.skU || 0)) || '' : (m ? m.skU : (g ? g.skU : '')),
+    m && g ? String(Math.max(+m.skE || 0, +g.skE || 0)) || '' : (m ? m.skE : (g ? g.skE : ''))];
+  for (let k = 0; k < NEW.length; k++) { if (dfix[NEW[k]] === undefined) return c; c[dfix[NEW[k]]] = vals[k]; }
+  dUpdated++;
+  return c;
+});
+if (dfix.MxC !== undefined) { writeFileSync(DP, dOut.map((r) => r.join('\t')).join('\n') + '\n'.replace('\n', DCRLF ? '\r\n' : '\n'), 'utf8'); console.log('✅ display.tsv Mx 列同步 ' + dUpdated + ' 行'); }
+else console.log('⚠ display.tsv 无 Mx 列（跑 tools/sync-display-mx 或等列族迁移）');
