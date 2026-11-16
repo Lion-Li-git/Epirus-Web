@@ -1167,12 +1167,14 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 - **刻意没碰**：`champion-map/pipeline/add-point.mjs` 与 `training/proto2/{pg-train,supfit-gd}.mjs` 是在别的班次手上的在制改动，留在工作树未提交。
   ⚠ 代价如实写在这：那条父边的 `parentSrc=seedpack-wid` 目前**在干净克隆里不可复算**（用已提交的 add-point 重跑会得到 `seedpack` 虚线）；
   已在 commit 说明里点名，等那笔代码落册自动闭合。**别把"CI 绿"读成"这格已经有 provenance"**。
-- **新事实（先 grep 过在册：十份提到 V3S2 的文档都没记过）**：`OBS6-SHAPEDIST-V3S2` 同名底下有**两枚不同权重**，两份都不入库——
-  `docs/artifacts/obs6-coldstart/…bak` sha 前 16 `ad6312fab5779967`（META `hotstartFrom=94f1343cd158ebb1` 即 V3a 的 wid）
-  ‖ `scratch/arms/…bak` sha 前 16 `691f33da3a0fda9d`（META **无** `hotstartFrom`）。
-  前线尺的"2 号现役强敌"读后者，而 `registry.tsv` 里 U1 的父节点指前者 ⇒ 把对手集统一改指在册件会**悄悄换掉对手身份**。
+- **V3S2 有两个文件，但不是两枚权重（我上一版这么写是错的，已逐位比过撤回）**：两份的权重数组 sha12 同为 `517b89dc139e`（`arch/dims/a.len` 也一致），整文件差 106 字节全在 META——
+  `docs/artifacts/…` 那份比 `scratch/arms/…` 多出 `up` / `hotstartFrom` / `seed=1131` 三个字段，`ts` 还被写成整分钟 `14:20:00.000Z`（scratch 那份是带毫秒的 `12:47:43.513Z`）。
+  同批补拷的 `V2` / `V2.snap0` / `V3a` / `shaped1` 两份 META 逐字段一致 ⇒ **V3S2 是唯一被手写补过出处字段的件**，来历对得上夜班 00:43 那句"V3S2 缓入池，META 无标准出处字段——等晚班补融合谱系"。
+  ⇒ ① 前线尺的对手路径**改指在册件是安全的纯路径修**，不必重测（我上一版"会换掉对手身份"作废）；
+  ⇒ ② 更要紧：填进去的 `hotstartFrom=94f1343cd158ebb1`（V3a 的 wid）与该包自己的 `recipe` 打脸——`{sd.2, v2s0.25, v2s1.15, v3as0.15, v3as1.15, v3bs1.1}` 合计 1.000，**六路线性融合、V3a 系只占 0.30，不存在热启动父包**。
+  而 `add-point` 判 `seedpack-wid` 读的正是这个字段 ⇒ 图上 `V3a→V3S2`、`V3S2→U1` 两条**实线**核的是手填值，**这条边不可当独立证据引用**（按融合应走 `parentOf2/parentOf3`，按热启动应把字段删回原样落 `unknown`——属裁件归属，不自专）。
 - **提案落盘**：`PROPOSAL-2026-11-16-frontline-ruler-into-objective-qoder.md`（正面接上本班上一节"等点头②"那条）：
   前线/真包胜率这把尺先**登记**（对手件改指在册、`--out` 默认落盘、夹具身份走 `rulers.tsv`+`batches.tsv` 单源、噪声地板 3 遍×5 枚实测），
   再接 `promote` 记录腿或 `EPIRUS_SEL_FRONT` 排序键。**不定线、不动产品装配**；按 11-16 21:5x 裁定它属于筛选顺序的**最后一段（强度）**，不做成早期硬地板。
-- **等点头**：① PR #5 要不要并 `main`（要点名；tag 不随合并授权）；② V3S2 认哪一枚、是否入库（顺带解掉它"缓入池"那半件事）；
+- **等点头**：① PR #5 要不要并 `main`（要点名；tag 不随合并授权）；② **V3S2 那条父边按哪种语义画**——按融合补 `parentOf2/parentOf3`（⑫d 管的就是这个），还是把 `hotstartFrom` 删回原样让父边落 `unknown`；顺带决定 docs 那份手填壳要不要入库；
   ③ 第 2 步那次约 15–20 分钟的分布测量开不开——**没分布就没名次**，今天已经拿 1.0pt 的差排过"全库第一"。
