@@ -253,3 +253,9 @@ MX7-T2-R	pass	—
 MX7-T4-R	block	1			
 MX4-GD-T2	pass	—			
 MX8-R6B-KL	pass	—			
+MX8-CN-M	pass	—			
+MX8-LE15	pass	—			
+MX8-LE20	block	1			
+MX8-LE25	block	1			
+MX8-T3L-KL	block	2			
+MX8-T4R-KL	block	1			

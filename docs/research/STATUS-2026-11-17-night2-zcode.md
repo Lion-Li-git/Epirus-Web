@@ -194,6 +194,19 @@
 - **新版当选键上图**（用户令）：当选键 UI 档整体切读 **mxsc=(MxC+MxCL)/2**（mixed 夹具复合 C̄ = 池分带那把"当选"尺，973 枚全库有读数 vs 旧版 Sc 仅 41 枚）；旧版 Sc 四列留表当账；色域=窗口内实测 p02..p98；剖面卡/明细卡/图例/计数器同步切新。
 - **audit 爬链同粒判定**：dupWid 对（MX1-E9-GD ≡ GD6ATEACH 同权重两名）按粒（wid 前缀）判同——MX7-T2-R 父边误报修复（§E378 悬垂边由 rebuild 牙先抓到：父 MX4-GD-T2 退役 → 重指向最近图上祖先 GD6ATEACH）。
 
+## 十六、gen11：KL 模式推广（05:1x–05:3x）
+
+- **MX8-LE15**（lasereye@0.15 轻触 + KL 锚定）：全门 + **laserEye 活**（C 0.087/0.168，skE 11/13）——laserEye 第二载体。
+- MX8-T3L-KL / MX8-T4R-KL：KL 锚定**没有**修好 cannon/T4R 的门（各自 block）——KL 修复模式对 R6B 有效、对这两臂无效，门敏感度逐臂不同（负结果如实记）。
+- gen12 收尾扫描跑中：laserEye 保活阈值（0.20/0.25）+ cannon 换 multi 桌形。
+
+## 十七、gen12：T3 全员过门粒收齐（05:4x–06:0x）
+
+- **MX8-CN-M**（cannon@0.20 换 multi 桌形）：全门 + cannon 活（C̄=0.162）——**cannon 的门是桌形特异**（长桌形喂 G5[long]，multi 不喂）——已注册入图入池 soft。
+- laserEye 保活阈值扫描：0.15 全门 ✓（LE15）/ 0.20、0.25 block——LE40（0.40 强攻粒）保持池内代表。
+- **T3 覆盖终账**：laserEye（LE40 hard 池）‖ cannon（MX8-CN-M soft 池）‖ miniT（V3b soft 池）——三键全部有**在池过门载体**；mine（MX8-R6B-KL soft 池）‖ rod（同上）‖ armor/taunt 能力证（R6/R6B，过门粒下一班）；purify 无教师。
+- 池 30 枚 hard14/soft16，union 全层级有载体。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
