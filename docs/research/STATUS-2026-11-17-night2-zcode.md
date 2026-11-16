@@ -127,7 +127,22 @@
 
 **池真空清单（当前口径）**：laserEye（gen4 打）· armor · rod · purify（无教师，押后）。
 
+## 八、gen4 重试 + 强度线（03:0x–03:3x）
+
+- **T3M2**（minit@0.40 四桌形）：全门但 minit 仍未命中——加权救不了"状态不可达"，要复合教师（把 minit 接进主教师轨迹，rationdet 先例）。下一班做。
+- **T3L2**（cannon@0.20 减扰）：仍 block×1，cannon 继续命中——cannon 能力成立、过门差一口气；T3L 的缺门是行为门粗类，下一班对准缺的那道细调。
+- **MX5-GD-T2STR**（transfer@0.10 轻触）：全门，**C长 0.3151 全场最强长程**——但 transfer 键没保活（0.10 权重不够，保活需 ≥0.30）。"能力↔强度"权衡实测：transfer 保活代价 ≈ C多 −0.17。
+- **SOUP4**（4 粒等权）：C̄=0.2997 全场最强综合，G5[long] 26%/25% 超 1pt block + selftest3 腿C 1.66e-3（插值 ReLU 折点已知工件，不能开 PG 臂）。
+- **SOUP4b**（0.30/0.30/0.20/0.20）：**全门 ✅**——1pt 边际被权重微扰翻过；强度读数见下。
+
 ## 四、交接与下一步
+
+- **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
+- **确定性发现（省预算）**：蒸馏完全确定——同 (底座, 配方) 必产同粒，seed 不扰动（MX1-E9-GD ≡ EQ-S4-GD6ATEACH 权重逐位同）。**要新粒改配方（shapeTeachers 配比/键道 lane），改 seed/底座无用**；shapeTeachers 全覆盖时底座贡献边际化（gen2 四位小数复现）。
+- **键道教师蹭轨迹病**：minit/bigT lane@0.30 打不出键（键只在主教师轨迹外的状态出现）；transfer@0.30 打得出（状态可达）。解法 = 复合教师（把键道接进主教师轨迹，rationdet 先例）或加权/换桌形——gen4 重试中。
+- **强度杠杆**：双倍 groups 不是杠杆（U4-STR 反退化）；soup（4 粒等权）测量中；"能力→强度回收"单变量臂 T2STR（transfer@0.10 轻触）跑中。
+- **池**：26 枚 12/6/8；真空 laserEye（gen4 打）/armor/rod/purify（无教师押后）；MX 新成员 seatKill=-1 待补人席批次。
+- **T2/T3/T4 下一班**：T2/T4 已通（代表在图）；T3 看 gen4；T4 强度回收同 T2STR 模式。
 
 - 9 枚 winner 正在走 measure-point→add-point 入图（后台），完成后需：`sync-page-coords` + `attach-exam4n-mixed` + `rebuild-map` 同笔重烘提交。
 - 7 枚 block 臂留 scratch/arms 记负结果（不注册，防污染名册口径；要入图需先修门）。
