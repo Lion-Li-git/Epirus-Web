@@ -143,6 +143,21 @@
 - **soup 线结论**：等权 C̄ 0.300 被 G5[long] 26%/25% 超 1pt 拦；权重版（0.3/0.3/0.2/0.2）全门但 C̄ 0.2665 **弱于自己最强成分**（GD6ATEACH 0.2798）——soup 强度加成不稳健，scratch 记档不再追。
 - **gen7（跑中）**：`ration6` mega 复合教师（ration 骨架 + DOSE6 剂量门内建 mine/armor/taunt/rod/cannon/curse 全清单）@0.35 混入 multi 桌形——一发臂打剩余全部真空（teacher 早就在册，只差接线）。
 
+## 十、gen7：ration6 mega 教师（03:0x）
+
+- **MX5-GD-R6**（ration6@0.35 混入 multi 桌形 + cannon@0.15）：block×1，但 **skE=19/18 全夜最高，armor+rod+cannon 三键首次打出**（mine/taunt 未中——DOSE6 剂量 1/局太窄或状态未达）。能力存在性证明完成，过门与强度是下一班的事（ration6@0.25 减量重试 R6B 已发）。
+- 池真空账更新：laserEye ✅（LE40 入池）‖ cannon ✅（2/26 在池）‖ armor/rod **能力已证**（R6）‖ mine/taunt 部分 ‖ purify 仍无教师。
+
+## 十一、ration6 权重二分（03:2x–03:4x，收口）
+
+| 权重 | 门 | 键命中 | C | skE |
+|---|---|---|---|---|
+| 0.25 | ✅ 全门 | 无 | 0.259/0.240 | 14/14 |
+| 0.30 | ⛔×1 | armor | 0.177/0.243 | 14/16 |
+| 0.35 | ⛔×1 | armor+rod+cannon（skE 19/18 全夜最高）| 0.089/0.107 | 19/18 |
+
+**结论**：键道 fired 阈值在 0.30+，门阻断也在 0.30+——纯权重二分无双全点。下一班解法 = PG KL 锚定（supfit 后接 pg-train --klW 锚住强度、保留键）或 DOSE6 剂量下调重蒸。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。
