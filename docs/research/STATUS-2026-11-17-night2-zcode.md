@@ -90,6 +90,43 @@
 
 **剪除 8 枚冗余变体**（MX1-E9-EQ/GD-ST/GD-GD/GD-BA、MX2-US1-ST/US1-BA、MX3-E9GD-GD/E9GD-EQ）：从 registry/lineage/display/features/projections/feasibility/readings/batches/page-coords/promote 十表移除 + docs 副本删除。**训练记录不丢**：scratch/arms 原件、exam4n-mixed-matrix-1117 考卷表、staging 体检 blob、本节榜单都在。
 
+## 五、gen3：T2/T3/T4 覆盖臂 + 强度臂（02:10–02:40，2/6 过预注册）
+
+载体考古：**supfit-gd 的 TEACHER_KNOWN 早已内置 transfer/minit/lasereye/cannon/detonate/bigT 键道脚本教师**（T2/T3 机器全在，只差配方接线）；T4 载体 = GD16m-D1（firestorm/curse 独苗，scratch/arms）。
+
+| 臂 | 目标 | 结果 |
+|---|---|---|
+| **MX4-GD-T2** | transfer/drain | ✅ 全门 + **transfer 命中**（T2 层 0→1），C 0.100/0.122（新键道代价强度）|
+| **MX4-GD-T4** | firestorm/curse | ✅ 全门 + **firestorm,curse 双命中**（T4 层 0→2），C 0.111/0.198 |
+| MX4-GD-T3L | lasereye/cannon | ⛔ block×1，**cannon 命中**（近失——降权重重试 gen4） |
+| MX4-GD-T3M | minit | ✅ 全门但 minit 未命中（键道蹭不到轨迹——11-14 复合教师教训重现）|
+| MX4-GD-T1B | bigt | ✅ 全门但 bigt 未命中（同上）|
+| MX4-U4-STR | 强度提升 | ✅ 全门但**双倍预算反而退化**（C长 0.202→0.023，如实记负：强度杠杆不是加预算）|
+
+**入图（代表性）**：MX4-GD-T2、MX4-GD-T4 两枚新层代表注册。gen4 重试：minit@0.40 四桌形、cannon@0.20 减扰。
+
+## 六、池强度分带重做 + 池补强（02:0x）
+
+- **量具**：mx1116 mixed 复合 C̄ =（MxC+MxCL）/2；断点取实测分布天然谷 0.165/0.135 → **hard 12 / mid 6 / soft 8**。
+- 错位修正：**EQ-S4-GD6ATEACH（全池最强 C̄=0.280）soft→hard** ‖ KD-G2 soft→hard ‖ STR-B-Q-s41 hard→soft ‖ OBS6E9/P9/V3b/MSB11×2 hard→mid ‖ DEF-s16 soft→mid。tier 外门账列（invited/promoteVerdict/seatKill）全不动。
+- 池补强：MX1-GD-EQ（c4fa2576）+ MX3-GDEQ-GD 入池 hard。**MX1-E9-GD 被 dupWid 闸正确拦下——它和 EQ-S4-GD6ATEACH 权重逐位相同**（蒸馏完全确定性：同配方同底座=同粒，seed 不扰动）⇒ 想造新粒改配方，换 seed/底座没用。
+- pool audit 全绿（26 枚 12/6/8，untracked 0，dupWid 0）。
+
+## 七、池技能覆盖普查（新跨环境口径，02:5x）
+
+口径：26 成员 × mixed 夹具 exam（keys= 发射用过键清单，任用即计——比 11-15 cov-census 的"≥2% 才计"更灵敏，两代不可直比）。
+
+| 层 | 键=覆盖/26 | 备注 |
+|---|---|---|
+| T0 | ji 26 · charge 23 · gun 25 · sword 25 · snipe 17 · guard/reflect 21 · bagua 16 · shift 15 · jinshield 9 · proto 12 · holo 17 · **armor 0** | armor 是 T0 真空 |
+| T1 | ring 10 · railgun 18 · **bigT 19** | 大雷已非真空（11-15 快照 0/17 是池换代+阈值差）|
+| T2 | transfer 3 · drain 1 | MX4-GD-T2 待入池补强 |
+| T3 | miniT 1 · mine 4 · **laserEye 0** · cannon 2 | laserEye 是 T3 真空（gen4 重试中）|
+| T4 | firestorm 2 · curse 5 | MX4-GD-T4 待入池补强 |
+| 其他 | tank 9 · taunt 1 · dualGun 1 · mirror 1 · **rod 0 · purify 0** | tank 已 9/26（11-15 快照 0/17）|
+
+**池真空清单（当前口径）**：laserEye（gen4 打）· armor · rod · purify（无教师，押后）。
+
 ## 四、交接与下一步
 
 - 9 枚 winner 正在走 measure-point→add-point 入图（后台），完成后需：`sync-page-coords` + `attach-exam4n-mixed` + `rebuild-map` 同笔重烘提交。

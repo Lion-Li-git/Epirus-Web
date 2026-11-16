@@ -1,0 +1,53 @@
+id	tier	mode	skU	skE	keys
+MSB14-railgun-R1S175656469		multi	12	9	bagua,dualGun,guard,gun,ji,mine,proto,reflect,shift,snipe,sword,tank
+MSB11-R2S306293884		multi	12	10	bagua,guard,gun,ji,jinshield,proto,reflect,shift,snipe,sword,tank,transfer
+MSB11-R1S130778313		multi	16	13	bagua,cannon,charge,guard,gun,ji,jinshield,mine,proto,reflect,shift,snipe,sword,tank,taunt,transfer
+KDG-B-Q-s13		multi	10	10	bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
+EQ-S4-E9		multi	12	12	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,snipe,sword
+MSB15R-HITMIX		multi	11	8	bagua,guard,gun,ji,jinshield,mine,proto,reflect,shift,snipe,sword
+MSB11-R2S306293884		long	14	10	bagua,curse,firestorm,guard,gun,ji,mine,proto,reflect,shift,snipe,sword,tank,transfer
+MSB14-railgun-R1S175656469		long	12	11	bagua,dualGun,guard,gun,ji,mine,proto,reflect,shift,snipe,sword,tank
+KDG-B-Q-s13		long	10	10	bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
+MSB11-R1S130778313		long	16	11	bagua,cannon,charge,guard,gun,ji,jinshield,mine,proto,reflect,shift,snipe,sword,tank,taunt,transfer
+MSB15R-HITMIX		long	11	11	guard,gun,ji,jinshield,mine,proto,reflect,shift,snipe,sword,tank
+EQ-S4-E9		long	14	13	bagua,bigT,charge,curse,firestorm,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+MX1-GD-EQ	new	multi	12	11	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,snipe,sword
+MX3-GDEQ-GD	new	multi	11	11	bagua,bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
+OBS6-SHAPEDIST-V3a		multi	14	14	bagua,bigT,charge,guard,gun,holo,ji,jinshield,proto,railgun,reflect,shift,snipe,sword
+OBS6-SHAPEDIST		multi	14	12	bagua,bigT,charge,guard,gun,holo,ji,jinshield,proto,reflect,shift,snipe,sword,tank
+OBS6-SHAPEDIST-V3b		multi	15	13	bagua,bigT,charge,guard,gun,holo,ji,proto,railgun,reflect,ring,shift,snipe,sword,tank
+OBS6B2		multi	15	15	bagua,bigT,charge,guard,gun,holo,ji,jinshield,proto,railgun,reflect,ring,shift,snipe,sword
+MX1-GD-EQ	new	long	13	11	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+MX3-GDEQ-GD	new	long	12	12	bagua,bigT,charge,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+OBS6-SHAPEDIST-V3a		long	16	13	bagua,bigT,charge,curse,guard,gun,holo,ji,proto,railgun,reflect,ring,shift,snipe,sword,tank
+OBS6-SHAPEDIST-V3b		long	16	15	bagua,bigT,charge,guard,gun,holo,ji,miniT,proto,railgun,reflect,ring,shift,snipe,sword,tank
+OBS6-SHAPEDIST		long	15	14	bagua,bigT,charge,guard,gun,holo,ji,jinshield,proto,reflect,ring,shift,snipe,sword,tank
+OBS6B2		long	15	15	bagua,bigT,charge,guard,gun,holo,ji,jinshield,proto,railgun,reflect,ring,shift,snipe,sword
+OBS6E9		multi	13	13	bagua,charge,guard,gun,holo,ji,jinshield,proto,reflect,shift,snipe,sword,tank
+COMBO-s13		multi	9	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+STR-B-Q-s41		multi	5	5	charge,gun,ji,railgun,sword
+DDEF-s13		multi	11	10	bigT,cannon,charge,drain,gun,ji,proto,railgun,sword,tank,transfer
+OBS6P4-S4000		multi	12	12	bagua,charge,guard,gun,holo,ji,jinshield,proto,reflect,shift,snipe,sword
+OBS6P9-S4000		multi	12	12	bagua,charge,guard,gun,holo,ji,jinshield,proto,reflect,shift,snipe,sword
+COMBO-s13		long	9	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+DDEF-s13		long	12	11	bigT,cannon,charge,drain,gun,ji,proto,railgun,ring,sword,tank,transfer
+STR-B-Q-s41		long	6	6	bigT,charge,gun,ji,railgun,sword
+OBS6E9		long	14	13	bagua,charge,guard,gun,holo,ji,jinshield,mirror,proto,reflect,shift,snipe,sword,tank
+DEF-s13		multi	9	8	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+OBS6P4-S4000		long	12	12	bagua,charge,guard,gun,holo,ji,jinshield,proto,reflect,shift,snipe,sword
+OBS6P9-S4000		long	13	12	bagua,charge,guard,gun,holo,ji,jinshield,proto,reflect,ring,shift,snipe,sword
+DEF-s15		multi	9	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+EFFG-s41		multi	7	7	bigT,charge,gun,ji,railgun,ring,sword
+DEF-s16		multi	10	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,ring,sword
+EFFG-s7		multi	7	7	bigT,charge,gun,ji,railgun,ring,sword
+EQ-S4-GD6ATEACH		multi	11	11	bagua,bigT,charge,curse,guard,gun,ji,railgun,reflect,snipe,sword
+DEF-s13		long	9	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+EFFG-s41		long	7	7	bigT,charge,gun,ji,railgun,ring,sword
+DEF-s15		long	9	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,sword
+DEF-s16		long	10	9	bigT,charge,guard,gun,holo,ji,railgun,reflect,ring,sword
+EFFG-s7		long	7	7	bigT,charge,gun,ji,railgun,ring,sword
+KD-G2		multi	11	11	bagua,bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
+GD6a-TILT		multi	5	5	bigT,charge,ji,railgun,ring
+EQ-S4-GD6ATEACH		long	13	12	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+KD-G2		long	11	11	bagua,bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
+GD6a-TILT		long	5	5	bigT,charge,ji,railgun,ring

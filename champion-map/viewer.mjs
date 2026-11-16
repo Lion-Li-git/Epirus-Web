@@ -1634,9 +1634,9 @@ function pfmt(kind, v) {
   return v.toFixed(1);
 }
 /* 剖面那张表：卡片与页内自检读**同一份**（维名在两处各列一遍，早晚漂移 —— 白名单同族病） */
-var PROF = [['Ge', '广度', 'f2'], ['gl', '长程广度', 'f2'], ['sc', '当选键', 'f1'], ['ske', '有效技能', 'f0'], ['mxc', '混合C', 'f2'], ['seat', '座位极差', 'pt'],
+var PROF = [['Ge', '广度', 'f2'], ['gl', '长程广度', 'f2'], ['sc', '当选键', 'f1'], ['ske', '跨环境技能', 'f0'], ['seat', '座位极差', 'pt'],
   ['dmg', '伤害/局', 'f1'], ['heavy', '重击/局', 'f1'], ['holo', '护盾/局', 'f1'], ['rounds', '回合', 'f1'],
-  ['keys', '技能种类', 'f0'], ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0']];
+  ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0']];
 function prow(key, lab, v, txt) { var p = pctl(key, v);
   return padc(lab, 10) + padc(txt, 7) + ' ' + (p === null ? '               ' : padc('P' + Math.round(p), 5) + pbar(p)); }
 function prof(d) {
