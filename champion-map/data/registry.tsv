@@ -925,34 +925,34 @@ S916-R1S1704335642	docs/artifacts/night-adapt/S916-R1S1704335642.js	2.0	19	2.0 o
 MSB2-R2S103437527	docs/artifacts/night-adapt/MSB2-R2S103437527.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-09T23:34:38.787Z	9195b92dd4a8dd7c3f92a0fbfc9e53fc9490720e77468849e2c0c9bcbed50e1a	active
 ADAPT-DEF-O5-s916	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-10T12:50:54.250Z	99f2f6db383386db0e9b2a51b033b298471b1bde4ab9e897677f238ea797a810	active
 MSB2-R1S773345716	docs/artifacts/night-adapt/MSB2-R1S773345716.js	2.0	19	2.0 obs5 反墙课程链（11-09~11 · 轮换/反墙/技能覆盖）		2026-11-09T23:05:07.390Z	d2b3eb6a283bcbbb1e52676c98575678a5719695001ae3ab7d578a5fd6d04ac8	active
-MSB15R-HITMIX	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15R-hit-mix-R1S2057836694.js	2.0		new		2026-11-12T04:18:24.826Z	7301b0a1e49bd75eee22eef7334eef80031e61cf4397cea5f53459ad0ca81a20	active
-MSB15-SOUPB	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15-soupb-R2S74063325.js	2.0		new		2026-11-12T04:19:40.948Z	6a54b8307bfa7770373a07f2c239120eb601312b469f38f6f5a452602d564f26	active
-MSB15-LASER-R3	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15-laser-R3S1859130085.js	2.0		new		2026-11-12T04:21:15.151Z	eaae715d3eebb5315a6ffe780d00ffea6472a260763a5955f53cb5da8aaa0dd7	active
-MSB15R-GD4RAT	D:\code\Epirus-Web\docs\artifacts\night-adapt\MSB15R-gd4rat-R1S1155875730.js	2.0		new		2026-11-12T04:22:36.246Z	d31dd2e54baf37373f77a97ba041d6d520179969f35871cc4d5d4d7002f8bae9	active
-GD4-RATION	D:\code\Epirus-Web\scratch\arms\GD4-RATION.bak	2.0	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）		2026-11-12T04:50:05.763Z	31ef20a600bc2fc39880b3e15e68ac3dcd9d25e7564508c9b4d7bd88c435fa6b	active
-GD6a-TILT	D:\code\Epirus-Web\scratch\arms\GD6a-TILT-3p.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:23:08.054Z	cc4d735779029d169a044dedb271cae8dbf9a5d515c1907efb76cb65875baa56	active
-GD6b-TILT	D:\code\Epirus-Web\scratch\arms\GD6b-TILT-3p.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:26:32.041Z	9bc37fd5b332520b5906be316c32b6c951d8e9ccf3634b7d203039af7b697813	active
-MSB18-R1S826788378-seg2	D:\code\Epirus-Web\docs\artifacts\MSB18-R1S826788378-seg2.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:29:40.638Z	78de26d3f6e820ec7dd7be30aa653334fb333812812297f9e02baf6474c161a4	active
-GD16m	D:\code\Epirus-Web\scratch\arms\GD16m-D1.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-14T06:51:49.926Z	a25da3c22906f152a8be0e434274125aac597db396474f1dd4faea2ab5132b91	active
-OBS6-GA25	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA25.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:03:14.977Z	282af2032e438599f3c27cd3787bb2dab8c2244d486a07043c130f745240b1f7	active
-OBS6-GA200	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA200.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:33:58.387Z	b62e7a928caf3f7a8a070af1a2cb9d6719b0c7d46a387f71b884f81d9fafecd5	active
-OBS6-GA100M	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA100M.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:13.856Z	14e07670a9d871972b3644e0cd4229858d82c5c686ee64d41973e8489121e5bd	active
-OBS6-GA2PG-8K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-8K.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:29.284Z	73d4f9e21657ecb4748c9d404d8bb76d657a26a2a85b583c0c0b30dfcee5c279	active
-OBS6-GA2PG-12K	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-GA2PG-12K.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:44.563Z	d46984a915bbde4a008ac304592ff8b2d27ab0fa6fd19bfaf1150e3d14ff3687	active
-OBS6A4-S1000	D:\code\Epirus-Web\scratch\arms\OBS6A4.seg1000.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:35:09.216Z	c7b4aa0ab244bdac83ff7291d8040e88ee4ed34fd2c63d391931bac15d51beed	active
-OBS6W2-S1500	D:\code\Epirus-Web\scratch\arms\OBS6W2.seg1500.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:36:50.631Z	e9434156ad7106314d996406af99538fc2317c4081046bf9024676facb589e4d	active
-OBS6A5-S1500	D:\code\Epirus-Web\scratch\arms\OBS6A5.seg1500.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:41:14.748Z	403266ed86abc5f09ec9cc95c3325c3f4c621f58d3fe6e4cdb2190ab70e77f64	active
-OBS6E5c	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6E5c.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:25:00.527Z	113d9fd4b68f8a03550eb7fb7f1814586cde14434c2b1ffd3fe4aafd8861dc52	active
-OBS6E4c	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6E4c.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:29:42.491Z	749ee225e31cdb8a33d1a122b16c2767614f40693e7875dadaf9be2e17307ad5	active
-OBS6D3	D:\code\Epirus-Web\scratch\arms\OBS6D3.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T16:20:29.291Z	1446ca10c9cb13f4ad7e01599972495ca25d1abbecd5537ad082d3b5330bee10	active
-OBS6P4-S4000	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6P4-S4000.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:42:55.246Z	8ced170c1648c08e02554b8815d039718948ad51f2b93cbd5670a0689c533688	active
-OBS6E9	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6E9.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:44:23.309Z	180fc9c52b6b6cff28c4b126bd68501fa88af317c09b0986df40ad0badd9c2c0	active
-OBS6P9-S4000	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6P9-S4000.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T19:04:03.314Z	52d306c08a387f11f14760e5c1b13c282d66153a3ec914df8ac8fdd9e5cce307	active
-OBS6-LH6	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-LH6.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T05:55:56.135Z	e28bda645657dcc5c39bc5a99f9a754150aacb40f1410a20f75251055447af62	active
-OBS6-LH6P	D:\code\Epirus-Web\docs\artifacts\obs6-coldstart\OBS6-LH6P.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T05:57:33.438Z	22ec08769482f4a361a508030336c9d4409ead3f22b42f380463acd6a107b869	active
-OBS6-SHAPEDIST	D:\code\Epirus-Web\scratch\arms\OBS6-SHAPEDIST.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:16:21.476Z	31a667943d5a403d2d458df66f8e30cdd47f90b928947f3d6ad185e3a92bdb2f	active
-OBS6-SHAPEDIST-V2	D:\code\Epirus-Web\scratch\arms\OBS6-SHAPEDIST-V2.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:21:50.045Z	163f042009d1fec6cd09a88158bc150c862e82ca88ccf89c90a46c4282d91818	active
-OBS6-SHAPEDIST-V2S0	D:\code\Epirus-Web\scratch\arms\OBS6-SHAPEDIST-V2.snap0.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:24:14.311Z	7ca9e8cf6326c1ad32785be14d557812e3f14a7b7924b9e814a4a964c619f66b	active
-OBS6-SHAPEDIST-V3a	D:\code\Epirus-Web\scratch\arms\OBS6-SHAPEDIST-V3a.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:26:26.763Z	8172d931413f4cade73ae8855afd67654a696f1b0ea2fbf346e63edb8bb30895	active
-OBS6-SHAPEDIST-V3b	D:\code\Epirus-Web\scratch\arms\OBS6-SHAPEDIST-V3b.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:27:57.962Z	1ece3523a357a8d860eac7f4aa369c76efc5ffb3c36b83e256c12ae90a154f64	active
-OBS6B2	D:\code\Epirus-Web\scratch\arms\OBS6B2.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:29:31.084Z	b5f46c1abee632a765198945e79ae5ee39ac951298aea3353d5ebd3c25ff33c9	active
+MSB15R-HITMIX	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	2.0		new		2026-11-12T04:18:24.826Z	7301b0a1e49bd75eee22eef7334eef80031e61cf4397cea5f53459ad0ca81a20	active
+MSB15-SOUPB	docs/artifacts/night-adapt/MSB15-soupb-R2S74063325.js	2.0		new		2026-11-12T04:19:40.948Z	6a54b8307bfa7770373a07f2c239120eb601312b469f38f6f5a452602d564f26	active
+MSB15-LASER-R3	docs/artifacts/night-adapt/MSB15-laser-R3S1859130085.js	2.0		new		2026-11-12T04:21:15.151Z	eaae715d3eebb5315a6ffe780d00ffea6472a260763a5955f53cb5da8aaa0dd7	active
+MSB15R-GD4RAT	docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js	2.0		new		2026-11-12T04:22:36.246Z	d31dd2e54baf37373f77a97ba041d6d520179969f35871cc4d5d4d7002f8bae9	active
+GD4-RATION	scratch/arms/GD4-RATION.bak	2.0	20	2.0 夜班 MSB15 技能训练（11-12 · hit/soup/laser/distill）		2026-11-12T04:50:05.763Z	31ef20a600bc2fc39880b3e15e68ac3dcd9d25e7564508c9b4d7bd88c435fa6b	active
+GD6a-TILT	scratch/arms/GD6a-TILT-3p.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:23:08.054Z	cc4d735779029d169a044dedb271cae8dbf9a5d515c1907efb76cb65875baa56	active
+GD6b-TILT	scratch/arms/GD6b-TILT-3p.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:26:32.041Z	9bc37fd5b332520b5906be316c32b6c951d8e9ccf3634b7d203039af7b697813	active
+MSB18-R1S826788378-seg2	docs/artifacts/MSB18-R1S826788378-seg2.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-12T23:29:40.638Z	78de26d3f6e820ec7dd7be30aa653334fb333812812297f9e02baf6474c161a4	active
+GD16m	scratch/arms/GD16m-D1.bak	2.0	21	GD6 蒸馏多线 11-12		2026-11-14T06:51:49.926Z	a25da3c22906f152a8be0e434274125aac597db396474f1dd4faea2ab5132b91	active
+OBS6-GA25	docs/artifacts/obs6-coldstart/OBS6-GA25.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:03:14.977Z	282af2032e438599f3c27cd3787bb2dab8c2244d486a07043c130f745240b1f7	active
+OBS6-GA200	docs/artifacts/obs6-coldstart/OBS6-GA200.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:33:58.387Z	b62e7a928caf3f7a8a070af1a2cb9d6719b0c7d46a387f71b884f81d9fafecd5	active
+OBS6-GA100M	docs/artifacts/obs6-coldstart/OBS6-GA100M.js	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:13.856Z	14e07670a9d871972b3644e0cd4229858d82c5c686ee64d41973e8489121e5bd	active
+OBS6-GA2PG-8K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-8K.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:29.284Z	73d4f9e21657ecb4748c9d404d8bb76d657a26a2a85b583c0c0b30dfcee5c279	active
+OBS6-GA2PG-12K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-12K.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:44.563Z	d46984a915bbde4a008ac304592ff8b2d27ab0fa6fd19bfaf1150e3d14ff3687	active
+OBS6A4-S1000	scratch/arms/OBS6A4.seg1000.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:35:09.216Z	c7b4aa0ab244bdac83ff7291d8040e88ee4ed34fd2c63d391931bac15d51beed	active
+OBS6W2-S1500	scratch/arms/OBS6W2.seg1500.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:36:50.631Z	e9434156ad7106314d996406af99538fc2317c4081046bf9024676facb589e4d	active
+OBS6A5-S1500	scratch/arms/OBS6A5.seg1500.bak	2.0	22	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:41:14.748Z	403266ed86abc5f09ec9cc95c3325c3f4c621f58d3fe6e4cdb2190ab70e77f64	active
+OBS6E5c	docs/artifacts/obs6-coldstart/OBS6E5c.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:25:00.527Z	113d9fd4b68f8a03550eb7fb7f1814586cde14434c2b1ffd3fe4aafd8861dc52	active
+OBS6E4c	docs/artifacts/obs6-coldstart/OBS6E4c.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:29:42.491Z	749ee225e31cdb8a33d1a122b16c2767614f40693e7875dadaf9be2e17307ad5	active
+OBS6D3	scratch/arms/OBS6D3.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T16:20:29.291Z	1446ca10c9cb13f4ad7e01599972495ca25d1abbecd5537ad082d3b5330bee10	active
+OBS6P4-S4000	docs/artifacts/obs6-coldstart/OBS6P4-S4000.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:42:55.246Z	8ced170c1648c08e02554b8815d039718948ad51f2b93cbd5670a0689c533688	active
+OBS6E9	docs/artifacts/obs6-coldstart/OBS6E9.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:44:23.309Z	180fc9c52b6b6cff28c4b126bd68501fa88af317c09b0986df40ad0badd9c2c0	active
+OBS6P9-S4000	docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T19:04:03.314Z	52d306c08a387f11f14760e5c1b13c282d66153a3ec914df8ac8fdd9e5cce307	active
+OBS6-LH6	docs/artifacts/obs6-coldstart/OBS6-LH6.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T05:55:56.135Z	e28bda645657dcc5c39bc5a99f9a754150aacb40f1410a20f75251055447af62	active
+OBS6-LH6P	docs/artifacts/obs6-coldstart/OBS6-LH6P.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T05:57:33.438Z	22ec08769482f4a361a508030336c9d4409ead3f22b42f380463acd6a107b869	active
+OBS6-SHAPEDIST	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:16:21.476Z	31a667943d5a403d2d458df66f8e30cdd47f90b928947f3d6ad185e3a92bdb2f	active
+OBS6-SHAPEDIST-V2	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V2.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:21:50.045Z	163f042009d1fec6cd09a88158bc150c862e82ca88ccf89c90a46c4282d91818	active
+OBS6-SHAPEDIST-V2S0	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V2.snap0.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:24:14.311Z	7ca9e8cf6326c1ad32785be14d557812e3f14a7b7924b9e814a4a964c619f66b	active
+OBS6-SHAPEDIST-V3a	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3a.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:26:26.763Z	8172d931413f4cade73ae8855afd67654a696f1b0ea2fbf346e63edb8bb30895	active
+OBS6-SHAPEDIST-V3b	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3b.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:27:57.962Z	1ece3523a357a8d860eac7f4aa369c76efc5ffb3c36b83e256c12ae90a154f64	active
+OBS6B2	docs/artifacts/obs6-coldstart/OBS6B2.bak	2.0	23	2.0 obs6 v7 蒸馏（11-14）		2026-11-15T16:29:31.084Z	b5f46c1abee632a765198945e79ae5ee39ac951298aea3353d5ebd3c25ff33c9	active

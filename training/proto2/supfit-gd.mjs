@@ -835,6 +835,7 @@ const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
 function collectInto(dst, srcParams, idBase) {
   let curShp = -1;   /* 当前桌形（覆盖自证用） */
+  let shapeStart = 0, shapeQuota = NGRP;   /* 按桌形摊配额：--shapeBal=1 时逐形按配额切 rareOnly，不让末形独吞稀有期 */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
   let gN = 0;   /* 组级计数：N 教师轮替的 Bresnham 游标 */
   let gameN = 0;   /* 局级游标（--rolloutMode=game 时每局锁定同一位驾驶教师） */
@@ -842,7 +843,7 @@ function collectInto(dst, srcParams, idBase) {
     _useT4 = d === 4; _useT3 = d === 3; _useT2 = d === 2;
     if (_pickRaw4 && _useT4) LABEL.t4Groups = (LABEL.t4Groups || 0) + 1;
     if (_pickRaw3 && _useT3) LABEL.t3Groups = (LABEL.t3Groups || 0) + 1;
-    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (!_pickRaw3 && !_pickRaw4 && d === 1) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
+    if (_pickRaw2) { if (_useT2) LABEL.t2Groups = (LABEL.t2Groups || 0) + 1; else if (d === 1) LABEL.t1Groups = (LABEL.t1Groups || 0) + 1; }
   };
   const record = (state, pid, legal) => {
     lastG = null;
@@ -867,8 +868,12 @@ function collectInto(dst, srcParams, idBase) {
     if (wIdx < 0 || !keys[wIdx]) { LABEL.gone++; return; }
     /* 稀有期：只收教师选中稀有键的决策点。⚑ 11-01 千问：**学生自访轮也要过同一道筛**
      *   （原先带 `srcParams == null` 条件 ⇒ DAgger 轮不受筛，稀有类被自访态淹掉——昨夜 mt-dag 的
-     *    "DAgger 稀释稀有类"就是这个条件造成的，不是 DAgger 本身的错）。 */
-    if (RARE.length && dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)) && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
+     *    "DAgger 稀释稀有类"就是这个条件造成的，不是 DAgger 本身的错）。
+     *   11-16：--shapeBal=1 时按单形配额切稀有期，避免全部落进末尾桌形把其余桌形的稀有教师架空。 */
+    const inRare = SHAPEBAL
+      ? ((dst.length - shapeStart) >= Math.floor(shapeQuota * (1 - RARE_FRAC)))
+      : (dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)));
+    if (RARE.length && inRare && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
       wantIdx: wIdx, wantBead: again.bead || null });
     lastG = dst[dst.length - 1];
@@ -898,7 +903,7 @@ function collectInto(dst, srcParams, idBase) {
   let play;
   if (srcParams == null) {
     play = (state, pid, legal) => {
-      if (dst.length < NGRP) record(state, pid, legal);
+      if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
       const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
       /* game 模式下驾驶教师走全轨（不过滤 TkKEYS），否则前置攒气手被主教师截断⇒永远到不了高 ep 态 */
       const drvPick = _gameDriver === 4 ? _pickRaw4 : _gameDriver === 3 ? _pickRaw3 : _gameDriver === 2 ? _pickRaw2 : (_gameDriver === 1 ? _pickRaw : null);
@@ -908,7 +913,7 @@ function collectInto(dst, srcParams, idBase) {
   } else {
     const ch = A2.chooserOf(srcParams, DAG_TEMP);
     play = (state, pid, legal) => {
-      if (dst.length < NGRP) record(state, pid, legal);
+      if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
       const act = ch(state, pid, legal);
       /* ⚑ Played-action 一致率（10-31 夜里加，因为"自访留出 100%"与考场读数打脸才补的这条）：
        *   留出一致率量的是**克隆态上的 argmax**；这一条量的是**真正打出去的那一手**。
@@ -943,8 +948,9 @@ function collectInto(dst, srcParams, idBase) {
     const q = Math.max(2, Math.ceil(NGRP / A2.shapes.length));
     for (let s = 0; s < A2.shapes.length; s++) {
       curShp = s;
-      const before = dst.length;
-      for (let g = 0; g < GCAP && dst.length - before < q; g++) { if (dst.length >= NGRP) break; runOneGame(s, g); }
+      shapeStart = dst.length;
+      shapeQuota = q;
+      for (let g = 0; g < GCAP && dst.length - shapeStart < q; g++) { if (dst.length >= NGRP) break; runOneGame(s, g); }
     }
   } else {
     for (let s = 0; s < A2.shapes.length && dst.length < NGRP; s++) {
@@ -1061,6 +1067,10 @@ function adamFit(pvStart, trainList, sentinelLl, roundTag) {
   DIM0 = DIM;   /* onlySeg 掩码按首轮回填（掩码 IIFE 在 DIM0 赋值前执行过一次 ⇒ 这里重建为真尺寸） */
   if (ONLY_SEG && (!ONLY_MASK || ONLY_MASK.length !== DIM)) {
     const sgm = ly.L.seg.find((x) => x.name === ONLY_SEG);
+    if (!sgm) {
+      console.error('⛔ --onlySeg 找不到段 "' + ONLY_SEG + '"（可选：' + ly.L.seg.map((x) => x.name).join(',') + '）');
+      process.exit(2);
+    }
     ONLY_MASK = new Float64Array(DIM);
     for (let d = sgm.off; d < sgm.off + sgm.len; d++) ONLY_MASK[d] = 1;
     console.log('⚑ onlySeg=' + ONLY_SEG + ' ⇒ 只训坐标 [' + sgm.off + ',' + (sgm.off + sgm.len) + ')，其余冻结（掩码重建 ' + DIM + ' 维）');

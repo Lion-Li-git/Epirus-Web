@@ -1,60 +1,165 @@
 {
- "tool": "pg-train",
- "tag": "OBS6B2",
- "parent": "docs/artifacts/obs6-coldstart/OBS6-GA25.js",
- "seed": 7,
- "games": 2000,
- "batch": 48,
- "lr": 0.0003,
- "temp": 0.5,
- "lamC": 0,
- "lamF": 0,
- "shapeKey": null,
- "shapeW": null,
- "klW": 0.05,
- "klTilt": "sword,bagua,ring,armor",
- "klTiltMul": 8,
- "klL1Final": 0.3163,
- "cur": "net",
- "updates": 42,
- "wallSecs": 46,
- "baseline": "ridge",
- "ridgeFeat": "small",
- "ridgeFitN": 920,
- "valueCapacityR2": {
-  "gX": -0.6364496013670409,
-  "gF": -0.2691585300571431
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "scratch/arms/OBS6-SHAPEDIST-V3a.bak",
+ "seed": 20261031,
+ "lr": 0.0005,
+ "steps": 180,
+ "groups": 733,
+ "trainG": 547,
+ "testG": 186,
+ "objective": "key",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 4800,
+ "shapeBal": 1,
+ "rolloutMode": "game",
+ "classPow": 0.35,
+ "classCap": 5,
+ "teacher": "pack:scratch/arms/OBS6-SHAPEDIST-V2.snap0.bak",
+ "keySplit": 0,
+ "rareOnly": "ring,bigT,railgun",
+ "rareFrac": 0.22,
+ "arenaPool": null,
+ "arenaShapes": "2:standard,5:long,5:multi,8:long",
+ "teacher2": "pack:js/bundled-champion.js",
+ "teacher2frac": 0.7,
+ "teacher2keys": null,
+ "teacher2shapes": "2:standard",
+ "teacher3": "pack:docs/artifacts/v7blk1-92.bak",
+ "teacher3frac": 0.35,
+ "teacher3keys": null,
+ "teacher3shapes": "5:long",
+ "teacher4": "pack:scratch/arms/GD16m-D1.bak",
+ "teacher4frac": 0.15,
+ "teacher4keys": "ring,bigT,railgun",
+ "teacher4shapes": "5:long",
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
  },
- "ridgeL2": 0.01,
- "ridgeDim": 7,
- "probe": 400,
- "rollbackTol": 0.05,
- "rollbackCount": 0,
- "probeGames": 800,
- "bestProbeScore": 0.0426,
- "lastR2": 0.1159,
- "loop": {
-  "meanScore": -0.0018740079365079118,
-  "firePerGame": 0,
-  "discChargePerGame": 0,
-  "entropy": 0.41840459216477327,
-  "zipBad": 0
+ "label": {
+  "ok": 720,
+  "moved": 13,
+  "gone": 0,
+  "keys": 733,
+  "rare": 164350,
+  "byKey": {
+   "ji": 259,
+   "bigT": 11,
+   "gun": 68,
+   "sword": 35,
+   "snipe": 30,
+   "reflect": 117,
+   "bagua": 46,
+   "guard": 35,
+   "charge": 28,
+   "holo": 1,
+   "proto": 2,
+   "ring": 100,
+   "railgun": 1
+  },
+  "t2Groups": 141,
+  "t2Hits": 282,
+  "t3Groups": 22,
+  "t3Hits": 44
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 547,
+    "teacherAgree": 0.6881720430107527,
+    "teacherLl": -2.2534081037748352,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.553763440860215,
+  "startLl": -2.974902801994372,
+  "agree": 0.6881720430107527,
+  "ll": -2.2534081037748352,
+  "wAgree": 0.6355893892381459,
+  "nTest": 186,
+  "nTrain": 547,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "snipe",
+    "n": 6,
+    "hit": 6
+   },
+   {
+    "key": "gun",
+    "n": 32,
+    "hit": 11
+   },
+   {
+    "key": "ji",
+    "n": 65,
+    "hit": 58
+   },
+   {
+    "key": "sword",
+    "n": 8,
+    "hit": 5
+   },
+   {
+    "key": "bigT",
+    "n": 4,
+    "hit": 1
+   },
+   {
+    "key": "reflect",
+    "n": 25,
+    "hit": 22
+   },
+   {
+    "key": "bagua",
+    "n": 11,
+    "hit": 6
+   },
+   {
+    "key": "charge#elec",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "guard",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "ring",
+    "n": 31,
+    "hit": 18
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
  },
  "container": {
   "v": 92,
   "input": "obs6",
   "dof": 287,
   "gen": 3,
-  "keySplit": 1,
-  "n": 16411
+  "keySplit": 0
  },
  "lineage": {
-  "parent": "docs/artifacts/obs6-coldstart/OBS6-GA25.js",
-  "gen": 3,
+  "parent": "scratch/arms/OBS6-SHAPEDIST-V3a.bak",
+  "gen": 2,
   "recipe": {
-   "objective": "scoreNet only (λ=0 negative control)",
-   "solver": "REINFORCE+Adam (pg-lib, selftest3 6 legs)",
-   "baseline": "ridge"
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
   }
  }
 }

@@ -173,7 +173,7 @@ function skStats() {
   let u = 0, e = 0;
   for (const k of Object.keys(SKUSE.use)) {
     u++;
-    const cells = Object.keys(SKUSE.cell[k]).filter((c) => SKUSE.cell[k][c] >= 3).length;
+    const cells = Object.keys(SKUSE.cell[k]).length;
     if (SKUSE.use[k] >= 3 && cells >= 3) e++;
   }
   return { skU: u, skE: e };
@@ -185,7 +185,7 @@ for (const n of NS) {
   let first = 0;
   const seatFirst = new Array(n).fill(0), seatGames = new Array(n).fill(0);
   for (let j = 0; j < plan.length; j++) {
-    CUR_CELL = n + ':' + (MODE || 'multi') + ':' + j;   // 技能普查的环境格键（11-16）
+    CUR_CELL = (champN > 0 ? 'B' : 'A') + ':' + n + ':' + (MODE || 'multi') + ':' + j;   // 技能普查的环境格键（11-16：区分 A/B 轴）
     const seat = j % n;
     const rot = j % (n - 1);
     const field = plan[j].seats.slice(rot).concat(plan[j].seats.slice(0, rot));   // 对手槽相对座位旋转（解耦座位率×脚本强度）
@@ -255,8 +255,8 @@ function emit(prefix, o) {
 if (AXIS === 'A') emit('[冠军4N]', evalAxis(0));
 else if (AXIS === 'B') emit('[冠军4N-B]', evalAxis(Number.MAX_SAFE_INTEGER));
 else {
-  const a = evalAxis(0), b = evalAxis(Number.MAX_SAFE_INTEGER);
-  emit('[冠军4N]', a); emit('[冠军4N-B]', b);
+  const a = evalAxis(0); emit('[冠军4N]', a);
+  const b = evalAxis(Number.MAX_SAFE_INTEGER); emit('[冠军4N-B]', b);
   const mix = {}; for (const n of NS) {
     /* C 尺 = A/B 同权平均；seatFirst/seatGames 必须逐座相加，否则 emit 的逐座行会 q.seatFirst.map 崩
      * （2026-11-15 本班撞上：--exam=both 在打印 C 行时 TypeError，C 的 h/x 已经算出但整条命令挂）。 */

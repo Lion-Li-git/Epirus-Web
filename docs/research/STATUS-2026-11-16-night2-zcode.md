@@ -15,9 +15,13 @@ policy2**（modeIdx 捕获加错站 ⇒ 偏置落到 standard 行——修后精
   权重级 modeBias 必要性坐实；
 - **B2MB（正确形态）**：B2 长出 modeBias + 经济塑形 PG 4000 局 ⇒ charge long +73%/multi +180%，
   链转化 0（代际不够）⇒ B2MB2 12000 局：charge 5.5-5.9% 双模式、**seg6000 multi ring 0.55% 首苗**、
-  强度回落（0.115）⇒ **B2MB3 第三代在跑**（从 seg6000 ring 苗续 12000 局 + 链塑形）。
-- **判读**：modeBias 机器全通、经济与条件化**必须同时练**（串联）、链转化 = 代际 grind
-  （每代 +0.5% 级苗头）——**obs6.5 路线活，长程合一开始有机制可走的路**。
+  强度回落（0.115）⇒ **B2MB3 第三代在 `02:27` 跑完终评判负**（未冻结主干 + `baseline=mean` + `--lamC=0.15` 连训 22k 局导致主干沦为死蓄电珠机：`死电/局` 升至 `2.48`、`废珠 2.42`、`modeBias` 最大仅移动 `+0.060`；官方 `exam-4n` 短 C `−0.2263` / 长 C `−0.1914`，`seg6000` 亦已跌至短 C `−0.1272` / 长 C `−0.1032`）。
+- **晨班复核修通的 5 处工具/脚本缺陷（2026-11-16 10:20）**：
+  ① [pg-lib.mjs](../../training/proto2/pg-lib.mjs) `tapeForward6` 的 `modeBias` 浮点加法次序对齐 `arch2`/`policy2`（先加进 `sk`，修复 `selftest3` 腿 B 在 145 格报红）；
+  ② [supfit-gd.mjs](../../training/proto2/supfit-gd.mjs) 修复 `--shapeBal=1` 与 `--rareOnly` 共用全局阈值导致 100% 稀有样本落入末尾桌形的 Bug（改为逐形配额切分），补 `--onlySeg` 缺段响亮退出及 `t1Groups` 计数；
+  ③ [tools/exam-4n.mjs](../../tools/exam-4n.mjs) 修复 `skE` 把同一局号内的重复出手当跨格门槛（放宽为出现过的不同 `(axis,n,mode,j)` 格数 ≥3 且总 ≥3 手）并使 `[冠军4N]` 与 `[冠军4N-B]` 各自打印本轴 `skU/skE`；
+  ④ [selftest2.mjs](../../training/proto2/selftest2.mjs) `T9b` 改按进入 `verifyWired` 前的原模式还原断言；
+  ⑤ 补拷 `V2` / `V2.snap0` 进 `docs/artifacts/obs6-coldstart/` 并统一 [registry.tsv](../../champion-map/data/registry.tsv) 为仓库相对路径。
 
 > 接力链：[PLAN-2026-11-15-night2-crossmode-longhorizon-zcode.md]（23:15 前哨批）→
 > 用户令"排满到九点+四项全批"⇒ [PLAN-2026-11-16-overnight-zcode.md]（本夜执行稿，执行列已回填）。

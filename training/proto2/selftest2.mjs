@@ -206,12 +206,13 @@ let MID = null;
  * 只验"装上了、跑着没崩"是不够的：作废的那几波全都"没崩"。真凭据是训练环里 **2.0 的 forwardCands 被叫到**。 */
 {
   let out = null, err = null;
-  try { out = verifyWired(W, A2, { mode: 'long', n: 5, games: 1 }); } catch (e) { err = String(e && e.message || e); }
+  const modeBefore = T.trainMode ? T.trainMode() : 'multi';
+  try { out = verifyWired(W, A2, { mode: modeBefore === 'long' ? 'multi' : 'long', n: 5, games: 1 }); } catch (e) { err = String(e && e.message || e); }
   ok(!!out && out.forwards > 0 && out.chooseCandidatesCalls > 0,
     'T9 接线：打一局 ⇒ forwardCands ' + (out ? out.forwards : 'n/a') + ' 次 ‖ 2.0 版 chooseCandidates ' + (out ? out.chooseCandidatesCalls : 'n/a') + ' 次' +
     (err ? '（抛：' + err.slice(0, 70) + '）' : '') + ' ⇒ 训练环真走在 2.0 上（此前这里是 **0 次**，而 fit 照样出数）');
   const modeNow = T.trainMode ? T.trainMode() : null;
-  ok(modeNow === 'multi', 'T9b 接线自证**没把桌形改走**（用完还原 ⇒ 现在 ' + modeNow + '）');
+  ok(modeNow === modeBefore, 'T9b 接线自证**没把桌形改走**（用完还原 ⇒ 现在 ' + modeNow + '）');
 }
 
 /* ---- T10/T11/T12（10-29 夜加）：obs3 输入面、S1o 接线、以及**相对步长**的两侧对账 ----

@@ -37,6 +37,17 @@
 - **验证设计**（下一班执行）：shaped1 基座 + modeBias 开启 + multi/long 分轨 PG 各 2000 局 →
   检验 ①long 档偏置是否学出与 multi 档不同的谱移（跨环境普查尺的换招 JS 应升）②2P 考卷不塌
   ③全库 exam-4n 双轴不退。
+- **施工单写实（11-16 凌晨考古后降难度）**：布局三拷贝 = `arch2.mjs` 段表（`keyHeadOn` 同款条件追加）
+  / `policy2.js layoutOfPack:382` / `pg-lib.mjs layoutOf:15`；**热启动无需新机制**——
+  `policy.js embedLegacy:862` 本来就是"旧列搬运+新列补 0、前向逐位同"的长布局机制，modeBias 段
+  走同一条路。①arch2：cfg `modeBias=1` → `seg.push({name:'modeBias', len: skills*NM})` +
+  `modeKeys` 冻结序存 cfg + fanIn 项；②policy2/layoutOfPack 同段；③pg-lib layoutOf 同段；
+  ④policy2 打分两路径：`sk += modeBias[modeIdx*skills+skillIdx]`（modeIdx 由 `state.modeKey`
+  查 modeKeys）；⑤embedLegacy 补零映射；⑥零初始化=老包逐位不变。
+- **前置实验（数据侧条件化，零布局改动，11-16 凌晨已跑）**：shaped1 + long 桌专项蒸馏
+  （GD16m 键道，`arenaShapes=5:long,8:long`，lr 0.004 小步）→ 检验"**模式门控训练数据**"能否
+  单独解开冲突：long 链部署升 ∧ multi 行为不漂 ∧ 2P 考卷不塌 ⇒ 数据门控够用（modeBias 优先级降）；
+  long 升但 multi 塌 ⇒ 权重级条件化（modeBias）必要性坐实。结果见 STATUS night2 §五′。
 - **判词**：案② 可行性**成立**（最小侵入形态存在且规避已知死），成本半天级；等案①路由上线拿到
   各格使用率后，再决定是否值得收进单包（若路由格使用率高且稳定，单包收益有限）。
 

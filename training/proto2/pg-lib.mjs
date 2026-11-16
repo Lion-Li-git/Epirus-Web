@@ -726,7 +726,7 @@ function tapeForward6(tape, params, ly) {
       const wRow = oSK + ki * hid;
       for (let j = 0; j < hid; j++) sk += params[wRow + j] * hctx[j];
       /* 11-16（obs6.5）：modeBias 重放——policy2 forwardObs6 打分同式；tape.modeIdx 已是数值下标（老 tape 无 ⇒ 按 0） */
-      if (ly.MB != null) { const mi = tape.modeIdx != null ? tape.modeIdx : 0; act.logits[i] += params[ly.MB + mi * skills + ki]; }
+      if (ly.MB != null) { const mi = tape.modeIdx != null ? tape.modeIdx : 0; sk += params[ly.MB + mi * skills + ki]; }
       act.logits[i] += sk;
     }
     const ae = act.aes[i], te1 = act.te1s[i], te2 = act.te2s[i];
