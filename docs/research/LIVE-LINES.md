@@ -1153,3 +1153,26 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   ② 要不要把"对真包的胜率"放进当选键/promote 地板——`tools/pick-best.mjs:102` 的 `selGapNote` 那个 "gap"
   是**第 1 与第 2 名分差**，跟 R−H 迁移 Gap 是两个量、只是共词；在 `train-3p.mjs`/`pick-best.mjs` 里搜
   `mem-probe`/H 集/非名册 全为空。③ `--force-copy` 那条注释与入口 :40 的无条件拒 `--` 互相打脸，要不要修。
+
+## 11-16 深夜追记（Qoder · main 尖端 CI 修红 + 前线尺登记提案）
+
+- **红在哪**：`e681f332`（22:05，已在 `origin/main`）上 `gates` ‖ `part ship-pool` ‖ `browser` 三作业红，两条腿：
+  ① `D234 ⑩c`——提交里的 `champion-map/index.html` 写着 `var NRAW = 970`，而 HEAD 的 `registry.tsv` 只有 965 行数据
+  ⇒ **产物进了仓、它吃的那 5 行 EQ 表行还悬在工作树上**（18:0x 起一直没提交）；
+  ② browser 池层——`图上没有或没有档的：EQ-S4-GD6ATEACH` ‖ `环 23 ‖ 表 24` ⇒ 那枚池成员进了池和 bundle，**从没接机**。
+- **修的是数据，不是判据**：`measure-point` 接机 `EQ-S4-GD6ATEACH`（父 `EQ-S4-E9`，wid 链 `a847eb3a41a160bb` 实测相等 ⇒ `seedpack-wid`）
+  + 那 5 枚 EQ 点的数据行落册 + `rebuild-map.mjs` 唯一入口重烘。
+  **PR #5 / 分支 `qoder-1116-map-ci-fix`：CI 在干净克隆里 14/14 全 pass**（run 43887283889）。
+  本地定向 `100 PASS ‖ 0 FAIL`（CI 原为 `98 PASS ‖ 2 FAIL`）——**定向不是整轮**，真绿以 PR 的 CI 为准。
+- **刻意没碰**：`champion-map/pipeline/add-point.mjs` 与 `training/proto2/{pg-train,supfit-gd}.mjs` 是在别的班次手上的在制改动，留在工作树未提交。
+  ⚠ 代价如实写在这：那条父边的 `parentSrc=seedpack-wid` 目前**在干净克隆里不可复算**（用已提交的 add-point 重跑会得到 `seedpack` 虚线）；
+  已在 commit 说明里点名，等那笔代码落册自动闭合。**别把"CI 绿"读成"这格已经有 provenance"**。
+- **新事实（先 grep 过在册：十份提到 V3S2 的文档都没记过）**：`OBS6-SHAPEDIST-V3S2` 同名底下有**两枚不同权重**，两份都不入库——
+  `docs/artifacts/obs6-coldstart/…bak` sha 前 16 `ad6312fab5779967`（META `hotstartFrom=94f1343cd158ebb1` 即 V3a 的 wid）
+  ‖ `scratch/arms/…bak` sha 前 16 `691f33da3a0fda9d`（META **无** `hotstartFrom`）。
+  前线尺的"2 号现役强敌"读后者，而 `registry.tsv` 里 U1 的父节点指前者 ⇒ 把对手集统一改指在册件会**悄悄换掉对手身份**。
+- **提案落盘**：`PROPOSAL-2026-11-16-frontline-ruler-into-objective-qoder.md`（正面接上本班上一节"等点头②"那条）：
+  前线/真包胜率这把尺先**登记**（对手件改指在册、`--out` 默认落盘、夹具身份走 `rulers.tsv`+`batches.tsv` 单源、噪声地板 3 遍×5 枚实测），
+  再接 `promote` 记录腿或 `EPIRUS_SEL_FRONT` 排序键。**不定线、不动产品装配**；按 11-16 21:5x 裁定它属于筛选顺序的**最后一段（强度）**，不做成早期硬地板。
+- **等点头**：① PR #5 要不要并 `main`（要点名；tag 不随合并授权）；② V3S2 认哪一枚、是否入库（顺带解掉它"缓入池"那半件事）；
+  ③ 第 2 步那次约 15–20 分钟的分布测量开不开——**没分布就没名次**，今天已经拿 1.0pt 的差排过"全库第一"。
