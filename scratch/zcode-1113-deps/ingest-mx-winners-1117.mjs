@@ -7,10 +7,8 @@ import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 const execFileP = promisify(execFile);
 
-const WINNERS = [
-  'MX1-E9-GD', 'MX1-E9-EQ', 'MX1-GD-EQ', 'MX1-GD-ST', 'MX1-GD-GD', 'MX1-GD-BA',
-  'MX2-US1-ST', 'MX2-US1-BA', 'MX2-U4-EQ',
-];
+const WINNERS = process.argv[2] ? process.argv.slice(2)
+  : ['MX1-E9-GD', 'MX1-E9-EQ', 'MX1-GD-EQ', 'MX1-GD-ST', 'MX1-GD-GD', 'MX1-GD-BA', 'MX2-US1-ST', 'MX2-US1-BA', 'MX2-U4-EQ'];
 for (const id of WINNERS) {
   const src = 'scratch/arms/' + id + '.bak';
   if (!existsSync(src)) { console.error('⛔ ' + id + ' 产物不在'); process.exitCode = 2; continue; }

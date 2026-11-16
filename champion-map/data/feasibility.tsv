@@ -982,3 +982,6 @@ MX1-GD-BA					1		1		add-point
 MX2-US1-ST					0	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	0	场B 清场 0.00 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	add-point
 MX2-US1-BA					1		0	场B 清场 0.02 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	add-point
 MX2-U4-EQ					1		1		add-point
+MX3-E9GD-GD					1		1		add-point
+MX3-E9GD-EQ					1		1		add-point
+MX3-GDEQ-GD					1		1		add-point

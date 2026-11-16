@@ -54,12 +54,4 @@ b-f2-eps0-1113	b-f2-eps0-1113	B	MSB11-R2S306293884+MSB10-R1S1149480262+MSB8-char
 measure-EQ-S3-E9	a-v2-page-1109	A	-	-	measure-EQ-S3-E9	EQ-S3-E9-readings.tsv	24	2026-11-16T16:09:56.918Z	add-point
 measure-BASE-E9-MB5	a-v2-page-1109	A	-	-	measure-BASE-E9-MB5	BASE-E9-MB5-readings.tsv	24	2026-11-16T16:11:46.510Z	add-point
 measure-BASE-P9-MB5	a-v2-page-1109	A	-	-	measure-BASE-P9-MB5	BASE-P9-MB5-readings.tsv	24	2026-11-16T16:13:38.834Z	add-point
-measure-MX1-E9-GD	a-v2-page-1109	A	-	-	measure-MX1-E9-GD	MX1-E9-GD-readings.tsv	24	2026-11-16T17:05:58.698Z	add-point
-measure-MX1-E9-EQ	a-v2-page-1109	A	-	-	measure-MX1-E9-EQ	MX1-E9-EQ-readings.tsv	24	2026-11-16T17:07:12.185Z	add-point
-measure-MX1-GD-EQ	a-v2-page-1109	A	-	-	measure-MX1-GD-EQ	MX1-GD-EQ-readings.tsv	24	2026-11-16T17:08:24.947Z	add-point
-measure-MX1-GD-ST	a-v2-page-1109	A	-	-	measure-MX1-GD-ST	MX1-GD-ST-readings.tsv	24	2026-11-16T17:09:35.942Z	add-point
-measure-MX1-GD-GD	a-v2-page-1109	A	-	-	measure-MX1-GD-GD	MX1-GD-GD-readings.tsv	24	2026-11-16T17:10:49.916Z	add-point
-measure-MX1-GD-BA	a-v2-page-1109	A	-	-	measure-MX1-GD-BA	MX1-GD-BA-readings.tsv	24	2026-11-16T17:12:04.939Z	add-point
-measure-MX2-US1-ST	a-v2-page-1109	A	-	-	measure-MX2-US1-ST	MX2-US1-ST-readings.tsv	24	2026-11-16T17:13:18.061Z	add-point
-measure-MX2-US1-BA	a-v2-page-1109	A	-	-	measure-MX2-US1-BA	MX2-US1-BA-readings.tsv	24	2026-11-16T17:14:32.102Z	add-point
-measure-MX2-U4-EQ	a-v2-page-1109	A	-	-	measure-MX2-U4-EQ	MX2-U4-EQ-readings.tsv	24	2026-11-16T17:15:43.479Z	add-point
+measure-MX3-GDEQ-GD	a-v2-page-1109	A	-	-	measure-MX3-GDEQ-GD	MX3-GDEQ-GD-readings.tsv	24	2026-11-16T17:48:26.279Z	add-point
