@@ -97,6 +97,13 @@ const rdCount = {};
 for (const r of rd.rows) rdCount[r[rd.ix.pack_id]] = (rdCount[r[rd.ix.pack_id]] || 0) + 1;
 const skEof = {};
 for (const r of exM.rows) skEof[r[exM.ix.id]] = r[exM.ix.skE];
+/* mixed 家族其它表（如矩阵批 exam4n-mixed-matrix-1117）同一把尺 ⇒ skE 同样算数 */
+for (const extra of ['exam4n-mixed-matrix-1117-multi.tsv']) {
+  const p2 = D(extra);
+  if (!existsSync(p2)) continue;
+  const t2 = readTsv(p2);
+  if (t2.ix.id !== undefined && t2.ix.skE !== undefined) for (const r of t2.rows) if (r[t2.ix.id] && !skEof[r[t2.ix.id]]) skEof[r[t2.ix.id]] = r[t2.ix.skE];
+}
 
 let ids = reg.rows.map((r) => r[reg.ix.pack_id]).filter(Boolean);
 if (ONLY) ids = [ONLY];
