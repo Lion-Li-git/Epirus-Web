@@ -176,6 +176,49 @@ const chargePick = (state, pid, cs) => {
   const cb = pickKey(cs, R.SK.CHARGE, 'boom'); if (cb) return cb;
   return pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 };
+/* 11-18 净化教师（夜3班 · 用户令"净化排最后"的最后覆盖窟窿）：清自身全部持续态（符咒/梦魇/挑衅/
+ *   藤甲火弱/地雷/避雷针/大雷禁用）并按符数回 n−1 血。触发条件保守（ration 系纪律：3ジ贵动作不许绑架行为）：
+ *   ① 被贴符 ≥2（净回血且洗掉火弱）② 被大雷禁用（cooldown 非空 = 手脚被缚，不解就得干挨）。
+ *   平时返回 null ⇒ lane 语义下该拍不出标签；主教师形态下回落 ji（收进拍）。
+ *   可达性前提：自对局里没有咒源（RINGEC6 全量 6600 标签 curse=1）⇒ 必须配 roster-lib pack 席
+ *   把 MX7-T4-R 这类活咒源摆上对手桌，教师才有演示机会（cf09f00a）。 */
+const purifyPick = (state, pid, cs) => {
+  const me = state.p[pid] || {};
+  const nStickers = (me.stickers || []).length;
+  const disabled = me.cooldown && Object.keys(me.cooldown).length > 0;
+  if (nStickers < 2 && !disabled) return null;
+  return pickKey(cs, R.SK.PURIFY) || null;
+};
+/* 11-18 摄魂处决教师（夜3班 · T2 真覆盖补课，用户令）：摄魂=处决器（3ジ · 仅 HP≤1 目标 · 命中自愈 1）。
+ *   引擎只对 HP≤1 活敌提供 drain 候选 ⇒ 机会=候选出现，教师语义 = "有候选就处决"（收人头+白赚 1 血）；
+ *   无候选返回 null（lane 语义下该拍不出标签）。
+ *   ⚑ 剂量帽（TZ-T3 教训：无帽过度演示 ⇒ G4 被珠爆发克制 73%>60% + G5 龟 81%——处决挤占蓄能/反制）：
+ *   每局 ≤1 次处决（castCount 计，TZT3B 起），lane 权重同步下调。 */
+const drainPick = (state, pid, cs) => {
+  if (castCount(state, pid, R.SK.DRAIN) >= 1) return null;
+  return pickKey(cs, R.SK.DRAIN) || null;
+};
+/* 11-18 转移·时机版（夜3班 · TZ-T2 双败教训：无时机味的 transfer 教师 @0.35 洗没 / @0.5 滥发 295 次 1 点）。
+ *   转移率 = 0.5×转走点数/使用次数 ⇒ 时机的可观测代理 = **上一回合被 ≥1 席瞄准**（lastTarget=predicts 将挨打）
+ *   ∧ 剂量 <2/局（滥发惩罚在 mastery 线里）；目标挑 ep≥2 的攒钱手（转移重定向的资格线）。不碰原 transferPick
+ *   ——保 MX4-GD-T2 谱系（MX7-T2-R 在册池成员）的确定性蒸馏不变式。 */
+const TRANSFER2_DOSE = 2;
+const transfer2Pick = (state, pid, cs) => {
+  let aimed = 0;
+  for (const q of (state.p || [])) {
+    if (!q || q.id === pid || (q.hp || 0) <= 0) continue;
+    if (q.lastTarget === pid) aimed++;
+  }
+  if (aimed < 1) return null;
+  if (castCount(state, pid, R.SK.TRANSFER) >= TRANSFER2_DOSE) return null;
+  let best = null, bestEp = 1;
+  for (const c of cs) {
+    if (c.key !== R.SK.TRANSFER || c.affordable === false || c.target == null) continue;
+    const o = state.p[c.target];
+    if (o && (o.ep || 0) > bestEp) { bestEp = o.ep; best = c; }
+  }
+  return best || null;
+};
 /* 定量配给的混合教师（千问 · 11-01，用户 11-01：『用一堆大雷本来就没有什么用处，我给大雷要求才 0.2，
  *   你剩下的资源不就可以拿去分配给电磁炮等等了吗』+『不能纯靠单一教师』）。
  * 形状：每条贵线**只用到桶线下限的若干倍**，超了就把它的地盘还给兑现链——剂量上限住在教师里，
@@ -753,6 +796,12 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => ration6Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'charge'
     ? (state, pid, cs) => chargePick(state, pid, cs)
+  : name === 'purify'
+    ? (state, pid, cs) => purifyPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'drain'
+    ? (state, pid, cs) => drainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'transfer2'
+    ? (state, pid, cs) => transfer2Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'ring'
@@ -867,7 +916,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'purify', 'drain', 'transfer2', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）

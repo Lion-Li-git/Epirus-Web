@@ -50,9 +50,9 @@ export const GUARD_FAMILY = ['guard', 'reflect', 'bagua', 'shift', 'jinshield', 
 const MINIT_ERA = 'predictive-2026-10-31';
 const MINIT_EP_MIN = 2;
 const MINIT_WINDOW = 4;
-const LONG_LINES = { bigT: 0.2, railgun: 0.35, laserEye: 0.2, miniT: 0.2, cannon: 0.1, firestorm: 0.2 };
-const SHORT_LINES = { bigT: 0.05, railgun: 0.09, laserEye: 0.05, miniT: 0.05 }; /* 长线 ×1/4（PREREG §四） */
-const FREQ_KEYS = ['ring', 'bigT', 'railgun', 'laserEye', 'miniT', 'cannon', 'proto', 'transfer', 'holo'];
+const LONG_LINES = { bigT: 0.2, railgun: 0.35, laserEye: 0.2, miniT: 0.2, cannon: 0.1, firestorm: 0.2, drain: 0.1 };
+const SHORT_LINES = { bigT: 0.05, railgun: 0.09, laserEye: 0.05, miniT: 0.05, drain: 0.03 }; /* 长线 ×1/4（PREREG §四） */
+const FREQ_KEYS = ['ring', 'bigT', 'railgun', 'laserEye', 'miniT', 'cannon', 'proto', 'transfer', 'holo', 'drain'];
 
 /* ---------- 装载（与 game-record.mjs 同一路数：v7 原生先试，再走 2.0 容器 + 代闸） ---------- */
 function balancedJson(s, at) {
@@ -133,11 +133,16 @@ export function replay(audGame, evs) {
     const lo = audGame.marks[i], hi = (i + 1 < audGame.marks.length) ? audGame.marks[i + 1] : evs.length;
     let attempt = null, voided = false;
     const dmgToMe = [];
+    const transfered = [];
     for (let j = lo; j < hi; j++) {
       const e = evs[j];
       if (!attempt && e.type === 'action' && e.pid === pk.pid) attempt = e;
       if (e.type === 'voided' && e.pid === pk.pid) voided = true;
       if (e.type === 'damage' && e.to === pk.pid && e.amt > 0) dmgToMe.push({ src: e.source == null ? null : e.source, amt: e.amt });
+      /* 夜3班 11-18 修复：转走点数 = type:'transfer' 事件（to=我，amt=重定向量）。旧口径计 dmgToMe
+       * （我承伤）是**反向的**——转移成功时伤害落 dest、我掉血为零 ⇒ 完美转移者旧读数 0%，
+       * 全库"转移率 0%"假象的根因（resolve.js :443/:478 的事件流就是真值）。 */
+      if (e.type === 'transfer' && e.to === pk.pid && (e.amt || 0) > 0) transfered.push({ amt: e.amt });
     }
     rows.push({
       pick: pk, lo,
@@ -267,7 +272,7 @@ export function auditCells(W, A, chooser, cellsSpec, games, salt) {
           if (flags.heat) st.obs.tHeat++;
           if (flags.lead) st.obs.tLead++;
           if (flags.low) st.obs.tLow++;
-          const got = row.dmgToMe.filter((d) => d.src != null);
+          const got = row.transfered || [];
           if (got.length) { st.obs.transferHit++; st.obs.transferAmt += got.reduce((a, d) => a + d.amt, 0); }
         }
         if (pk.key === R.SK.HOLO) {
@@ -374,6 +379,10 @@ function verdictOf(a) {
     unreadable: !isShort && tfAll === 0,
     actual: pct(minRate('transfer')) + '/局，转移 ' + tfAmt + ' 点 / ' + tfAll + ' 次 ⇒ 转移率 ' + pct(tfRate) + '（回本线 100% = 2.0 点/次）',
     line: '0.05/局（各格）' + (isShort ? '' : ' ∧ 转移率≥50%') };
+  /* 夜3班 · 11-18（用户令「训练做 T1/T2 的真覆盖率，不要偶尔用一下就算会」）：drain 判线新立——
+   *   摄魂是处决器（3ジ · 仅 HP≤1 目标 · 命中自愈 1；引擎只对合法目标供候选 ⇒ 机会=候选出现），
+   *   真会用 = 机会出现时真的在收人头。线 0.1/局（各格）；短桌 ×1/4。无复合语义，只判使用率。 */
+  v.drain = { pass: minRate('drain') >= L.drain, actual: pct(minRate('drain')) + '/局', line: L.drain + '/局（各格）' };
   /* 夜6班 · 11-14（用户令「天火训练把引爆率和电磁炮珠浪费一样当重要门槛」）：**贴而不引**是主浪费形态
    *   （R62 实测 GD3ALL-NGA2R 贴 89 引 1，I/A=0.01）。口径：引爆率 = okUses.firestorm / max(1, okUses.curse)
    *   —— R64 引擎门保证每次成功 firestorm 都有活符可点；**符咒引爆后仍存（可多次引爆）⇒ 每次引爆都计入、
@@ -408,7 +417,7 @@ function printPack(a) {
     console.log('  ' + row);
   }
   const v = verdictOf(a);
-  const names = { ring: '会聚能环', bigT: '会大雷', railgun: '会电磁炮', laserEye: '会激光眼', miniT: '会小雷', cannon: '会过载炮', firestorm: '会天火', transfer: '会转移' };
+  const names = { ring: '会聚能环', bigT: '会大雷', railgun: '会电磁炮', laserEye: '会激光眼', miniT: '会小雷', cannon: '会过载炮', firestorm: '会天火', transfer: '会转移', drain: '会摄魂' };
   console.log('  —— 判据（' + (a.table === 'long' ? '长程 PREREG §二' : '短程迁移 PREREG §四 ×1/4') + '）——');
   for (const k of Object.keys(v)) console.log('  ' + (v[k].pass ? '✔' : '✘') + ' ' + names[k].padEnd(5) + '  ' + v[k].actual + '   [线：' + v[k].line + ']');
   if (a.bead) console.log('  珠经济（chargeProfile long 单源）：蓄能/局 ' + a.bead.chargesPerGame.toFixed(1) + '，得 ' + a.bead.gained + ' 花 ' + a.bead.spent + '（电 ' + a.bead.spentElec + '/爆 ' + a.bead.spentBoom + '）过期 ' + a.bead.expired + ' ⇒ 浪费率 ' + pct(a.bead.wasteRate) + '，花珠率 ' + pct(a.bead.spentRate));
