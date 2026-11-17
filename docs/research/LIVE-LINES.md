@@ -1235,3 +1235,13 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   （TZT2D 收账后定）③ purify 合成状态注入 ④ G5 普查 300 局标准协议（v2 是 100 局）⑤ 池 31→17 重切后
   被裁 14 枚的回收评估 ⑥ bpM 列要不要进当选键/promote 判据（现只作研究列）。
 
+## 11-18 夜3补记（07:5x · 用户令四步收官）
+
+- **四步全落册**：①四代表包入图（RINGB9/TZ2C/TZPUR/TZT2D/RINGB11，registry 994）②三枚全过包入池
+  （RINGB9 soft / TZT2D hard / RINGB11 soft——池 17→20 hard9/soft11，bundle 6071KB，probe-pool 过）
+  ③TZ2D 冲全过 ❌（TZ2C 的 G4 珠爆发克制是 firestorm 行为结构性弱点，强度配方救不动——TZ2C 的门问题
+  需要行为层改造而非强度层）④低强度池包训练（RINGB11 ✅ 入池取代位；RINGB12 全门但珠环 0% 断裂不取）。
+- **一句话给下一班**：RINGB9（T1 真覆盖+全门+0.161）与 TZT2D（hard 带 0.20+G5 0%）是本轮两只最值钱的包；
+  G5 杠杆（奖励结构/门语义）与 seatKill 人席批测是池的下一班活；transfer 特征工程与 purify 合成注入是
+  覆盖的下一班活。
+
