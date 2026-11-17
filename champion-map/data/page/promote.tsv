@@ -246,8 +246,6 @@ MX5-GD-R6	block	1
 MX5-GD-R6B	pass	—			
 MX5-GD-R6C	block	1			
 MX6-GD-TF05	block	1			
-MX6-GD-TF15	pass	—			
-MX6-GD-TF20	pass	—			
 MX7-GD-R6B	block	2			
 MX7-T2-R	pass	—			
 MX7-T4-R	block	1			
@@ -260,3 +258,7 @@ MX8-LE25	block	1
 MX8-T3L-KL	block	2			
 MX8-T4R-KL	block	1			
 MX8-R6C-KL	pass	—			
+MX6-GD-TF15	pass	—			
+MX6-GD-TF20	pass	—			
+MX8-TN25-KL	pass	—			
+MX8-TN35-KL3	pass	—			

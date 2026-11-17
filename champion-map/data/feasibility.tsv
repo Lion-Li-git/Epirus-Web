@@ -993,3 +993,7 @@ MX7-T2-R					1		0	场B 清场 0.25 < 0.3/局（对面只攒钱不动时收掉的
 MX8-R6B-KL					0	场B 清场 0.02 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	1		add-point
 MX8-CN-M					1		1		add-point
 MX8-R6C-KL					0	场B 清场 0.08 < 0.3/局（对面只攒钱不动时收掉的人头） ——【对面都在攒钱不动时能把人打死】不成立〔原机器名：场B〕	1		add-point
+MX6-GD-TF15					1		1		add-point
+MX6-GD-TF20					1		1		add-point
+MX8-TN25-KL					1		1		add-point
+MX8-TN35-KL3					1		1		add-point

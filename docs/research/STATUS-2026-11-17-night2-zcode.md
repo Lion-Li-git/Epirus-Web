@@ -207,6 +207,23 @@
 - **T3 覆盖终账**：laserEye（LE40 hard 池）‖ cannon（MX8-CN-M soft 池）‖ miniT（V3b soft 池）——三键全部有**在池过门载体**；mine（MX8-R6B-KL soft 池）‖ rod（同上）‖ armor/taunt 能力证（R6/R6B，过门粒下一班）；purify 无教师。
 - 池 30 枚 hard14/soft16，union 全层级有载体。
 
+## 十八、gen13–gen14 补齐 + 14 包 skill-report + 冠军池精简清退与合规补账（11-17 上午续接）
+
+- **gen13 收官（`77d76a2a`，06:25）**：`MX8-R6C-KL`（R6C 底座 + KL 锚定 PG）全门 + `armor,rod` 保活（`skE=16/16`）入图；同时补查确认 `3091c0df` 提到的 `MX8-CN-M`（`cannon 3.0%`）此前已在图但漏入 `pool-members.tsv`。
+- **gen14/14b `taunt` 攻坚**：在 `training/proto2/supfit-gd.mjs` 新增无旋钮教师变体 `ration6t`（`DOSE6T`，清掉前置占拍的 `curse/armor/mine/rod/cannon` 保住 `taunt` 窗口），配对两阶段训练：
+  - **`MX8-TN25-KL`**（`ration6t@0.25` + `klW=0.18`）：严格 `promote=pass`，`selftest3` **6/6 全绿（`0.00e+0`，允许继续开 PG）**，`seatKill=0`（90210/90211 全格 ≤11.5%），`drain` 活，`C多=0.3253 / C长=0.2424（C̄=0.2839）`。
+  - **`MX8-TN35-KL3`**（`ration6t@0.35` + `--klW=0.28 --klModes=long,standard --dmgW=0.03 --defTax=0.015 --shapeModes=long`）：严格 `promote=pass`（`G5[long]=23%/25%`, `G4=26%/38%`, `Wall=17.4/局`），**`skE=19/18` 全池最高**，`taunt + drain + dualGun + laserEye + ring` 全打出（`selftest3` 数值梯度腿在 5831/5833 过 ReLU 折点，推理腿全同，不直接再接 PG）。
+  - 同时启用 **`MX6-GD-TF15`**（`transfer+railgun+bigT`, 5P 原生 `49.5%`, `pass`, `seatKill=0`, `C̄=0.195`）与 **`MX6-GD-TF20`**（`transfer+miniT+railgun+bigT`, `pass`, 取代 `OBS6-SHAPEDIST-V3b` 使全池零 `block`）；以上 4 枚走 `measure-point --rounds=100` 正式入图并补齐 `mx1116`（`registry 989 / coords 989`）。
+- **14 包 5P `skill-report` 横评结论（旧技能保持检查）**：
+  - T0 核心动作（枪 7–15.5%、狙击枪 8.7–12.9%、激光剑 2.5–5.7%、防/反/八卦、蓄能 1.7–6.9%）全部保留，且新包蓄能意识普遍高于旧均衡包 `EQ-S4-E9`（1.7%）；
+  - T1 「电磁炮」在原生 5P 局出现分化：`EQ-S4-GD6ATEACH(3.0%)`、`MX3-GDEQ-GD(3.1%)`、`MX8-R6C-KL(1.7%)`、`MX8-R6B-KL(1.6%)`、`MX8-TN25-KL(1.5%)` 保持高活跃，而专项强插包 `LE40/T2STR/TF15/T2-R/CN-M/TN35-KL3` 在 5P 原生局上 `电磁炮` 被挤占降至 `0.2%–0.6%`。
+- **全池合规补账 + 精简重组（`31 枚 → 17 枚`，`hard 8 / soft 9` 实桌分带）**：
+  - 补齐全部 21 枚池/代表包 `90210/90211` 人席与标准 `--dry --support=2` 体检：其中原自动成员 `OBS6P9-S4000` 实测 `seatKill=3`（负「只枪压制」68%/66%）。
+  - 踢出未过线（`block`）/低广度（`skE=5–8`）/人席踩线冗余旧包（仅从池抽签剔除、文件与地图留档不动）；保留 `DEF-s16`（补齐 `90210/90211` 全过且 `seatKill=0`、`DEF-s16` 全长 `pass`）与 `MSB11-R1S130778313`（带 `transfer` 且整桌强于纯 C 排序），保证 **8 人桌两带各自 ≥ 7 枚不重复**（`hard 8 / soft 9`）。
+  - **按 `exam-4n --champn=7` 整桌强度分带**（双外部参照席 `MX2-U4-EQ` + `EQ-S5-P9` 实测）：将 `MX6-GD-TF15` 与 `MX5-GD-LE40` 上调进 `hard`（二者纯单包 C̄ 与低一档接近，但进 7AI 混合桌后整体压制更强），`hard(8)` 整桌参照 `avgRefC̄=0.1314` vs `soft(9)` `avgRefC̄=0.2045`（实测两带整桌差距 `+0.0731`，`long` 桌差距 `+0.1065`）。
+  - 体检 **`17/17` 全过线**、人席 **`17/17` 全 `seatKill=0`**、`pool-add --audit` 零异常（`untracked/dupWid/blockedAuto/untestedAuto/seatKilledAuto/seatUnknown` 全 0）；全池覆盖 **`T1 = 15/17 (88.2% ≥ 50%)`**、**`T2 = 6/17 (35.3% ≥ 25%)`**，除无教师的 `purify` 外 **29/29 可训技能全覆盖**；`js/bundled-champion-pool.js` 已同步重编（`5266 KB`）。
+- **门禁阻断收口**：① `champion-map/pack-aliases.tsv` 登记 `MX1-E9-GD.bak` 为 `EQ-S4-GD6ATEACH.bak` 同源别名（解 `D191 ④`）；② `champion-map/viewer.mjs` `FAM_SLOTS` 由 `24` 扩至 `30`（保持同 `(s,l)` 色相差 `65° ≥ 40°`，解决 25 家后第 25 家族色相回绕撞 `fam 0` 导致的 `shot.mjs` 1 项红叉），`rebuild-map` 实测 **100 PASS ‖ 0 FAIL**。
+
 ## 四、交接与下一步
 
 - **工具资产**：`tools/pipeline-audit.mjs`（10 站审计，随时 `--all` 重跑）‖ `tools/sync-page-coords.mjs` ‖ `tools/attach-exam4n-mixed.mjs` ‖ `exam-4n` 新发射 `keys=`（用过键清单——T 层验证与池普查的钥匙名来源）。

@@ -51,3 +51,23 @@ GD6a-TILT		multi	5	5	bigT,charge,ji,railgun,ring
 EQ-S4-GD6ATEACH		long	13	12	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
 KD-G2		long	11	11	bagua,bigT,charge,guard,gun,holo,ji,railgun,reflect,snipe,sword
 GD6a-TILT		long	5	5	bigT,charge,ji,railgun,ring
+MX7-T2-R	new	multi	13	13	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,snipe,sword,transfer
+MX8-R6B-KL	new	multi	18	15	bagua,bigT,charge,curse,firestorm,guard,gun,holo,ji,mine,proto,railgun,reflect,ring,shift,snipe,sword,tank
+MX5-GD-T2STR	new	multi	13	12	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+MX5-GD-LE40	new	multi	13	12	bagua,bigT,charge,guard,gun,holo,ji,laserEye,railgun,reflect,shift,snipe,sword
+MX8-R6C-KL	new	multi	18	16	armor,bagua,bigT,charge,curse,guard,gun,holo,ji,laserEye,proto,railgun,reflect,ring,shift,snipe,sword,tank
+MX7-T2-R	new	long	14	13	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword,transfer
+MX8-R6B-KL	new	long	19	16	bagua,bigT,charge,curse,firestorm,guard,gun,holo,ji,laserEye,mine,proto,railgun,reflect,ring,rod,shift,snipe,sword
+MX5-GD-LE40	new	long	14	13	bagua,bigT,charge,guard,gun,holo,ji,laserEye,railgun,reflect,ring,shift,snipe,sword
+MX8-R6C-KL	new	long	18	16	armor,bagua,bigT,charge,curse,guard,gun,holo,ji,laserEye,proto,railgun,reflect,rod,shift,snipe,sword,tank
+MX5-GD-T2STR	new	long	13	13	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+MX6-GD-TF15	new	multi	14	14	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword,transfer
+MX8-TN25-KL	new	multi	14	11	bagua,bigT,charge,curse,drain,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword
+MX6-GD-TF20	new	multi	15	14	bagua,bigT,charge,curse,guard,gun,holo,ji,miniT,railgun,reflect,shift,snipe,sword,transfer
+MX8-TN35-KL3	new	multi	19	19	bagua,bigT,charge,curse,drain,dualGun,guard,gun,holo,ji,laserEye,proto,railgun,reflect,ring,shift,snipe,sword,taunt
+MX8-CN-M	new	multi	15	13	bagua,bigT,cannon,charge,curse,firestorm,guard,gun,holo,ji,proto,railgun,reflect,snipe,sword
+MX6-GD-TF20	new	long	15	14	bagua,bigT,charge,curse,guard,gun,holo,ji,miniT,railgun,reflect,shift,snipe,sword,transfer
+MX8-CN-M	new	long	16	14	bagua,bigT,cannon,charge,curse,firestorm,guard,gun,holo,ji,proto,railgun,reflect,shift,snipe,sword
+MX8-TN35-KL3	new	long	18	18	bagua,bigT,charge,curse,drain,guard,gun,holo,ji,laserEye,proto,railgun,reflect,ring,shift,snipe,sword,taunt
+MX6-GD-TF15	new	long	14	14	bagua,bigT,charge,curse,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword,transfer
+MX8-TN25-KL	new	long	14	13	bagua,bigT,charge,curse,drain,guard,gun,holo,ji,railgun,reflect,shift,snipe,sword

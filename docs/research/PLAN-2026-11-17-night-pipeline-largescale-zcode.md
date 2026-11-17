@@ -89,7 +89,9 @@ GD6a 教师只在 5long/8long 出标签，但它教的是**多席位长局的珠
 - **viewer 并列档**（不撤旧 Sc 账）：色档新增 `ske`（有效技能数·跨环境）+ 剖面卡 +2 行（有效技能/混合C）；色域=窗口内实测 p02..p98，灰=未测。
 - 旧当选键结论维持：41 枚旧 GA 选举读数留表当账，不复活旧仪。
 
-### 批 3 矩阵（脚本就绪，00:45 待发车）
+### 批 3 矩阵（00:45 发车，01:35 收榜，02:0x winner 入图，02:4x gen2 续代发车）
 
-- `scratch/zcode-1113-deps/run-matrix-1117.mjs`：**MX1 过线波**（底座 E9/GD6ATEACH）→ **MX2 T1 波**（底座 US1/U4，ring/rg9/bigT6 持有者；长程臂禁 E9 高权重基座——铁律遵守）。每波 2 底座 × 4 教师组合（EQ 均衡原方/ST 补 2:multi/GD6a 经济道/breakAll 加权）= 16 臂，1500 组/180 步。
-- 预注册：promote 全门 ∧ mixed skE ≥ 4 ⇒ 进 Next；T2/T3 层今晚不开，等 T1 粒站稳。
+- **16 臂完成，9/16 过预注册线**（promote 全门 ∧ mixed skE≥4）。榜单与结论详见 [STATUS-2026-11-17-night2-zcode.md](STATUS-2026-11-17-night2-zcode.md) §三。
+- 三条结论：①经济教师组合（gd）是过线+强度双赢家（mx1-e9-gd C多 0.324 全场第一）——与批 0 反升归因互证；②T1 覆盖保得住（16 臂 skE 全 ≥10，U4 线最高 17）；③breakAll 要跟底座挑（E9 底座爆门、GD/US1/U4 底座能过）。
+- 9 winner 走正式入口入图 + 产物落 docs（tracked）；7 block 臂留 scratch 记负结果。
+- **gen2 续代**（赢家续代，计划原文）：底座 {MX1-E9-GD, MX1-GD-EQ} × 组合 {GD, EQ} = 4 臂，02:4x 后台。

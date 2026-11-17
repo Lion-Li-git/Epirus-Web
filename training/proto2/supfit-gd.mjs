@@ -449,6 +449,8 @@ const ration5Pick = (state, pid, cs) => {
 const DOSE6 = { firestorm: 2, curse: 4, armor: 3, taunt: 2, transfer: 2, proto: 1, mine: 1, rod: 1, holo: 1, cannon: 2, railgun: 8, charge: 1, drain: 3 };
 /* 11-17：ration6b = ration6 的减剂量变体——taunt/armor 归零（实测它们喂 G5[long] 防席夺冠门：R6 31%/25%、SOUP4 26%/25% 同一道门），mine 加倍（池真空目标）。其余同 DOSE6。 */
 const DOSE6B = { ...DOSE6, taunt: 0, armor: 0, mine: 2 };
+/* 11-17：ration6t = ration6 的挑衅专项变体——清掉前置占拍的 curse/armor/mine/rod/cannon，保住 taunt 发射窗口。 */
+const DOSE6T = { ...DOSE6, curse: 0, armor: 0, mine: 0, rod: 0, cannon: 0, taunt: 3 };
 /* ⚑ 珠经济流（04:5x 第三修）：炮配额 3→6（珠的主花口）、持珠只在 ep<2 才攥（ep≥2 有珠就该打炮）、
  *   蓄能 4/局配额——"蓄→花"要成环，否则持珠态的 JI 标签就是囤积签名（四发产物花珠全 0 的病根）。 */
 /* ⚑ railgun 也要配额：富桌（:r2）上无配额的炮会单线吃满标签（11-02 shake3 实测 103/240），
@@ -672,6 +674,8 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => detonatePick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 不回落链：链会把引爆段拖回攒钱 */
   : name === 'ration6b'
     ? (state, pid, cs) => ration6Pick(state, pid, cs, DOSE6B)
+  : name === 'ration6t'
+    ? (state, pid, cs) => ration6Pick(state, pid, cs, DOSE6T)
   : name === 'rationdet'
     ? (state, pid, cs) => rationPick(state, pid, cs) || detonatePick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'rationdet2'
@@ -770,7 +774,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
