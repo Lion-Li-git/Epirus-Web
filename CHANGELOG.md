@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.0 — 11-17（**冠军池换代：17 枚实桌两带 + 家族按训练方法合并 + 图数据管线**）
+
+**这一版是什么**：不换规则，只换产品侧冠军池与出图口径。池从 31 枚收敛到 **17 枚**（hard 8 / soft 9），全部 `promote=pass`；hard 桌对外部参照 C̄ 0.1314 vs soft 0.2045（7AI 整桌差 0.0731，long 0.1065）。
+
+- **池**：补齐全 21 枚池/代表的 90210/90211 人席与 `--dry --support=2` 体检；踢出未过线/低广度/踩线旧包；`MX6-GD-TF15`、`MX5-GD-LE40` 上调 hard；`DEF-s16`、`MSB11-R1S130778313` 保留 soft。T1 覆盖 15/17（88.2%）、T2 6/17（35.3%）；除无教师 `purify` 外 29/29 可训技能有载体。
+- **家族**：24/25 收容所修复；V3a/V3b/V3S2/V3H3/B2 归 fam25（5 枚）；MX1–MX8 按训练方法合并为 fam26 `obs6.5 键道/覆盖训练`（15 枚）；fam24 保留统一单包/基座（15 枚）。`add-point` 按 id 前缀自动归族，不再把所有 MX 塞进统一族。
+- **图/管线**：`pipeline-audit`、`sync-page-coords`、`attach-exam4n-mixed`；`rebuild-map 100 PASS / 0 FAIL`；bundle 5266 KB。
+- **版本**：程序版本 `v2.0.9 → v2.1.0`（池换代是玩家可感知的新东西，按版本规则走次版本；规则集仍是 v2.1.0）。
+
 ## v2.0.9 — 11-15（**规则边界修复 + 2P/UI 收口**）
 - **规则与产品侧联动收口**：
   - **镜面复制 & N6/N9/R65 边界对齐**：`resolve.js` 修正 `R.CAT.DEFENSE`（镜面复制防御类不再误走攻击分支/二次发 `mirror` 事件）；`bigTBan` 记录原技能 `mirror` 而非复制产物；大雷连带先检查第三方承伤者 `rodGuard`（免疫 2 电与禁用并消耗避雷针，发 `rodBlock`）；镜面复制 `ring` 保留 `ringStreak`；多人 `chains` 改为双向追加而非覆盖；`金刚盾反击` 与 `挑衅违约` 走 `rawDamage` 参与 `铁索连环`；`roundTaunts` 迁至 `state._roundTaunts`；同步更新 `RULES-NP.md`（并纠偏镜面复制双枪 `pri 3` 文案）与 `RULES-2P.md`。

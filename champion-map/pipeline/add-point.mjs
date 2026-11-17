@@ -92,10 +92,7 @@ function packDims(txt) {
 const PACK_DIMS = packDims(packText) || {};
 /* 11-17：按 id 前缀分代归族；不要把 MX* 全部塞进统一单包族。 */
 function autoFamLabel(id, dims) {
-  if (/^MX8-/.test(id)) return '2.0 MX8 覆盖终盘/KL（11-17）';
-  if (/^MX[67]-/.test(id)) return '2.0 MX6–MX7 transfer/KL（11-17）';
-  if (/^MX[45]-/.test(id)) return '2.0 MX4–MX5 覆盖/强度回收（11-17）';
-  if (/^MX[123]-/.test(id)) return '2.0 MX1–MX3 强度/续代矩阵（11-17）';
+  if (/^MX[1-8]-/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
   if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
   if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
   return '';
