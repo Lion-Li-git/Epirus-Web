@@ -1178,3 +1178,27 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
   再接 `promote` 记录腿或 `EPIRUS_SEL_FRONT` 排序键。**不定线、不动产品装配**；按 11-16 21:5x 裁定它属于筛选顺序的**最后一段（强度）**，不做成早期硬地板。
 - **等点头**：① PR #5 要不要并 `main`（要点名；tag 不随合并授权）；② **V3S2 那条父边按哪种语义画**——按融合补 `parentOf2/parentOf3`（⑫d 管的就是这个），还是把 `hotstartFrom` 删回原样让父边落 `unknown`；顺带决定 docs 那份手填壳要不要入库；
   ③ 第 2 步那次约 15–20 分钟的分布测量开不开——**没分布就没名次**，今天已经拿 1.0pt 的差排过"全库第一"。
+  ‖ **本条已销**：②「V3S2 那条父边按哪种语义画」由 `08c29d18`（11-16 23:13，用户令）落定——手填的假 `hotstartFrom` 已删，
+  META 写进真实六路 `soup.sources`、ts 恢复 `12:47:43.513Z`，lineage 行改成三源融合真值（V2S0 / SHAPEDIST / V3a，三条边全 `parentSrc=soup`）。
+
+## 11-17 深夜追记（Qoder · 家族号收成单一真源 + 今天两次 CI 红的病根）
+
+- **病根（不是手误，是设计）**：同一个家族号存三处——`registry.fam` ‖ `page/lineage-g3.tsv.fam` ‖ 生成物 `page/lineage.tsv.fam`。
+  13:59 那次"以 registry 为真源回写"把 registry 里 4 枚 MSB15 的**空值**盖掉了 sidecar 里的真值 ⇒ `D234 ⑫` 红在 CI（`display 989 ‖ 覆盖 995 ‖ 缺 4`）。
+  同一天 11-16 那次红（池成员没图点）与这次红是**同一族**：产物/输入分家 + 一份数存多处。**修法选"只留一处"，不是"再加一层校验"。**
+- **改了什么**（PR #6 / 分支 `qoder-1117-fam-single-source`，6 个文件）：sidecar 删 `fam`/`famLabel`（16→14 列、174 行不变，从此只存血统）；
+  `lineage.mjs`/`viewer.mjs`/`add-point.mjs` 只认 registry；表头再出现这两列 ⇒ viewer 拒烘、add-point `exit 2`；
+  `D234 ⑫` 同一条腿里加两格（**不新增门**）：⑫e 每个 display 点必须在 registry 有行**且 fam 非空**、⑫f `lineage.tsv` 自带 fam 必须等于 registry（抓"生成物过期"，此前无人看守）。
+- **等值性是证明过的，不是看过的**：迁移后重跑 `lineage.mjs` + `rebuild-map.mjs` ⇒ `lineage.tsv`(990 行) ‖ `index.html`(2,629,952 字节) ‖ `trends.html` **三个产物逐位不变**（git 不认为它们被改过）、页内自检 `100 PASS ‖ 0 FAIL`、干净克隆 `ship-pool 1/1`、CI 非 success 项为空。
+- **反向验牙**（一次性 worktree 里做，跑完还原并核对 `git status` 干净）：
+  | 变异 | 应当红的格 | 实测 |
+  |---|---|---|
+  | registry 里某枚 fam 清空 | ⑫e | ✔ `registry 里 fam 为空的 1 枚：EQ-S4-GD6ATEACH` |
+  | registry 删掉某枚整行（先全链重烘让 `⑩c` 不抢话） | ⑫e | ✔ `没有行的 1 枚：EQ-S4-GD6ATEACH` |
+  | 两张谱系表都删掉该枚父边行（registry 保留，重烘） | ⑫ 覆盖格 | ✔ `谱系表覆盖 988 枚；缺 1 枚` ⇒ **换数据源没有把老格子削钝**（这条是我最担心的） |
+  | 手改 `lineage.tsv` 的 fam=77、registry 不动 | ⑫f | ✔ `自带的 fam 与 registry 不一致 1 枚` |
+  | 把 fam/famLabel 塞回 sidecar 表头 | viewer + add-point | ✔ 双双当场拒（`⛔ …家族号 11-17 起只在 registry 定一份`） |
+  一个过程教训：前两轮我把变异判词归给了 ⑫，实际先被同一条腿里更前面的 `⑩c`（页面必须等于烘焙输出）抓走——**"红了"不等于"我以为的那格红了"**，得重烘后再比才分得清谁有牙。
+- **仍未根治的两件事**（要动就另开一笔，等点名）：① `rebuild-map` 不跑 `lineage.mjs` ⇒ `lineage.tsv` 是"提交了但没人验新鲜"的生成物，⑫f 只是兜底；根治是把它纳入唯一入口或加"重生成后必须逐位相同"的腿。
+  ② 那 10 枚 sidecar 孤行（8 枚 `wid:` 父边占位 + `OB3S-C2-s7` + `MSB15-soupb-R1S190353054`）在 registry 里没有对应行——现在不伤页面，但"血统表里有、身份账里没有"这个形状还留着。
+- **等点头**：① PR #6 要不要并 `main`（要点名；tag 不随合并授权）；② 上面那两件根治做不做。
