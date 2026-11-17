@@ -1,0 +1,277 @@
+{
+ "tool": "supfit-gd",
+ "tag": "eq-s4-tz2b",
+ "parent": "scratch/arms/EQ-S4-TZ2A.bak",
+ "seed": 2026112702,
+ "lr": 0.001,
+ "steps": 260,
+ "groups": 2200,
+ "trainG": 1650,
+ "testG": 550,
+ "objective": "cand",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 2200,
+ "shapeBal": 1,
+ "rolloutMode": "step",
+ "classPow": 1,
+ "classCap": 0,
+ "teacher": "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "arenaPool": null,
+ "arenaShapes": "2:standard,2:long,2:multi,3:multi,5:multi,8:multi,3:long,5:long,5:long,8:long,8:long",
+ "teacher2": null,
+ "teacher2frac": null,
+ "teacher2keys": null,
+ "teacher2shapes": null,
+ "teacher3": null,
+ "teacher3frac": null,
+ "teacher3keys": null,
+ "teacher3shapes": null,
+ "teacher4": null,
+ "teacher4frac": null,
+ "teacher4keys": null,
+ "teacher4shapes": null,
+ "shapeTeachers": "2:standard=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.85+detonate@0.15;2:multi=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.85+detonate@0.15;3:multi=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.85+detonate@0.15;5:multi=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.85+detonate@0.15;8:multi=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.85+detonate@0.15;2:long=ringEcon@0.6+detonate@0.4;3:long=ringEcon@0.6+detonate@0.4;5:long=ringEcon@0.6+detonate@0.4;8:long=ringEcon@0.6+detonate@0.4",
+ "playedAgree": {
+  "n": 4887,
+  "hit": 2779,
+  "stuckCharge": 80,
+  "missCharge": 30,
+  "missFire": 2
+ },
+ "label": {
+  "ok": 6573,
+  "moved": 27,
+  "gone": 0,
+  "keys": 6600,
+  "rare": 0,
+  "byKey": {
+   "ji": 4747,
+   "curse": 162,
+   "sword": 183,
+   "gun": 241,
+   "snipe": 324,
+   "reflect": 150,
+   "charge": 189,
+   "railgun": 50,
+   "firestorm": 97,
+   "proto": 91,
+   "laserEye": 30,
+   "drain": 38,
+   "bagua": 58,
+   "guard": 56,
+   "bigT": 20,
+   "ring": 130,
+   "dualGun": 34
+  },
+  "shapeTeacherHits": {
+   "2:standard": {
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 510,
+    "detonate": 90
+   },
+   "2:long": {
+    "ringEcon": 360,
+    "detonate": 240
+   },
+   "2:multi": {
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 510,
+    "detonate": 90
+   },
+   "3:multi": {
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 510,
+    "detonate": 90
+   },
+   "5:multi": {
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 510,
+    "detonate": 90
+   },
+   "8:multi": {
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 510,
+    "detonate": 90
+   },
+   "3:long": {
+    "ringEcon": 360,
+    "detonate": 240
+   },
+   "5:long": {
+    "ringEcon": 720,
+    "detonate": 480
+   },
+   "8:long": {
+    "ringEcon": 720,
+    "detonate": 480
+   }
+  }
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1650,
+    "teacherAgree": 0.5254545454545455,
+    "teacherLl": -2.8376511627402685,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 2200,
+    "trainG": 2200,
+    "teacherAgree": 0.58,
+    "teacherLl": -3.9637488194526442,
+    "studentAgree": 0.5927272727272728,
+    "studentLl": -4.1854557324789265,
+    "studentN": 550
+   },
+   {
+    "round": 2,
+    "studentG": 2200,
+    "trainG": 2200,
+    "teacherAgree": 0.5527272727272727,
+    "teacherLl": -3.911510393762526,
+    "studentAgree": 0.5881818181818181,
+    "studentLl": -4.502066466405099,
+    "studentN": 1100
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 11739,
+    "firstDiff": 0,
+    "dim": 16561
+   },
+   {
+    "round": 2,
+    "moved": 11709,
+    "firstDiff": 0,
+    "dim": 16561
+   }
+  ],
+  "startAgree": 0.54,
+  "startLl": -3.4562507667561837,
+  "agree": 0.5527272727272727,
+  "ll": -3.911510393762526,
+  "wAgree": 0.43124611801287516,
+  "nTest": 550,
+  "nTrain": 2200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.5881818181818181,
+  "studentN": 1100,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 347,
+    "hit": 217
+   },
+   {
+    "key": "sword",
+    "n": 16,
+    "hit": 12
+   },
+   {
+    "key": "curse",
+    "n": 16,
+    "hit": 2
+   },
+   {
+    "key": "gun",
+    "n": 24,
+    "hit": 11
+   },
+   {
+    "key": "snipe",
+    "n": 62,
+    "hit": 28
+   },
+   {
+    "key": "railgun",
+    "n": 10,
+    "hit": 6
+   },
+   {
+    "key": "charge#boom#boom",
+    "n": 4,
+    "hit": 1
+   },
+   {
+    "key": "laserEye",
+    "n": 2,
+    "hit": 2
+   },
+   {
+    "key": "drain",
+    "n": 10,
+    "hit": 2
+   },
+   {
+    "key": "charge#elec#elec",
+    "n": 18,
+    "hit": 7
+   },
+   {
+    "key": "bigT",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "bagua",
+    "n": 4,
+    "hit": 2
+   },
+   {
+    "key": "guard",
+    "n": 2,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 5,
+    "hit": 3
+   },
+   {
+    "key": "proto",
+    "n": 7,
+    "hit": 2
+   },
+   {
+    "key": "firestorm",
+    "n": 4,
+    "hit": 2
+   },
+   {
+    "key": "ring",
+    "n": 11,
+    "hit": 5
+   },
+   {
+    "key": "dualGun",
+    "n": 6,
+    "hit": 2
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "scratch/arms/EQ-S4-TZ2A.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}
