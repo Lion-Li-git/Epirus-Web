@@ -186,7 +186,7 @@ const purifyPick = (state, pid, cs) => {
   const me = state.p[pid] || {};
   const nStickers = (me.stickers || []).length;
   const disabled = me.cooldown && Object.keys(me.cooldown).length > 0;
-  if (nStickers < 2 && !disabled) return null;
+  if (nStickers < 1 && !disabled) return null;   /* 夜3班 TZPUR-B 起：≥2 符触发在咒源场实测 0 演示（11 符/20 局摊 4 席攒不到 2），降到 ≥1——清火弱/禁用仍有价值 */
   return pickKey(cs, R.SK.PURIFY) || null;
 };
 /* 11-18 摄魂处决教师（夜3班 · T2 真覆盖补课，用户令）：摄魂=处决器（3ジ · 仅 HP≤1 目标 · 命中自愈 1）。
