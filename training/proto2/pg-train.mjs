@@ -140,6 +140,21 @@ if (ONLY_SEG.length) {
  *   （避开考卷名册脚本），--arenaShapes=3:multi,5:long 等轮换桌形。 */
 const PG_ROSTER = rosterFromArg(W, T, String(arg('arenaPool', '')), 'pg-train');
 const PG_SHAPES = shapesFromArg(arg('arenaShapes', ''), 'pg-train');
+/* 夜3班 11-18：**KL/塑形空转响亮闸**（RINGB3/4 实测 klL1Final=0 的静默浪费）——
+ *   `--arenaShapes` 把桌形限制成与 `--klModes`（或 `--shapeModes`）无交集时，锚/塑形一次都不会触发
+ *   （allowKl = KL_MODES.has(slot.mode)，pg-train :441），预算全白交还带着"我加过锚"的假叙事。
+ *   当场拒；要 long 专项就 klModes 里放 long，要么去掉桌形限制。 */
+if (PG_SHAPES) {
+  const sm = new Set(PG_SHAPES.map((s) => s.mode));
+  if (KL_W > 0 && KL_MODES.size && ![...KL_MODES].some((m) => sm.has(m))) {
+    console.error('⛔ pg-train：--arenaShapes 桌形模式 [' + [...sm].join(',') + '] 与 --klModes [' + [...KL_MODES].join(',') + '] 无交集 ⇒ KL 锚零触发（空转）。把 klModes 对上桌形模式，或去掉 arenaShapes。');
+    process.exit(2);
+  }
+  if (SHAPE_MODES.size && ![...SHAPE_MODES].some((m) => sm.has(m))) {
+    console.error('⛔ pg-train：--arenaShapes 桌形模式 [' + [...sm].join(',') + '] 与 --shapeModes [' + [...SHAPE_MODES].join(',') + '] 无交集 ⇒ 塑形零触发（空转）。同上二选一。');
+    process.exit(2);
+  }
+}
 const A2 = createArena2(W, Object.assign(
   { refParams, temp: 0.15, highN: 1, wantEvents: 1 },
   PG_ROSTER ? { roster: PG_ROSTER } : { stratified: true, stratCap: 2, stratMix: 0.5 },
