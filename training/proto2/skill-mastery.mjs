@@ -27,6 +27,7 @@ import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp, chargeProfile } from '../../tools/audit-lib.mjs';
 import { install as installArch2, packCfgExit } from './arch2.mjs';
 import { createArena2, ARENA2_VERSION } from './arena2.mjs';
+import { rosterFromArg } from './roster-lib.mjs';
 
 const argv = process.argv.slice(2);
 const arg = (k, d) => { const f = argv.find((x) => x.startsWith('--' + k + '=')); return f ? f.slice(k.length + 3) : d; };
@@ -163,7 +164,13 @@ function auditOne(spec, opts) {
   for (const k of GUARD_FAMILY) if (!R.byKey[k]) throw new Error('GUARD_FAMILY 键不存在：' + k + '（rules.js 改了键名？）');
   const ref = loadChamp(W, 'js/bundled-champion-3p.js');
   if (!ref) throw new Error('参照包读不出');
-  const A = createArena2(W, { refParams: Float64Array.from(ref), temp: TEMP, wantEvents: 1 });
+  /* 夜3班 11-18：`--arena=hostile` = 敌意场（gunspam/heavyfire/aggro/targeter 攻击阵）——
+   *   transfer 的转移率/purify 的净化率在无攻击/无咒源的标准卷上**结构性不可过**（没挨打就没转移、
+   *   没被贴符就没净化），语义判线需要语义场。只换对手表，桌形/格数口径不变；fp 自带 roster 可查。 */
+  const A = createArena2(W, Object.assign(
+    { refParams: Float64Array.from(ref), temp: TEMP, wantEvents: 1 },
+    String(arg('arena', '')) === 'hostile' ? { roster: rosterFromArg(W, T, 'names:gunspam,heavyfire,aggro,targeter', 'skill-mastery-hostile') } : {},
+  ));
 
   let chooser, label, params = null;
   if (spec.startsWith('fixed:')) {

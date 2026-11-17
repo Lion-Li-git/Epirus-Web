@@ -1,0 +1,199 @@
+{
+ "def-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "def-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "def-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "def-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "def-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "def-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "eco2-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtA-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fgtB-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "fstA-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "long-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "mix-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "rwd0-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-31": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-32": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-33": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-34": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-35": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "sty-36": [
+  "checkPack: 载入拒绝：{\"ok\":false,\"reason\":\"version\",\"got\":6,\"want\":7}"
+ ],
+ "D1-77000": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "C2-77000": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "N2-77000": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "Q4-77000": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "U2-77001": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "RC1-77001": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "V9-77001": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ],
+ "RW2-77001": [
+  "file: registry 路径不存在：",
+  "skE: exam4n 表无 skE（未跑新口径考卷）"
+ ]
+}
