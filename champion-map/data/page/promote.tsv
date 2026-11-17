@@ -262,3 +262,9 @@ MX6-GD-TF15	pass	—
 MX6-GD-TF20	pass	—			
 MX8-TN25-KL	pass	—			
 MX8-TN35-KL3	pass	—			
+RINGB9	pass	—	0		
+TZ2C	fail	2		31	
+RINGB11	pass	—			
+TZPUR	fail	2	16		
+TZT2D	pass	—			
+TZT2D	pass	—			
