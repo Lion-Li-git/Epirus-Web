@@ -677,7 +677,13 @@ console.log('内联 ' + DATA.length + ' 枚（带冠军记录 ' + DATA.filter(d 
   (SID.live.coordsId || '⛔ 认不出') + (SID.live.coordsId && DATA.some(d => d.id === SID.live.coordsId) ? ' ‖ 在图上' : '') + '）');
 /* 家族标签**去重**：22 条长文本 × 718 枚 = 86 KB 的重复 ⇒ 表只发一份，枚上只留编号。*/
 const FAMLAB = {};
-for (const r of DATA) if (r.fam && LIN[r.id]) FAMLAB[r.fam] = LIN[r.id].famLabel;
+for (const r of DATA) if (r.fam && LIN[r.id]) {
+  if (FAMLAB[r.fam] && FAMLAB[r.fam] !== LIN[r.id].famLabel) {
+    console.error('⛔ 家族 ' + r.fam + ' 存在冲突 famLabel：「' + FAMLAB[r.fam] + '」 vs 「' + LIN[r.id].famLabel + '」（节点 ' + r.id + '）');
+    process.exit(2);
+  }
+  FAMLAB[r.fam] = LIN[r.id].famLabel;
+}
 /* §E376 这 16 枚在 lineage.tsv 里天生没有行（面板上没名字 = §E369 那批），而谱系图的行表是按 `P[i].fam` 建的
  *   ⇒ 实测它们被**静默丢掉**：页内自检报"树上只有 901/917 枚、旧包 0/16 有位置"，而页面标题仍说 917 枚。
  *   修法不是猜血统，而是给一行**明说是合成**的家族：横轴位置用它们的**上槽**时刻（slot-timeline.tsv，与训出时刻不同件事，
@@ -6462,16 +6468,19 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var rows8 = Object.keys(byF).map(Number).sort(function (a, b) { return a - b; });
     var st8 = rows8.map(function (f) { var a = byF[f].slice().sort(function (x, y) { return x - y; });
       return { f: f, n: a.length, min: a[0] }; });
-    var bad8 = [], nSlotOut = 0;
+    var bad8 = [], nSlotOut = 0, nBadFam0 = 0;
     for (var k8 = 1; k8 < st8.length; k8++) { var cu = st8[k8], pv = st8[k8 - 1];
       if (cu.f === 0 || /零散/.test(String(FAMLAB[cu.f] || '')) || /零散/.test(String(FAMLAB[pv.f] || ''))) continue;
       if (cu.min < pv.min) bad8.push('行 ' + cu.f + ' 最早 ' + new Date(cu.min).toISOString().slice(5, 10)
         + ' 早于行 ' + pv.f + ' 的 ' + new Date(pv.min).toISOString().slice(5, 10)); }
-    for (var j8 = 0; j8 < N; j8++) if (String(P[j8].id).indexOf('SLOT-') === 0 && !P[j8].famTop && P[j8].fam) nSlotOut++;
-    T('家族行序要与"这一行真显示的那些枚"的训出时刻同向，且旧槽位冠军只能住在合成那一行（§E466：一枚 09-09 的旧冠军曾把 10-02 那批拖上第 2 行）',
-      bad8.length === 0 && nSlotOut === 0,
+    for (var j8 = 0; j8 < N; j8++) {
+      if (String(P[j8].id).indexOf('SLOT-') === 0 && !P[j8].famTop && P[j8].fam) nSlotOut++;
+      if (!P[j8].old && (!P[j8].fam || P[j8].fam <= 0)) nBadFam0++;
+    }
+    T('家族行序要与"这一行真显示的那些枚"的训出时刻同向，且旧槽位冠军与普通包各自归位不混入 fam 0（§E466）',
+      bad8.length === 0 && nSlotOut === 0 && nBadFam0 === 0,
       st8.length + ' 行 ‖ 序违规 ' + bad8.length + ' 条' + (bad8.length ? '：' + bad8.slice(0, 4).join(' ‖ ') : '')
-        + ' ‖ 落在家族 0 之外的旧槽位冠军 ' + nSlotOut + ' 枚（要 0）‖ 头三行 '
+        + ' ‖ 落在家族 0 之外的旧槽位冠军 ' + nSlotOut + ' 枚（要 0）‖ 误入家族 0/缺家族号的非旧包 ' + nBadFam0 + ' 枚（要 0）‖ 头三行 '
         + st8.slice(0, 3).map(function (s) { return s.f + '：n' + s.n + ' ‖ 最早 ' + new Date(s.min).toISOString().slice(5, 10); }).join(' '));
   })();
   /* ===== §E462 拖动手本身要有判据 =====

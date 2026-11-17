@@ -47,7 +47,7 @@ const PATHOF = {};
     const iI = ch.indexOf('id'), iP = ch.indexOf('path');
     for (const l of L.slice(1)) { const c = l.split('\t'); if (iI >= 0 && iP >= 0 && c[iI] && c[iP]) PATHOF[c[iI]] = c[iP]; } } }
 const AP = {};
-{ const f = join(HERE, '_e330-armparent.tsv');
+{ const f = join(HERE, 'data/arm-parents.tsv');
   if (existsSync(f)) { const A = rd(f).trim().split('\n'), ah = A[0].split('\t');
     const ia = ah.indexOf('arm'), ir = ah.indexOf('productRel');
     for (const l of A.slice(1)) { const c = l.split('\t'); if (ia >= 0 && ir >= 0 && c[ia] && c[ir]) AP[c[ia]] = c[ir]; } } }

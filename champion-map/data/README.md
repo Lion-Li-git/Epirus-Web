@@ -8,6 +8,8 @@
 |---|---|---|
 | registry.tsv | 一行 = 一份权重 | id/path/ver/fam/fam_label/lineage/ts/sha256/status |
 | archived-pack-meta.tsv | 一行 = 一枚归档旧包 | 18 枚归档 1.8 包的 wid/ts/gens/seed/hotstartFrom/meta_json（不靠旧 packs/ 或 archive/ 路径重扫） |
+| gate-arms-2026-10-09.tsv | 1.8 臂线批次表 | `lineage.mjs` 拆分 1.8 臂家族（fam 8/11/12）所需配方表 |
+| arm-parents.tsv | 臂级父指针参考表 | `lineage.mjs`/`audit-parent-evidence.mjs` 三级父边参考（原 `_e330-armparent.tsv`） |
 | rulers.tsv | 一行 = 一把尺 | axis/status(current/reference/frozen)/fixture/batch/formula |
 | batches.tsv | 一行 = 一次考试批次 | batch_id/ruler/axis/fixture/champ/run/source/rows |
 | readings/current.tsv | 长表 | pack_id,ruler_id,cell,horizon,value,n,batch_id |
