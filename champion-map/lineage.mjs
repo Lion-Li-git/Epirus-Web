@@ -50,10 +50,34 @@ const ids = rd(join(HERE, 'data/page/coords.tsv')).trim().split('\n').slice(1).m
  *   ⇒ 补录必须**带证据串**，且由 `audit-parent-evidence.mjs` 那条新腿钉住"有 parentOf 的行两端 ts 都得非空"。
  *   ⚠ 这张表只填**缺 ts 的**，不许拿它覆盖包内自报值（覆盖 = 把训练侧的时钟换成研究侧的，历史读数就没法核）。 */
 const TSFIX = {};
-{ const p = join(HERE, 'ts-override.tsv');
+{ const p = join(HERE, 'data/page/ts-override.tsv');
   if (existsSync(p)) { const T = rd(p).replace(/\n+$/, '').split('\n').map(l => l.split('\t')), th = Object.fromEntries(T[0].map((x, i) => [x, i]));
     for (const r of T.slice(1)) if (r[th.id] && r[th.ts]) TSFIX[r[th.id]] = r[th.ts]; } }
 let nTsFix = 0;
+/* 2026-11-17 统一数据仓接轨：lineage.mjs 负责生成全表 lineage.tsv，其中 1.8 走签名/臂线/SOUP 聚类（fam 0..13），
+ *   2.0 / G3 节点不参与 1.8 配置等价类聚类：**家族号与标签只从 `data/registry.tsv` 取**（唯一真源），
+ *   sidecar `data/page/lineage-g3.tsv` 只提供血统（parent/parentOf/parentName/wid/parentSrc + 融合的 2/3 组）与训出时刻 ts。
+ *   仍跑全库 SOUP/META/TS 审计，保证 D233 幂等通过。 */
+const REGROW = {};
+{ const rp = join(HERE, 'data/registry.tsv');
+  if (existsSync(rp)) {
+    const T = rd(rp).replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
+    const rh = Object.fromEntries(T[0].map((x, i) => [x, i]));
+    for (const r of T.slice(1)) if (r[rh.pack_id]) REGROW[r[rh.pack_id]] = {
+      ver: r[rh.ver] || '', fam: r[rh.fam] ?? '', famLabel: r[rh.fam_label] || '', ts: r[rh.ts] || '' };
+  } }
+const G3ROW = {};
+{ const gp = join(HERE, 'data/page/lineage-g3.tsv');
+  if (existsSync(gp)) {
+    const T = rd(gp).replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
+    const gh = Object.fromEntries(T[0].map((x, i) => [x, i]));
+    for (const r of T.slice(1)) if (r[gh.id]) {
+      const o = {}; for (const [k, idx] of Object.entries(gh)) o[k] = r[idx] ?? '';
+      G3ROW[o.id] = o;
+    }
+  } }
+const G3SET = {};
+for (const id of ids) if (G3ROW[id] || (REGROW[id] && REGROW[id].ver === '2.0')) G3SET[id] = 1;
 
 /* `braceObj` / `parseMeta` / `widOf` 住在 `./pack-id.mjs`（§E328 起）—— 那份注释也在那里。 */
 /* §E330：**同一个 id 在盘上可以有两份不同的包**，而血统表过去只按 `docs/artifacts/<id>.bak` 找 ⇒ 读错了文件。
@@ -330,7 +354,7 @@ function seedpackVerified(m, parId, ts) {
  *   臂级证据"这支臂是从 X 起步的"对产物同样成立，所以按 productRel 反查图上的那一枚。
  *   ⚠ 只认**面板上已有的父**（IDSET），表里没有的臂一律不接。*/
 const ARMPAR = {};
-{ const AP = join(HERE, '_e330-armparent.tsv');
+{ const AP = join(HERE, 'data/arm-parents.tsv');
   if (existsSync(AP)) {
     const A = rd(AP).trim().split('\n'), ah = A[0].split('\t');
     const iRel = ah.indexOf('productRel'), iPar = ah.indexOf('armParent');
@@ -338,8 +362,8 @@ const ARMPAR = {};
     for (const l of A.slice(1)) { const c = l.split('\t'); if (iPar < 0 || !c[iRel] || !c[iPar]) continue;
       const id = REL2ID[c[iRel]], par = BYBASE[c[iPar]] || c[iPar];
       if (id && par !== id && IDSET.has(par)) ARMPAR[id] = par; }
-    console.log('臂级父指针表（chain-scan --emit）：' + Object.keys(ARMPAR).length + ' 支臂的产物能反查到图上已有的父');
-  } else console.log('提示：没有 _e330-armparent.tsv ⇒ 臂级父指针这一级退路不生效（跑 node champion-map/chain-scan.mjs --emit=_e330-armparent.tsv）'); }
+    console.log('臂级父指针表（data/arm-parents.tsv）：' + Object.keys(ARMPAR).length + ' 支臂的产物能反查到图上已有的父');
+  } else console.log('提示：没有 data/arm-parents.tsv ⇒ 臂级父指针这一级退路不生效（跑 node champion-map/archive/2026-11-11-legacy-data/chain-scan.mjs --emit=champion-map/data/arm-parents.tsv）'); }
 /* §E368 **槽位时间轴**（用户 10-06 23:0x 给的办法：「通过出厂日期 + CHANGELOG 里的记录可以推出当时槽上是谁」）。
  *   `ship-times.tsv` 是 §E338 那台 ship-scan 的产物 —— 它逐提交把 `js/bundled-champion-3p.js` 的内容取出来算权重指纹，
  *   某个 wid **第一次出现**的那条提交 = 那枚真正上槽的时刻 ⇒ 这张表本身就是"槽位由谁住过"的时间轴，不用另建。
@@ -478,13 +502,20 @@ for (const r of REC) { const m = r.m || {};
     const noEvidence = !m.hotstartFrom && String(ENVX.EPIRUS_HOTSTART || '') !== '1' && !seedpackFile(m);
     ps = (/^SLOT-/.test(r.id) || !Object.keys(m).length) ? 'synthetic' : (noEvidence ? 'cold' : 'unresolved');
     if (ps === 'cold') nCold++; else if (ps === 'unresolved') nUnres++; else nSynthP++; }
-  const TSVAL = m.ts || TSFIX[r.id] || '';
+  const g3r = G3ROW[r.id], regr = REGROW[r.id];
+  const TSVAL = m.ts || TSFIX[r.id] || (g3r && g3r.ts) || (regr && regr.ts) || '';
   if (!m.ts && TSFIX[r.id]) nTsFix++;
+  const pofVal = G3SET[r.id] && g3r ? (IDSET.has(g3r.parentOf) ? g3r.parentOf : '') : (byHash || byPath || byArm || bySlot || bySlotInfer || sP1);
+  const psrcVal = G3SET[r.id] && g3r
+    ? (!pofVal ? (g3r.parentSrc || ps)
+      : (ps === 'hash' || ps === 'hash-emb' || ps === 'seedpack-wid' || ps === 'slot-wid' || ps === 'soup') ? ps
+      : (g3r.parentSrc && g3r.parentSrc !== 'seedpack-wid' ? g3r.parentSrc : 'seedpack'))
+    : ps;
   ROWS.push({ id: r.id, ts: TSVAL, seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: byHash || byPath || byArm || bySlot || bySlotInfer || sP1, wid: r.wid || '',
-    psrc: ps,
+    parentOf: pofVal, wid: r.wid || '',
+    psrc: psrcVal,
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
-    demoted: demoted,
+    demoted: G3SET[r.id] ? '' : demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
 /* §E613 补录 ts 报数 + **孤点父边探测器**：一条有父的边只要有一端没有时间，查看器就把它静默丢掉（见上面补录表的注）。
@@ -552,19 +583,20 @@ const SLOTID = {}; for (const r of ROWS) if (/^SLOT-/.test(r.id)) SLOTID[r.id] =
 const SOUPSET = {}; for (const r of ROWS) if (r.psrc === 'soup') SOUPSET[r.id] = 1;
 const BYID = {}; for (const r of ROWS) BYID[r.id] = r;
 function fromSoup(id) { for (let g = BYID[id], n = 0; g && n < 40; g = BYID[g.parentOf], n++) if (SOUPSET[g.id]) return true; return false; }
-const FUS = ROWS.filter(r => !SLOTID[r.id] && (SOUPSET[r.id] || fromSoup(r.id)));
+const FUS = ROWS.filter(r => !SLOTID[r.id] && !G3SET[r.id] && (SOUPSET[r.id] || fromSoup(r.id)));
 const FUSID = {}; for (const r of FUS) FUSID[r.id] = 1;
-if (FUS.length) console.log('§E490 融合家族摘出来 ' + FUS.length + ' 枚（融合粒 ' + Object.keys(SOUPSET).length +
-  ' ‖ 从它续训的 ' + (FUS.length - Object.keys(SOUPSET).length) + '）：' + FUS.map(r => r.id).join(' '));
+const nSoup18 = FUS.filter(r => SOUPSET[r.id]).length;
+if (FUS.length) console.log('§E490 融合家族摘出来 ' + FUS.length + ' 枚（融合粒 ' + nSoup18 +
+  ' ‖ 从它续训的 ' + (FUS.length - nSoup18) + '）：' + FUS.map(r => r.id).join(' '));
 /* ===== §E554 训练臂按**方法快照**拆家族（用户 10-09 07:2x：「把晚上训练的东西进图」）=====
  * 病（实测出来的，不是设想）：`train-3p` 从 v1.6 起把旋钮写进 `meta.recipe.env`，而上面那 16 根在册轴**一根都不填** ⇒
  *   照轴聚类，今晚 271 枚（其实是"纯续训 / guardSpam 池 / 狙击池+示范 / SEL_EVAL_SEEDS=8 / veto 单自由度…"好几条线）
  *   全落进同一个兜底类（家族 22，283 枚），标签印的是"珠价 divW 0.3→- ‖ 代数 250→400"—— 它们从没碰过 divW。
  *   那样这张图等于没进：用户问"今晚那批在哪"，答案是"和 9 枚 E59 老臂叠在同一行"。
  * 名单**不许住在 gitignored 的产物目录里**（§E503 的教训：干净克隆里融合父边 6→0 而退出码还是 0）⇒
- *   批次表走**入库件** `champion-map/gate-arms-2026-10-09.tsv` 的 `knobs` / `seedpack` 两列；
+ *   批次表走**入库件** `champion-map/data/gate-arms-2026-10-09.tsv` 的 `knobs` / `seedpack` 两列；
  *   读不到就**响亮降级**（合回兜底类可以，但不许静默）。 */
-const ARMF = join(HERE, (process.argv.find(x => x.indexOf('--arms=') === 0) || '').slice(7) || 'gate-arms-2026-10-09.tsv');
+const ARMF = join(HERE, (process.argv.find(x => x.indexOf('--arms=') === 0) || '').slice(7) || 'data/gate-arms-2026-10-09.tsv');
 const ARMMETA = {};
 if (existsSync(ARMF)) {
   const AL = rd(ARMF).replace(/\n+$/, '').split('\n'), ah = AL[0].split('\t');
@@ -581,7 +613,7 @@ const ARMID = {}; for (const id of Object.keys(ARMMETA)) if (INROWS[id]) ARMID[i
 const nArmMiss = Object.keys(ARMMETA).filter(id => !INROWS[id]).length;
 if (Object.keys(ARMID).length) console.log('§E554 臂批次表读到 ' + Object.keys(ARMMETA).length + ' 枚 ‖ 在图上 ' +
   Object.keys(ARMID).length + ' 枚（不在图上的 ' + nArmMiss + ' 枚是库里对照件，本来就没登记）⇒ 按 knobs+父 拆臂家族');
-for (const r of ROWS) { if (SLOTID[r.id] || FUSID[r.id] || ARMID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
+for (const r of ROWS) { if (SLOTID[r.id] || G3SET[r.id] || FUSID[r.id] || ARMID[r.id]) continue; if (!bySig.has(r.sig)) bySig.set(r.sig, []); bySig.get(r.sig).push(r); }
 const groups = [...bySig.entries()].map(([sig, rs]) => ({ sig, rs,
   t0: tsSorted(rs)[0] || '', t1: tsSorted(rs).slice(-1)[0] || '' }))
   .sort((a, b) => (a.t0 < b.t0 ? -1 : a.t0 > b.t0 ? 1 : b.rs.length - a.rs.length));
@@ -633,7 +665,7 @@ if (FUS.length) {
  *   ≥6 枚独立成行，<6 枚并成"臂线·零散"（与「零散实验」同一口径，但**不混进那一行** —— 那一行是"配置各不相同的老散枚"）。
  *   标签里必须写清"这不是那 16 根轴"，否则读图的人会把 `HOTSTART=1` 当成一次配置改动。 */
 { const byArm = new Map();
-  for (const r of ROWS) { const m = ARMMETA[r.id]; if (!m || !ARMID[r.id]) continue;
+  for (const r of ROWS) { if (G3SET[r.id]) continue; const m = ARMMETA[r.id]; if (!m || !ARMID[r.id]) continue;
     const s = 'env:' + m.knobs + '#parent=' + m.seedpack;
     if (!byArm.has(s)) byArm.set(s, []); byArm.get(s).push(r); }
   const ag = [...byArm.entries()].map(([s, rs]) => ({ s, rs,
@@ -816,9 +848,8 @@ mergeDefs('r61fix-31', ['v7aim1-31', 'v7aim2-31'], '对手池/珠价步进 C3（
  *   ⚠ 名单里**不含**「臂线·零散」那 9 枚 —— 它们已经由上面那段按年代搬进来了（10-21 那版靠号点，
  *   把 27/28 当成两个原始组；今天按锚枚点，这条被上面那道"两个锚已是同一个家族"的检查挡下来，
  *   所以我按它的提示把名单改短，而不是拿 `⚠ 跳过` 糊过去）。 */
-/* 11-12 夜：本行按其自带判据已过期（聚类在这台机的现行行集上已把两族自然并拢，d===kd ⇒ exit 2）——
- *   注释原文：「本机（数据全）撞这条 = 合并表过期 ⇒ 名单要更新」。删行 = 更新；历史账见 git。 */
-// mergeDefs('R-s107', ['P-s22'], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
+/* 2026-11-17：随着 gate-arms-2026-10-09.tsv 归位 data/，P-s22（纯续训 27 枚）与 R-s107（env 实验 24 枚）重新并回 fam11（51 枚）。 */
+mergeDefs('R-s107', ['P-s22'], '臂线·env 实验（COUNTER_OPPS / 纯续训）');
 function relabel(anchor, label) { const d = defOf(anchor, '改名'); const rs = d.g.rs;
   touch(d);
   d.label = label + ' ‖ ' + rs.length + ' 枚 ‖ ' + String(d.g.t0).slice(5, 10) + '→' + String(d.g.t1).slice(5, 10); }
@@ -888,10 +919,35 @@ const SLOTDEF = { n: 0, label: '旧槽位冠军（不参与家族聚类 ‖ 谱�
   else console.log('融合血统口径 ✅ ' + nSoupDeclared + ' 枚声明是权重平均的粒，父边全部解析（第二父边 ' +
     ROWS.filter(r => r.pof2).length + ' 条）'); }
 const out = [COLS.join('\t')];
-for (const r of ROWS) { const d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null); if (!d) continue; const c = r.cfg;
-  out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19), r.seed, r.id.replace(/^.*-/, ''), c.parent.slice(0, 8), r.parentOf, r.parentName, r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
+const g3Fams = new Map();
+for (const r of ROWS) {
+  let d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null);
+  const g3r = G3ROW[r.id], regr = REGROW[r.id];
+  if (G3SET[r.id]) {
+    /* 家族号只有一个家：`data/registry.tsv`（11-17 单源化）。sidecar 里的 fam/famLabel 两列已删——
+     *   它们曾与 registry 各存一份，而 13:59 那次"以 registry 为真源回写"把 registry 的空值盖掉了
+     *   sidecar 的真值 ⇒ 同一个数存两处，迟早有一次同步方向选错。现在这里不再比较两份，只认一份。 */
+    const fStr = regr ? regr.fam : '';
+    const lStr = regr ? regr.famLabel : '';
+    if (fStr === '' || !lStr) { console.error('⛔ 2.0/G3 节点 `' + r.id + '` 在 registry 里缺 fam 或 famLabel' +
+      '（家族号只在 data/registry.tsv 定一份，sidecar 不再存它 ⇒ 补那里，别补 sidecar）'); process.exit(2); }
+    d = { n: Number(fStr), label: lStr };
+    if (!g3Fams.has(d.n)) g3Fams.set(d.n, { n: d.n, label: lStr, count: 0 });
+    g3Fams.get(d.n).count++;
+  }
+  if (!d) continue;
+  const c = r.cfg;
+  const useG3 = !!(G3SET[r.id] && g3r);
+  out.push([r.id, d.n, d.label, (r.ts || '').slice(0, 19),
+    useG3 && g3r.metaSeed ? g3r.metaSeed : r.seed,
+    useG3 && g3r.nameSeed !== '' ? g3r.nameSeed : r.id.replace(/^.*-/, ''),
+    useG3 && g3r.parent ? g3r.parent : c.parent.slice(0, 8),
+    r.parentOf,
+    useG3 && g3r.parentName !== undefined && g3r.parentName !== '' ? g3r.parentName : r.parentName,
+    r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || '',
-    r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t')); }
+    r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t'));
+}
 /* v1.7.10：落盘行尾跟着**盘上那一份**走，不许写死 '\n'。
  * 为什么（DS 10-14 实测）：本仓工作树是 CRLF（`core.autocrlf=true`），而这里原先写死 `'\n'` ⇒
  *   跑一遍带 D233 ⑤ 腿的门之后，`lineage.tsv` 变成 795 行纯 LF（190413 → 189618 字节），

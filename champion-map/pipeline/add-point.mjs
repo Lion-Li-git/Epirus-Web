@@ -99,23 +99,32 @@ function autoFamLabel(id, dims) {
 }
 const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS);
 function famRows() {
+  /* 11-17 家族号单源化：唯一真源是 `data/registry.tsv`（sidecar 的 fam/famLabel 两列已删）。
+   *   lineage.tsv 一并扫只为本它的 1.8 老行兜底（它是 registry+sidecar 的生成物，正常两处一致）。 */
   const out = [];
-  for (const t of [linMain, linG3]) {
-    const fi = t.ix.fam, li = t.ix.famLabel, ii = t.ix.id;
-    if (fi === undefined || li === undefined) continue;
-    for (const r of t.rows) if (r[fi] && r[li]) out.push({ fam: String(r[fi]), label: String(r[li]), id: String(r[ii]) });
-  }
+  { const fi = reg.ix.fam, li = reg.ix.fam_label, ii = reg.ix.pack_id;
+    if (fi === undefined || li === undefined || ii === undefined) { console.error('⛔ registry 缺 fam/fam_label/pack_id 列'); process.exit(2); }
+    for (const r of reg.rows) if (r[fi] && r[li]) out.push({ fam: String(r[fi]), label: String(r[li]), id: String(r[ii]) }); }
+  { const fi = linMain.ix.fam, li = linMain.ix.famLabel, ii = linMain.ix.id;
+    if (fi !== undefined && li !== undefined) for (const r of linMain.rows) if (r[fi] && r[li]) out.push({ fam: String(r[fi]), label: String(r[li]), id: String(r[ii]) }); }
   return out;
 }
 function findFamByLabel(label) { return famRows().find((x) => x.label === label) || null; }
 function findFamByNum(fam) { return famRows().find((x) => x.fam === String(fam)) || null; }
 const linMain = readTable(join(DATA, 'page/lineage.tsv'));
 const linG3 = readTable(join(DATA, 'page/lineage-g3.tsv'));
+/* sidecar 只许存血统，不许再存家族号：在注册这一步就拒，别留到烘页面时让 viewer 喊。 */
+if (linG3.ix.fam !== undefined || linG3.ix.famLabel !== undefined) {
+  console.error('⛔ `page/lineage-g3.tsv` 的表头还带 fam/famLabel —— 家族号 11-17 起只在 `data/registry.tsv` 定一份' +
+    '（两处各存过一次事故：align 把 registry 的空值盖掉 sidecar 的真值 ⇒ D234 ⑫ 红在 CI）。请把这两列删掉再注册。');
+  process.exit(2);
+}
 const wid2id = new Map();
 for (const t of [linMain, linG3]) { const iw = t.ix.wid, ii = t.ix.id; if (iw === undefined) continue;
   for (const r of t.rows) { if (r[iw] && r[ii]) wid2id.set(r[iw], r[ii]); } }
 let FAM_MAX = 0;
-for (const t of [linMain, linG3]) for (const r of t.rows) { const n = Number(r[t.ix.fam]); if (Number.isFinite(n) && n > FAM_MAX) FAM_MAX = n; }
+for (const [t, fk] of [[reg, 'fam'], [linMain, 'fam']]) { const fi = t.ix[fk]; if (fi === undefined) continue;
+  for (const r of t.rows) { const n = Number(r[fi]); if (Number.isFinite(n) && n > FAM_MAX) FAM_MAX = n; } }
 if (!FAM) {
   if (AUTO_FAM_LABEL) {
     const hit = findFamByLabel(AUTO_FAM_LABEL);
