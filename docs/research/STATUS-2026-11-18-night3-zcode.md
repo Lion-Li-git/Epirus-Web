@@ -183,6 +183,11 @@ T1 备注：RINGB5 配方（RINGEC6+PG klW=0.30+dmgW+珠塑形）已证明能产
 - transfer 敌意场仍 0（TZT2D = transfer2 × 敌意训练场 在跑，最后一发）。
 - 语义场仪器留档：skill-mastery `--arena=hostile`（fp 自带 roster 可查）；purify/transfer 的判线今后都应双场并报。
 
+**transfer 四轮终账（04:2x）**：TZT2D（transfer2 瞄准门 × 敌意训练场）= **ALL-GATE 过门** + 用量 0.075/局
+（16 次 0 点）——配方空间已扫尽（通用 0.35 洗没 / 自锚 0.5 滥发 / 瞄准门 0 用 / 瞄准门×敌意场 微用 0 点）。
+**定性钉死：转移需要"谁会真打我"的伤害预测特征，现有观测面不含它** ⇒ 特征工程项（下一班：lastTarget 之外
+补 attacker-affordable-damage 聚合特征，或引擎侧 transfer 落点信号进观测面）。TZT2D 本身可作干净过门件备用。
+
 ## 十、遗留
 
 1. **G5 修复的下一类杠杆（等裁）**：① 奖励结构——"对被动席/低威胁席的清场加权"（新塑形旋钮，按 AGENTS 加一删二走）；
