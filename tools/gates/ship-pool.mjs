@@ -497,14 +497,51 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
     const DH = rd('champion-map/data/display.tsv'), did = DH[0].split('\t').indexOf('id');
     const disp = DH.slice(1).map((l) => l.split('\t')[did]).filter(Boolean);
-    const lin = new Set(), famTs = new Map(), newBad = [];
+    /* 11-17 家族号单源化：`registry.fam/fam_label` 是唯一真源，sidecar `lineage-g3.tsv` 从此只存血统、
+     *   不再带 fam/famLabel 两列（两处各存过一次事故：13:59 那次"以 registry 为真源回写"把 registry 的
+     *   空值盖掉了 sidecar 里的真值 ⇒ 本门 ⑫ 当场红在 CI）。
+     *   所以下面查家族号时：表自己带 fam 就用表的（lineage.tsv 是生成物，它空了=过期，要能被抓住），
+     *   不带就回 registry 查 —— ⑫ 的语义一格没松。 */
+    const RG = rd('champion-map/data/registry.tsv'), RH = RG[0].split('\t');
+    const rId = RH.indexOf('pack_id'), rFam = RH.indexOf('fam'), rLab = RH.indexOf('fam_label');
+    const REGF = new Map();
+    if (rId >= 0 && rFam >= 0 && rLab >= 0) for (const l of RG.slice(1)) { const c = l.split('\t');
+      if (c[rId]) REGF.set(c[rId], { fam: c[rFam] === undefined ? '' : c[rFam], lab: c[rLab] === undefined ? '' : c[rLab] }); }
+    eq(rId >= 0 && rFam >= 0 && rLab >= 0, true, '⑫ registry.tsv 必须带 pack_id/fam/fam_label 三列——家族号的唯一真源');
+    const lin = new Set(), famTs = new Map(), newBad = [], stale = [];
     for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
-      const R = rd(f), id = R[0].split('\t').indexOf('id'), fam = R[0].split('\t').indexOf('fam'), lab = R[0].split('\t').indexOf('famLabel'), ts = R[0].split('\t').indexOf('ts');
-      for (const l of R.slice(1)) { const c = l.split('\t'); if (c[id] && c[fam] !== '' && c[lab]) { lin.add(c[id]); const F = famTs.get(c[fam]) || { n: 0, t: 0 }; F.n++; if (c[ts]) F.t++; famTs.set(c[fam], F); if (Number(c[fam]) >= 20) { const wi = R[0].split('\t').indexOf('wid'), ms = R[0].split('\t').indexOf('metaSeed'), ps = R[0].split('\t').indexOf('parentSrc'); const bad = []; if (!c[ts]) bad.push('ts'); if (!c[wi]) bad.push('wid'); if (!c[ms]) bad.push('metaSeed'); if (!c[ps]) bad.push('parentSrc'); if (bad.length) newBad.push(c[id] + '缺' + bad.join('/')); } } }
+      const R = rd(f), hd = R[0].split('\t');
+      const id = hd.indexOf('id'), fam = hd.indexOf('fam'), lab = hd.indexOf('famLabel'), ts = hd.indexOf('ts');
+      for (const l of R.slice(1)) { const c = l.split('\t'); if (!c[id]) continue;
+        const rf = REGF.get(c[id]) || { fam: '', lab: '' };
+        /* registry 优先：家族号只在它那里定一份；表自己带的那列（只有 lineage.tsv 带）拿来对账，见 ⑫f。 */
+        const F = rf.fam !== '' ? rf.fam : (fam >= 0 && c[fam] !== undefined ? String(c[fam]) : '');
+        const L = rf.lab ? rf.lab : (lab >= 0 ? c[lab] : '');
+        if (F === '' || !L) continue;                       /* 家族号解不出来 = 这行不算覆盖（与旧判据同形） */
+        if (f.endsWith('lineage.tsv') && rf.fam !== '' && fam >= 0 && c[fam] !== undefined && c[fam] !== '' && String(c[fam]) !== rf.fam) stale.push(c[id] + '(lineage=' + c[fam] + ' registry=' + rf.fam + ')');
+        lin.add(c[id]); const FF = famTs.get(F) || { n: 0, t: 0 }; FF.n++; if (c[ts]) FF.t++; famTs.set(F, FF);
+        if (Number(F) >= 20) { const wi = hd.indexOf('wid'), ms = hd.indexOf('metaSeed'), ps = hd.indexOf('parentSrc'); const bad = [];
+          if (!c[ts]) bad.push('ts'); if (!c[wi]) bad.push('wid'); if (!c[ms]) bad.push('metaSeed'); if (!c[ps]) bad.push('parentSrc');
+          if (bad.length) newBad.push(c[id] + '缺' + bad.join('/')); } }
     }
     const miss = disp.filter((id) => !lin.has(id));
     eq(miss.length, 0, '⑫ display 有 ' + disp.length + ' 枚，谱系表覆盖 ' + lin.size + ' 枚；缺 ' + miss.length + ' 枚：' + miss.slice(0, 8).join(',') +
-      ' ⇒ 这些点只会出现在地图，不会出现在谱系图（跑 lineage/补 lineage-g3 后再重烘）');
+      ' ⇒ 这些点只会出现在地图，不会出现在谱系图（家族号补进 registry、父边补进 lineage/lineage-g3，再跑 node champion-map/rebuild-map.mjs）');
+    /* ⑫e（11-17 新增，随家族号单源化）：每个上图的点都必须在 registry 里有行且带家族号。
+     *   判的两种真事故：11-16 那枚池成员压根没进 registry（页面有环、账上没人）‖ 11-17 那 4 枚 MSB15
+     *   在 registry 里 fam 是空的（点只出现在地图、不出现在谱系图）。两条都得红，缺一不可。 */
+    const noRow = disp.filter((x) => !REGF.has(x));
+    const noFam = disp.filter((x) => REGF.has(x) && REGF.get(x).fam === '');
+    eq(noRow.length + noFam.length, 0, '⑫e display 有 ' + disp.length + ' 枚，registry 里' +
+      (noRow.length ? ' 没有行的 ' + noRow.length + ' 枚：' + noRow.slice(0, 8).join(',') : '') +
+      (noRow.length && noFam.length ? ' ‖' : '') +
+      (noFam.length ? ' fam 为空的 ' + noFam.length + ' 枚：' + noFam.slice(0, 8).join(',') : '') +
+      ' ⇒ 家族号只在 registry 存一份，缺哪一格补哪一格（别把 fam 塞回 sidecar，本门与 viewer/add-point 都会拒）');
+    /* ⑫f `lineage.tsv` 是生成物 ⇒ 它自带的 fam 必须与 registry 一致。不一致就是**生成物过期**：
+     *   页面吃这份，而 `rebuild-map` 不跑 `lineage.mjs`（接机走的是 sidecar + registry 那条路），
+     *   所以手改过 lineage.tsv、或改完 registry 忘了重生成，都不会被别处抓到。11-17 实测当前 989/989 一致。 */
+    eq(stale.length, 0, '⑫f lineage.tsv 自带的 fam 与 registry 不一致 ' + stale.length + ' 枚：' + stale.slice(0, 8).join(' ‖ ') +
+      ' ⇒ 生成物过期了（跑 node champion-map/lineage.mjs 重生成，别手改 lineage.tsv 的这一列）');
     const emptyFams = [...famTs].filter(([, v]) => v.n > 0 && v.t === 0).map(([f, v]) => f + '(n=' + v.n + ')');
     eq(emptyFams.length, 0, '⑫b 有 ' + emptyFams.length + ' 个家族的所有行 ts 为空：' + emptyFams.join(',') +
       ' ⇒ 这一行画不出来（家族 20 第一次就是这么空的），必须给至少一枚非空训练时刻');

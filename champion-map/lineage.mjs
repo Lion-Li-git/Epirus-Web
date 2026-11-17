@@ -55,8 +55,9 @@ const TSFIX = {};
     for (const r of T.slice(1)) if (r[th.id] && r[th.ts]) TSFIX[r[th.id]] = r[th.ts]; } }
 let nTsFix = 0;
 /* 2026-11-17 统一数据仓接轨：lineage.mjs 负责生成全表 lineage.tsv，其中 1.8 走签名/臂线/SOUP 聚类（fam 0..13），
- *   2.0 / G3 sidecar（data/page/lineage-g3.tsv + data/registry.tsv）不参与 1.8 配置等价类聚类，
- *   直接沿用两份真源的 fam/famLabel 与父边（仍跑全库 SOUP/META/TS 审计，保证 D233 幂等通过）。 */
+ *   2.0 / G3 节点不参与 1.8 配置等价类聚类：**家族号与标签只从 `data/registry.tsv` 取**（唯一真源），
+ *   sidecar `data/page/lineage-g3.tsv` 只提供血统（parent/parentOf/parentName/wid/parentSrc + 融合的 2/3 组）与训出时刻 ts。
+ *   仍跑全库 SOUP/META/TS 审计，保证 D233 幂等通过。 */
 const REGROW = {};
 { const rp = join(HERE, 'data/registry.tsv');
   if (existsSync(rp)) {
@@ -923,13 +924,13 @@ for (const r of ROWS) {
   let d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null);
   const g3r = G3ROW[r.id], regr = REGROW[r.id];
   if (G3SET[r.id]) {
-    const fStr = (g3r && g3r.fam !== '') ? g3r.fam : (regr ? regr.fam : '');
-    const lStr = (g3r && g3r.famLabel) ? g3r.famLabel : (regr ? regr.famLabel : '');
-    if (fStr === '' || !lStr) { console.error('⛔ 2.0/G3 节点 `' + r.id + '` 在 lineage-g3/registry 中缺 fam 或 famLabel'); process.exit(2); }
-    if (g3r && regr && (String(g3r.fam) !== String(regr.fam) || (regr.famLabel && g3r.famLabel !== regr.famLabel))) {
-      console.error('⛔ 2.0/G3 节点 `' + r.id + '` 在 lineage-g3(' + g3r.fam + '/' + g3r.famLabel + ') 与 registry(' + regr.fam + '/' + regr.famLabel + ') 不一致');
-      process.exit(2);
-    }
+    /* 家族号只有一个家：`data/registry.tsv`（11-17 单源化）。sidecar 里的 fam/famLabel 两列已删——
+     *   它们曾与 registry 各存一份，而 13:59 那次"以 registry 为真源回写"把 registry 的空值盖掉了
+     *   sidecar 的真值 ⇒ 同一个数存两处，迟早有一次同步方向选错。现在这里不再比较两份，只认一份。 */
+    const fStr = regr ? regr.fam : '';
+    const lStr = regr ? regr.famLabel : '';
+    if (fStr === '' || !lStr) { console.error('⛔ 2.0/G3 节点 `' + r.id + '` 在 registry 里缺 fam 或 famLabel' +
+      '（家族号只在 data/registry.tsv 定一份，sidecar 不再存它 ⇒ 补那里，别补 sidecar）'); process.exit(2); }
     d = { n: Number(fStr), label: lStr };
     if (!g3Fams.has(d.n)) g3Fams.set(d.n, { n: d.n, label: lStr, count: 0 });
     g3Fams.get(d.n).count++;
