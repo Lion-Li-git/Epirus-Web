@@ -1,0 +1,207 @@
+{
+ "tool": "supfit-gd",
+ "tag": null,
+ "parent": "docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+ "seed": 2026111707,
+ "lr": 0.0004,
+ "steps": 180,
+ "groups": 1500,
+ "trainG": 1116,
+ "testG": 384,
+ "objective": "cand",
+ "dagger": 1,
+ "dagTemp": 0.15,
+ "pool": 1500,
+ "shapeBal": 1,
+ "rolloutMode": "game",
+ "classPow": 0.35,
+ "classCap": 5,
+ "teacher": "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "arenaPool": null,
+ "arenaShapes": "2:standard,2:standard,2:standard,2:long,2:multi,3:multi,5:multi,8:multi,3:long,5:long,5:long,8:long",
+ "teacher2": null,
+ "teacher2frac": null,
+ "teacher2keys": null,
+ "teacher2shapes": null,
+ "teacher3": null,
+ "teacher3frac": null,
+ "teacher3keys": null,
+ "teacher3shapes": null,
+ "teacher4": null,
+ "teacher4frac": null,
+ "teacher4keys": null,
+ "teacher4shapes": null,
+ "shapeTeachers": "5:long=pack:scratch/arms/GD16m-D1.bak@0.55+pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.35+breakAll@0.10;8:long=pack:scratch/arms/GD16m-D1.bak@0.55+pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak@0.35+breakAll@0.10",
+ "playedAgree": {
+  "n": 1886,
+  "hit": 1542,
+  "stuckCharge": 5,
+  "missCharge": 2,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 2991,
+  "moved": 9,
+  "gone": 0,
+  "keys": 3000,
+  "rare": 0,
+  "byKey": {
+   "ji": 1720,
+   "sword": 293,
+   "gun": 279,
+   "snipe": 170,
+   "reflect": 76,
+   "charge": 51,
+   "railgun": 32,
+   "bigT": 31,
+   "bagua": 87,
+   "guard": 129,
+   "holo": 1,
+   "curse": 15,
+   "firestorm": 40,
+   "ring": 76
+  },
+  "shapeTeacherHits": {
+   "5:long": {
+    "pack:scratch/arms/GD16m-D1.bak": 275,
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 201,
+    "breakAll": 24
+   },
+   "8:long": {
+    "pack:scratch/arms/GD16m-D1.bak": 142,
+    "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak": 96,
+    "breakAll": 12
+   }
+  }
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 1,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1116,
+    "teacherAgree": 0.8072916666666666,
+    "teacherLl": -1.687746117888514,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 1500,
+    "trainG": 1500,
+    "teacherAgree": 0.8177083333333334,
+    "teacherLl": -1.962187794301163,
+    "studentAgree": 0.8828125,
+    "studentLl": -0.46819739547676553,
+    "studentN": 384
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 11179,
+    "firstDiff": 0,
+    "dim": 16561
+   }
+  ],
+  "startAgree": 0.8541666666666666,
+  "startLl": -2.131846954484096,
+  "agree": 0.8177083333333334,
+  "ll": -1.962187794301163,
+  "wAgree": 0.7548460499851729,
+  "nTest": 384,
+  "nTrain": 1500,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.8828125,
+  "studentN": 384,
+  "byKey": [
+   {
+    "key": "gun",
+    "n": 22,
+    "hit": 16
+   },
+   {
+    "key": "ji",
+    "n": 198,
+    "hit": 179
+   },
+   {
+    "key": "sword",
+    "n": 45,
+    "hit": 40
+   },
+   {
+    "key": "snipe",
+    "n": 16,
+    "hit": 12
+   },
+   {
+    "key": "bigT",
+    "n": 9,
+    "hit": 3
+   },
+   {
+    "key": "guard",
+    "n": 37,
+    "hit": 34
+   },
+   {
+    "key": "reflect",
+    "n": 8,
+    "hit": 5
+   },
+   {
+    "key": "bagua",
+    "n": 8,
+    "hit": 6
+   },
+   {
+    "key": "charge#elec#elec",
+    "n": 7,
+    "hit": 3
+   },
+   {
+    "key": "railgun",
+    "n": 6,
+    "hit": 4
+   },
+   {
+    "key": "curse",
+    "n": 1,
+    "hit": 0
+   },
+   {
+    "key": "firestorm",
+    "n": 3,
+    "hit": 2
+   },
+   {
+    "key": "ring",
+    "n": 24,
+    "hit": 10
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x1"
+  }
+ }
+}

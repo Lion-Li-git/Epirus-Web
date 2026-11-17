@@ -1,0 +1,235 @@
+{
+ "tool": "supfit-gd",
+ "tag": "RINGEC5",
+ "parent": "docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+ "seed": 2026111716,
+ "lr": 0.02,
+ "steps": 260,
+ "groups": 2200,
+ "trainG": 1650,
+ "testG": 550,
+ "objective": "key",
+ "dagger": 2,
+ "dagTemp": 0.15,
+ "pool": 2200,
+ "shapeBal": 1,
+ "rolloutMode": "step",
+ "classPow": 1,
+ "classCap": 0,
+ "teacher": "pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "arenaPool": null,
+ "arenaShapes": "2:standard,2:long,2:multi,3:multi,5:multi,8:multi,3:long,5:long,5:long,8:long,8:long",
+ "teacher2": null,
+ "teacher2frac": null,
+ "teacher2keys": null,
+ "teacher2shapes": null,
+ "teacher3": null,
+ "teacher3frac": null,
+ "teacher3keys": null,
+ "teacher3shapes": null,
+ "teacher4": null,
+ "teacher4frac": null,
+ "teacher4keys": null,
+ "teacher4shapes": null,
+ "shapeTeachers": "3:long=ringEcon@1.0;5:long=ringEcon@1.0;8:long=ringEcon@1.0",
+ "playedAgree": {
+  "n": 4883,
+  "hit": 2649,
+  "stuckCharge": 50,
+  "missCharge": 5,
+  "missFire": 1
+ },
+ "label": {
+  "ok": 6570,
+  "moved": 30,
+  "gone": 0,
+  "keys": 6600,
+  "rare": 0,
+  "byKey": {
+   "ji": 4398,
+   "sword": 237,
+   "gun": 425,
+   "snipe": 388,
+   "reflect": 339,
+   "charge": 140,
+   "railgun": 71,
+   "bigT": 49,
+   "bagua": 165,
+   "guard": 91,
+   "holo": 4,
+   "ring": 130,
+   "laserEye": 65,
+   "proto": 64,
+   "drain": 24,
+   "curse": 3,
+   "dualGun": 7
+  },
+  "shapeTeacherHits": {
+   "3:long": {
+    "ringEcon": 600
+   },
+   "5:long": {
+    "ringEcon": 1200
+   },
+   "8:long": {
+    "ringEcon": 1200
+   }
+  }
+ },
+ "supfitGd": {
+  "objective": "key",
+  "dagger": 2,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1650,
+    "teacherAgree": 0.7163636363636363,
+    "teacherLl": -1.9499913742696975,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 2200,
+    "trainG": 2200,
+    "teacherAgree": 0.7327272727272728,
+    "teacherLl": -2.684374425888088,
+    "studentAgree": 0.649090909090909,
+    "studentLl": -4.153904858106167,
+    "studentN": 550
+   },
+   {
+    "round": 2,
+    "studentG": 2200,
+    "trainG": 2200,
+    "teacherAgree": 0.72,
+    "teacherLl": -3.120997892820673,
+    "studentAgree": 0.5531135531135531,
+    "studentLl": -8.107892231111778,
+    "studentN": 1092
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 11248,
+    "firstDiff": 0,
+    "dim": 16561
+   },
+   {
+    "round": 2,
+    "moved": 10433,
+    "firstDiff": 0,
+    "dim": 16561
+   }
+  ],
+  "startAgree": 0.6890909090909091,
+  "startLl": -3.4664142574637355,
+  "agree": 0.72,
+  "ll": -3.120997892820673,
+  "wAgree": 0.6885245818917304,
+  "nTest": 550,
+  "nTrain": 2200,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.5531135531135531,
+  "studentN": 1092,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 270,
+    "hit": 177
+   },
+   {
+    "key": "sword",
+    "n": 18,
+    "hit": 12
+   },
+   {
+    "key": "charge#elec",
+    "n": 19,
+    "hit": 12
+   },
+   {
+    "key": "railgun",
+    "n": 14,
+    "hit": 14
+   },
+   {
+    "key": "gun",
+    "n": 29,
+    "hit": 17
+   },
+   {
+    "key": "snipe",
+    "n": 47,
+    "hit": 38
+   },
+   {
+    "key": "bigT",
+    "n": 8,
+    "hit": 7
+   },
+   {
+    "key": "bagua",
+    "n": 15,
+    "hit": 11
+   },
+   {
+    "key": "guard",
+    "n": 8,
+    "hit": 2
+   },
+   {
+    "key": "reflect",
+    "n": 87,
+    "hit": 80
+   },
+   {
+    "key": "laserEye",
+    "n": 8,
+    "hit": 8
+   },
+   {
+    "key": "ring",
+    "n": 11,
+    "hit": 11
+   },
+   {
+    "key": "proto",
+    "n": 6,
+    "hit": 5
+   },
+   {
+    "key": "drain",
+    "n": 3,
+    "hit": 1
+   },
+   {
+    "key": "charge#boom",
+    "n": 7,
+    "hit": 1
+   }
+  ],
+  "verdict": "⇒ P-A1 未达（<75.5%）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted key log-likelihood (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x2"
+  }
+ }
+}

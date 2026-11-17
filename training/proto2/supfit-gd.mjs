@@ -169,6 +169,13 @@ const allRoundPick = (state, pid, cs) => {
  * `chain` 教师（兑现优先）拿到 5P 43.6~64 但大雷 0（每拍先花电珠 ⇒ ep 攒不到 5）。这一档是把两者串在一条
  * 去向上：**能兑现就兑现，兑现不了才开环** ⇒ 问的是『收入去向』能不能同时给出桶线与强度。 */
 const ringChainPick = (state, pid, cs) => pickKey(cs, R.SK.BIG_T) || pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R);
+/* 11-17 charge-first 教师：有蓄能就先蓄（电/爆都行），没有蓄能才回链；专治 offer-trace 里
+ *   charge 提供 61% 但只选 0.5% 的即时消费反射。只作教师标签，不进产品。 */
+const chargePick = (state, pid, cs) => {
+  const ce = pickKey(cs, R.SK.CHARGE, 'elec'); if (ce) return ce;
+  const cb = pickKey(cs, R.SK.CHARGE, 'boom'); if (cb) return cb;
+  return pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+};
 /* 定量配给的混合教师（千问 · 11-01，用户 11-01：『用一堆大雷本来就没有什么用处，我给大雷要求才 0.2，
  *   你剩下的资源不就可以拿去分配给电磁炮等等了吗』+『不能纯靠单一教师』）。
  * 形状：每条贵线**只用到桶线下限的若干倍**，超了就把它的地盘还给兑现链——剂量上限住在教师里，
@@ -564,6 +571,88 @@ const ration6Pick = (state, pid, cs, DOSE = DOSE6) => {
   }
   return pickChain(state, pid, cs, R);
 };
+/* 11-17 长程开环经济教师：修"R2 必开枪(ep1→0)+R3 必挥剑(ep2→0)⇒ 聚能环 0%⇒ 全程低费短打"病灶。
+ *   只在长程多人安全开局窗口（非围殴/非反弹墙/ringStreak=0 ∧ round≤6 ∧ ep<3）忍住攒 ji 到 ep=3 开聚能环，
+ *   开环后连开 2~3 拍（后两拍 0 费 +2/+3 ep），随后转高费/多元兑现；遇围殴(≥2 敌指己=G4)与反弹墙(≥2 墙=G5)照常反击破墙。 */
+const ringEconPick = (state, pid, cs) => {
+  const me = state.p[pid] || {};
+  const foes = (state.p || []).filter((q) => q && q.id !== pid && q.hp > 0);
+  const reflFoes = foes.filter((q) => q.lastSkill === R.SK.REFLECT);
+  const guardFoes = foes.filter((q) => GUARD_FAMILY.indexOf(q.lastSkill) >= 0);
+  const attackersOnMe = foes.filter((q) => q.lastTarget === pid && q.lastSkill && R.ATK_EFFECT.indexOf(q.lastSkill) >= 0);
+  const maxHp = (state.mode && state.mode.hp) || 5;
+  const ep = me.ep || 0;
+  /* G5 多面反弹墙 / 防守僵局：优先穿透/非反弹打击，不靠全盘攒钱白吃判定 */
+  if (reflFoes.length >= 2) {
+    for (const k of [R.SK.LASER_EYE, R.SK.SNIPE, R.SK.CANNON, R.SK.RAILGUN, R.SK.BIG_T]) {
+      const hit = cs.find((c) => c.key === k && reflFoes.some((f) => f.id === c.target)) || pickKey(cs, k);
+      if (hit) return hit;
+    }
+  }
+  /* 残血防御 / G4 围殴保底 + 被针对时的轻防御：保住过线门且避免 8P 混桌脆死 */
+  if (me.hp <= 1 && foes.some((q) => (q.ep || 0) >= 2)) {
+    const pr = pickKey(cs, R.SK.PROTO) || pickKey(cs, R.SK.REFLECT) || pickKey(cs, R.SK.BAGUA);
+    if (pr) return pr;
+  }
+  if (attackersOnMe.length >= 2 && ep >= 1 && (me.ringStreak || 0) === 0) {
+    const atkTargetIds = new Set(attackersOnMe.map((q) => q.id));
+    for (const k of [R.SK.LASER_EYE, R.SK.RAILGUN, R.SK.SNIPE, R.SK.SWORD, R.SK.GUN]) {
+      const hit = cs.find((c) => c.key === k && atkTargetIds.has(c.target));
+      if (hit) return hit;
+    }
+  }
+  /* 时敏珠兑现优先于开环/大雷（珠仅保留 1 回合，先花再续环/落雷，修 78~82% 珠浪费） */
+  if ((me.elec || 0) > 0) {
+    const railPref = cs.find((c) => c.key === R.SK.RAILGUN && (reflFoes.some((f) => f.id === c.target) || guardFoes.some((f) => f.id === c.target)))
+      || lowestHpEnemy(state, pid, cs, R.SK.RAILGUN) || pickKey(cs, R.SK.RAILGUN);
+    if (railPref) return railPref;
+  }
+  if ((me.boom || 0) > 0) {
+    const lsPref = cs.find((c) => c.key === R.SK.LASER_EYE && (guardFoes.some((f) => f.id === c.target) || reflFoes.some((f) => f.id === c.target)))
+      || highestHpEnemy(state, pid, cs, R.SK.LASER_EYE) || pickKey(cs, R.SK.LASER_EYE);
+    if (lsPref) return lsPref;
+  }
+  /* 长程多人开环三连阶梯：先保证 R1→R6 开出聚能环攒出高费，绝不在 ep<3 时用蓄能抢断开环 */
+  if (state.modeKey === 'long' && foes.length >= 2) {
+    if ((me.ringStreak || 0) > 0 && me.ringStreak < 3 && ep < 6) {
+      const rgCont = pickKey(cs, R.SK.RING);
+      if (rgCont) return rgCont;
+    }
+    if ((me.ringStreak || 0) === 0 && (state.round || 1) <= 8 && ep < 3) {
+      const ji = pickKey(cs, R.SK.JI);
+      if (ji) return ji;
+    }
+    if ((me.ringStreak || 0) === 0 && ep >= 3 && ep < 5 && castCount(state, pid, R.SK.RING) < 2) {
+      const rgStart = pickKey(cs, R.SK.RING);
+      if (rgStart) return rgStart;
+    }
+  }
+  /* 开环后/高 ep 富余态：多元高费收割 + 防破/蓄炮双供弹（严守可消费 ep 底线且不抢开环前序：ep≥3 才蓄） */
+  const bt = pickKey(cs, R.SK.BIG_T);
+  if (bt && castCount(state, pid, R.SK.BIG_T) < 2) return bt;
+  const dr = pickKey(cs, R.SK.DRAIN);
+  if (dr && me.hp < maxHp && castCount(state, pid, R.SK.DRAIN) < 2) return dr;
+  if (guardFoes.length > 0) {
+    const ls = cs.find((c) => c.key === R.SK.LASER_EYE && guardFoes.some((f) => f.id === c.target)) || pickKey(cs, R.SK.LASER_EYE);
+    if (ls) return ls;
+  }
+  const dg = pickKey(cs, R.SK.DUAL_GUN);
+  if (dg && ep >= 4) return dg;
+  const ringReady = state.modeKey !== 'long' || foes.length < 2 || (me.ringStreak || 0) >= 2 || castCount(state, pid, R.SK.RING) >= 2 || ep >= 4;
+  if (!me.elec && !me.boom && ringReady && castCount(state, pid, R.SK.CHARGE) < 3) {
+    if ((reflFoes.length >= 1 || guardFoes.length >= 2) && ep >= 3) {
+      const cb = pickKey(cs, R.SK.CHARGE, 'boom');
+      if (cb) return cb;
+    }
+    if (ep >= 3) {
+      const ce = pickKey(cs, R.SK.CHARGE, 'elec');
+      if (ce) return ce;
+    }
+  }
+  const sn = lowestHpEnemy(state, pid, cs, R.SK.SNIPE);
+  if (sn && ep >= 3) return sn;
+  return pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+};
 function buildTeacherPick(name) {
   /* v2.0.7（11-13 · 双教师轮替）：教师链提成为函数——一份实现，主教师与 `--teacher2` 各构一份 picker。
    *   不传 teacher2 时第二份为 null ⇒ 主路径逐字节不变（回归腿：teacher=chain 冒烟 md5 对表）。 */
@@ -662,10 +751,14 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => ration5Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'ration6'
     ? (state, pid, cs) => ration6Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'charge'
+    ? (state, pid, cs) => chargePick(state, pid, cs)
   : name === 'ringchain'
     ? (state, pid, cs) => ringChainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'ring'
     ? (state, pid, cs) => pickKey(cs, R.SK.RING) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]   /* 环优先：代 3 上环的提供率只有 2.8% ⇒ 先让教师自己肯开环 */
+  : name === 'ringEcon'
+    ? (state, pid, cs) => ringEconPick(state, pid, cs)
   : name === 'bigt'
     ? (state, pid, cs) => bigTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'lasereye'
@@ -774,7 +867,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
