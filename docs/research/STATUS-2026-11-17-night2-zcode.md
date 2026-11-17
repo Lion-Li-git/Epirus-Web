@@ -221,7 +221,7 @@
   - 补齐全部 21 枚池/代表包 `90210/90211` 人席与标准 `--dry --support=2` 体检：其中原自动成员 `OBS6P9-S4000` 实测 `seatKill=3`（负「只枪压制」68%/66%）。
   - 踢出未过线（`block`）/低广度（`skE=5–8`）/人席踩线冗余旧包（仅从池抽签剔除、文件与地图留档不动）；保留 `DEF-s16`（补齐 `90210/90211` 全过且 `seatKill=0`、`DEF-s16` 全长 `pass`）与 `MSB11-R1S130778313`（带 `transfer` 且整桌强于纯 C 排序），保证 **8 人桌两带各自 ≥ 7 枚不重复**（`hard 8 / soft 9`）。
   - **按 `exam-4n --champn=7` 整桌强度分带**（双外部参照席 `MX2-U4-EQ` + `EQ-S5-P9` 实测）：将 `MX6-GD-TF15` 与 `MX5-GD-LE40` 上调进 `hard`（二者纯单包 C̄ 与低一档接近，但进 7AI 混合桌后整体压制更强），`hard(8)` 整桌参照 `avgRefC̄=0.1314` vs `soft(9)` `avgRefC̄=0.2045`（实测两带整桌差距 `+0.0731`，`long` 桌差距 `+0.1065`）。
-  - 体检 **`17/17` 全过线**、人席 **`17/17` 全 `seatKill=0`**、`pool-add --audit` 零异常（`untracked/dupWid/blockedAuto/untestedAuto/seatKilledAuto/seatUnknown` 全 0）；全池覆盖 **`T1 = 15/17 (88.2% ≥ 50%)`**、**`T2 = 6/17 (35.3% ≥ 25%)`**，除无教师的 `purify` 外 **29/29 可训技能全覆盖**；`js/bundled-champion-pool.js` 已同步重编（`5266 KB`）。
+  - 体检 **`17/17` 全过线**；人席 **14/17 `seatKill=0`**，3 枚点名成员 `seatKill>0`（`MX5-GD-LE40=2` / `DEF-s16=1` / `MX8-R6B-KL=1`，均 `invited=1`，`pool-add --audit` 不报自动成员人席否决）；`pool-add --audit` 零异常（`untracked/dupWid/blockedAuto/untestedAuto/seatKilledAuto/seatUnknown` 全 0）；全池覆盖 **`T1 = 15/17 (88.2% ≥ 50%)`**、**`T2 = 6/17 (35.3% ≥ 25%)`**，除无教师的 `purify` 外 **29/29 可训技能全覆盖**；`js/bundled-champion-pool.js` 已同步重编（`5266 KB`）。
 - **门禁阻断收口**：① `champion-map/pack-aliases.tsv` 登记 `MX1-E9-GD.bak` 为 `EQ-S4-GD6ATEACH.bak` 同源别名（解 `D191 ④`）；② `champion-map/viewer.mjs` `FAM_SLOTS` 由 `24` 扩至 `30`（保持同 `(s,l)` 色相差 `65° ≥ 40°`，解决 25 家后第 25 家族色相回绕撞 `fam 0` 导致的 `shot.mjs` 1 项红叉），`rebuild-map` 实测 **100 PASS ‖ 0 FAIL**。
 
 ## 四、交接与下一步
