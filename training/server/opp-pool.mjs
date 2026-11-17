@@ -56,6 +56,7 @@ export const OPP_SPECS = [
    * ⇒ "交 tempo 税去攒一种永远花不掉的东西"）。池里没有这种压迫 ⇒ 训练里低密度不受罚
    * ⇒ 这条线一直没有梯度（动机同 `pickTargeter`）。**默认池不含它**，只在显式实验里按需加入。 */
   { name: 'gunspam', fn: 'pickGunSpam' },
+  { name: 'cursestorm', fn: 'pickCurseStorm' },   /* 夜3班 11-18：贴符→引爆专精（purify/转移语义场配套——被测席需要稳定被诅咒状态源） */
   /* v1.5.133：**聚焦枪手** —— G4 那格（`gate-drafts.mjs:222` 的「只枪」）的**同一个口径**写成人格：
    * 击杀优先 → 再压血量最高者（`pT` → `T.pickTargetN`）。与上面的 `gunspam`（只打最肥）**不是**同一条线：
    * 实测同一个 G4 harness 里 `gunspam` 是 83%/77%，**比 G4 那格（75%/62%）更狠** ⇒ 池里不是"没有枪线"。
