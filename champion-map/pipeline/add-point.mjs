@@ -83,14 +83,24 @@ const packText = readFileSync(PACK, 'utf8');
 const now = new Date().toISOString();
 const meta = parseMeta(packText) || {};
 /* 11-16：自动进图必须认架构，不许把 obs6.5/modeBias 包默认塞进 fam23（v7 蒸馏）。
- *   modeBias 包的容器 dims.modeBias=1；族标签是稳定键，按标签找已存在的族号，找不到才开新号。 */
+ *   11-17：统一单包不再做收容所；V3 与 MX1-8 分代归族。族标签是稳定键，按标签找已存在的族号，找不到才开新号。 */
 function packDims(txt) {
   const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(txt);
   if (!m) return null;
   try { const o = JSON.parse(m[1]); return o && o.dims ? o.dims : null; } catch { return null; }
 }
 const PACK_DIMS = packDims(packText) || {};
-const AUTO_FAM_LABEL = PACK_DIMS.modeBias === 1 ? '2.0 obs6.5 统一单包（11-16）' : '';
+/* 11-17：按 id 前缀分代归族；不要把 MX* 全部塞进统一单包族。 */
+function autoFamLabel(id, dims) {
+  if (/^MX8-/.test(id)) return '2.0 MX8 覆盖终盘/KL（11-17）';
+  if (/^MX[67]-/.test(id)) return '2.0 MX6–MX7 transfer/KL（11-17）';
+  if (/^MX[45]-/.test(id)) return '2.0 MX4–MX5 覆盖/强度回收（11-17）';
+  if (/^MX[123]-/.test(id)) return '2.0 MX1–MX3 强度/续代矩阵（11-17）';
+  if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
+  if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
+  return '';
+}
+const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS);
 function famRows() {
   const out = [];
   for (const t of [linMain, linG3]) {

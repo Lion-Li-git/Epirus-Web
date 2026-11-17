@@ -1,0 +1,46 @@
+# FINDING · 2026-11-17 · 家族 24/25 收容所修复：V3 归并 + MX 分代
+
+> 用户观察：图上“一堆点在家族24，家族25只有两个”。核实为真：fam24=统一单包 30 枚，fam25=V3 仅 2 枚。
+> 范围：只改家族/谱系/图数据与 add-point 自动归族，不动包权重、池、promote 判据。
+
+## 一、根因
+
+1. **24/25 被对调**：`eac2aeef` 时 fam24=V3、fam25=统一；11-17 03:xx 为修 `rebuild-map` 家族行序（BASE 11-14 早于 V3 11-15）做了 fam24↔25 对调 ⇒ 编号语义反了。
+2. **V3 系列拆散**：`V3a/V3b/B2` 留在 fam23（`2.0 obs6 v7 蒸馏`），只有 `V3S2/V3H3` 在 fam25 ⇒ 看起来只有 2 枚。
+3. **fam24 成收容所**：`add-point` 只按 `dims.modeBias===1` 把所有 obs6.5 包归入“统一单包”标签；BASE/U/EQ/MX1–MX8 全塞 fam24 ⇒ 30 枚。
+
+## 二、修复后
+
+| fam | 标签 | 枚数 |
+|---:|---|---:|
+| 24 | 2.0 obs6.5 统一单包（11-16）（含基座/U/EQ） | 15 |
+| 25 | 2.0 obs6 V3 融合/路由（11-16） | 5 |
+| 26 | 2.0 MX1–MX3 强度/续代矩阵（11-17） | 4 |
+| 27 | 2.0 MX4–MX5 覆盖/强度回收（11-17） | 3 |
+| 28 | 2.0 MX6–MX7 transfer/KL（11-17） | 3 |
+| 29 | 2.0 MX8 覆盖终盘/KL（11-17） | 5 |
+
+- V3a/V3b/V3S2/V3H3/OBS6B2 全部归 fam25；
+- MX 按代分族，fam24 不再吞覆盖臂；
+- 族号仍按最早 ts 递增：24（BASE 11-14）→25（V3 11-15）→26（MX1 11-16 16:34）→27→28→29；
+- 当前最大 fam=29，`FAM_SLOTS=30` 尚够；若再开 fam30，必须同步扩 `FAM_SLOTS` 与色相。
+
+## 三、工具修复
+
+- `champion-map/pipeline/add-point.mjs` 新增 `autoFamLabel(id, dims)`：
+  - `MX8-*` → fam29；`MX[67]-*` → fam28；`MX[45]-*` → fam27；`MX[123]-*` → fam26；
+  - `OBS6-SHAPEDIST-V3*` / `OBS6B2` → fam25；
+  - 其余 `modeBias===1` → fam24（统一单包）。
+- 以后新 MX 包不再默认塞进统一族；分代族按标签查已存在号，找不到才新开。
+
+## 四、验证
+
+- `node champion-map/rebuild-map.mjs`：**100 PASS / 0 FAIL**，页内自检通过；
+- `node tools/np-test.mjs --part=meta-repo`：**13/13**；
+- registry 与 lineage-g3 行数/族号一致；
+- 未动 `js/bundled-champion-pool.js`、pool-members、promote 判据。
+
+## 五、遗留
+
+- 统一族 fam24 仍含 15 枚（BASE/U/EQ）；如果还要更细，下一步可按 U/EQ 与 MX 矩阵再拆；
+- 当前 MX 代表只保留图上 4 枚，分族后不会再出现“全在 fam24”的视觉。
