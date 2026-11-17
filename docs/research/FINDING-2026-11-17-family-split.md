@@ -15,6 +15,7 @@
 
 | fam | 标签 | 枚数 |
 |---:|---|---:|
+| 11 | 臂线·env 实验（旧 v7） | 51 |
 | 19 | 2.0 obs5 课程链（反墙/配给教师 · 11-09~11） | 20（含 GD4-RATION） |
 | 20 | 2.0 GD6 蒸馏多线（11-12） | 4 |
 | 21 | 2.0 obs6 无教师冷启动（11-14） | 8 |
@@ -36,14 +37,21 @@
   - 其余 `modeBias===1` → fam23（统一单包）。
 - 以后新 MX 包不再默认塞进统一族；分代族按标签查已存在号，找不到才新开。
 
-## 四、验证
+## 四、二次校正：单包族是 fam11，不是 fam20
+
+- 用户指出：真正的单包族是 **fam11**。核实：viewer 的 `DATA.fam` 来自 `lineage.tsv`；registry 里 fam11 有 **51 枚**，但 lineage 里只有 `clone-79101` 一枚是 fam11，`B-s63/T8-s114/Q-s47` 等旧 v7 全被写成 **fam8**（`臂线·env 实验`）。
+- 根因：registry ↔ lineage 有 **245 处家族列不一致**；图一直读 lineage，所以旧 v7 被折进 fam8，fam11 只剩 synthetic 的 `clone-79101`。
+- 修复：以 registry 为单一真源，把相同 id 的 `fam/famLabel` 回写 `lineage.tsv`（369 行）与 `lineage-g3.tsv`（4 行）；现在两表 fam11 都是 **51 枚**，旧 v7 回到 fam11，不再有单包族。
+- fam20 的 GD4-RATION 合并与 fam21–26 顺次减一仍然保留；fam11 的 51 枚是旧 v7 线，不是这次新造的。
+
+## 五、验证
 
 - `node champion-map/rebuild-map.mjs`：**100 PASS / 0 FAIL**，页内自检通过；
 - `node tools/np-test.mjs --part=meta-repo`：**13/13**；
 - registry 与 lineage-g3 行数/族号一致；
 - 未动 `js/bundled-champion-pool.js`、pool-members、promote 判据。
 
-## 五、遗留
+## 六、遗留
 
 - 统一族 fam23 仍含 15 枚（BASE/U/EQ）；如果还要更细，下一步可按 U/EQ 与 MX 矩阵再拆；
 - 当前 MX 代表只保留图上 4 枚，分族后不会再出现“全在 fam23”的视觉。

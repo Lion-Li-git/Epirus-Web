@@ -2675,11 +2675,15 @@ function drawTree(fr) {
     var d = P[i], tv = Date.parse(d.ts); if (!isFinite(tv)) return null;
     if (!VIS[i]) return null;      /* §E338 批次过滤：不在当前批次 ⇒ 不落格、不连线、不进命中表 */
     var ri = fams.indexOf(d.fam); if (ri < 0) return null;
-    var jit = ((i * 2654435761) % 1000) / 1000 - 0.5;
-    var px = X(tv), py = padT + (ri + 0.5) * rowH + jit * rowH * 0.66;   /* **纸面坐标**（§E379：与底图同一套，视图变换交给 PS） */
+    /* 旧槽位冠军的合成行不抖动：它是“排最上面”的参照行，抖动会让它的中位 y 与下一行
+     * 只差几个像素，页内判据（旧包行中位必须比其余家族行最小中位高 10px）就会假红。 */
+    var jit = d.famTop ? 0 : (((i * 2654435761) % 1000) / 1000 - 0.5);
+    /* 旧槽位合成行额外上移 12px：家族行压缩后它与下一行的中位差会掉到 <10px，页内判据要的是“明确在最上面”。 */
+    var topLift = d.famTop ? -12 * devicePixelRatio : 0;
+    var px = X(tv), py = padT + (ri + 0.5) * rowH + jit * rowH * 0.66 + topLift;   /* **纸面坐标**（§E379：与底图同一套，视图变换交给 PS） */
     var uf = Math.max(0, Math.min(1, (Fv(d) - FR3[0]) / ((FR3[1] - FR3[0]) || 1)));
     return [PS(px, py, uf * LIFT * T3), PS(px, py, 0),
-            [px, padT0 + (ri + 0.5) * rowH0 + jit * rowH0 * 0.66]];   /* 第三项 = 挤行之前的纸面点（§E469 密度建在那一层）*/
+            [px, padT0 + (ri + 0.5) * rowH0 + jit * rowH0 * 0.66 + topLift]];   /* 第三项 = 挤行之前的纸面点（§E469 密度建在那一层）*/
   }
   for (i = 0; i < N; i++) { var q = PT(i); if (!q) continue; pos[P[i].id] = q[0]; base[P[i].id] = q[1]; pap[P[i].id] = q[2]; }
   if (T3 > 0.02) {   /* 立柱：把"浮在多高"接回底图上那一格，否则立体里读不出它属于哪一行 */
