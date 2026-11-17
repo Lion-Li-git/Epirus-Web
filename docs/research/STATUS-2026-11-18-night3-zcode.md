@@ -188,6 +188,18 @@ T1 备注：RINGB5 配方（RINGEC6+PG klW=0.30+dmgW+珠塑形）已证明能产
 **定性钉死：转移需要"谁会真打我"的伤害预测特征，现有观测面不含它** ⇒ 特征工程项（下一班：lastTarget 之外
 补 attacker-affordable-damage 聚合特征，或引擎侧 transfer 落点信号进观测面）。TZT2D 本身可作干净过门件备用。
 
+## 十A、池扩张（07:4x，用户令"根据强度和过线情况分配入池"）
+
+**池 17 → 20（hard 9 / soft 11）**，三枚全过包按强度分带入池（pool-add 双闸留痕，promote 行全落账）：
+| 包 | 带 | 资历 | seatKill |
+|---|---|---|---|
+| RINGB9 | soft | T1 真覆盖全三条 + ALL-GATE + C̄ 0.161（dmgW 甜点 0.005）+ 珠 72.7% | 未量=-1 |
+| TZT2D | **hard** | 敌意场转移臂：ALL-GATE + C̄ 0.20（C长 0.255）+ G5 0% + transfer 0.075/局 | 未量=-1 |
+| RINGB11 | soft | DEF-s16 升级件：ALL-GATE + C̄ 0.15 + 珠 63.8% | 未量=-1 |
+bundle 6071KB 重编 + probe-pool 过（hard 9 席验证）+ skill-report/trends 随新包刷新 + audit 994 枚零新缺漏。
+入图代表：RINGB9/TZ2C/TZPUR/TZT2D/RINGB11 五枚（registry 994 行，coords 面板同步，mx1116/bp1118 列族全补）。
+⚠ 三枚 seatKill 未量（=-1 如实记）——人席批测（probe-human-seat 流程）留下一班。
+
 ## 十、遗留
 
 1. **G5 修复的下一类杠杆（等裁）**：① 奖励结构——"对被动席/低威胁席的清场加权"（新塑形旋钮，按 AGENTS 加一删二走）；
