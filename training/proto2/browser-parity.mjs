@@ -11,7 +11,7 @@
  *   P3 拒读：v7 包 / `dims.gen=1` / 段表被改 —— 三种都要**拒读并点名原因**，不许静默按新形状切。
  *   P4 v7 路径没被接走：装完 policy2 之后，v7 的 `P.checkPack/unpack/shapeOf/chooseCandidates` 对 v7 包仍给出与装档前一致的判定。
  *
- * 用法：node tools/proto2/browser-parity.mjs [--pack=scratch/arms/CEM48c-s7.bak] [--perShape=6]
+ * 用法：node training/proto2/browser-parity.mjs [--pack=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak] [--perShape=6]
  */
 import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
 import { install, packInstallCfg, readPack2, packCfgExit } from './arch2.mjs';
@@ -22,7 +22,7 @@ const P = W.EpirusPolicy, T = W.EpirusTrainer, Play = W.EpirusPlay, S = W.Epirus
 const P2 = W.EpirusPolicy2;
 const args = process.argv.slice(2);
 const arg = (k, d) => { const a = args.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-const PACK = arg('pack', 'scratch/arms/CEM48c-s7.bak');
+const PACK = arg('pack', 'docs/artifacts/obs6-coldstart/EQ-S4-E9.bak');
 const PER = Math.max(1, Number(arg('perShape', 6)) || 6);
 
 if (!P2 || typeof P2.forwardCands !== 'function') { console.error('⛔ 沙箱里没有 EpirusPolicy2 ⇒ `tools/audit-lib.mjs` 的 CORE 表没加 js/train/policy2.js'); process.exit(8); }
@@ -181,6 +181,23 @@ if (!sameSeq) {
   console.log('P6 产品侧守卫：`value(2.0)` ⇒ ' + threwV + ' ‖ `forward(2.0)` ⇒ ' + threwF +
     ' ‖ `value(v7)` 仍给有限分=' + v7ok + (v7err ? '（抛了：' + v7err + '）' : ''));
   if (/^没抛/.test(threwV) || threwF !== '抛了 ✔' || !v7ok) { console.error('⛔ P6 不过：2.0 张量能被 v7 打分器静默切开，或 v7 那台被打坏'); process.exit(8); }
+}
+
+/* ---- P7 2.0 张量经由 EpirusPolicy.pack 往返序列化必须分派到 EpirusPolicy2.pack ---- */
+{
+  const packed = Wb.EpirusPolicy.pack(bp2);
+  if (!packed || packed.v !== raw.v || !Array.isArray(packed.a) || packed.a.length !== raw.a.length) {
+    console.error('⛔ P7：`EpirusPolicy.pack(bp2)` 返回容器版本或长度不匹配：' + JSON.stringify({ v: packed && packed.v, len: packed && packed.a && packed.a.length, wantV: raw.v, wantLen: raw.a.length }));
+    process.exit(8);
+  }
+  const chk = Wb.EpirusPolicy.checkPack(packed);
+  if (!chk.ok) { console.error('⛔ P7：重打包产物没过 checkPack：' + JSON.stringify(chk)); process.exit(8); }
+  const unpacked = Wb.EpirusPolicy.unpack(packed, false);
+  const seqRepacked = playSeq(Wb, unpacked, 4242, 5);
+  const sameRt = !seqRepacked.err && seqRepacked.trace.length === seqBrowse.trace.length &&
+    seqRepacked.trace.every((v, i) => v === seqBrowse.trace[i]);
+  console.log('P7 浏览器侧 `P.pack(2.0)` 往返：v=' + packed.v + ' ‖ len=' + packed.a.length + ' ‖ 重打 4242 逐手相同=' + sameRt + (sameRt ? ' ✔' : ''));
+  if (!sameRt) { console.error('⛔ P7 不过：P.pack→P.unpack 后推理行为分叉'); process.exit(8); }
 }
 
 console.log('\n⇒ 浏览器侧与训练侧对同一枚 2.0 包**逐位同分**，且四种拒读都有牙。包=' + PACK + ' ‖ 观测面 dof=' + (raw.dims && raw.dims.dof) + ' ‖ 参数 ' + raw.a.length + ' 条');

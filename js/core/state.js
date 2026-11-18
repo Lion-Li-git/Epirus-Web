@@ -9,6 +9,7 @@
     return {
       id, name, hp, ep: 0,
       lastSkill: null,
+      lastEffSkill: null,           // 实际生效的技能（镜面成功复制时记被复制卡，用于连用价判据）
       lastTarget: null, lastTarget2: null,   // v1.5.19：上一手指向谁（公共信息；供特征 T 块与 UI）
       elec: 0, boom: 0,             // 能量珠 R9'（只供下一回合，回合末未用即清空）
       beadNew: null,                // 本回合蓄能新得的珠类型（endTurn 据此决定谁过期）
@@ -147,7 +148,7 @@
       return { ok: true, ep: p.ep, hp: 1, beads: null, cannonPhase: 3 }; // R42 自损1血
     }
     if (key === R.SK.LASER_EYE) {
-      const cont = p.lastSkill === R.SK.LASER_EYE; // R32
+      const cont = (p.lastEffSkill || p.lastSkill) === R.SK.LASER_EYE; // R32
       if (cont) return { ok: true, ep: 2, hp: 0, beads: null };
       if (p.boom < 1) return { ok: false, reason: '首次激光眼需 1 枚爆破珠' };
       return { ok: true, ep: 1, hp: 0, beads: { boom: 1 } };
@@ -172,7 +173,7 @@
       if (live < 1) return { ok: false, reason: '天火需有自己贴出的符咒可引爆' };
       /* R62（2026-10-25 用户裁定）：首下 1ジ；连续使用（上一手也是天火）2ジ；隔开（出过任何别的招）重置 1ジ。
        * 连续的判定与 R32 激光眼同一支 lastSkill。 */
-      return { ok: true, ep: p.lastSkill === R.SK.FIRESTORM ? 2 : 1, hp: 0, beads: null };
+      return { ok: true, ep: (p.lastEffSkill || p.lastSkill) === R.SK.FIRESTORM ? 2 : 1, hp: 0, beads: null };
     }
     if (key === R.SK.DRAIN) {   // R25 + v1.4.0：门槛按模式可配（默认仍是 HP≤1）；v1.5.174 长程 3 → 2（用户裁定，见 rules.js 本字段注释）
       /* v1.5.174：原来是 `|| 1` ⇒ **写 0 会静默变成 1**，"想关掉这张卡"这条语义根本不存在

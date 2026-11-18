@@ -15,15 +15,16 @@ import { sandbox, loadChamp, rejectUnknownFlags, chargeProfile } from '../../too
 import { widOf } from '../../champion-map/pack-id.mjs';   // 起点身份入档用（与 supfit-full 同一契约）
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
-import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi, dropObs6Tape } from './pg-lib.mjs';
+import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
 import { pickChain, pickKey } from './chain-lib.mjs';
 import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预示式代理 + 防席名单的单一来源（千问 §二十三/11-01）
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'obs', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
+const OBS_SPEC = String(arg('obs', '')).trim();
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
 const LR = Number(arg('lr', 0.02)) || 0.02;
 const STEPS = Math.max(10, Number(arg('steps', 400)) || 400);
@@ -75,6 +76,7 @@ const got = srcSegQ
              input: srcDims.input, inter: srcDims.inter || 0, tinter: srcDims.tinter || 0, gen: 3, keySplit: KS },
       gen: 3, era: '代 ' + (srcDims.gen || '?') + ' → 代 3（显式砍 qHead ' + srcSegQ.len + ' 个参数）', carried: srcSegQ }
   : packCfgExit(raw, UP);
+assertObsArch(got.cfg, OBS_SPEC, 'supfit-gd', UP);
 const W = sandbox();
 installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg, (KS ? { gen: 3, keySplit: 1 } : {})));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;

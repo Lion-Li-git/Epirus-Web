@@ -66,6 +66,10 @@ nav.tabs button.on{color:#fff;border-color:var(--accent);background:var(--panel2
 .logbox .ev.gold{color:var(--gold)} .logbox .ev.pur{color:var(--purple)}
 .logbox .ev.blue{color:var(--accent)}
 .logbox .ev.dim{color:var(--dim)}
+/* v2.1.1（用户裁定 2026-11-18）：≥6 人桌的对手栏**铺满与技能列同高**（align-self:stretch +
+   space-between）——卡片保持原尺寸（不缩小），底部与技能栏底部平齐；日志回到下方全宽 grid 行，
+   不塞窄侧栏、也不给对手栏加滚轮。2~5 人桌布局一字不变。 */
+#app.app-wide #side-1{align-self:stretch;align-content:space-between}
 .overlay{position:fixed;inset:0;background:rgba(5,6,15,.78);display:flex;align-items:center;justify-content:center;z-index:40}
 .overlay .card{background:var(--panel);border:1px solid var(--gold);border-radius:16px;padding:26px 34px;text-align:center;max-width:420px}
 .overlay h2{margin:4px 0 10px}

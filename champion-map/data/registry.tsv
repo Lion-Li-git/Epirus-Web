@@ -988,8 +988,8 @@ MX6-GD-TF15	docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak	2.0	25	2.0 obs6.5 键�
 MX6-GD-TF20	docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T03:54:32.126Z	1f4a97c0268c610b9a3ea11f4189c6439e71840ae009caf138d36b41f9192afb	active
 MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T03:58:38.261Z	de3f866fd83cf53416493c337966e54f3aa3d8ccb42276394ac8076a2497b10e	active
 MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T04:03:24.216Z	f2e46cc2737b2490feb468f6d8d24e26981e13029468f578f0a6ab7da5ca15ee	active
-RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-17T23:21:40.047Z	af676b7b054672066f1d75e31cfdebbcfcb1e3d13f4ddcc5451f521f30b6d596	active
-TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-17T23:23:15.709Z	7b0c82dd06b64d7ada6d4d407569f2ae1f1cac5302bc6a31a94f8e1cdbcfbf68	active
-TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-17T23:24:44.651Z	662ed5464d25bb04e7631b36b1fe418ae9478c247896f7c4be897419f53294a5	active
-TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active
-RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	2.0	26	自动新点 2026-11-17		2026-11-17T23:42:26.400Z	7fab176c216212d7ab1e60bf91346a76e6066a62c2a9e2845a3b36a2bb7b6a34	active
+RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:21:40.047Z	af676b7b054672066f1d75e31cfdebbcfcb1e3d13f4ddcc5451f521f30b6d596	active
+TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:23:15.709Z	7b0c82dd06b64d7ada6d4d407569f2ae1f1cac5302bc6a31a94f8e1cdbcfbf68	active
+TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:24:44.651Z	662ed5464d25bb04e7631b36b1fe418ae9478c247896f7c4be897419f53294a5	active
+TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active
+RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-17T23:42:26.400Z	7fab176c216212d7ab1e60bf91346a76e6066a62c2a9e2845a3b36a2bb7b6a34	active

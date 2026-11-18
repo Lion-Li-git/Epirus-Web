@@ -225,7 +225,7 @@ const BYBASE = {};
 for (const r of REC) { const k = String(r.rel || r.id).replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/, '');
   if (k && !BYBASE[k]) BYBASE[k] = r.id; if (r.id && !BYBASE[r.id]) BYBASE[r.id] = r.id;
   const a = r.id.replace(/^SHIPPED-/, ''); if (a !== r.id && !BYBASE[a]) BYBASE[a] = r.id; }   /* 链上节点叫 Ldemo、图上叫 SHIPPED-Ldemo */
-function seedpackFile(m) { const e = m.recipe && m.recipe.env; const p = e && e.EPIRUS_SEEDPACK;
+function seedpackFile(m) { const e = m.recipe && m.recipe.env; const p = (e && e.EPIRUS_SEEDPACK) || m.up;
   return typeof p === 'string' && p ? p : ''; }
 const SLOT_BASE = 'bundled-champion-3p';
 let nSlotEra = 0;
@@ -509,7 +509,7 @@ for (const r of REC) { const m = r.m || {};
   const psrcVal = G3SET[r.id] && g3r
     ? (!pofVal ? (g3r.parentSrc || ps)
       : (ps === 'hash' || ps === 'hash-emb' || ps === 'seedpack-wid' || ps === 'slot-wid' || ps === 'soup') ? ps
-      : (g3r.parentSrc && g3r.parentSrc !== 'seedpack-wid' ? g3r.parentSrc : 'seedpack'))
+      : (g3r.parentSrc === 'seedpack-wid' ? 'seedpack-wid' : (g3r.parentSrc || 'seedpack')))
     : ps;
   ROWS.push({ id: r.id, ts: TSVAL, seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     parentOf: pofVal, wid: r.wid || '',

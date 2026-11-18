@@ -820,6 +820,11 @@
    * 伤害 12.25→7.70、穿透 242→152。修法：容器写 `lv`（来源版本），读取时挂到 params 上，
    * chooser 用 `isLegacyChooser` 认标记而不是认长度。 */
   function pack(p) {
+    if (p && p.p2) {
+      const P2 = global.EpirusPolicy2;
+      if (!P2) throw new Error('params 是 2.0 张量（带 p2 布局）但 `js/train/policy2.js` 没加载');
+      return P2.pack(p, global);
+    }
     const o = { v: PACK_VERSION, a: Array.from(p), f: FEAT_S, fa: FEAT_A, h: HID };
     if (p && p.legacyFrom != null) o.lv = p.legacyFrom;
     return o;

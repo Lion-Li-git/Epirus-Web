@@ -222,9 +222,8 @@
       default: return null;
     }
   }
-  /* N14：复制来的架势（多一个全息屏障 = 原型制御的特例，v1.5.7 已确认两者防御效果完全相同） */
+  /* N14：复制来的自保架势（全息屏障是给输出目标 t2 套盾，不走此表） */
   function copiedGuardKind(key) {
-    if (key === SK.HOLO) return 'proto';
     return guardKindOfKey(key);
   }
 
@@ -344,7 +343,7 @@
     state._proto = {};
   }
 
-  /* 本回合是否有人用「全息屏障」把盾套在 `pid` 身上 —— 返回施放者 pid，没有则 null */
+  /* 本回合是否有人用「全息屏障」（含镜面复制全息屏障）把盾套在 `pid` 身上 —— 返回施放者 pid，没有则 null */
   function holoShieldFrom(state, pid) {
     for (let i = 0; i < state.actions.length; i++) {
       if (i === pid) continue;                      // 自己给自己套不算（规则：目标是"被作用者"= 别人）
@@ -353,7 +352,18 @@
        * （原始规则：「雷击之枪需要对使用者作用才能使其无效」）。
        * 用 actionOf 还让这条判定**与结算顺序无关** —— 以后万一调 pri 也不会漏掉"被无效化"。 */
       const a = actionOf(state, i);
-      if (a && a.key === SK.HOLO && a.target === pid) return i;
+      if (!a) continue;
+      if (a.key === SK.HOLO && targetOf(state, i) === pid) return i;
+      if (a.key === SK.MIRROR) {
+        if (state._mirrorHidden && state._mirrorHidden[i]) continue;
+        const mr = state._mirrorResolved && state._mirrorResolved[i];
+        if (mr) {
+          if (mr.key === SK.HOLO && mr.target === pid) return i;
+        } else {
+          const ch = resolveMirrorChain(state, i, state._mirrorHidden || null);
+          if (ch && !ch.cycleInvalid && ch.action && ch.action.key === SK.HOLO && ch.t2 === pid) return i;
+        }
+      }
     }
     return null;
   }
@@ -659,15 +669,30 @@
 
   /* 攻击相抵/阻止（优先级原则 R3）：同优先级攻击抵消，高优先级攻击阻止低优先级攻击 */
   function clashPass(state) {
-    /* N2 修正：快照结算，避免“先判定的对子把后判定的行动作废”带来的顺序依赖 */
-    const snapK = [], snapT = [];
-    for (const i of turnOrder(state)) { const ea = effectiveAction(state, i); snapK[i] = ea ? ea.key : null; snapT[i] = ea ? ea.target : null; }
+    /* N2 修正：快照结算，避免“先判定的对子把后判定的行动作废”带来的顺序依赖；支持双枪双目标按枪管独立交锋 */
+    const snapK = [], snapT = [], snapT2 = [];
+    for (const i of turnOrder(state)) {
+      const ea = effectiveAction(state, i);
+      snapK[i] = ea ? ea.key : null;
+      snapT[i] = ea ? ea.target : null;
+      snapT2[i] = (ea && !ea.isMirror && ea.key === SK.DUAL_GUN && ea.target2 != null && ea.target2 !== ea.target && ea.target2 !== i && isAliveInRound(state, ea.target2))
+        ? ea.target2 : null;
+    }
     const atkIdx = [];
     for (const i of turnOrder(state)) {
       if (snapK[i] && R.ATK_EFFECT.indexOf(snapK[i]) >= 0) atkIdx.push(i);
     }
     if (atkIdx.length < 2) return;
     const pending = [];
+    const dgVoid = {};
+    const markClashLoss = function (pid, barrel, reason) {
+      if (snapT2[pid] != null) {
+        dgVoid[pid] = dgVoid[pid] || {};
+        if (!dgVoid[pid][barrel]) dgVoid[pid][barrel] = reason;
+      } else {
+        pending.push([pid, reason]);
+      }
+    };
     // N 人：两两结算（同优先级相抵、高优先级阻止低优先级）
     for (let x = 0; x < atkIdx.length; x++) {
       for (let y = x + 1; y < atkIdx.length; y++) {
@@ -676,21 +701,33 @@
         if (!a || !b) continue;
         if (a === SK.DRAIN && b === SK.DRAIN) continue; // 互勾触发铁索，不抵消
         // N4：**只有互为目标**的攻击才会交锋（2 人时天然成立）。
-        if (snapT[ia] !== ib || snapT[ib] !== ia) continue;
+        const bA = snapT[ia] === ib ? 1 : (snapT2[ia] === ib ? 2 : 0);
+        const bB = snapT[ib] === ia ? 1 : (snapT2[ib] === ia ? 2 : 0);
+        if (!bA || !bB) continue;
         const pa = skillPri(a), pb = skillPri(b);
         if (pa === pb) {
           ev(state, { type: 'cancel', pids: [ia, ib], round: state.round });
-          pending.push([ia, '相抵'], [ib, '相抵']);
+          markClashLoss(ia, bA, '相抵');
+          markClashLoss(ib, bB, '相抵');
         } else if (pa > pb) {
           ev(state, { type: 'clash', winner: ia, loser: ib });
-          pending.push([ib, '被高优先级攻击阻止']);
+          markClashLoss(ib, bB, '被高优先级攻击阻止');
         } else {
           ev(state, { type: 'clash', winner: ib, loser: ia });
-          pending.push([ia, '被高优先级攻击阻止']);
+          markClashLoss(ia, bA, '被高优先级攻击阻止');
         }
       }
     }
     for (const pd of pending) if (actionOf(state, pd[0])) setVoid(state, pd[0], pd[1]);
+    for (const k of Object.keys(dgVoid)) {
+      const pid = Number(k), act = actionOf(state, pid), v = dgVoid[pid];
+      if (!act) continue;
+      if (v[1] && v[2]) setVoid(state, pid, v[1]);
+      else {
+        if (v[1]) act._dgVoid1 = true;
+        if (v[2]) act._dgVoid2 = true;
+      }
+    }
   }
 
   /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
@@ -777,13 +814,15 @@
   /* 大雷统一结算（真实 pri4 与镜面复制大雷共用，按入口快照消除先后顺序偏置） */
   function runBigTBatch(state, entries) {
     if (!entries.length) return;
-    const snapK = [], snapRawK = [], snapT = [];
+    const snapK = [], snapRawK = [], snapT = [], snapT2 = [];
     for (const i of turnOrder(state)) {
       const ea = effectiveAction(state, i);
       const a = actionOf(state, i);
       snapK[i] = ea ? ea.key : (a ? a.key : null);
       snapRawK[i] = a ? a.key : null;
       snapT[i] = ea ? ea.target : (a ? targetOf(state, i) : null);
+      snapT2[i] = ((!ea || !ea.isMirror) && snapK[i] === SK.DUAL_GUN && a && a.target2 != null && a.target2 !== snapT[i] && a.target2 !== i && isAliveInRound(state, a.target2))
+        ? a.target2 : null;
     }
     for (const ent of entries) {
       const c = ent.caster, t = ent.target;
@@ -808,8 +847,8 @@
       for (const q of turnOrder(state)) {
         if (q === c || q === t || !isAliveInRound(state, q)) continue;
         const qa = snapK[q] ? { key: snapK[q] } : null;
-        const qTargetsT = snapK[q] != null && snapT[q] === t;
-        const tTargetsQ = !!ta && tTgt === q;
+        const qTargetsT = snapK[q] != null && (snapT[q] === t || snapT2[q] === t);
+        const tTargetsQ = !!ta && (tTgt === q || snapT2[t] === q);
         if (!qTargetsT && !tTargetsQ) continue;
         const qUsed = snapRawK[q] || snapK[q];
         const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
@@ -1021,7 +1060,7 @@
       const t = ea.target;
       if (t == null) continue;
       const eb = effectiveAction(state, t);
-      if (eb && R.ATK_EFFECT.indexOf(eb.key) >= 0 && eb.target === i) {
+      if (eb && R.ATK_EFFECT.indexOf(eb.key) >= 0 && (eb.target === i || (!eb.isMirror && eb.key === SK.DUAL_GUN && eb.target2 === i))) {
         setVoid(state, i, '过载炮被攻击抵消');
         ev(state, { type: 'cannonCountered', pid: i, by: t, key: eb.key });
       }
@@ -1074,6 +1113,9 @@
         } else if (ea.key === SK.TRANSFER) {
           me._copiedTransfer = ea.target;
           ev(state, { type: 'mirror', pid: i, from: ea.from, to: ea.target, key: SK.TRANSFER });
+        } else if (ea.key === SK.HOLO) {
+          ev(state, { type: 'mirror', pid: i, from: ea.from, to: ea.target, key: SK.HOLO });
+          if (ea.target != null) ev(state, { type: 'holoSet', pid: i, target: ea.target, copied: true });
         }
       }
     }
@@ -1152,8 +1194,10 @@
         case SK.DUAL_GUN: {
           const dgDef = R.byKey[SK.DUAL_GUN];
           const dgDmg = { amt: (dgDef.dmg && dgDef.dmg.amt) || 1, type: (dgDef.dmg && dgDef.dmg.type) || R.DMG.NORMAL, source: i, via: SK.GUN, pierce: dgDef.pierce || {} };
-          deliverDamage(state, Object.assign({}, dgDmg), t, { reason: rsnPfx + '双枪射手' });
-          if (!ea.isMirror) {
+          if (!(ea.act && ea.act._dgVoid1)) {
+            deliverDamage(state, Object.assign({}, dgDmg), t, { reason: rsnPfx + '双枪射手' });
+          }
+          if (!ea.isMirror && !(ea.act && ea.act._dgVoid2)) {
             const t2 = (ea.target2 != null && isAliveInRound(state, ea.target2)) ? ea.target2 : null;
             if (t2 != null && t2 !== t) deliverDamage(state, Object.assign({}, dgDmg), t2, { reason: '双枪射手' });
           }
@@ -1254,13 +1298,18 @@
     }
 
     // ====== ⑥a 狙击 pri1（真实与镜面复制皆按狙击时机干扰/爆头） ======
+    const eaTargetsWho = function (st, ea, who) {
+      if (!ea || R.ATK_EFFECT.indexOf(ea.key) < 0) return false;
+      if (ea.isMirror) return ea.target === who;
+      if (!(ea.act && ea.act._dgVoid1) && targetOf(st, ea.pid) === who) return true;
+      if (ea.key === SK.DUAL_GUN && !(ea.act && ea.act._dgVoid2) && ea.target2 === who && who !== ea.pid && isAliveInRound(st, who)) return true;
+      return false;
+    };
     const aimedAt = function (st, who) {
       for (const j of turnOrder(st)) {
         if (j === who) continue;
         const ja = effectiveAction(st, j);
-        if (!ja || R.ATK_EFFECT.indexOf(ja.key) < 0) continue;
-        const jt = ja.isMirror ? ja.target : targetOf(st, j);
-        if (jt === who) return j;
+        if (eaTargetsWho(st, ja, who)) return j;
       }
       return null;
     };
@@ -1276,8 +1325,7 @@
       }, t, { reason: ea.isMirror ? '镜面反射·狙击枪' : '狙击枪' });
       if (res.result === 'land') {
         const ta = effectiveAction(state, t);
-        const tTgt = ta ? (ta.isMirror ? ta.target : targetOf(state, t)) : null;
-        const affect = !!ta && (ta.key === SK.TRANSFER || R.ATK_EFFECT.indexOf(ta.key) >= 0) && tTgt === i;
+        const affect = !!ta && ((ta.key === SK.TRANSFER && (ta.isMirror ? ta.target : targetOf(state, t)) === i) || eaTargetsWho(state, ta, i));
         if (!affect && judge3(state)) {
           extraHitWithTransfer(state, t, 1, '爆头', 'headshot', { from: i });
           ev(state, { type: 'headshot', pid: i, to: t });
@@ -1331,6 +1379,7 @@
        * ⚠️ 边界：**过载炮**有明文 R43"被无效化**仍**计入次数"（`state.js:190`，用户裁定）⇒ 那条**不动**；
        *    失败/买不起的一手本来就带 `outcome!=='ok'`（`state.js:156` 的 `fail()`）⇒ 行为不变。 */
       p.lastSkill = (a && a.outcome === 'ok' && !a.voided) ? a.key : null;
+      p.lastEffSkill = (a && a.outcome === 'ok' && !a.voided && ringEa) ? ringEa.key : null;
       /* v1.5.109（R59，用户裁定）：地雷计时 —— 回合末递减，减到 0 就卸下。
        * 语义：埋下的那一回合记 3，回合末 → 2（仍在，本回合有效）；后两回合末 → 1 → 0（卸下）
        * ⇒ **武装覆盖"当前回合 + 其后两个回合"共 3 个回合**，第三回合结束后失效。 */
@@ -1392,8 +1441,9 @@
         const mr = (a && a.key === SK.MIRROR && state._mirrorResolved) ? state._mirrorResolved[i] : null;
         const effKey = mr ? mr.key : (a && a.key);
         const effTgt = mr ? mr.target : (a && a.target);
+        const effTgt2 = (!mr && a && a.key === SK.DUAL_GUN) ? a.target2 : null;
         const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(effKey) >= 0
-          && p.tauntBy.indexOf(effTgt) >= 0);
+          && (p.tauntBy.indexOf(effTgt) >= 0 || (effTgt2 != null && p.tauntBy.indexOf(effTgt2) >= 0)));
         if (!ok) rawDamage(state, i, 1, '挑衅违约', 'taunt', { type: R.DMG.NORMAL, allowDead: true });
         p.tauntActive = false; p.tauntBy = [];
         ev(state, { type: 'tauntCheck', pid: i, ok });

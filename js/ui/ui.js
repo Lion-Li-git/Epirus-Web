@@ -1400,10 +1400,13 @@
      * 现在按 `store.lastSource`（由 `trainer.js` 单一来源回传）如实区分三种情形。 */
     const c = Champ.store.load();
     const from = Champ.store.lastSource;
+    let has3pLocal = false;
+    try { has3pLocal = !!localStorage.getItem('epirus.champion3p'); } catch (e) { has3pLocal = false; }
     const el = $('tr-has');
     let label;
-    if (from === 'local') {
-      label = '已保存本地冠军（本机自训/导入）';
+    if (from === 'local' || has3pLocal) {
+      const slots = [from === 'local' ? '2 人' : '', has3pLocal ? '多人' : ''].filter(Boolean).join(' + ');
+      label = '已保存本地冠军（本机自训/导入 · ' + slots + '）';
     } else if (from === 'builtin') {
       const m = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) || null;
       label = m
@@ -1589,12 +1592,12 @@
       } else if (d.type === 'done' && d.n > 2) {
         $('tr-progress').style.width = '100%';
         $('tr-state').textContent = '多人（' + d.n + '人）训练完成：1st ' + (d.firstRate * 100).toFixed(1) + '% / top2 ' + (d.top2Rate * 100).toFixed(1) + '%（' + d.secs + 's）';
-        $('tr-remote').textContent = '多人冠军已写入 js/bundled-champion-3p.js；对局困难档即时生效；再点一次可继续训练';
+        $('tr-remote').textContent = '多人冠军已写入 js/bundled-champion-3p.js 并存入本机（对局困难档即时生效；可用「用内置冠军」还原）；再点一次可继续训练';
         remoteActive = false;
         es.close(); remoteES = null;
         if (d.champ) {
           window.EPIRUS_CHAMPION_3P = d.champ;
-          try { localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
+          try { localStorage.setItem('epirus.champion3p', JSON.stringify(d.champ)); } catch (e) { /* ignore */ }
           resetMultiChampCache();
           renderChampState();
         }
@@ -1605,13 +1608,13 @@
         $('tr-remote').textContent = '训练完成（' + (d.rounds || roundsN) + ' 轮 × ' + (d.seeds || seedsN) + ' 种子' + bestSeedTxt + '），冠军已写入 js/bundled-champion.js；再点一次可继续训练';
         remoteActive = false;
         es.close(); remoteES = null;
-        // 把冠军拉进内存，困难档无需刷新即可生效
+        // 把冠军拉进内存并写入本机覆盖（困难档无需刷新即可生效，不被池覆盖）
         fetch(base + '/champion').then(function (r) { return r.json(); }).then(function (j) {
           if (j && j.champion) {
             window.EPIRUS_CHAMPION = j.champion;
-            try { localStorage.removeItem('epirus.champion.v3'); } catch (e) { /* ignore */ }
+            try { localStorage.setItem('epirus.champion.v3', JSON.stringify(j.champion)); } catch (e) { /* ignore */ }
             renderChampState();
-            $('tr-remote').textContent = '冠军已载入内存（困难档即时生效；刷新页面可持久化到内置文件）；再点一次可继续训练';
+            $('tr-remote').textContent = '冠军已载入内存并存入本机（困难档即时生效；可用「用内置冠军」还原）；再点一次可继续训练';
           }
         });
       } else if (d.type === 'error') { $('tr-remote').textContent = '服务错误：' + d.msg; }
@@ -1841,9 +1844,15 @@
     }
   }
   function resetChamp() {
-    openModal('<h3>确定清空本地冠军策略？</h3><p style="color:var(--dim);font-size:13px">之后“困难”难度将代打中等逻辑，直到重新训练或导入。</p>', [
+    openModal('<h3>确定清空本地冠军策略？</h3><p style="color:var(--dim);font-size:13px">将清除本机自训/导入的 2 人与多人冠军，之后对局改回内置冠军/池，直到重新训练或导入。</p>', [
       { label: '取消', fn: closeModal },
-      { label: '清空', fn: function () { closeModal(); Champ.store.clear(); renderChampState(); } }
+      { label: '清空', fn: function () {
+        closeModal();
+        Champ.store.clear();
+        try { localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
+        resetMultiChampCache();
+        renderChampState();
+      } }
     ]);
   }
 

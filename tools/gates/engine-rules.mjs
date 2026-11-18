@@ -971,7 +971,7 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
    *    注意：与复制技能按同一规则结算，含高/低优先级与对外非伤技能，唯一例外是无隐藏技互镜/空符天火无效。 */
   const DMG_COPY = [R.SK.GUN, R.SK.SWORD, R.SK.TANK, R.SK.SNIPE, R.SK.DRAIN, R.SK.RAILGUN,
     R.SK.BIG_T, R.SK.CANNON, R.SK.LASER_EYE, R.SK.DUAL_GUN];
-  const OTHER_COPY = [R.SK.MINI_T, R.SK.TRANSFER, R.SK.CURSE, R.SK.FIRESTORM, R.SK.TAUNT, R.SK.MIRROR];
+  const OTHER_COPY = [R.SK.MINI_T, R.SK.TRANSFER, R.SK.CURSE, R.SK.FIRESTORM, R.SK.TAUNT, R.SK.HOLO, R.SK.MIRROR];
   const cls = {};
   for (const k of DMG_COPY) { ok(!cls[k], '分类重复：' + k); cls[k] = 'dmg'; }
   for (const k of R.MIRROR_SELF) { ok(!cls[k], '分类重复：' + k); cls[k] = 'self'; }
@@ -985,7 +985,7 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
   const EXPECT = {};
   EXPECT[R.SK.GUARD] = 'guard'; EXPECT[R.SK.REFLECT] = 'reflect'; EXPECT[R.SK.BAGUA] = 'bagua';
   EXPECT[R.SK.SHIFT] = 'bagua'; EXPECT[R.SK.JINSHIELD] = 'jinshield'; EXPECT[R.SK.ARMOR] = 'armor';
-  EXPECT[R.SK.PROTO] = 'proto'; EXPECT[R.SK.HOLO] = 'proto';   // 复制全息屏障 = 原型制御式自保（v1.5.7 两者等价）
+  EXPECT[R.SK.PROTO] = 'proto';
   for (const k of R.MIRROR_SELF) {
     const s2 = S.createState('multi', { next: mulberry32(3) }, 3);
     for (const q of s2.p) q.ep = 9;
@@ -1133,6 +1133,32 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
     X.resolveActions(s); X.endTurn(s);
     ok(s.actions[1].voided, '激光眼应作废挂在 P2 身上的全息盾施法者 P1');
     eq(s.p[2].hp, 4, '全息盾被破后 0 号位的剑命中 P2 造成 1 伤');
+
+    // ⑨e 镜面复制全息屏障护 t2（不护镜面施法者自己），且可被针对 t2 的激光眼破除
+    s = S.createState('multi', { next: mulberry32(50) }, 4);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; q.boom = 1; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 }); // P0 复制 P1 的全息屏障并护住 P2
+    S.attemptAction(s, 1, R.SK.HOLO, { target: 3 });               // P1 原本护 P3
+    S.attemptAction(s, 2, R.SK.JI, {});
+    S.attemptAction(s, 3, R.SK.SWORD, { target: 0 });              // P3 打 P0（若 P0 误获自盾会被挡）
+    X.resolveActions(s);
+    const g2 = X.guardOf(s, 2);
+    const g0 = X.guardOf(s, 0);
+    ok(g2 && g2.kind === 'proto' && g2.viaHolo && g2.from === 0, '镜面复制全息屏障应给 t2(P2) 套上全息原型盾');
+    eq(g0, null, '镜面复制全息屏障不得给镜面施法者 P0 自己套盾');
+    eq(s.p[0].hp, 4, 'P0 自身无盾，应受 P3 的激光剑 1 伤');
+    X.endTurn(s);
+
+    s = S.createState('multi', { next: mulberry32(51) }, 4);
+    for (const q of s.p) { q.ep = 8; q.hp = 5; q.boom = 1; }
+    X.startTurn(s);
+    S.attemptAction(s, 0, R.SK.MIRROR, { target: 1, target2: 2 }); // P0 复制 P1 的全息屏障并护住 P2
+    S.attemptAction(s, 1, R.SK.HOLO, { target: 3 });
+    S.attemptAction(s, 2, R.SK.JI, {});
+    S.attemptAction(s, 3, R.SK.LASER_EYE, { target: 2 });          // 针对 t2(P2) 出激光眼
+    X.resolveActions(s); X.endTurn(s);
+    ok(s.actions[0].voided, '针对 t2 的激光眼应破除镜面施法者 P0 的镜面全息盾');
   }
 });
 

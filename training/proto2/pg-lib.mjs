@@ -12,6 +12,44 @@
  *      的尾**逐字同源**（复制粘贴，不凭记忆——本仓 10-29 的教训）。
  * 布局语义（逐字对 encode）：权重行主序 base=wOff+j*inDim，bias 在 biasOff+j，biasOff=seg.off+out*in。
  */
+export const CURRENT_OBS_INPUT = 'obs6';
+const VALID_OBS_SPECS = new Set(['obs6', 'obs6.5', 'obs5', 'obs4', 'obs3c', 'obs3b', 'obs3', 'v7']);
+
+/**
+ * 校验起点/上游包的观测输入架构，禁止静默用老代（如 obs3b/obs5）底座开新训。
+ * 缺省要求当前代 obs6（含 obs6.5）；若确需在特定架构上复现，须显式传 --obs=<spec>。
+ */
+export function assertObsArch(cfg, rawObsSpec, runner, packPath) {
+  const spec = String(rawObsSpec || '').trim();
+  if (spec && !VALID_OBS_SPECS.has(spec)) {
+    console.error('⛔ [' + runner + '] 未知 --obs=' + spec + '（合法：' + [...VALID_OBS_SPECS].join(' | ') + '）');
+    process.exit(2);
+  }
+  const actualInput = (cfg && cfg.input) || 'v7';
+  const hasModeBias = Number((cfg && cfg.modeBias) || 0) === 1;
+  if (!spec) {
+    if (actualInput !== CURRENT_OBS_INPUT) {
+      console.error('⛔ [' + runner + '] 观测架构校验失败：底座 ' + packPath + ' 是 input=' + actualInput +
+        '（非当前代 ' + CURRENT_OBS_INPUT + '），禁止隐式用老观测架构底座开训；若确需复现老架构，请显式传 --obs=' + actualInput);
+      process.exit(2);
+    }
+    return;
+  }
+  if (spec === 'obs6.5') {
+    if (actualInput !== 'obs6' || !hasModeBias) {
+      console.error('⛔ [' + runner + '] 观测架构校验失败：底座 ' + packPath + ' 是 input=' + actualInput +
+        '（modeBias=' + (hasModeBias ? 1 : 0) + '），不符合 --obs=obs6.5（需 input=obs6 且 modeBias=1）');
+      process.exit(2);
+    }
+    return;
+  }
+  if (actualInput !== spec) {
+    console.error('⛔ [' + runner + '] 观测架构校验失败：底座 ' + packPath + ' 是 input=' + actualInput +
+      '，与显式要求的 --obs=' + spec + ' 不一致');
+    process.exit(2);
+  }
+}
+
 export function layoutOf(P) {
   const L = P.__arch2 && P.__arch2.L;
   if (!L) throw new Error('pg-lib: P.__arch2.L 不在 ⇒ 只支持 2.0 张量（v7 包走原训练环）');

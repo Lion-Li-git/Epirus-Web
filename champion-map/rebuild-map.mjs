@@ -40,8 +40,12 @@ run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
   '--compare=champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
-/* ③ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */
-run([join(HERE, 'pipeline/build-trends.mjs')], '③ build-trends 趋势页');
+/* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */
+if (DATA === resolve(HERE, 'data')) {
+  run([join(HERE, 'lineage.mjs')], '③ lineage 同步 lineage.tsv');
+}
+/* ④ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */
+run([join(HERE, 'pipeline/build-trends.mjs')], '④ build-trends 趋势页');
 /* ④ 烘页面：flags 以 bake-flags.txt 为单一来源；--fit 固定到 data 编译产物 */
 const flagFile = join(HERE, 'bake-flags.txt');
 const flags = (existsSync(flagFile)

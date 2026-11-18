@@ -10,7 +10,7 @@
  * 注：本脚本不跑测量；读数/display 由 ruler-measure / 门禁产出后喂进来。
  */
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
-import { resolve, join, basename, dirname, relative } from 'node:path';
+import { resolve, join, basename, dirname, relative, isAbsolute } from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
@@ -54,9 +54,10 @@ if (reg.rows.some((r) => r[reg.ix.pack_id] === ID)) { console.error('⛔ registr
  *   否则先按 meta.hotstartFrom 直接查图，查不到时再沿局部包目录多跳回溯至图上最近祖先（每一跳
  *   都按 widOf === hotstartFrom 逐包核过权重指纹 ⇒ 升为 `seedpack-wid` 实线；仅靠手填 --parent=
  *   且无权重链可证时才落 `seedpack` 虚线），仍找不到才保留 unknown-wid。 */
-/** Walk verified widOf/hotstartFrom links through local unplotted packs to find an ancestor on map. */
-function findAncestorOnMap(startWid, dirs, wid2id, dispIds, targetId = '') {
+/** Walk verified up/widOf/hotstartFrom links through local unplotted packs to find an ancestor on map. */
+function findAncestorOnMap(startWid, startUp, dirs, resolveOnMap, rootDir, targetId = '') {
   const widParent = new Map();
+  const widUp = new Map();
   const seenDirs = new Set();
   for (const dir of dirs) {
     if (!dir || seenDirs.has(dir) || !existsSync(dir)) continue;
@@ -65,16 +66,37 @@ function findAncestorOnMap(startWid, dirs, wid2id, dispIds, targetId = '') {
       if (!name.endsWith('.bak') && !name.endsWith('.js')) continue;
       const txt = readFileSync(join(dir, name), 'utf8');
       const w = widOf(txt), m = w && parseMeta(txt);
-      if (w && m && m.hotstartFrom) widParent.set(w, String(m.hotstartFrom).trim());
+      if (w && m && m.hotstartFrom && !widParent.has(w)) {
+        widParent.set(w, String(m.hotstartFrom).trim());
+        widUp.set(w, m.up ? String(m.up).trim() : '');
+      }
     }
   }
   const visited = new Set();
-  let cur = startWid;
-  for (let hop = 0; hop < 16 && cur && !visited.has(cur); hop++) {
-    visited.add(cur);
-    const id = wid2id.get(cur);
-    if (id && dispIds.has(id) && (!targetId || id === targetId)) return id;
-    cur = widParent.get(cur) || '';
+  let curWid = startWid;
+  let curUp = String(startUp || '').trim();
+  for (let hop = 0; hop < 16 && curWid && !visited.has(curWid); hop++) {
+    visited.add(curWid);
+    const id = resolveOnMap(curUp, curWid, targetId);
+    if (id) return id;
+    let nextWid = '', nextUp = '';
+    if (curUp) {
+      const upAbs = isAbsolute(curUp) ? curUp : join(rootDir, curUp);
+      if (existsSync(upAbs)) {
+        const txt = readFileSync(upAbs, 'utf8');
+        const m = parseMeta(txt);
+        if (m && m.hotstartFrom) {
+          nextWid = String(m.hotstartFrom).trim();
+          nextUp = m.up ? String(m.up).trim() : '';
+        }
+      }
+    }
+    if (!nextWid) {
+      nextWid = widParent.get(curWid) || '';
+      nextUp = widUp.get(curWid) || '';
+    }
+    curWid = nextWid;
+    curUp = nextUp;
   }
   return '';
 }
@@ -90,11 +112,13 @@ function packDims(txt) {
   try { const o = JSON.parse(m[1]); return o && o.dims ? o.dims : null; } catch { return null; }
 }
 const PACK_DIMS = packDims(packText) || {};
-/* 11-17：按 id 前缀分代归族；不要把 MX* 全部塞进统一单包族。 */
+/* 11-17：按 id 前缀与观测面分代归族；仅 obs6 包允许进 obs6/obs6.5 家族，防 obs3b/obs5 混入。 */
 function autoFamLabel(id, dims) {
-  if (/^MX[1-8]-/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
-  if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
-  if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
+  if (dims.input === 'obs6') {
+    if (/^(MX[1-8]-|RINGB|TZ)/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
+    if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
+    if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
+  }
   return '';
 }
 const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS);
@@ -119,9 +143,35 @@ if (linG3.ix.fam !== undefined || linG3.ix.famLabel !== undefined) {
     '（两处各存过一次事故：align 把 registry 的空值盖掉 sidecar 的真值 ⇒ D234 ⑫ 红在 CI）。请把这两列删掉再注册。');
   process.exit(2);
 }
+const rootDir = resolve(DATA, '../..');
+const normRel = (p) => {
+  const s = String(p || '').trim().replace(/\\/g, '/');
+  if (!s) return '';
+  const r = isAbsolute(s) ? relative(rootDir, s).replace(/\\/g, '/') : s;
+  return r.replace(/^\.\//, '');
+};
 const wid2id = new Map();
-for (const t of [linMain, linG3]) { const iw = t.ix.wid, ii = t.ix.id; if (iw === undefined) continue;
-  for (const r of t.rows) { if (r[iw] && r[ii]) wid2id.set(r[iw], r[ii]); } }
+const id2wid = new Map();
+for (const t of [linMain, linG3]) {
+  const iw = t.ix.wid, ii = t.ix.id;
+  if (iw === undefined) continue;
+  for (const r of t.rows) {
+    if (r[iw] && r[ii]) {
+      if (!wid2id.has(r[iw])) wid2id.set(r[iw], r[ii]);
+      if (!id2wid.has(r[ii])) id2wid.set(r[ii], r[iw]);
+    }
+  }
+}
+const rel2id = new Map();
+const base2id = new Map();
+for (const r of reg.rows) {
+  const id = r[reg.ix.pack_id], p = normRel(r[reg.ix.path]);
+  if (id && p) {
+    if (!rel2id.has(p)) rel2id.set(p, id);
+    const b = basename(p).replace(/\.(bak|js)$/, '');
+    if (b && !base2id.has(b)) base2id.set(b, id);
+  }
+}
 let FAM_MAX = 0;
 for (const [t, fk] of [[reg, 'fam'], [linMain, 'fam']]) { const fi = t.ix[fk]; if (fi === undefined) continue;
   for (const r of t.rows) { const n = Number(r[fi]); if (Number.isFinite(n) && n > FAM_MAX) FAM_MAX = n; } }
@@ -130,9 +180,14 @@ if (!FAM) {
     const hit = findFamByLabel(AUTO_FAM_LABEL);
     if (hit) { FAM = hit.fam; FAMLAB = AUTO_FAM_LABEL; }
     else { FAM = String(FAM_MAX + 1); FAMLAB = AUTO_FAM_LABEL; }
-    console.log('自动家族：modeBias=1 ⇒ ' + FAM + ' / ' + FAMLAB);
+    console.log('自动家族：' + ID + ' ⇒ ' + FAM + ' / ' + FAMLAB);
+  } else if (FAMLAB) {
+    const hit = findFamByLabel(FAMLAB);
+    if (!hit) { console.error('⛔ --fam-label=' + FAMLAB + ' 未在册；请显式传 --fam=<id>'); process.exit(2); }
+    FAM = hit.fam;
   } else {
-    FAM = String(FAM_MAX + 1); FAMLAB = FAMLAB || (LINEAGE !== 'new' ? LINEAGE : '自动新点 ' + now.slice(0, 10));
+    console.error('⛔ 无法自动归类家族，请显式传 --fam=<id> --fam-label=<label>');
+    process.exit(2);
   }
 } else {
   if (AUTO_FAM_LABEL) {
@@ -150,27 +205,51 @@ if (!FAM) {
   }
   if (!FAMLAB) { console.error('⛔ --fam=' + FAM + ' 在册但找不到 famLabel；拒绝静默新建'); process.exit(2); }
 }
+if (VER === '2.0' && PACK_DIMS.input) {
+  const fn = Number(FAM);
+  if (PACK_DIMS.input === 'obs6' && fn > 0 && fn < 21) {
+    console.error('⛔ 观测架构校验失败：obs6 包 ' + ID + ' 不许放进非 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
+    process.exit(2);
+  }
+  if (PACK_DIMS.input !== 'obs6' && (fn >= 21 || /obs6/i.test(FAMLAB))) {
+    console.error('⛔ 观测架构校验失败：' + PACK_DIMS.input + ' 包 ' + ID + ' 不许放进 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
+    process.exit(2);
+  }
+}
 /* 11-15 深夜（ZCode）：lineage 列**不再收族名**——11-07 裁定"血统列不再兼记产物来源"，但这里的缺省把
  *   FAMLAB 写进 lineage ⇒ 11-12/11-14 的进图全部带族名入列，页面 keep 式 `!!d.lin` 钉住把 19 枚 2.0 新点
  *   漏进「1.8 及以前」旧图（用户令"老版本图应冻结"）。族名只住 fam_label（registry 第 5 列）与
  *   lineage-g3 的 famLabel 列；lineage 列只收显式 --lineage= 的真血统声明，缺省留空。 */
 if (LINEAGE === 'new') LINEAGE = '';
 const parentWid = String(meta.hotstartFrom || '').trim();
+const startUp = normRel(meta.up || (meta.recipe && meta.recipe.env && meta.recipe.env.EPIRUS_SEEDPACK) || '');
 const dispIds = new Set(display.rows.map((r) => r[display.ix.id]));
-const rootDir = resolve(DATA, '../..');
 const ancDirs = [dirname(PACK), join(rootDir, 'scratch/arms'), join(rootDir, 'docs/artifacts/obs6-coldstart')];
+const widMatch = (a, b) => Boolean(a && b && (a === b || (a.length >= 12 && b.startsWith(a)) || (b.length >= 12 && a.startsWith(b))));
+const resolveOnMap = (upPath, wid, targetId = '') => {
+  const rel = normRel(upPath);
+  const byRel = rel ? rel2id.get(rel) : '';
+  if (byRel && dispIds.has(byRel) && (!targetId || byRel === targetId) && (!wid || !id2wid.get(byRel) || widMatch(id2wid.get(byRel), wid))) return byRel;
+  const b = rel ? basename(rel).replace(/\.(bak|js)$/, '') : '';
+  const byBase = b ? base2id.get(b) : '';
+  if (byBase && dispIds.has(byBase) && (!targetId || byBase === targetId) && (!wid || !id2wid.get(byBase) || widMatch(id2wid.get(byBase), wid))) return byBase;
+  if (targetId && dispIds.has(targetId) && wid && widMatch(id2wid.get(targetId), wid)) return targetId;
+  const byWid = wid ? wid2id.get(wid) : '';
+  if (byWid && dispIds.has(byWid) && (!targetId || byWid === targetId)) return byWid;
+  return '';
+};
 let parentId = '', parentSrc = 'root';
 if (PARENT_ARG) {
   if (!dispIds.has(PARENT_ARG)) { console.error('⛔ --parent 指向不在图上的节点：' + PARENT_ARG); process.exit(2); }
   parentId = PARENT_ARG;
-  const directOk = Boolean(parentWid && wid2id.get(parentWid) === PARENT_ARG);
-  const chainOk = !directOk && Boolean(parentWid && findAncestorOnMap(parentWid, ancDirs, wid2id, dispIds, PARENT_ARG) === PARENT_ARG);
+  const directOk = Boolean(parentWid && resolveOnMap(startUp, parentWid, PARENT_ARG) === PARENT_ARG);
+  const chainOk = !directOk && Boolean(parentWid && findAncestorOnMap(parentWid, startUp, ancDirs, resolveOnMap, rootDir, PARENT_ARG) === PARENT_ARG);
   parentSrc = (directOk || chainOk) ? 'seedpack-wid' : 'seedpack';
 } else if (parentWid) {
-  const direct = wid2id.get(parentWid);
+  const direct = resolveOnMap(startUp, parentWid);
   if (direct && dispIds.has(direct)) { parentId = direct; parentSrc = 'seedpack-wid'; }
   else {
-    const anc = findAncestorOnMap(parentWid, ancDirs, wid2id, dispIds);
+    const anc = findAncestorOnMap(parentWid, startUp, ancDirs, resolveOnMap, rootDir);
     if (anc) { parentId = anc; parentSrc = 'seedpack-wid'; }
     else parentSrc = 'unknown-wid';
   }

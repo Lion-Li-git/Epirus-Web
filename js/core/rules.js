@@ -120,7 +120,9 @@
    * 这张表 = 有"自效果"可复制的技能，其余非伤害技能复制后只有"空指"（指向保留、本身无效果）。
    * 结算实现见 `resolve.js` 的 `applyMirrorSelf`；`np-test D23` 用它做**穷举守门**：
    * 技能表里任何一个 key 都必须"要么可复制伤害（copyEffect 非空）、要么在这张表里"。 */
-  const MIRROR_SELF = [SK.JI, SK.CHARGE, SK.RING, SK.MINE, SK.ROD, SK.PURIFY].concat(GUARD_FAMILY);
+  const MIRROR_SELF = [SK.JI, SK.CHARGE, SK.RING, SK.MINE, SK.ROD, SK.PURIFY].concat(
+    GUARD_FAMILY.filter(function (k) { return k !== SK.HOLO; })
+  );
   // 反弹可反射的攻击（README 仅 枪/坦克）
   const REFLECTABLE = [SK.GUN, SK.TANK];
 
@@ -143,7 +145,11 @@
      *   先证明既有三个模式的读数**逐位不变**（同种子配对复跑、落盘字节比对，见 CHANGELOG v1.6.5），
      *   再把新指纹 + 这段证据写进两个 bundle 的 `meta.rulesFingerprint`/`fingerprintRefresh`
      *   —— **权重字节不动、不 promote、不换包**，所以老用户拿到的还是同一颗冠军。 */
-    standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '' },
+    /* v2.1.1（用户裁定 2026-11-18「2P 的终局收缩也和标准（多人）一样开」）：standard 补 suddenDeath: 45。
+     * 此前它走全局 SUDDEN_DEATH = 100，而回合上限 60 ⇒ **永不触发** ⇒ 2 人 3 血桌可以拖到上限比血，
+     * 同血即平局（随机对局实测 25.5% 平局）。现在 2P 与 multi 同起点：第 45 回合起每回合末全员 −1，
+     * 落在 60 上限之内。⚠ 这是规则换代：指纹会变，2P 考卷成绩须重测（promote-champion2p）。 */
+    standard: { name: '标准模式', hp: 3, skills: AVAILABLE_2P, rule: '', suddenDeath: 45 },
     multi: { name: '多人模式(2-8人)', hp: 3, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.5.65：见下
     multi4: { name: '多人模式(4血·2-8人)', hp: 4, skills: AVAILABLE_MULTI, rule: '', drainHpMax: 1, suddenDeath: 45 },   // v1.6.5：= multi 那一套 + 一格血
     /* v1.4.0 长程模式（5 血）—— 用户 2026-09-12 提出：线下靠多人混乱达成平衡，
@@ -195,10 +201,11 @@
 
   const MODE_DEFAULT = 'standard';
   const MAX_ROUNDS = 60; // R1 防死锁
-  /* v1.5.10（用户裁定）：**终局收缩（100 回合后每回合末全员 −1 血）是全局规则**，不再是 long 专属。
+  /* v1.5.10（用户裁定）：**终局收缩（每回合末全员 −1 血）是全局规则**，不再是 long 专属。
    * 用户原话："可以把 100 回合之后扣血的机制直接做到正常对战规则里面，反正一般也打不了那么久"。
-   * 效果范围：standard(60)/multi(60) 的上限都在 100 以下 ⇒ **实际上只在 long(上限 140) 生效**，
-   * 但作为规则它现在是统一的（将来任何模式把上限调过 100 都会自动接上）。
+   * v2.1.1（用户裁定 2026-11-18）：standard 也补了自己的 `suddenDeath = 45`（与 multi 同起点）——
+   * 此前它吃这个全局值 100，而回合上限 60 ⇒ 永不触发；现在 standard/multi/multi4 都同 45、
+   * long 100（上限 140）。这个全局值保留给"没写 suddenDeath 的新模式"当缺省。
    * 模式仍可用自己的 `suddenDeath` 覆盖（写 0 = 该模式关掉）。 */
   const SUDDEN_DEATH = 100;
   /* v1.5.11（用户裁定"按你的意思做"）：**每回合扣多少血**也做成可调（原写死 1）。

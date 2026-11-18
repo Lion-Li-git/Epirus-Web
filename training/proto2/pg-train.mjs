@@ -15,12 +15,13 @@ import { widOf } from '../../champion-map/pack-id.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/桌形单一来源（与 supfit-gd 同源） */
-import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape } from './pg-lib.mjs';
+import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
+const OBS_SPEC = String(arg('obs', '')).trim();
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
 const BATCH = Math.max(8, Number(arg('batch', 48)) || 48);
 const LR = Number(arg('lr', 3e-4)) || 3e-4;
@@ -82,6 +83,7 @@ const W0 = sandbox();
 const refParams = Float64Array.from(loadChamp(W0, 'js/bundled-champion-3p.js', ''));
 const raw = readPack2(UP);
 const got = packCfgExit(raw, UP);
+assertObsArch(got.cfg, OBS_SPEC, 'pg-train', UP);
 const W = sandbox();
 installArch2(W, Object.assign({ mutMode: 'seg' }, got.cfg));
 const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, R = W.EpirusRules;
