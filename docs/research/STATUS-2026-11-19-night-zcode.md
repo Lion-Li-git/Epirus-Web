@@ -89,7 +89,30 @@ MS2-band2 wid=`c8f5f357ffb31a10`。**复现臂 MS2b/MS2c**（同配方 seed 7703
 
 **机制结论（三批臂共同钉死）**：imitation 只负责"行为先发生"，**GA 保留需要事件奖励**——`SEL_CARDS` 地板数广度不数目标卡、加长教师窗也留不住 jinshield/taunt/rod/firestorm；唯一例外的 miniT 是靠"反制价值真实存在"（对手矩阵里 ringspam 常在场）被 GA 自己留下来的。下班提案：`EPIRUS_JINSHIELD_W/TAUNT_W/MINIT_W/ROD_W/FIRESTORM_W` 事件奖励族（照 `REFLECT_W` 先例，纯训练侧计数、引擎零改动），教师窗照旧。
 
-## 八、复算命令
+## 八、统一管线落地（02:3x–03:1x · 用户裁定「旧的全删了」的执行）
+
+- **v7 线删除**：train-3p（248KB）/train-best/train-fast/train-selftest/start-train-server.cmd/server 七件（train-server/worker/paralleltrain/train-env/econ-env/fight-env）——tracked 一次性 −11 文件；产品训练场 tab（index.html+ui.js ~310 行）摘除，**导入冠军包控件回归对局区**（产品功能，非训练专属）。
+- **门腿撤编**：D73/D124/D125/D121/D158/D116 整撤 + D228 摘⑥⑦⑧（纯函数腿保留）；**np 171→166 全绿**；`docs/GATE-SHIFTS.md` 记账。
+- **旋钮账**：194 → **65**（在用 19 ‖ 暗键 46 列为下批删除候选）。KPI ≤40 接近达成。
+- **权威地图**：`training/README.md` 全面重写（30 秒决策表 / 训练器清单 / 禁默认训老网条款 / 验尸脚本 / 流程速查）；根 README 训练入口同步。
+- **2.0 载体臂（统一管线上重跑）**：`pg-train --klW=0.05 --klTilt=tank,miniT,jinshield,rod,firestorm,taunt --klTiltMul=3 --shapeKey=tank:0.2,miniT:0.15 --segEvery=1500 --games=6000`，双基座（R6C-KL ‖ EQ-S4-E9）× 2 臂 = U1/U2，结果回填 §九。
+
+## 九、pg-train 多技能臂结果（回填槽）
+
+**supfit-gd 蒸馏臂结果（30 局×双桌形镜像验收，≥0.5% 线）**：
+
+| 臂 | 配方 | 双桌形读数 | 判定 |
+|---|---|---|---|
+| S1 | R6C-KL + toolkit 教师 | **armor 2.2% multi**（首个稳定藤甲载体）‖ **jinshield 0.5%** 过线 ‖ curse 2.4% | ✅ 两张死卡获得 2.0 线载体 |
+| S2 | EQ-S4-E9 + toolkit | jinshield 0.1%/0.6% ‖ curse 2.6% ‖ snap0(long) curse 10.0% | ⚠ snap 节点可用 |
+| **S3** | R6C-KL + **教师=v7 tank 载体（pack: 跨线蒸馏）** | **tank 19.7% multi ‖ 16.5% long** + armor 1.1% | ✅ **2.0 线 tank 载体达成** |
+| **S4** | R6C-KL + **教师=v7 tank+miniT 载体** | final: tank 7.5% + **miniT 5.0%** multi ‖ **miniT 10.9%** + curse 7.8% long ‖ snap0: 四张稀缺卡同包 | ✅ **多技能包成立**（tank+miniT+curse） |
+| U1/U2 | pg-train klTilt+shapeKey | 全零 | ✗ 负结果：klTilt 放大起点分布，零覆盖键 3×0=0（机制在 klW 注释） |
+
+**统一管线战果**：v7 线的 GA 发现（tank / tank+miniT 载体）经 `supfit-gd --teacher=pack:<v7包>` **跨线蒸馏**成 2.0 线产物——v7 线退役但它的**知识**通过教师机制平移。加上 S1 的 armor/jinshield，死卡（tank/jinshield/armor/miniT）在 2.0 线全部有载体；**大雷 +17.3pt**（EQ-S4-E9 强度尺读出"没学会的强招"）列 S5（chain 教师，跑批中）。
+**pg-train klTilt 路线 = 负结果（8 节点全零）**，机制原因（`pg-train` klW 注释在册）：`--klTiltMul` 放大的是**起点策略分布**——起点从未用过的键 3×0=0；`--shapeKey` 又依赖键被采样（逐决策塑形挂不上未采样键，klW 注释原话）。**零覆盖键的正解 = supfit-gd 教师蒸馏**（标签来自教师、不依赖学生采样；toolkit 教师标签里正好有金刚盾 11/藤甲 11/贴贴 14/无极变速 7）。已换 `--teacher=toolkit --objective=cand --dagger=1` 蒸馏臂（S1/S2 双基座）。
+
+## 十、复算命令
 
 ```bash
 # 合并尺（两级）
