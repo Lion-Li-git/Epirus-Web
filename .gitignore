@@ -161,3 +161,6 @@ champion-map/data/build/
 # 新点测量中间产物（measure-point 的 exam4/ruler/readings/display）
 champion-map/staging/
 champion-map/data/page/*.bak-*
+
+# 批1 清理（2026-11-19）：scratch 本地保留、不再跟踪（先归位了 ladder-anchor/bp 表/exam4 夹具，见 PLAN-2026-11-18-late 批3）
+scratch/

@@ -37,7 +37,7 @@
  *   node tools/pool-add.mjs --list [--tier=hard]
  * 退出码：0 = 跑完 ‖ 2 = 输入/前置不齐（宁可红也不许假绿）
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
@@ -53,7 +53,7 @@ import { bandFor, parseSelSeeds } from './pick-best.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("pool-add.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['arena', 'audit', 'dry', 'id', 'invite', 'list', 'note', 'pack', 'packs', 'quiet', 'ref', 'refresh', 'run-promote', 'seat', 'tier'], "pool-add");
+  rejectUnknownFlags(process.argv.slice(2), ['arena', 'audit', 'dry', 'id', 'invite', 'list', 'note', 'pack', 'packs', 'quiet', 'ref', 'refresh', 'retire', 'no-census', 'run-promote', 'seat', 'tier'], "pool-add");
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -309,6 +309,29 @@ if (has('refresh')) {
   process.exit(0);
 }
 
+/* ---------- 退役（--retire=<id>；PLAN-2026-11-18-late 批 1e · 用户裁定「退池删 raw 留纯数字进图」）----------
+ * 一条龙：摘池表行 → 删该枚的 skill-report raw JSON（聚合纯数字已进 coords/registry 图列，原始计数退役）
+ * → 提示重烘 bundle。防「池表退了 raw 还在」的半截账。 */
+if (arg('retire', '')) {
+  const rid = arg('retire', '');
+  const t2 = loadMap();
+  const rix = t2.rows.findIndex(r => r[t2.h.id] === rid);
+  if (rix < 0) { console.error('⛔ --retire：池表里没有 ' + rid + '（现 ' + t2.rows.length + ' 枚）'); process.exit(2); }
+  const row = t2.rows.splice(rix, 1)[0];
+  saveMap(t2);
+  const rawPath = join(ROOT, 'champion-map', 'data', 'skill-report', rid + '.json');
+  let rawNote = '（本就没有 raw）';
+  if (existsSync(rawPath)) {
+    let union = '—', at = '—';
+    try { const d = JSON.parse(readFileSync(rawPath, 'utf8')); union = d.stage1 ? String(d.stage1.unionN) : '—'; at = (d.measuredAt || '').slice(0, 10); } catch (e) { /* 读不出也删：坏文件不留 */ }
+    unlinkSync(rawPath);
+    rawNote = '（已删 raw：曾测于 ' + at + ' · 并集 ' + union + '/30；纯数字留在图列）';
+  }
+  console.log('✔ 退役 ' + rid + '（tier=' + row[3] + '，wid=' + String(row[1] || '').slice(0, 16) + '）已摘出池表；skill-report raw ' + rawNote);
+  console.log('   下一步：node tools/build-pool-bundle.mjs ‖ node champion-map/rebuild-map.mjs');
+  process.exit(0);
+}
+
 /* ---------- 加入 ---------- */
 const ID = arg('id', ''), PACK = arg('pack', ''), TIER = arg('tier', '');
 if (!ID || !PACK || !TIERS.includes(TIER)) {
@@ -366,4 +389,15 @@ t.rows.sort((a, b) => (TIERS.indexOf(a[3]) - TIERS.indexOf(b[3])) || a[0].locale
 saveMap(t);
 console.log('✔ 已写 champion-map/pool-members.tsv（现 ' + t.rows.length + ' 枚）');
 console.log('   下一步：node tools/build-pool-bundle.mjs（把表派生成浏览器读的 js/bundled-champion-pool.js）');
+/* 入池触发强度层（用户 11-18 裁定「要进池的时候再跑后面的强度层等东西」）：
+ * 先 Stage 1 观察层（Stage 2 的技能选择门依赖它）再 Stage 2 强度层，产物 = data/skill-report/<id>.json。
+ * --no-census 跳过（离线补测场景）；跑失败**不阻断入池**（入池判据在 promote/seat 闸，普查是证据不是闸）但必须吼。 */
+if (!has('no-census')) {
+  console.log('   [skill-report] 入池普查（Stage 1 观察 + Stage 2 强度）…');
+  for (const stg of [1, 2]) {
+    const cp = spawnSync(process.execPath, [join('tools', 'pool-skill-report.mjs'), '--stage=' + stg, '--pack=' + ID], { cwd: ROOT, encoding: 'utf8' });
+    if (cp.status !== 0) console.error('   ⚠ [skill-report] stage' + stg + ' 没跑成（不阻断入池，事后可手动补：node tools/pool-skill-report.mjs --stage=' + stg + ' --pack=' + ID + '）：' + String(cp.stderr || '').slice(0, 160));
+    else console.log(String(cp.stdout || '').trim().split('\n').map(l => '   ' + l).join('\n'));
+  }
+}
 syncChart();

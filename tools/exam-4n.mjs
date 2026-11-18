@@ -91,9 +91,9 @@ const CHAMP_PATHS = { 'Q-s47': 'docs/artifacts/e507-out/Q-s47.js', 'T8-s114': 'd
   'MSB13-R1S791820660': 'docs/artifacts/night-adapt/MSB13-R1S791820660.js',
   /* 11-14 夜6班：B 轴新夹具候选（风格互补五枚之二；registry 在册路径，见 PLAN-2026-11-14-night6） */
   'MSB15R-HITMIX': 'docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js',
-  'GD6a-TILT': 'scratch/arms/GD6a-TILT-3p.bak',
+  'GD6a-TILT': 'docs/artifacts/exam4-fixtures/GD6a-TILT-3p.bak',
   'MSB14-railgun-R1S175656469': 'docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js',
-  'G5J-50': 'scratch/ds-1109/G5J-50.js', 'G5C-100': 'scratch/ds-1109/G5C-100.js',
+  'G5J-50': 'docs/artifacts/exam4-fixtures/G5J-50.js', 'G5C-100': 'docs/artifacts/exam4-fixtures/G5C-100.js',
   /* 11-16 凌晨（用户授权"更符合真实强度的尺"）：obs6 现役冠亚军入夹具——
    *   全库重测的循环性发现（exam4n-rerun-1116）：Top15 全 MSB/G5/v7 血 ⇒ 单边夹具偏袒血亲；
    *   混合夹具 = MSB 系三锚 + obs6 双旗（E9=obs6 线原型、P4-S4000=obs6 考卷纪录保持者）。 */

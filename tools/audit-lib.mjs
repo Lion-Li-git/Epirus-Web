@@ -1118,7 +1118,7 @@ export function breadthProfile(W, params, mode, GAMES) {
  *   在这 16 格 arena 上夺1 **65.3%**，参照包 v7 只有 **40.4%**。机制见台账第二十九段：
  *   反弹把打在它身上的枪/坦克伤害**以它为 source** 重投给攻击者（`resolve.js:519-521`），而长局打满突死线后
  *   全灭按**累计造成伤害**判胜（`resolve.js:1400-1417`）⇒ "不还手"也能靠替对手记账拿下夺1。
- *   （锚 `scratch/ladder-anchor.json` ‖ `ladder --guard` 判红 exit 4）。
+ *   （锚 `docs/artifacts/ladder-anchor.json` ‖ `ladder --guard` 判红 exit 4）。
  *   ⚠ 这一格 DS 写的是 66.7%、锚里是 65.3%——我 13:4x 一度判它"引错了尺"，**那是我的归因错**：
  *     同一枚尺实测 reflect 夺1 = 20 局/格 **64.7%** ‖ 40 局/格 **66.6%** ‖ 120 局/格 **65.3%**
  *     ⇒ 区间是**剂量**给的，不是两把尺给的 ⇒ 引用这格必须带剂量（ rung 自身 ±2pt 的剂量敏感性也是新量到的一格）。

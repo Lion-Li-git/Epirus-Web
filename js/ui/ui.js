@@ -719,6 +719,7 @@
     }).join('  ');
     return who + (d.scriptSeats ? '（掺脚本 ' + d.scriptSeats + ' 席）' : '') +
       (d.mixNote ? ' ⚠' + d.mixNote : '') + (d.bandNote ? ' ⚠' + d.bandNote : '') +
+      (d.capNote ? ' ⚠' + d.capNote : '') +
       /* v2.0.9：2P 只有 1 个 AI 席 ⇒ compose 的 allSame 必然为 true（数学必然，不是降级）。
        * 这里与 champForSeat/aiInfo 一样加 `!one`，否则最常见的 2 人桌每局都误报"该档成员不足"。 */
       (d.allSame && !one ? ' ⚠各席全同：该档成员不足' : '');
@@ -760,6 +761,7 @@
             (d.bands ? ' 带比 ' + d.bands : '') +
             (d.mixNote ? ' ⚠' + d.mixNote : '') +
             (d.bandNote ? ' ⚠' + d.bandNote : '') +
+            (d.capNote ? ' ⚠' + d.capNote : '') +
             (d.allSame && !plan.two ? ' ⚠' + aiSeatWord() + '全同:该档成员不足' : '') +
             (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
             ' · ' + tier.name + tierEpsLabel(tier),

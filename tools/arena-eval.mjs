@@ -204,7 +204,7 @@ if (isMainThread) {
     }, DOSE_OBJ);
     /* 读 GLM 1v1 RR 与 5 席桌战真值 */
     const rrSum = {}, rrCnt = {};
-    for (const l of readFileSync(join(ROOT, 'scratch/zcode-1113-deps/bp-validity-1118-rr.tsv'), 'utf8').trim().split('\n')) {
+    for (const l of readFileSync(join(ROOT, 'docs/artifacts/zcode-1113-deps/bp-validity-1118-rr.tsv'), 'utf8').trim().split('\n')) {
       const [a, b, wr] = l.split('\t');
       if (!b || b === 'Q1' || b === 'Q2') continue;
       const w = Number(wr);
@@ -212,7 +212,7 @@ if (isMainThread) {
       rrSum[b] = (rrSum[b] || 0) + (1 - w); rrCnt[b] = (rrCnt[b] || 0) + 1;
     }
     const tbSum = {}, tbCnt = {};
-    for (const l of readFileSync(join(ROOT, 'scratch/zcode-1113-deps/bp-table-truth-1118.tsv'), 'utf8').trim().split('\n')) {
+    for (const l of readFileSync(join(ROOT, 'docs/artifacts/zcode-1113-deps/bp-table-truth-1118.tsv'), 'utf8').trim().split('\n')) {
       const [id, , , wr] = l.split('\t');
       tbSum[id] = (tbSum[id] || 0) + Number(wr); tbCnt[id] = (tbCnt[id] || 0) + 1;
     }

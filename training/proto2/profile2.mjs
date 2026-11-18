@@ -12,7 +12,7 @@
  *      要么被测包就是那枚随机粒（会印出来），要么 chooser 根本没吃到它 ⇒ 后者当场 exit 7，不许继续印剖面。
  *   ③ 对手表由**参照包**造（`T.buildOpps(refParams)`），不用被测包自己造 ⇒ 避免"对手随被评粒变化"那条病。
  *
- * 用法：node tools/proto2/profile2.mjs --pack=scratch/arms/xxx.bak [--games=24] [--ref=js/bundled-champion-3p.js] [--anchor=scratch/ladder-anchor.json]
+ * 用法：node tools/proto2/profile2.mjs --pack=scratch/arms/xxx.bak [--games=24] [--ref=js/bundled-champion-3p.js] [--anchor=docs/artifacts/ladder-anchor.json]
  *   · 包里的 `arch` 字段决定输入面（`S1`=吃 v7 切片 ‖ `S1o`=吃 obs3）⇒ 不需要手对齐，读错会当场抛。
  *   · 只读，不改引擎、不 promote、不进产品门。
  */
@@ -252,7 +252,7 @@ console.log('   ⚑ 两行分母必须相等（同格同局号）：' + S.pG + '
  *   ③ 这一行必须与上面的"并列集合平均"并排读：阶梯那 31 格**不走 chooser、不吃大雷注入**，
  *      臂这行走引擎那条路（吃注入）⇒ 名次是**下界**；并列集合大 ⇒ 名次里有破号运气。 */
 {
-  const ANCH = arg('anchor', 'scratch/ladder-anchor.json');
+  const ANCH = arg('anchor', 'docs/artifacts/ladder-anchor.json');
   const armWin = 100 * S.pF / S.pG;
   const line = '   · 阶梯名次';
   if (!existsSync(ANCH)) {

@@ -14,7 +14,7 @@
  *      臂行与固定打法在同一把尺上，且臂行可被 `profile2` 对表。要退回旧的宽面用 `--face=wide`（只为对照，别拿去出判语）。
  *   ② `temp` 只影响 v7 那一行（其余是确定性/自带定标流），所以阶梯内可比、跨 temp 不可比。
  *   ③ 每个策略都跑**同一批局号**（`1000 + n*97 + idx + g*7919`）⇒ 分母逐字相等，不做"各自换一批桌"。
- * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7] [--anchors=scratch/ladder-anchor.json]
+ * 用法：node tools/proto2/ladder.mjs [--games=120] [--temp=0.001] [--only=guard,ji,charge,rand,v7] [--anchors=docs/artifacts/ladder-anchor.json]
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { sandbox, loadChamp, buildPoolSeeded, poolFingerprint, arenaGuardVerdict } from '../../tools/audit-lib.mjs';
@@ -42,7 +42,7 @@ const PACKS = String(arg('pack', '')).split(',').map((x) => x.trim()).filter(Boo
  *   而它量的是"这把尺的刻度"，只要 arena/对手表/剂量没变就一直能用 ⇒ 一次落盘、每枚臂都免费读到名次。
  *   ⚠ 代价是锚会**过期**：所以文件里带 `poolFp + cells + games + temp + bigt`，profile2 逐条回读，
  *     对不上就只印"锚过期"、**不印名次**（宁可少一条读数，不要一条接错刻度的读数）。
- *   用法：`node tools/proto2/ladder.mjs --games=40 --sweep=keys --anchors=scratch/ladder-anchor.json` */
+ *   用法：`node tools/proto2/ladder.mjs --games=40 --sweep=keys --anchors=docs/artifacts/ladder-anchor.json` */
 const ANCHORS = arg('anchors', '');
 /* `--opp=<固定打法键>` ⇒ **所有非被测席**换成同一条固定打法（DS 的 P0 第 1 条：先把"退化打法当对手"做成**刻度**，不写通过线）。
  *   为什么不新写一把尺：候选面/局号/temp/bigt 全在这一处，换一把就要再对一次口径（第 ①节那 21pt 的教训）。
@@ -107,7 +107,7 @@ function cancelOtherLocal(state, pid) {
 const ENGINE_FACE = !argv.includes('--face=wide');
 /* ===== 2026-10-29（DS · 强度尺修复 ‖ 千问 13:3x 补上"锚必须新鲜"那一半）：`--guard=<锚文件>` ⇒ arena 可判性门 =====
  * 判据（可失败）：任何一枚固定单技能打法的夺1 ≥ 参照包 v7 ⇒ 这套 arena 不能当强度尺（退化会被读成进步）。
- * 真锚实测：只 `reflect` **65.3% ≥ v7 40.4%**（`scratch/ladder-anchor.json`）⇒ 这道门现在**必须是红的**，这正是它的用途。
+ * 真锚实测：只 `reflect` **65.3% ≥ v7 40.4%**（`docs/artifacts/ladder-anchor.json`）⇒ 这道门现在**必须是红的**，这正是它的用途。
  *   （DS 原注释写 66.7%、本锚是 65.3%——我 13:4x 判它"引错了尺"，**那是我的归因错**：同一枚尺实测
  *     reflect 夺1 = 20 局/格 64.7% ‖ 40 局/格 66.6% ‖ 120 局/格 65.3% ⇒ 那个区间是**剂量**给的，不是两把尺给的。
  *     ⇒ 由此多立一条本尺条款：**rung 的读数要带 `gamesPerCell`**，跨剂量的 rung 差（此格 ±2pt）不许当判语。）

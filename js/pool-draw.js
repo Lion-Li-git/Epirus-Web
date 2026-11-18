@@ -64,11 +64,13 @@
       return pool;
     }
     var order = null;
+    var BAND_SEAT = {};   /* bandW 路：席位 → 所落带名（⑥ 修复趟重抽时优先本带） */
     if (BANDS) {
       for (var s2 = 0; s2 < aiSeats; s2++) {
         var r = rand(), acc = 0, pickB = BANDS[BANDS.length - 1];
         for (var q2 = 0; q2 < BANDS.length; q2++) { acc += BANDS[q2].w; if (r < acc) { pickB = BANDS[q2]; break; } }
         out.seats.push(pickB.list[Math.floor(rand() * pickB.list.length)]);
+        BAND_SEAT[s2] = pickB.name;
       }
       out.bands = BANDS.map(function (b) { return b.name + ' ' + (100 * b.w).toFixed(0) + '%'; }).join(' ‖ ');
     } else {
@@ -87,6 +89,32 @@
     }
     out.allSame = distinct(out.seats) === 1;
     if (out.allSame) out.degraded = members.length < 2 ? 'single-member-tier' : 'still-all-same';
+    /* ⑥ 每包最多重复一次（POOL-CONTRACT §0 ⑥，2026-11-18 用户裁定「每个包最多重复一次」）：
+     *    两条抽法（洗牌循环补足 & bandW 带内放回）在此统一做**逐包计数上限 = 2** 修复趟——
+     *    超额席位重抽（bandW 路优先该席本带内 count<2 的成员、退全表；洗牌路全表），
+     *    用同一个 rand ⇒ 同 salt 仍逐位可复现。池太小（< ⌈席数/2⌉）才破例并产出 capNote（契约 §4：不许静默）。 */
+    (function enforceCap() {
+      var counts = {};
+      for (var ci = 0; ci < out.seats.length; ci++) {
+        var cm = out.seats[ci];
+        counts[cm.id] = (counts[cm.id] || 0) + 1;
+      }
+      for (var si = 0; si < out.seats.length; si++) {
+        var sm = out.seats[si];
+        if ((counts[sm.id] || 0) <= 2) continue;
+        var bandList = null;
+        if (BANDS && BAND_SEAT[si] != null) {
+          for (var bi2 = 0; bi2 < BANDS.length; bi2++) if (BANDS[bi2].name === BAND_SEAT[si]) bandList = BANDS[bi2].list;
+        }
+        var cands = (bandList || members).filter(function (x) { return (counts[x.id] || 0) < 2; });
+        if (!cands.length && bandList) cands = members.filter(function (x) { return (counts[x.id] || 0) < 2; });
+        if (!cands.length) { out.capNote = '池只有 ' + members.length + ' 枚 < ⌈席数/2⌉ ⇒ 每包≤2 无法满足，本桌如实破例'; return; }
+        var pick = cands[Math.floor(rand() * cands.length)];
+        counts[sm.id]--;
+        out.seats[si] = { id: pick.id, wid: pick.wid };
+        counts[pick.id] = (counts[pick.id] || 0) + 1;
+      }
+    })();
     /* 席位号：AI 席按升序领组成里的第 0..n-1 枚（`ui.js` 那边 pid 也是升序，两边对得上才谈"同一套装配"） */
     var idx = 0;
     out.seats = out.seats.map(function (m) { return { id: m.id, wid: m.wid, seat: idx++, kind: 'pack' }; });

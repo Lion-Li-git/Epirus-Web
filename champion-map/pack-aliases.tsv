@@ -502,3 +502,41 @@ ts	wid	canonical	wantedPath	tool	note
 2026-11-13T22:10:55.579Z	2e12ffcc180439b5	docs/artifacts/MSR2-R1S1795180446-band1.bak	docs/artifacts/night-adapt/MSR2-R1S1795180446.js	train-3p	未复制：同一粒权重已有真身
 2026-11-13T22:12:45.998Z	847e8994de26c2aa	docs/artifacts/MSR2-R1S1443659016-band4.bak	docs/artifacts/night-adapt/MSR2-R1S1443659016.js	train-3p	未复制：同一粒权重已有真身
 2026-11-17T01:17:22.000Z	72abddc710e6252b	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	docs/artifacts/obs6-coldstart/MX1-E9-GD.bak	distill-dup	11-17 确定性蒸馏同权重（EQ-S4-GD6ATEACH == MX1-E9-GD），两名称各自在图/池在册 ⇒ 按 D191/E589 登记别名
+2026-11-18T16:48:23.426Z	27f605680f4257f5	docs/artifacts/night1119-B1-firestorm-band4.bak	docs/artifacts/night1119-B1-firestorm-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-18T16:48:23.431Z	27f605680f4257f5	docs/artifacts/night1119-B1-firestorm-band4.bak	docs/artifacts/night1119-B1-firestorm-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T16:48:23.434Z	43b4ff9a69952677	docs/artifacts/night1119-B1-firestorm-band3.bak	scratch/arms/night1119-B1-firestorm.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:48:55.427Z	942d2da49a4cb8fa	docs/artifacts/night1119-A1-tank-band6.bak	scratch/arms/night1119-A1-tank.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:49:17.482Z	57153bff129d6150	docs/artifacts/night1119-A3-taunt-band2.bak	scratch/arms/night1119-A3-taunt.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:49:20.697Z	c6e04cdefa495535	docs/artifacts/night1119-A2-jinshield-band4.bak	docs/artifacts/night1119-A2-jinshield-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-18T16:49:20.704Z	c6e04cdefa495535	docs/artifacts/night1119-A2-jinshield-band4.bak	scratch/arms/night1119-A2-jinshield.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:51:00.792Z	59d8c0982c1654ec	docs/artifacts/night1119-B2-minit-band3.bak	docs/artifacts/night1119-B2-minit-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-18T16:51:00.796Z	7ca6a7260b0adde6	docs/artifacts/night1119-B2-minit-band1.bak	docs/artifacts/night1119-B2-minit-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-18T16:51:00.804Z	7ca6a7260b0adde6	docs/artifacts/night1119-B2-minit-band1.bak	scratch/arms/night1119-B2-minit.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:53:28.363Z	4cf318dc02ffd9fa	docs/artifacts/night1119-C1-purify-band1.bak	docs/artifacts/night1119-C1-purify-band4.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 4 席）
+2026-11-18T16:53:28.373Z	f9de8958ff653950	docs/artifacts/night1119-C1-purify-band6.bak	scratch/arms/night1119-C1-purify.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T16:53:48.582Z	2afcdc320f5664c8	docs/artifacts/night1119-B3-rod-band3.bak	docs/artifacts/night1119-B3-rod-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-18T16:53:48.585Z	9b3f51c647207f3a	docs/artifacts/night1119-B3-rod-band1.bak	docs/artifacts/night1119-B3-rod-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T16:53:48.589Z	9b3f51c647207f3a	docs/artifacts/night1119-B3-rod-band1.bak	scratch/arms/night1119-B3-rod.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:07:45.840Z	f78bb057c66a8aaf	docs/artifacts/exam4-fixtures/G5C-100.js	docs/artifacts/G5C-100-band1.bak	exam4-fixture-move	已登记的复制：夹具原居 scratch（批3 归位 exam4-fixtures），该副本既存
+2026-11-18T17:07:45.845Z	c16e0afe0199b8f3	docs/artifacts/exam4-fixtures/G5J-50.js	docs/artifacts/G5J-50-band1.bak	exam4-fixture-move	已登记的复制：夹具原居 scratch（批3 归位 exam4-fixtures），该副本既存
+2026-11-18T17:07:45.848Z	440ca578ed5384d0	docs/artifacts/exam4-fixtures/GD6a-TILT-3p.bak	docs/artifacts/night-adapt/GD6a-TILT-3p.bak	exam4-fixture-move	已登记的复制：夹具原居 scratch（批3 归位 exam4-fixtures），该副本既存
+2026-11-18T17:16:22.422Z	d527794600d2c830	docs/artifacts/night1119r2-A2-jinshield-band2.bak	scratch/arms/night1119r2-A2-jinshield.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:16:49.107Z	c81d1d9157352026	docs/artifacts/night1119r2-B1-firestorm-band2.bak	docs/artifacts/night1119r2-B1-firestorm-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-18T17:16:49.113Z	c81d1d9157352026	docs/artifacts/night1119r2-B1-firestorm-band2.bak	docs/artifacts/night1119r2-B1-firestorm-band5.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 5 席）
+2026-11-18T17:16:49.119Z	c81d1d9157352026	docs/artifacts/night1119r2-B1-firestorm-band2.bak	scratch/arms/night1119r2-B1-firestorm.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:18:31.970Z	c27b86949a24d076	docs/artifacts/night1119r2-B2-minit-band2.bak	docs/artifacts/night1119r2-B2-minit-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-18T17:18:31.985Z	efcbc78ff5df2251	docs/artifacts/night1119r2-B2-minit-band1.bak	docs/artifacts/night1119r2-B2-minit-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T17:18:31.989Z	c27b86949a24d076	docs/artifacts/night1119r2-B2-minit-band2.bak	scratch/arms/night1119r2-B2-minit.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:19:10.739Z	0562a9ee16d93ae2	docs/artifacts/night1119r2-A3-taunt-band5.bak	docs/artifacts/night1119r2-A3-taunt-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T17:19:10.743Z	e9638d1168be1039	docs/artifacts/night1119r2-A3-taunt-band2.bak	scratch/arms/night1119r2-A3-taunt.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:23:40.714Z	efab8849384e9e62	docs/artifacts/night1119-A1-tank-band3.bak	docs/artifacts/night1119-MS3-tanktaunt-band3.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 3 席）
+2026-11-18T17:23:40.722Z	ef116d8c3c3a6e3d	docs/artifacts/night1119-MS3-tanktaunt-band4.bak	docs/artifacts/night1119-MS3-tanktaunt-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T17:23:40.727Z	92458e95fd517439	docs/artifacts/night1119-MS3-tanktaunt-band2.bak	scratch/arms/night1119-MS3-tanktaunt.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:24:15.015Z	f3962060511e3fb2	docs/artifacts/night1119-MS2-tankmini-band5.bak	scratch/arms/night1119-MS2-tankmini.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:25:01.430Z	96b7f66c7d44430f	docs/artifacts/night1119-MS4-tankrod-band6.bak	scratch/arms/night1119-MS4-tankrod.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:25:14.842Z	a2fa1aee0498c97a	docs/artifacts/night1119-MS1-tankjin-band1.bak	scratch/arms/night1119-MS1-tankjin.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:30:33.269Z	efab8849384e9e62	docs/artifacts/night1119-A1-tank-band3.bak	docs/artifacts/night1119-MS2c-band6.bak	train-3p:band	已登记的复制：band 夹具（同一次跑的第 6 席）
+2026-11-18T17:30:33.273Z	857b80775d5e2b80	docs/artifacts/night1119-MS2c-band1.bak	scratch/arms/night1119-MS2c.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:32:25.730Z	ff27e164a5acbd74	docs/artifacts/night1119-MS2b-band4.bak	scratch/arms/night1119-MS2b.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:41:39.713Z	de8b858727bc8516	docs/artifacts/night1119-MS6-tanklaser-band1.bak	scratch/arms/night1119-MS6-tanklaser.js	train-3p	未复制：同一粒权重已有真身
+2026-11-18T17:41:56.056Z	af427ea2780a8411	docs/artifacts/night1119-MS5-tanklaser-band2.bak	scratch/arms/night1119-MS5-tanklaser.js	train-3p	未复制：同一粒权重已有真身

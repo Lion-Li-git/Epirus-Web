@@ -14,6 +14,11 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import vm from 'node:vm';
+/* v3 合并尺基建（PLAN-2026-11-18-late 批 1a）：A/B 核心抽到 `strength-lib.mjs` 共享——
+ * pool-skill-report.mjs（合并尺 Stage 2）与本工具必须共用同一份算术（AGENTS §4）。
+ * ⚠ parity 纪律：抽取是**逐字搬运 + 参数化**，本文件行为必须与抽取前逐位一致（同种子同输出）；
+ *   验证命令见 `node tools/pool-skill-report.mjs --parity` 或直接对比改造前后 HTML/JSON 字节。 */
+import { createStrengthCore } from './strength-lib.mjs';
 
 /* 位置参数：剔除 --flag（否则会被当成人数/局数/输出路径） */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -117,102 +122,16 @@ const PAIRS = [];
   for (let i = start; i < BOTFN.length; i++) { cur.push(BOTFN[i]); combos(i + 1, cur); cur.pop(); }
 })(0, []);
 
-/* 冠军 chooser，可附带「每回合补 ep」与「强制某技能」 */
-function makeSel(forceKey, rich, seat, acc, banKey) {
-  // 修正：冠军在 runCondition 里是**轮换座位**的，之前硬编码 pid===0 → seat!=0 时
-  // 冠军的决策被套在对手身上、自己却由脚本驱动，测量完全错位（基线只有 10% 的主因）。
-  const inner = N > 2 ? T.policyChooserN(champ, TEMP) : null;
-  const fn = function (state, pid, legal) {
-    if (rich && pid === seat) {
-      // 只给冠军补资源（之前给所有人补 → 脚本对手远超分布变强，把基线压到 10%）
-      const pl = state.p[seat];
-      pl.ep = Math.max(pl.ep, RICH);
-      const d = forceKey ? R.byKey[forceKey] : null;      // 珠类技能要同时补珠，否则强制也没用
-      if (d && d.energyNeeds) {
-        if (d.energyNeeds.elec) pl.elec = Math.max(pl.elec, 1);
-        if (d.energyNeeds.boom) pl.boom = Math.max(pl.boom, 1);
-      }
-    }
-    if (pid !== seat) {
-      if (inner) return inner(state, pid, legal);
-      const aff2 = legal.filter(function (l) { return l.affordable; });
-      const base2 = aff2.length ? aff2 : [{ key: R.SK.JI, affordable: true }];
-      return T.pickChampion(state, pid, base2, champ, TEMP);   // v7：候选感知（对手座位）
-    }
-    const aff = legal.filter(function (l) { return l.affordable; });
-    let base = aff.length ? aff : [{ key: R.SK.JI, affordable: true }];
-    /* v1.4.10 消融：把这一招从**主体**的候选里拿掉（脚本对手不受影响）。
-     * 这是"冠军已经在用的技能"唯一能测的口径 —— mono-spam Δ 对它们会给出相反结论：
-     * 实测 枪 mono Δ=−15.5pt（读作"坑/别用"）而消融 Δ_lost=+3.8pt（读作"该留着"）；
-     * 雷击之枪 mono Δ=−44pt（读作"没用"）而消融 Δ_lost=−2.2pt（读作"该拿掉"，陷阱卡）。 */
-    if (banKey) {
-      const keep = base.filter(function (l) { return l.key !== banKey; });
-      base = keep.length ? keep : [{ key: R.SK.JI, affordable: true }];
-    }
-    if (forceKey) {
-      /* v1.3.59：记录"强制到底有没有生效"。play.js 会把 cost.ok===false（条件不满足）
-       * 的技能从 legal 里剔掉，而这里只在 **legal 里已有的可负担项** 中筛 ⇒ 条件门技能
-       * 永远强制不到，Δ 恒≈0，旧版据此把它判成"死技能"。没有这一列就无法分辨。 */
-      if (acc) acc.tries++;
-      const can = base.filter(function (l) { return l.key === forceKey; });
-      if (can.length) base = can;
-    }
-    const pickC = T.pickChampion(state, pid, base, champ, TEMP);   // v7：候选感知
-    const k = pickC.key;
-    if (forceKey && acc && k === forceKey) acc.hit++;
-    if (inner) {
-      const t1 = (pickC.target != null) ? pickC.target : T.pickTargetN(state, pid, k);
-      let t2 = null;
-      if (k === R.SK.DUAL_GUN || k === R.SK.MIRROR) {
-        const rest = S.opponentsOf(state, pid).filter(function (o) { return o !== t1; });
-        t2 = rest.length ? rest[0] : null;
-      }
-      return { key: k, target: t1, target2: t2, bead: pickC.bead || null };
-    }
-    return pickC;
-  };
-  return fn;
-}
-
-function runCondition(forceKey, rich, seedBase, acc, banKey) {
-  let first = 0, total = 0;
-  const wins = [];   // v1.5.190：逐场胜负（0/1）⇒ 同 seedBase 的两个条件可以**逐场配对**求差，SE 才是真配对 SE
-  for (const pair of PAIRS) {
-    for (let g = 0; g < GAMES; g++) {
-      const seat = g % N;
-      const choosers = [];
-      let oi = 0;
-      for (let pid = 0; pid < N; pid++) {
-        if (pid === seat) choosers.push(makeSel(forceKey, rich, seat, acc, banKey));
-        else { choosers.push(T.wrapBotN(B[pair[oi % pair.length]])); oi++; }
-      }
-      const r = T.oneGameN(choosers, seedBase + g * 977 + total, N, { mode: MODE });
-      const w = T.rankOf(r.state, seat, seedBase + g * 977 + total) === 1 ? 1 : 0;
-      first += w; wins.push(w);
-      total++;
-    }
-  }
-  return { firstRate: first / total, games: total, wins: wins };
-}
-/* v1.5.190：**配对**差与它的 SE。同一 `(pair, g)` 用同一个种子 ⇒ 两条件逐场可配对，
- * 直接按二项近似会把噪声估大好几倍（本表 126 组之间对手强度差异极大，组间方差才是主项）。
- * 返回 `{d, se, n}`，`se` 是"场均差"的标准误（比例单位）。 */
-function pairedDiff(base, arm) {
-  const n = Math.min(base.wins.length, arm.wins.length);
-  if (!n) return { d: 0, se: NaN, n: 0 };
-  let s = 0, s2 = 0;
-  for (let i = 0; i < n; i++) { const dd = arm.wins[i] - base.wins[i]; s += dd; s2 += dd * dd; }
-  const mean = s / n;
-  if (n < 2) return { d: mean, se: NaN, n: n };
-  const varr = Math.max(0, (s2 - n * mean * mean) / (n - 1));
-  return { d: mean, se: Math.sqrt(varr / n), n: n };
-}
-/* 要把 1.96·SE 压到 `TARGET_PT`（pt）需要把每条件的场数乘多少倍 ⇒ 反推"每组该跑几局"。 */
-function needGamesPerPair(se) {
-  if (!(se > 0)) return null;
-  const k = Math.pow(1.96 * se / (TARGET_PT / 100), 2);
-  return Math.max(1, Math.ceil(GAMES * k));
-}
+/* v3 合并尺基建：A/B 核心（makeSel/runCondition/pairedDiff/needGamesPerPair/costOf）抽到
+ * `strength-lib.mjs`——本文件与 pool-skill-report.mjs 共用同一份算术。抽取是逐字搬运 + 参数化，
+ * 语义与裁定史（v1.3.59 强制命中率 ‖ v1.4.10 消融 ‖ v1.5.190 配对 SE）全在 lib 头注与本文件 git 历史。 */
+const CORE = createStrengthCore({
+  W, champ, n: N, mode: MODE, pairs: PAIRS, games: GAMES, temp: TEMP, richConst: RICH, targetPt: TARGET_PT, B,
+});
+const runCondition = CORE.runCondition;
+const pairedDiff = CORE.pairedDiff;
+const needGamesPerPair = CORE.needGamesPerPair;
+const costOf = CORE.costOf;
 
 /* ① 实际使用率（原生经济，正常对局） */
 function usage() {
@@ -243,13 +162,6 @@ function usage() {
     }
   }
   return { use: use, dec: dec, maxEp: maxEp, avgEp: epSum / dec };
-}
-
-function costOf(key) {
-  const st = S.createState('multi', { next: T.mulberry32(1) }, N);
-  for (let i = 0; i < N; i++) { st.p[i].ep = 99; st.p[i].elec = 3; st.p[i].boom = 3; }
-  const c = S.computeCost(st, 0, key);
-  return (c && c.ok) ? c.ep : null;
 }
 
 console.log('[报告] 人数=' + N + '  冠军=' + file + '  模式=' + MODE + '(' + (R.MODES[MODE].name || '') + ')' + '  对手场=' + PAIRS.length + ' 组(每组 4 个互不相同的脚本)  每条件 ' + GAMES + ' 局/组');
