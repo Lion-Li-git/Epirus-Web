@@ -990,9 +990,10 @@ if (ROLLOUT_MODE !== 'step' && ROLLOUT_MODE !== 'game') { console.error('⛔ --r
  *   标签落盘（平局/败局整局丢弃）。机制假设：DAgger 的标签分布被"教师怎么打"决定，**在什么语境下学**仍由对手
  *   环境决定——只保留胜局语境 ⇒ 学生向"获胜状态下的教师动作"靠拢，败着语境（追不平、龟死局）不再进梯度。
  *   这是对"蒸馏成立"之外的机制探路：它不改标签内容（教师照旧解决零覆盖键），只改**语境的分布**。
+ *   winOnly=2 = 同一手术的镜像对照（只留败局语境）：读"反向锐化"长什么形状，把 §149 的轴钉完整。
  *   代价：采集局数 ×(1/胜率) 才能凑满同量组 ⇒ GCAP 自动 ×4 兜底；LABEL.winKept/winDrop 如实记账。 */
 const WINONLY = Number(arg('winOnly', 0));
-if (!(WINONLY === 0 || WINONLY === 1)) { console.error('⛔ --winOnly 只认 0|1（1=只保留 @me 胜局标签，平局也丢）'); process.exit(2); }
+if (!(WINONLY === 0 || WINONLY === 1 || WINONLY === 2)) { console.error('⛔ --winOnly 只认 0|1|2（1=只留 @me 胜局，2=只留败局；平局都丢）'); process.exit(2); }
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
@@ -1128,8 +1129,9 @@ function collectInto(dst, srcParams, idBase) {
       if (x._acctOk) LABEL.ok++; else LABEL.moved++;
     }
     if (WINONLY) {
-      if (keep) { LABEL.winGamesKept = (LABEL.winGamesKept || 0) + 1; LABEL.winKeptGroups = (LABEL.winKeptGroups || 0) + pend.length; }
-      else { LABEL.winGamesDrop = (LABEL.winGamesDrop || 0) + 1; LABEL.winDropGroups = (LABEL.winDropGroups || 0) + pend.length; }
+      /* 字段名模式中性（1=胜局留 ‖ 2=败局留——别让 mode 2 的"win Games"字段名说谎）；kept/drop 语义只看 WINONLY */
+      if (keep) { LABEL.gamesKept = (LABEL.gamesKept || 0) + 1; LABEL.keptGroups = (LABEL.keptGroups || 0) + pend.length; }
+      else { LABEL.gamesDrop = (LABEL.gamesDrop || 0) + 1; LABEL.dropGroups = (LABEL.dropGroups || 0) + pend.length; }
     }
     pend.length = 0;
   };
@@ -1255,7 +1257,8 @@ function collectInto(dst, srcParams, idBase) {
     let row = null;
     try { row = A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
     finally { _gameDriver = 0; _activeShapeSlot = null; }
-    flushPend(!WINONLY || !!(row && row.win));   /* X1 局终裁决：胜局才落盘；winOnly=0 恒落盘（默认路径逐位不变） */
+    /* X1 局终裁决：1=胜局才落盘 ‖ 2=败局才落盘（镜像对照）；winOnly=0 恒落盘（默认路径逐位不变） */
+    flushPend(!WINONLY || (WINONLY === 1 ? !!(row && row.win) : !!(row && !row.win && !row.draw)));
   };
   if (SHAPEBAL) {
     /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
