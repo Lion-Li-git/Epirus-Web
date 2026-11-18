@@ -6,7 +6,7 @@
  *   池的语义是"**这枚成为某档里可被抽到的成员之一**"⇒ 需要的新事实是：身份按权重、成员必须在册、两道闸（体检 + 人席）都要留痕。
  *   所以这台工具不写 `js/**`（那是 `tools/build-pool-bundle.mjs` 的活），它只维护**真源表** `champion-map/pool-members.tsv`。
  *
- * 四条硬规矩（每条都对得上一次真实的坑）：
+ * 五条硬规矩（每条都对得上一次真实的坑）：
  *   ① **身份只按权重**（`pack-id.mjs` 的 `widOf`）：同 wid 已有成员就拒绝 ⇒ 表里出现两枚同权重 = 抽签会连着抽到同一颗，
  *      而"池里有 N 枚"这句话又会虚高（§E589 的普查就是这么翻车的：1443 个文件其实 1130 粒）。
  *   ② **成员必须 tracked**：不在 git 里的包 ⇒ CI/干净克隆根本看不见它（今晚 `D191` 的④ 已经为这件事红过一次）。
@@ -15,10 +15,24 @@
  *      自动成员任一道闸不过 ⇒ 拒绝；点名成员（`--invite`）可越过，但列里必须写明它越过了什么。
  *      ⚠ "没量过"≠"过关"⇒ 没测的就如实写 `untested` / `seatKill=-1`，并让门 D234 把枚数印出来。
  *   ④ 缺行**不许当零**：批表里没有这一枚 ⇒ `seatKill=-1`（未知），不是 0（干净）。
+ *   ⑤ **第三道留痕（11-18 前线读数）**：这枚包对**在册 24 锚联盟**、page 剂量、6 粒 seedBase 的 `rAll`
+ *      中位与极差（pt）。读数**只存一份**，在测量原件 `champion-map/data/arena-noise-floor-1118.tsv` 里
+ *      （同 `exam4n-arena-page-1118.tsv` 一族）；本表**不加列**、只按 id 引用 ⇒ 避免"同一个数存两处、
+ *      单向同步迟早选错方向"（11-17 家族号那次 CI 红的教训）。量具是 `tools/arena-noise-floor.mjs`，
+ *      它每次跑先做**接线自证**（复算对不上在册 `arR` 就直接红）——⚠ `arena-eval` 的 `--dose` 默认是
+ *      `exam`，拿默认值去比 page 表会读出 6~59pt 的假"噪声"，那其实是 Δε。
+ *      这道**只记录、不阻断**（阻断权在②③两道闸），但它自带一条判语：`--audit` 会印
+ *      `arenaUnknown`（地板表里没这枚、或有行但逐粒值算不出 σ ⇒ 没量过，不许被读成 0）与
+ *      `arenaOverBand`（**批间 σ** > 当选判决窗口 `bandFor(k)` 的枚数）⇒ 后者不为零时，
+ *      这枚的前线读数**只可看、不可当排序键**。
+ *      ⚠ 与窗口比的是 σ 不是极差：`docs/POOL-CONTRACT.md` §5.2 明写极差随批数增大
+ *      （3 批 E[极差]≈1.69σ ‖ 6 批≈2.33σ），拿 6 批的极差当 σ 会把尺子**看粗一倍**——
+ *      本班第一版就是这么写的，改回来了；表里仍存极差只作留痕，判读由逐粒值现算。
+ *      成本账：单枚单 seed ≈ 4s ⇒ 6 粒 ≈ 24s，只在 `--add` 现场跑；`--audit` 只 join 不重算（门不许十几分钟）。
  *
  * 用法：
  *   node tools/pool-add.mjs --id=E3 --pack=docs/artifacts/e234-out/E3.js --tier=hard [--note="困难档自动成员"]
- *        [--invite] [--run-promote] [--seat=pool-seat-90210.tsv,pool-seat-90211.tsv] [--dry]
+ *        [--invite] [--run-promote] [--seat=pool-seat-90210.tsv,pool-seat-90211.tsv] [--arena=6] [--dry]
  *   node tools/pool-add.mjs --audit          # 给门 D234 用的机器可读一行（stdout 最后一个 {…}）
  *   node tools/pool-add.mjs --list [--tier=hard]
  * 退出码：0 = 跑完 ‖ 2 = 输入/前置不齐（宁可红也不许假绿）
@@ -26,22 +40,29 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { execSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { widOf } from '../champion-map/pack-id.mjs';
 import { resolve as resolvePath, rdTable, seatKillIndex, seatKillIndexBand, pairHasBase, MODES } from '../champion-map/seat-rule.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
+/* 第三道留痕的量具：`arenaFloorOf` 与地板复算尺**同一份实现**（本仓为"量具抄两遍"栽过至少四次）。 */
+import { arenaFloorOf, readFloor, appendFloor, FLOOR_PATH } from './arena-noise-floor.mjs';
+/* 同分带的宽度**只有单一来源**（`SEL_BAND_BY_K` + `bandFor`，表外的 k 会抛错）—— 抄一个 5.8 进门里就是第二份标定。 */
+import { bandFor, parseSelSeeds } from './pick-best.mjs';
 /* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
  *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("pool-add.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['audit', 'dry', 'id', 'invite', 'list', 'note', 'pack', 'packs', 'quiet', 'ref', 'refresh', 'run-promote', 'seat', 'tier'], "pool-add");
+  rejectUnknownFlags(process.argv.slice(2), ['arena', 'audit', 'dry', 'id', 'invite', 'list', 'note', 'pack', 'packs', 'quiet', 'ref', 'refresh', 'run-promote', 'seat', 'tier'], "pool-add");
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const MAP = join(ROOT, 'champion-map', 'data/page/pool-members.tsv');
 const COLS = ['id', 'wid', 'path', 'tier', 'invited', 'promoteVerdict', 'seatKill', 'addedAt', 'note'];
+/* 11-18 第三道留痕（头注⑤）**不在这里加列**：前线读数住在测量原件 `data/arena-noise-floor-1118.tsv` 一份，
+ *   账本只按 id 引用它。理由是同一天刚为这件事红过一次——同一个数存两处 ⇒ 单向同步迟早选错方向
+ *   （`champion-map/pipeline/migrate-drop-family-from-sidecar.mjs` 头注）。*/
 /* 池的**带名**（`pool-members.tsv` 的 `tier` 列取值）—— §E596（10-12 下半场）把带定成**三带**：
  *   `hard`（最强，现役钉在这一带）/ `mid` / `soft`（最软）。§E594 那版"两带"已被三带取代。
  * ⚠ 这张名单同时管着三件事：`--tier=` 的校验、表内排序、以及"少了一档 = 图例与环色要一起加"的那个信号。
@@ -77,6 +98,9 @@ function syncChart() {
  * 对那个路径又不生效（不在同一个 `ls-files` 输出域）⇒ 死路，逼人去造第二份 `.bak`。
  * `packs/README.md` 的原话是"只在图上的包不该再存一份入库拷贝"，入池成员本来就住 `packs/` ⇒ 该修的是这道闸。 */
 const trackedSet = () => new Set(execSync('git ls-files docs/artifacts champion-map/packs scratch/ds-1109', { cwd: ROOT, maxBuffer: 1 << 26 }).toString().trim().split('\n').filter(Boolean));
+/* ⚠ 上面那个集合**只扫三个目录**，不含 `champion-map/data/` ⇒ 拿它判数据表会不会恒假。
+ *   判"某一张表进没进 git"用这条按路径的（前线原件表就要靠它，CI 读不到的原件不算在册）。 */
+const isTracked = (rel) => { try { return execSync('git ls-files -- ' + rel, { cwd: ROOT, encoding: 'utf8' }).trim() !== ''; } catch (e) { return false; } };
 const WARNED = new Set();   /* `--refresh` 会对每枚成员调一次 seatKillOf ⇒ 同一对坏表只吼一次，别刷 13 遍屏 */
 
 /* 人席杀刀的**参照物**（§E598 · 2026-10-12 用户裁定 A）：
@@ -209,8 +233,13 @@ function classifyBlock(blocks) {
 
 /* ---------- --audit：给门 D234 的机器可读一行（判 JSON 里的数，不判退出码 —— 管道会吃掉退出码） ---------- */
 if (has('audit')) {
+  /* 对照的是**当选判决窗口**（evalN 用几粒 seedBase ⇒ 带就多宽，默认 4 粒 ⇒ 5.8pt），跟着配置走不写死。
+   *   ⚠ 它不是 arena 这把尺自己的噪声标定（两者剂量不同：evalN 720 局/粒 ‖ arena 176 局/粒），
+   *     所以这里的比法是"输入的摆动 vs 它要起作用的窗口"——别读成"arena 的带该是 5.8pt"。 */
+  const BAND = bandFor(parseSelSeeds(undefined).k);
   const t = loadMap(), tr = trackedSet();
-  const byWid = {}; let untracked = 0, blockedAuto = 0, untestedProm = 0, seatKilled = 0, seatUnknown = 0, dupWid = 0;
+  const FL = readFloor();
+  const byWid = {}; let untracked = 0, blockedAuto = 0, untestedProm = 0, seatKilled = 0, seatUnknown = 0, dupWid = 0, arenaUnknown = 0, arenaOverBand = 0;
   const tiers = {}; const bad = [];
   for (const r of t.rows) {
     const id = r[t.h.id], w = r[t.h.wid], p = r[t.h.path], tier = r[t.h.tier], inv = r[t.h.invited] === '1';
@@ -224,19 +253,30 @@ if (has('audit')) {
     const sk = Number(r[t.h.seatKill]);
     if (!inv && sk > 0) { seatKilled++; bad.push({ why: '自动成员人席否决 ' + sk + ' 格', id: id }); }
     if (sk < 0) seatUnknown++;
+    /* 第三道留痕的"没量过"判据：地板表里**没有这一行**、或有行但逐粒值算不出 σ（= 没量过，不许读成 0）。
+     *   与判决窗口比的是**批间 σ**（`POOL-CONTRACT` §5.2：极差随批数增大，拿它当 σ 会把尺子看粗）。
+     *   这道只计数、不进 exitCode —— 它的产品事实是"账本诚实"，不是"候选合格"。 */
+    const fr = FL.get(id);
+    if (!fr || !isFinite(fr.sd)) { arenaUnknown++; }
+    else if (fr.sd > BAND) arenaOverBand++;
   }
   console.log(JSON.stringify({ members: t.rows.length, tiers: tiers, untracked: untracked, dupWid: dupWid,
     blockedAuto: blockedAuto, untestedAuto: untestedProm, seatKilledAuto: seatKilled, seatUnknown: seatUnknown,
+    /* 前线原件表的在册态：1=在且进 git ‖ 0=在但**没进 git**（CI 里根本读不到 ⇒ 这条留痕是空话）‖ -1=还没跑过 */
+    arenaFloor: existsSync(FLOOR_PATH) ? (isTracked(relative(ROOT, FLOOR_PATH).replace(/\\/g, '/')) ? 1 : 0) : -1,
+    arenaUnknown: arenaUnknown, arenaOverBand: arenaOverBand, decideBandPt: BAND,
     modes: MODES, bad: bad.slice(0, 6) }));
   process.exitCode = (untracked || dupWid || blockedAuto || seatKilled) ? 1 : 0;
   process.exit(0);
 }
 if (has('list')) {
-  const t = loadMap(); const only = arg('tier', '');
+  const t = loadMap(); const only = arg('tier', ''); const FL = readFloor();
   console.log('池成员 ' + t.rows.length + ' 枚' + (only ? '（tier=' + only + '）' : ''));
   for (const r of t.rows) if (!only || r[t.h.tier] === only) {
+    const fr = FL.get(r[t.h.id]);
     console.log('  ' + (r[t.h.id] + '                ').slice(0, 16) + ' ' + r[t.h.tier] + ' · wid=' + String(r[t.h.wid]).slice(0, 8) +
       ' · 体检 ' + r[t.h.promoteVerdict] + ' · 人席否决 ' + (r[t.h.seatKill] === '-1' ? '没量过' : r[t.h.seatKill] + ' 格') +
+      ' · 前线 ' + (fr && isFinite(fr.sd) ? fr.med + ' ±σ' + fr.sd + 'pt（' + fr.seeds + ' 粒 seed ‖ 极差 ' + fr.spread + 'pt，判读用 σ 不用极差：POOL-CONTRACT §5.2）' : (fr ? '表里有行但逐粒值读不出 σ ⇒ 没量过' : '没量过')) +
       (r[t.h.invited] === '1' ? ' · 点名越过门槛' : '') + ' · ' + r[t.h.path]);
   }
   process.exit(0);
@@ -307,6 +347,18 @@ if (hard.length) { console.error('\n⛔ 拒绝入池（硬闸，点名也不放�
 if (soft.length && !INVITE) { console.error('\n⛔ 拒绝入池（自动成员要过两道闸；要点名进就加 --invite，越过的原话会记进表）：\n   · ' + soft.join('\n   · ')); process.exit(2); }
 if (soft.length) console.log('   ⚠ 点名越过：' + soft.join(' ‖ '));
 const NOTE = arg('note', '') + (INVITE && soft.length ? ' · 点名越过：' + soft.join(' ‖ ') : '');
+/* 第三道留痕（头注⑤）：现场算 k 粒 seedBase 的中位与极差（k=6 约 24s）。`--arena=0` 跳过 ⇒ 落 `-1`。
+ *   跑不成**不许静默、也不许写 0**：这道只记录不阻断（阻断权在②③两道闸），但"没量成"必须吼一声。 */
+const AK = Number(arg('arena', 6));
+if (AK > 0) {
+  const f = arenaFloorOf(PACK, ID, AK);
+  if (f.err) console.error('⚠ 前线读数没量成 ⇒ 这枚在地板表里没有行（= 没量过，不是 0）：' + f.err);
+  else {
+    try { appendFloor(f); console.log('   前线读数（24 锚联盟 · page 剂量 · ' + AK + ' 粒 seed）已落 data/arena-noise-floor-1118.tsv：' +
+      'B=' + f.med + 'pt ‖ 极差 ' + f.spread + 'pt ‖ 当选判决窗口 ' + bandFor(parseSelSeeds(undefined).k) + 'pt'); }
+    catch (e) { console.error('⛔ 地板表接不下这条记录（剂量与表不符）：' + e.message); process.exit(2); }
+  }
+} else console.log('   前线读数：--arena=0 跳过 ⇒ 地板表里没有这枚（没量过）');
 const row = [ID, WID, PACK, TIER, INVITE ? '1' : '0', PV, String(SK), new Date().toString(), NOTE];
 if (has('dry')) { console.log('（--dry：没写表）将落这一行：\n   ' + COLS.join(' | ') + '\n   ' + row.join(' | ')); process.exit(0); }
 t.rows.push(row);

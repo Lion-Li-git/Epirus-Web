@@ -19,6 +19,8 @@
 | features.tsv | 一行 = 一份权重 | 行为列（rounds/dmg/.../S/Geff） |
 | projections.tsv | 一行 = 一份权重 | xt/yt/xt3/yt3/zt3/xt18/yt18/xt20/yt20；换尺不动 |
 | fit.tsv | 宽表 | 页面 fit 说明 |
+| exam4n-arena-1118.tsv / exam4n-arena-page-1118.tsv / arena-league-1118.tsv / arena-league-1118-page.tsv | 一行 = 一份权重 ‖ 一枚锚 | **Arena B 轴的测量原件**（11-18 起 B=current=`b-arena-page-1118`）：联盟表存 24 枚锚的 path/era/role 与各向 r，读数表存 2/3/5/8 格 × short/long 与 arS/arL/arR。产=`tools/arena-eval.mjs`（⚠ `--dose` 默认是 exam，不是 page），接=`tools/attach-arena.mjs` |
+| arena-noise-floor-1118.tsv | 一行 = 一份权重 | **Arena 这把尺的种子噪声地板**：6 粒 seedBase（82200 起步、步长 1000）的 `rAll` 中位/极差/逐粒值（pt）。产=`tools/arena-noise-floor.mjs`，它每次先做接线自证（复算对不上在册 `arR` 就直接红）。⚠ 判读用**批间 σ**（由逐粒值现算），不用极差——`docs/POOL-CONTRACT.md` §5.2：极差随批数增大，6 批 E[极差]≈2.33σ，拿它当 σ 会把尺子看粗一倍。冠军池入池的**第三道留痕只存这一份**，`page/pool-members.tsv` 按 id 引用、不复制读数（11-17 家族号那次的教训） |
 | page/lineage.tsv | 一行 = 图上一点（**生成物**） | `lineage.mjs` 从 registry + 下面那张 sidecar 生成；viewer 吃这份上色与画父边。`rebuild-map` **不跑生成器** ⇒ 手改这里或改完 registry 不重生成，由 `D234 ⑫f` 抓 |
 | page/lineage-g3.tsv | 一行 = 2.0 节点的血统 | **只存血统**：ts/metaSeed/nameSeed/parent/parentOf/parentName/wid/parentSrc/tsSrc + 融合的 2/3 组。11-17 起 fam/famLabel 两列已删（曾与 registry 各存一份，被一次"对齐"单向覆盖 ⇒ CI 红）；表头再出现这两列，viewer 与 add-point 都会当场拒。迁移与五组验牙的做法记在 `champion-map/pipeline/migrate-drop-family-from-sidecar.mjs` 头注 |
 | page/coords.tsv / pool-members.tsv / promote.tsv / ship-times.tsv / slot-*.tsv | 页面元数据 | viewer/slot-identity 的页面输入；P0 从根目录迁入，根目录不再放这些表 |
