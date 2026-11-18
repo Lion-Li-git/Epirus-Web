@@ -21,7 +21,7 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'obs', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'obs', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg', 'winOnly'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
 const OBS_SPEC = String(arg('obs', '')).trim();
@@ -986,6 +986,13 @@ const T4SHAPES = parseShapeGate('teacher4Shapes', 'teacher4Shapes');
 if (T4SHAPES.size && !TEACHER4) { console.error('⛔ --teacher4Shapes 需要同时给 --teacher4'); process.exit(2); }
 const ROLLOUT_MODE = String(arg('rolloutMode', 'step'));
 if (ROLLOUT_MODE !== 'step' && ROLLOUT_MODE !== 'game') { console.error('⛔ --rolloutMode 只认 step|game（收到 ' + ROLLOUT_MODE + '）'); process.exit(2); }
+/* ⚑ --winOnly=1（X1 胜局语境蒸馏 · 2026-11-19）：采集标签一律先入局内缓冲 `pend`，局终只把 **@me 席获胜**那几局的
+ *   标签落盘（平局/败局整局丢弃）。机制假设：DAgger 的标签分布被"教师怎么打"决定，**在什么语境下学**仍由对手
+ *   环境决定——只保留胜局语境 ⇒ 学生向"获胜状态下的教师动作"靠拢，败着语境（追不平、龟死局）不再进梯度。
+ *   这是对"蒸馏成立"之外的机制探路：它不改标签内容（教师照旧解决零覆盖键），只改**语境的分布**。
+ *   代价：采集局数 ×(1/胜率) 才能凑满同量组 ⇒ GCAP 自动 ×4 兜底；LABEL.winKept/winDrop 如实记账。 */
+const WINONLY = Number(arg('winOnly', 0));
+if (!(WINONLY === 0 || WINONLY === 1)) { console.error('⛔ --winOnly 只认 0|1（1=只保留 @me 胜局标签，平局也丢）'); process.exit(2); }
 if (TEACHER2) {
   if (TEACHER_KNOWN.indexOf(TEACHER2) < 0 && TEACHER2.indexOf('pack:') !== 0) { console.error('⛔ --teacher2 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER2 + '）'); process.exit(2); }
   if (TEACHER2 === TEACHER) { console.error('⛔ --teacher2 与 --teacher 相同 ⇒ 轮替无意义'); process.exit(2); }
@@ -1108,6 +1115,24 @@ function collectInto(dst, srcParams, idBase) {
   let shapeStart = 0, shapeQuota = NGRP, forceNormalForShape = false;   /* 按桌形摊配额 + rareOnly 缺货兜底 */
   let lastG = null;  /* 最近推入的组：oracleDef 的 onPicks 钩子回头改它的 wantKey */
   let gN = 0;   /* 组级计数：N 教师轮替的 Bresnham 游标 */
+  /* X1：标签先入局内缓冲；nOut()=已落盘+在途 ⇒ 配额判断语义与直推完全一致（winOnly=0 每局终无条件 flush ⇒ 逐位不变） */
+  const pend = [];
+  const nOut = () => dst.length + pend.length;
+  /* 局终裁决：keep=false 且 winOnly=1 ⇒ 整局标签丢弃（败/平语境不进梯度）；winOnly=0 恒 keep。
+   *  keys/byKey/ok/moved 的记账在这里做（采到 ≠ 留下：被 winOnly 丢掉的组不许进采集计数）。 */
+  const flushPend = (keep) => {
+    if (keep) for (const x of pend) {
+      dst.push(x);
+      LABEL.keys++;
+      LABEL.byKey[x._acctKey] = (LABEL.byKey[x._acctKey] || 0) + 1;
+      if (x._acctOk) LABEL.ok++; else LABEL.moved++;
+    }
+    if (WINONLY) {
+      if (keep) { LABEL.winGamesKept = (LABEL.winGamesKept || 0) + 1; LABEL.winKeptGroups = (LABEL.winKeptGroups || 0) + pend.length; }
+      else { LABEL.winGamesDrop = (LABEL.winGamesDrop || 0) + 1; LABEL.winDropGroups = (LABEL.winDropGroups || 0) + pend.length; }
+    }
+    pend.length = 0;
+  };
   let gameN = 0;   /* 局级游标（--rolloutMode=game 时每局锁定同一位驾驶教师） */
   const setTeacherMask = (d) => {
     _useT4 = d === 4; _useT3 = d === 3; _useT2 = d === 2;
@@ -1143,20 +1168,18 @@ function collectInto(dst, srcParams, idBase) {
      *    "DAgger 稀释稀有类"就是这个条件造成的，不是 DAgger 本身的错）。
      *   11-16：--shapeBal=1 时按单形配额切稀有期，且若该桌形稀有键绝迹/极稀则平滑退回正常采集。 */
     const inRare = SHAPEBAL
-      ? (!forceNormalForShape && (dst.length - shapeStart) >= Math.floor(shapeQuota * (1 - RARE_FRAC)))
-      : (dst.length >= Math.floor(NGRP * (1 - RARE_FRAC)));
+      ? (!forceNormalForShape && (nOut() - shapeStart) >= Math.floor(shapeQuota * (1 - RARE_FRAC)))
+      : (nOut() >= Math.floor(NGRP * (1 - RARE_FRAC)));
     if (RARE.length && inRare && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
-    dst.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
-      wantIdx: wIdx, wantBead: again.bead || null });
-    lastG = dst[dst.length - 1];
-    LABEL.keys++;
-    LABEL.byKey[again.key] = (LABEL.byKey[again.key] || 0) + 1;
+    pend.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
+      wantIdx: wIdx, wantBead: again.bead || null, _acctKey: again.key, _acctOk: again.key === t0.key });
+    lastG = pend[pend.length - 1];
+    /* keys/byKey/ok/moved 记账挪到 flushPend（X1）：采到 ≠ 留下 */
     if (_activeShapeSlot) {
       LABEL.shapeTeacherHits = LABEL.shapeTeacherHits || {};
       const mp = LABEL.shapeTeacherHits[_activeShapeSlot.shpKey] || (LABEL.shapeTeacherHits[_activeShapeSlot.shpKey] = {});
       mp[_activeShapeSlot.name] = (mp[_activeShapeSlot.name] || 0) + 1;
     }
-    if (again.key !== t0.key) LABEL.moved++; else LABEL.ok++;
   };
   /* oracleDef：选完/结算前看别人这一手打谁，回头把**上一组**的标签改成对应的防御（用户口径）。 */
   const oracleHook = TEACHER === 'oracleDef' ? function (state, picks, legals, seat) {
@@ -1188,7 +1211,7 @@ function collectInto(dst, srcParams, idBase) {
   let play;
   if (srcParams == null) {
     play = wrapPlay((state, pid, legal) => {
-      if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
+      if (nOut() < NGRP && (!SHAPEBAL || (nOut() - shapeStart) < shapeQuota)) record(state, pid, legal);
       const cs3 = P.candidatesFor(state, pid, T.econBase(state, pid, legal), { lockTarget: false }) || [];
       /* game 模式下驾驶教师走全轨（不过滤 TkKEYS），否则前置攒气手被主教师截断⇒永远到不了高 ep 态 */
       const drvPick = _activeShapeSlot ? _activeShapeSlot.pick
@@ -1199,7 +1222,7 @@ function collectInto(dst, srcParams, idBase) {
   } else {
     const ch = A2.chooserOf(srcParams, DAG_TEMP);
     play = wrapPlay((state, pid, legal) => {
-      if (dst.length < NGRP && (!SHAPEBAL || (dst.length - shapeStart) < shapeQuota)) record(state, pid, legal);
+      if (nOut() < NGRP && (!SHAPEBAL || (nOut() - shapeStart) < shapeQuota)) record(state, pid, legal);
       const act = ch(state, pid, legal);
       /* ⚑ Played-action 一致率（10-31 夜里加，因为"自访留出 100%"与考场读数打脸才补的这条）：
        *   留出一致率量的是**克隆态上的 argmax**；这一条量的是**真正打出去的那一手**。
@@ -1222,14 +1245,17 @@ function collectInto(dst, srcParams, idBase) {
       return act;
     });
   }
-  /* 稀有期的每形局数上限放宽（60 ⇒ 2500）；game 模式下略放宽到 240 以补齐跳过非键道手的配额 */
-  const GCAP = RARE.length ? 2500 : ((ROLLOUT_MODE === 'game' && (TEACHER2 || TEACHER3 || TEACHER4)) || SHAPE_TEACHERS.size > 0 ? 240 : 60);
+  /* 稀有期的每形局数上限放宽（60 ⇒ 2500）；game 模式下略放宽到 240 以补齐跳过非键道手的配额；
+   *  winOnly=1 再 ×4：约 (1−胜率) 的局整局丢弃 ⇒ 凑满同量组需要更多局（经验胜率带 25–50%，4× 兜底） */
+  const GCAP = (RARE.length ? 2500 : ((ROLLOUT_MODE === 'game' && (TEACHER2 || TEACHER3 || TEACHER4)) || SHAPE_TEACHERS.size > 0 ? 240 : 60)) * (WINONLY ? 4 : 1);
   const runOneGame = (s, g) => {
     const shpEnt = ROLLOUT_MODE === 'game' ? getShapeTeacherEntry(A2.shapes[s]) : null;
     _activeShapeSlot = shpEnt ? nextShapeSlot(shpEnt, 'game') : null;
     _gameDriver = (!_activeShapeSlot && ROLLOUT_MODE === 'game') ? pickBresenham(gameN++, A2.shapes[s]) : 0;
-    try { A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
+    let row = null;
+    try { row = A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
     finally { _gameDriver = 0; _activeShapeSlot = null; }
+    flushPend(!WINONLY || !!(row && row.win));   /* X1 局终裁决：胜局才落盘；winOnly=0 恒落盘（默认路径逐位不变） */
   };
   if (SHAPEBAL) {
     /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */

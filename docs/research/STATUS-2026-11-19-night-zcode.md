@@ -123,7 +123,33 @@ MS2-band2 wid=`c8f5f357ffb31a10`。**复现臂 MS2b/MS2c**（同配方 seed 7703
 **统一管线战果**：v7 线的 GA 发现（tank / tank+miniT 载体）经 `supfit-gd --teacher=pack:<v7包>` **跨线蒸馏**成 2.0 线产物——v7 线退役但它的**知识**通过教师机制平移。加上 S1 的 armor/jinshield，死卡（tank/jinshield/armor/miniT）在 2.0 线全部有载体；**大雷 +17.3pt**（EQ-S4-E9 强度尺读出"没学会的强招"）列 S5（chain 教师，跑批中）。
 **pg-train klTilt 路线 = 负结果（8 节点全零）**，机制原因（`pg-train` klW 注释在册）：`--klTiltMul` 放大的是**起点策略分布**——起点从未用过的键 3×0=0；`--shapeKey` 又依赖键被采样（逐决策塑形挂不上未采样键，klW 注释原话）。**零覆盖键的正解 = supfit-gd 教师蒸馏**（标签来自教师、不依赖学生采样；toolkit 教师标签里正好有金刚盾 11/藤甲 11/贴贴 14/无极变速 7）。已换 `--teacher=toolkit --objective=cand --dagger=1` 蒸馏臂（S1/S2 双基座）。
 
-## 十、复算命令
+## 十一、S6 入池（07:0x · 用户裁定「s6入池吧」的执行）
+
+- **入池**：`pool-add --id=night2-S6 --tier=soft --run-promote --invite` ⇒ **池 23 枚**（8 hard ‖ 15 soft）。wid `d12c18baca6c1eab`，包正身 `docs/artifacts/night2-S6.bak`（scratch 正本同在）。
+- **体检**：promote --dry --support=2 严格档仅剩 G5[long] 26%——池层按 **用户 10-12 裁定（上线档 ≤40%）自动豁免 ⇒ pass**；人席没量过（批表无此枚，seatKill=-1 如实）。
+- **点名**：note 记「用户 11-19 07:0x 裁定入池」。
+- **前线读数**：24 锚联盟 page 剂量 6 粒 ⇒ **B=−104.8pt（极差 36.6）**——蒸馏产物没经过长 GA 强度进化，对现役锚差距巨大，soft 带是诚实位置（补强度列下班项）。
+- **普查**：入池自动跑 Stage1+Stage2 ⇒ `champion-map/data/skill-report/night2-S6.json`（并集 **19/30**，自对局 18，换招JS 0.0605；Stage2 强度 25 技·消融 10）——比 22 枚池成员的旧读数偏高，蒸馏载体的行为多样性是真的。
+- **bundle**：`js/bundled-champion-pool.js` 已重烘（7043 KB，含 night2-S6）。
+- **图节点未补（如实）**：`pool-sync` 报「night2-S6 不在图节点里」——coords.tsv 行是仪器链产物（exam-4n-full+attach），不手搓半空行。**下班项**：night2-S6 ‖ night1119-A1-tank-band3 ‖ MS2c-band1 三枚走 exam-4n-full --extra + attach 管线补图。
+
+## 十二、发散臂（用户 07:0x 令「研究更发散的方法」——不许重证蒸馏成立，找方法论外的新机制）
+
+**X1 胜局语境蒸馏**（`supfit-gd --winOnly=1`，本班新手术）：标签一律先入局内缓冲 `pend`，局终只把 **@me 席获胜**那几局落盘（平局也丢）。机制假设：DAgger 标签内容由教师定（零覆盖键照旧有解），但**学习语境的分布**由对手环境定——只留胜局语境 ⇒ 学生向「获胜状态下的教师动作」靠拢，败着语境（追不平、龟死局）不进梯度。与蒸馏成立正交：不改标签内容，只改语境。手术四件：pend/nOut 配额语义（winOnly=0 默认路径逐位不变）‖ flushPend 局终裁决 ‖ GCAP ×4 兜底（胜率 25-50% 经验带）‖ LABEL.winGamesKept/winGamesDrop 如实记账。冒烟：32 胜局留 480 组 ‖ 37 败/平丢 681 组，1.5s 绿。
+
+**X2 融合热启动**（`pack-fuse S3×S1 t=0.5` → toolkit 巩固）：同盆地载体×载体融合（tank 系 × armor/jinshield 系）做**训练起点**而不是终点——F4 当年验证的是「融合产物本身双卡」，这次验证「融合后再蒸馏能否一次巩固出双卡宽载体」。
+
+臂结果（30 局 × 双桌形镜像普查）：
+
+| 臂 | 配方 | 镜像读数 | 判定 |
+|---|---|---|---|
+| **X1** | S6 配方 + winOnly=1，120 步 | **tank 23/26**（对照 14.9/6.0）‖ armor 3% 保住 ‖ curse 0 ‖ 用卡 7/5 | ✅ **新方法：锐化旋钮**——胜局语境让主胜招 tank ×4.3，广度同步收窄。**METHODOLOGY §149 已立**（「约束在状态分布」在采集保留端的第二根杆；含三条规矩：预注册按锐化写 / nOut 保默认逐位不变 / 开臂前先读方法论） |
+| X2 | fuse-S3S1-t50 热启动 + toolkit 单教师 120 步 | 用卡 11 但 **tank/armor 全归零**（charge 13+railgun 13 主导） | ⚠ **§148.6 前半的再证实**（插值/融合产物不能当自由起点——本班内第二次重证已知结论，用户点名；新账只有下面 X2b 的后半） |
+| **X2b** | 同融合起点 + **双父系教师**（pack:S3 主 + toolkit 副 0.35） | tank multi **14%** / armor long **12%** / 用卡 9，双卡保住 | ✅ **§148.6 追加后半**：融合产物当起点的唯一活法 = 教师键道 ⊇ 两父系键道；单教师巩固 = 洗掉融合 |
+
+**班内自省（用户 07:5x 两次点名）**：X1/X2 开臂前没先读 `docs/METHODOLOGY.md` 相关节——X2 就是 §148.6 在 pack-fuse 语境的重复。此后流程钉死：**开臂前 grep 方法论相邻节 + PROPOSAL/FINDING，臂计划里写明「这是不是已有结论」**（已入 §149 规矩 3 + 记忆）。
+
+## 十三、复算命令（更新）
 
 ```bash
 # 合并尺（两级）
@@ -138,4 +164,18 @@ node tools/skill-report.mjs 2 1 scratch/parity/after.html --json=scratch/parity/
 node tools/probe-diff-ladder.mjs --pool=1 --games=800 --n=5 --mode=multi --surrogate=rule
 # 训练臂验收（目标卡镜像稳定性）
 node tools/card-usage.mjs --packs=docs/artifacts/night1119-A1-tank-band3.bak --games=30 --mode=multi
+# X1 胜局语境蒸馏（METHODOLOGY §149）
+node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --obs=obs6 \
+  --teacher=pack:docs/artifacts/night1119-A1-tank-band3.bak --teacher2=toolkit --teacher2frac=0.5 \
+  --rolloutMode=game --shapeBal=1 --classPow=0.35 --objective=cand --dagger=1 \
+  --groups=3300 --steps=120 --winOnly=1 --out=scratch/arms/night2-X1-winonly.bak --tag=night2-X1-winonly
+# X2/X2b 融合热启动（§148.6 后半）
+node tools/pack-fuse.mjs --a=scratch/arms/night2-S3.bak --b=scratch/arms/night2-S1.bak --t=0.5 --out=scratch/arms/fuse-S3S1-t50.bak
+node training/proto2/supfit-gd.mjs --upstream=scratch/arms/fuse-S3S1-t50.bak --obs=obs6 \
+  --teacher=pack:scratch/arms/night2-S3.bak --teacher2=toolkit --teacher2frac=0.35 \
+  --rolloutMode=game --shapeBal=1 --classPow=0.35 --objective=cand --dagger=1 \
+  --groups=3300 --steps=120 --out=scratch/arms/night2-X2b-fuse.bak --tag=night2-X2b-fuse-dualT
+# S6 入池链
+node tools/pool-add.mjs --id=night2-S6 --pack=docs/artifacts/night2-S6.bak --tier=soft --run-promote --invite
+node champion-map/pipeline/measure-point.mjs --pack=docs/artifacts/night2-S6.bak --id=night2-S6 --ver=2.0 --parent=MX8-R6C-KL --bake
 ```
