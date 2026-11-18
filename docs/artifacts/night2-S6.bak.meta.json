@@ -1,0 +1,219 @@
+{
+ "tool": "supfit-gd",
+ "tag": "night2-S6-tanktoolkit",
+ "parent": "docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak",
+ "seed": 20261031,
+ "lr": 0.0004,
+ "steps": 180,
+ "groups": 3300,
+ "trainG": 2475,
+ "testG": 825,
+ "objective": "cand",
+ "dagger": 1,
+ "dagTemp": 0.15,
+ "pool": 3300,
+ "shapeBal": 1,
+ "rolloutMode": "game",
+ "classPow": 0.35,
+ "classCap": 0,
+ "teacher": "pack:docs/artifacts/night1119-A1-tank-band3.bak",
+ "keySplit": 0,
+ "rareOnly": null,
+ "rareFrac": null,
+ "arenaPool": null,
+ "arenaShapes": null,
+ "teacher2": "toolkit",
+ "teacher2frac": 0.5,
+ "teacher2keys": null,
+ "teacher2shapes": null,
+ "teacher3": null,
+ "teacher3frac": null,
+ "teacher3keys": null,
+ "teacher3shapes": null,
+ "teacher4": null,
+ "teacher4frac": null,
+ "teacher4keys": null,
+ "teacher4shapes": null,
+ "shapeTeachers": null,
+ "playedAgree": {
+  "n": 3622,
+  "hit": 1818,
+  "stuckCharge": 115,
+  "missCharge": 204,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 5568,
+  "moved": 1032,
+  "gone": 0,
+  "keys": 6600,
+  "rare": 0,
+  "byKey": {
+   "ji": 4276,
+   "tank": 435,
+   "gun": 302,
+   "charge": 375,
+   "railgun": 154,
+   "reflect": 102,
+   "guard": 162,
+   "bagua": 107,
+   "curse": 108,
+   "armor": 64,
+   "shift": 68,
+   "proto": 85,
+   "bigT": 86,
+   "jinshield": 67,
+   "transfer": 4,
+   "snipe": 60,
+   "holo": 142,
+   "mine": 1,
+   "miniT": 1,
+   "sword": 1
+  },
+  "t1Groups": 3734,
+  "t2Groups": 2866,
+  "t2Hits": 7344
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 1,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 2475,
+    "teacherAgree": 0.5284848484848484,
+    "teacherLl": -2.7295583113753374,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 3300,
+    "trainG": 3300,
+    "teacherAgree": 0.5684848484848485,
+    "teacherLl": -2.2996758060133304,
+    "studentAgree": 0.5454545454545454,
+    "studentLl": -2.1573651603567137,
+    "studentN": 825
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 10191,
+    "firstDiff": 0,
+    "dim": 16561
+   }
+  ],
+  "startAgree": 0.4036363636363636,
+  "startLl": -6.754556583653118,
+  "agree": 0.5684848484848485,
+  "ll": -2.2996758060133304,
+  "wAgree": 0.45117981204770735,
+  "nTest": 825,
+  "nTrain": 3300,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.5454545454545454,
+  "studentN": 825,
+  "byKey": [
+   {
+    "key": "tank",
+    "n": 53,
+    "hit": 33
+   },
+   {
+    "key": "ji",
+    "n": 506,
+    "hit": 356
+   },
+   {
+    "key": "charge#elec#elec",
+    "n": 39,
+    "hit": 37
+   },
+   {
+    "key": "railgun",
+    "n": 35,
+    "hit": 19
+   },
+   {
+    "key": "shift",
+    "n": 8,
+    "hit": 0
+   },
+   {
+    "key": "armor",
+    "n": 17,
+    "hit": 0
+   },
+   {
+    "key": "reflect",
+    "n": 21,
+    "hit": 2
+   },
+   {
+    "key": "gun",
+    "n": 25,
+    "hit": 1
+   },
+   {
+    "key": "guard",
+    "n": 29,
+    "hit": 0
+   },
+   {
+    "key": "proto",
+    "n": 9,
+    "hit": 0
+   },
+   {
+    "key": "jinshield",
+    "n": 4,
+    "hit": 0
+   },
+   {
+    "key": "curse",
+    "n": 25,
+    "hit": 15
+   },
+   {
+    "key": "bagua",
+    "n": 14,
+    "hit": 2
+   },
+   {
+    "key": "bigT",
+    "n": 17,
+    "hit": 4
+   },
+   {
+    "key": "snipe",
+    "n": 5,
+    "hit": 0
+   },
+   {
+    "key": "holo",
+    "n": 18,
+    "hit": 0
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 0
+ },
+ "lineage": {
+  "parent": "docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x1"
+  }
+ }
+}

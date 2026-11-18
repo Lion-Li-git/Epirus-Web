@@ -80,3 +80,4 @@ measure-P9-CN-MINI-CONT	a-v2-page-1109	A	-	-	measure-P9-CN-MINI-CONT	P9-CN-MINI-
 b-arena-pl-1118	b-arena-pl-1118	B	ARENA24-PL-1118	24锚多元联盟(multi+long统一)	1118	champion-map/data/exam4n-arena-1118.tsv	980	2026-11-18	2026-11-18 多人 Plackett-Luce Arena 全库评估（980 枚 × 176 局 × multi+long 双桌统一）
 b-arena-page-1118	b-arena-page-1118	B	ARENA24-PL-1118-PAGE	24锚多元联盟(multi+long统一·页面剂量)	1118	champion-map/data/exam4n-arena-page-1118.tsv	980	2026-11-18	2026-11-18 Arena 页面剂量全库评估（980 枚 × 176 局，整桌 lv:regular 剂量）
 a-v2coop-exam-1118	a-v2coop-exam-1118	A	v2-scripts	v2 脚本桌 28 席 + coop v3	1118	champion-map/exam4-a-exam-multi-1118.tsv + exam4-a-exam-long-1118.tsv	990	2026-11-18	2026-11-18 A 轴贪心全量重测（multi+long；9 枚 docs/artifacts 旧包子进程失败，未入表）
+measure-night2-S6	a-v2-page-1109	A	-	-	measure-night2-S6	night2-S6-readings.tsv	24	2026-11-18T23:20:41.127Z	add-point
