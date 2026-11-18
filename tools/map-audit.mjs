@@ -84,6 +84,11 @@ if (rulers && disp && rd && cv) {
   need(bad === 0, 'B 读数与 P?R 不一致 ' + bad);
   need(cbad === 0, 'C?R ≠ (P?+P?R)/2 ' + cbad);
 }
+/* ⑦ 注册表路径缺失（黄） */
+if (reg) {
+  const miss = reg.rows.filter((r) => r[reg.ix.path] && !existsSync(join(DATA, '..', '..', r[reg.ix.path]))).map((r) => r[0]);
+  if (miss.length) yellow.push('registry 路径不在盘：' + miss.length + ' 枚（' + miss.slice(0, 8).join(',') + (miss.length > 8 ? '…' : '') + '）');
+}
 /* ⑦ 新包 C̄ 缺口（黄） */
 if (pc) {
   const newIds = ['DIV-V3-PRESSURE-S2', 'DIV-V3-ANTIDEF', 'DIV-LH6-HEAVY-S2', 'RING-MINIT-CONT', 'P9-CN-MINI-CONT'];

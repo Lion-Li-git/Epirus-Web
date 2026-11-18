@@ -183,6 +183,23 @@ export function buildCoordsView(opts) {
       if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, bRid, cell, hor)); }
       if (av !== undefined && bv !== undefined) set(row, 'C' + cell + 'R' + suf, (Number(av) + Number(bv)) / 2);
     }
+    /* Δε = C_page − C_greedy（2026-11-18 用户定义）：A 贪心 a-v2coop-exam-1118 + B 贪心 b-arena-pl-1118，同协议两半边 */
+    {
+      const W4 = { 2: 0.15, 3: 0.25, 5: 0.45, 8: 0.15 };
+      for (const hz of HORIZONS) {
+        const hor = hz[0];
+        let sw = 0, acc = 0;
+        for (const cell of CELLS) {
+          const ap = get(pid, A, cell, hor), bp = get(pid, B, cell, hor);
+          const ag = get(pid, 'a-v2coop-exam-1118', cell, hor), bg = get(pid, 'b-arena-pl-1118', cell, hor);
+          if (ap !== undefined && bp !== undefined && ag !== undefined && bg !== undefined) {
+            const cp = (Number(ap) + Number(bp)) / 2, cg = (Number(ag) + Number(bg)) / 2;
+            acc += W4[cell] * (cp - cg); sw += W4[cell];
+          }
+        }
+        set(row, hor === 'long' ? 'DeL' : 'De', sw > 0 ? (acc / sw).toFixed(4) : '');
+      }
+    }
     rows.push(row);
   }
   let maxD = 0, mism = 0;

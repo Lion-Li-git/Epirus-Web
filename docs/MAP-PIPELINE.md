@@ -88,3 +88,9 @@
 3. `build-view --compare=<不存在>` 烤新视图 → 拷到 `archive/<gen>/coords-<gen>.tsv`。
 4. `rebuild-map` 的 `--compare` 指向新锚 → 跑全链（100 PASS）。
 5. `node tools/map-audit.mjs` 必过（黄条可接受，红条不许）。
+## 9. 2026-11-18 夜补记（A 贪心 / Delta epsilon / 9 枚缺档）
+
+- **A 轴贪心全量**：999 包 × multi/long × 100 回合、seed=77000、coop=v3，**40.7 分钟**；990 枚成功。9 枚失败全是 status=archived 且 registry 的 path 为空（D1-77000 / C2-77000 / N2-77000 / Q4-77000 / U2-77001 / RC1-77001 / V9-77001 / RW2-77001 / MSB12-seqboom-R1S1308870894），盘上没有 .bak。
+- **新参考尺**：a-v2coop-exam-1118（A，reference）；tools/attach-a-greedy.mjs 接入。exam-4n-full 现在遇缺文件跳过（打印 缺文件），不再算失败、不再 abort 整批。
+- **Delta epsilon 恢复为 C_page − C_greedy**：display 新增 De/DeL 两列（161 列）；build-view 用 A 贪心 a-v2coop-exam-1118 + B 贪心 b-arena-pl-1118 现算（weights 0.15/0.25/0.45/0.15），viewer 卡片重新显示 Delta epsilon（短/长）。9 枚无 A_greedy 的包显示未测，是诚实缺测。
+- **守卫缺口（新发现）**：rebuild-map 的 --compare 只对 exam-view（A/B/C 格）逐值；display 独有列（De/DeL、arR、page 列）不进对照锚，改这些列不会让守卫红。今天的 gen10 就是先烤了空 De 列、补值后 compare 仍报 0。修法列入 P1：对照锚改比 coords-view 的共有数值列。

@@ -586,6 +586,7 @@ const DATA = rows.map(r => ({
   C3L: (r.C3L === '' || r.C3L === undefined) ? null : +r.C3L,
   C5L: (r.C5L === '' || r.C5L === undefined) ? null : +r.C5L,
   C8L: (r.C8L === '' || r.C8L === undefined) ? null : +r.C8L,
+  De: (r.De === '' || r.De === undefined) ? null : +r.De, DeL: (r.DeL === '' || r.DeL === undefined) ? null : +r.DeL,
   /* F2 滚动夹具族（11-11 转正 · 新尺新列族）：P·R = B 轴单侧读数，C·R = (P + P·R)/2 = 现在的显示主尺。
    *   这一族**自带计数列 m·R**（X4T 的"有格"判定读它，不再借 n 族 —— 借别的尺的分母就是 R8 那条"算不出当算过"）。
    *   ⚠ 名单必须显式：DATA 是白名单，表里有列不等于 d 上有字段，漏一个 = 那一格静默变未测。 */
@@ -1704,6 +1705,7 @@ function tip(d) {
         : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
           : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
     '\\n短程四格 ' + H4STR(d, '') + ' ‖ 长程四格 ' + H4STR(d, 'L') + ' ‖ 加权差(长−短) ' + X4D(d) +
+    '\\nΔε(短) ' + (d.De == null ? '未测' : d.De.toFixed(3)) + ' ‖ Δε(长) ' + (d.DeL == null ? '未测' : d.DeL.toFixed(3)) + '（C 页面 − C 贪心）' +
     '\\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')

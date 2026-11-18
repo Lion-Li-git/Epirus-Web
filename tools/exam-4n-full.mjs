@@ -72,6 +72,7 @@ function one(id) {
   const cand = [PATHOF[id], CO_PATH[id], ('docs/artifacts/' + id + '.bak')].filter(Boolean);
   let rel = cand[cand.length - 1];
   for (const c of cand) { if (existsSync(join(ROOT, c))) { rel = c; break; } }
+  if (!existsSync(join(ROOT, rel))) return Promise.resolve({ skip: true, id });
   const a = ['tools/exam-4n.mjs', String(ROUNDS), String(SEED), rel];
   if (MODE) a.push('--mode=' + MODE);
   if (DOSE !== 'exam') a.push('--dose=' + DOSE);
@@ -110,12 +111,13 @@ if (COOP_V) a.push('--coop=' + COOP_V);
       });
   });
 }
-let qi = 0, done = 0, fail = 0;
+let qi = 0, done = 0, fail = 0, skipped = 0;
 async function worker() {
   while (qi < ids.length) {
     const id = ids[qi++];
     const r = await one(id);
     done++;
+    if (r.skip) { skipped++; console.error('  ⏭ 缺文件 ' + id); continue; }
     if (r.err || !r.kv || r.kv.h2 === undefined) { fail++; console.error('  ⛔ ' + id + ' ' + (r.err || '缺 h2')); continue; }
     const row = [id, r.kv.h2, r.kv.h3, r.kv.h5, r.kv.h8, r.kv.x2, r.kv.x3, r.kv.x5, r.kv.x8,
       r.kv.n2, r.kv.n3, r.kv.n5, r.kv.n8, SEED, ROUNDS, MODE || 'multi(默认)', DOSE, r.axis || EXAM, r.kv.pool, r.kv.champ, r.sec, r.kv.skU, r.kv.skE];
@@ -127,7 +129,7 @@ async function worker() {
   const t0 = Date.now();
   console.error('四格考卷批量：名单 ' + ids.length + ' 枚 ‖ rounds=' + ROUNDS + ' seed=' + SEED + (MODE ? ' mode=' + MODE : ' mode=multi(默认)') + ' jobs=' + JOBS);
   await Promise.all(Array.from({ length: JOBS }, worker));
-  console.error('完成 ' + done + ' / 失败 ' + fail + ' ‖ 用时 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟（jobs=' + JOBS + '）⇒ ' + OUT);
+  console.error('完成 ' + done + ' / 失败 ' + fail + ' / 跳过 ' + skipped + ' ‖ 用时 ' + ((Date.now() - t0) / 60000).toFixed(1) + ' 分钟（jobs=' + JOBS + '）⇒ ' + OUT);
   /* 全败必红（11-10 补）：907 枚全败 = 解析器/旗标错，不是'没数据'——不许 exit 0 让 && 链把下一批也跑了 */
   if (done > 0 && fail === done) { console.error('⛔ 全败（' + fail + '/' + done + '）⇒ 解析器或旗标错，响亮失败'); process.exit(1); }
   /* 行序规范化：增量追加的行序 = worker 完成序（跑两遍会不同）⇒ 收尾按 id 排序重写，让产物表自身逐位可复现 */
