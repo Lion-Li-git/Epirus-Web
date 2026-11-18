@@ -18,10 +18,15 @@ const DISP = join(ROOT, 'champion-map/data/display.tsv');
 const WALLS = ['EXTA', 'EXTB', 'EXTC', 'EXTD', 'EXTE'];
 const COLS = ['bpA', 'bpB', 'bpC', 'bpD', 'bpE', 'bpM'];
 
-/* 汇总：per-pack per-wall 均值（跨种子） */
+/* 汇总：per-pack per-wall 均值（跨种子，去重 id|wall|seed） */
 const packs = {};
-for (const l of readFileSync(SRC, 'utf8').trim().split(/\r?\n/).slice(1)) {
+const seen = new Set();
+for (const l of readFileSync(SRC, 'utf8').trim().split(/\r?\n/)) {
+  if (!l || l.startsWith('id\t')) continue;
   const c = l.split('\t');
+  const k = c[0] + '|' + c[1] + '|' + c[2];
+  if (seen.has(k)) continue;
+  seen.add(k);
   if (!packs[c[0]]) packs[c[0]] = {};
   if (!packs[c[0]][c[1]]) packs[c[0]][c[1]] = [];
   packs[c[0]][c[1]].push(+c[7]);

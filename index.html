@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.2 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.3 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -157,29 +157,29 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mwloty53"></script>
-<script src="js/core/state.js?v=mwloty53"></script>
-<script src="js/core/resolve.js?v=mwloty53"></script>
-<script src="js/core/play.js?v=mwloty53"></script>
-<script src="js/train/bots.js?v=mwloty53"></script>
-<script src="js/train/policy.js?v=mwloty53"></script>
-<script src="js/train/policy2.js?v=mwloty53"></script>
-<script src="js/train/evo.js?v=mwloty53"></script>
-<script src="js/train/trainer.js?v=mwloty53"></script>
-<script src="js/bundled-champion.js?v=mwloty53"></script>
-    <script src="js/bundled-champion-3p.js?v=mwloty53"></script>
-<script src="js/champion-pack.js?v=mwloty53"></script>
-<script src="js/pool-draw.js?v=mwloty53"></script>
-<script src="js/ui/skill-tip.js?v=mwloty53"></script>
-<script src="js/ui/bead-choice.js?v=mwloty53"></script>
-<script src="js/ui/rules-panel.js?v=mwloty53"></script>
+<script src="js/core/rules.js?v=mwm0j69a"></script>
+<script src="js/core/state.js?v=mwm0j69a"></script>
+<script src="js/core/resolve.js?v=mwm0j69a"></script>
+<script src="js/core/play.js?v=mwm0j69a"></script>
+<script src="js/train/bots.js?v=mwm0j69a"></script>
+<script src="js/train/policy.js?v=mwm0j69a"></script>
+<script src="js/train/policy2.js?v=mwm0j69a"></script>
+<script src="js/train/evo.js?v=mwm0j69a"></script>
+<script src="js/train/trainer.js?v=mwm0j69a"></script>
+<script src="js/bundled-champion.js?v=mwm0j69a"></script>
+    <script src="js/bundled-champion-3p.js?v=mwm0j69a"></script>
+<script src="js/champion-pack.js?v=mwm0j69a"></script>
+<script src="js/pool-draw.js?v=mwm0j69a"></script>
+<script src="js/ui/skill-tip.js?v=mwm0j69a"></script>
+<script src="js/ui/bead-choice.js?v=mwm0j69a"></script>
+<script src="js/ui/rules-panel.js?v=mwm0j69a"></script>
 <!-- 冠军池：成员权重表，defer（不挡首屏；第一次 AI 决策前必然已执行）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
-<script defer src="js/bundled-champion-pool.js?v=mwloty53"></script>
+<script defer src="js/bundled-champion-pool.js?v=mwm0j69a"></script>
 <!-- 2026-11-13 用户裁定「2p 直接切到统一池」：旧 2P 池 bundle（bundled-champion-pool-2p.js）退役删除——两桌读同一份 js/bundled-champion-pool.js；旧 v7 包（pool-members-2p.tsv 名册）转任 2P 训练对手，不再上页面桌 -->
 <!-- v1.8.45（11-06 晨，用户报"刚进入时 3P 未加载静默回退"）：ui.js 也改 defer，且**排在两份池 bundle 之后** ——
      defer 脚本按文档序执行、全部先于 DOMContentLoaded ⇒ 事件绑定发生时池必然已就位，
      "首屏点击赶在 3MB 池 bundle 解析完之前"的竞态窗口从结构上关死（旧窗口内开局 = 池静默回退成单包）。
      降级提示（万一还有别的路能碰上）在 newGame 的开局日志里响亮记一笔，契约 §4。 -->
-<script defer src="js/ui/ui.js?v=mwloty53"></script>
+<script defer src="js/ui/ui.js?v=mwm0j69a"></script>
 </body>
 </html>

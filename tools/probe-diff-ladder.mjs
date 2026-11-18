@@ -28,11 +28,11 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join, isAbsolute } from 'node:path';
 import { sandbox, mulberry32, ROOT, extractJsonObject, rejectUnknownFlags, loadChamp } from './audit-lib.mjs';
-import { loadPool, makeMimic } from './human-pool.mjs';
+import { loadPool, makeMimic, makeRuleHuman } from './human-pool.mjs';
 import { loadChampParams } from '../training/server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
-rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'extra',
+rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'surrogate', 'extra',
   'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
   'mixseats', 'mixids', 'mixadd', 'epsover', 'livedose', 'breakbank', 'breakfirst'], 'probe-diff-ladder');
 
@@ -42,6 +42,11 @@ const N = Math.max(2, Number(flag('n', 5)) || 5);
 const MODE = flag('mode', 'multi');
 const SEED = Number(flag('seed', 77000));
 const TGT = flag('tgt', 'rand');
+const SURROGATE = (flag('surrogate', 'legacy') || 'legacy').trim();
+if (SURROGATE !== 'legacy' && SURROGATE !== 'rule') {
+  console.error('⛔ --surrogate 只认 legacy|rule（收到 ' + SURROGATE + '）');
+  process.exit(2);
+}
 const PACK = flag('pack', 'auto');
 const ONLY = (flag('tiers', '') || '').split(',').filter(Boolean);
 const QUIET = process.argv.includes('--quiet');
@@ -348,7 +353,7 @@ for (const L of LEVELS) {
     const st = S.createState(MODE, { next: rng }, N);
     st.slotSalt = (Math.floor(rng() * 4294967296)) >>> 0;
     const refSeat = g % N;
-    const mimic = makeMimic(W, humanPool, TGT, mrng);
+    const mimic = SURROGATE === 'rule' ? makeRuleHuman(W, null, mrng) : makeMimic(W, humanPool, TGT, mrng);
     /* 池形态：每局按 `state.slotSalt` 抽一次组成（与页面同一份 `compose`），AI 席按 pid 升序领第 0..n-1 枚 ——
      *   这条顺序与 `js/pool-draw.js` 末尾那句"席位号按升序领"以及 `ui.js` 的 `champForSeat` 同源，不许在这儿另排一次。 */
     let comp = null, seatK = 0;
@@ -401,7 +406,8 @@ function pairedDiff(a, b) {
 }
 
 rows.sort((a, b) => a.pct - b.pct);
-const head = '难度阶梯 · 1 席人类替身(' + TGT + ') vs ' + (N - 1) + ' 席同档 AI · n=' + N + ' · mode=' + MODE +
+const surrTag = SURROGATE === 'rule' ? 'rule·规则理解' : TGT;
+const head = '难度阶梯 · 1 席人类替身(' + surrTag + ') vs ' + (N - 1) + ' 席同档 AI · n=' + N + ' · mode=' + MODE +
   ' · 包=' + pk.tag + ' · ' + GAMES + ' 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强';
 if (QUIET) {
   /* --quiet 只印机器可读的一行（门用它做"阶梯确实分级"的判定，不靠措辞） */

@@ -4,6 +4,18 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.3 — 11-18 下午（**人类替身重做 + 池 22 枚 + B 轴换 Arena 尺 + 5 枚多样性包入图**）
+
+**这一版是什么**：产品侧池 20→22（hard 8 / soft 14），演化图 B 轴从 bp1118 五墙换为 Arena Plackett-Luce 尺，并补入 5 枚多样性包；人类替身新增规则理解型（默认仍 legacy）。
+
+- **人类替身**：`tools/human-pool.mjs` 新增 `makeRuleHuman`（穿反弹/留珠兑现/开局憋环/按威胁排名/残血摄魂与穿透），`probe-diff-ladder --surrogate=legacy|rule`（默认 legacy，旧读数不变）。真机 9 局基线：人类 P1 4/9 胜，而同桌 AI 聚能环 0 次、枪 218 次——旧替身失真的直接证据。
+- **池 20→22**：`OBS6P9-S4000` 入 hard（bpM +0.0847，10r X4m 0.140 / X4l 0.272；seatKill=3，按"点名越过"入池——**该条待用户确认**），`RING-MINIT-CONT` 入 soft（全门 pass，A短 0.298/A长 0.236，珠闭环 73.8%）。bundle 6728 KB；D234 通过（22 枚，0 未量自动成员，4 枚人席未量）。
+- **B 轴换代**：`b-arena-pl-1118`（24 锚 PL 联盟、双程 176 局/包、全图 980 包）成为 current；与 5 席桌战真值 corr **0.628**（旧 bpM 0.537）、与 A 轴正交 **0.010**。bp1118 转 reference；viewer 默认桌形切 long，trends 短长分列。
+- **5 枚入图**：DIV-V3-PRESSURE-S2 / DIV-V3-ANTIDEF / DIV-LH6-HEAVY-S2 / RING-MINIT-CONT / P9-CN-MINI-CONT；map 999 包，`rebuild-map` 100 PASS。
+- **口径说明（重要）**：B 轴 Arena 是**纯贪心 ε=0**（`policyChooserN(params, 0.15)`），不是实机剂量；因此 `P?R` 列不再是 page dose，Δε 的配对半边不存在，viewer 对 arena / bp1118-long 显示"未测"（是缺数据，不是零）。
+- **已知边界**：rule 替身下 multi 仍是 困难 18.7 < 简单 21.0 < 普通 21.3（普通档最软，只修好了困难）；`page/coords.tsv` 仍 994 行，5 枚新包只在 coords-view / 页面里。
+- **版本**：`v2.1.2 → v2.1.3`。
+
 ## v2.1.2 — 11-18（**池 hard 补到 7 枚：8 人局 7 席可全不同**）
 
 **这一版是什么**：只动池分带；规则、权重、2P 收缩都不变。

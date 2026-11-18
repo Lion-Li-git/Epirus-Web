@@ -126,10 +126,11 @@ function chart(title, keys) {
     const dash = ki === 1 ? ' stroke-dasharray="9 6"' : '';
     s += '<polyline fill="none" stroke="' + COL[key] + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"' + dash + ' points="' + pts.map(p => xAt(p[0]).toFixed(1) + ',' + yOf(p[1]).toFixed(1)).join(' ') + '"/>';
   });
+  const SER_LABEL = { P5: 'P5（短·实线）', P5L: 'P5L（长·虚线）', P5R: 'P5R（短·Arena B轴）', P5RL: 'P5RL（长·Arena B轴）', C5R: 'C5R（短·(A+Arena)/2）', C5RL: 'C5RL（长·(A+Arena)/2）' };
   keys.forEach((key, ki) => {
-    const x = W - 330 + ki * 150, y = 24;
+    const x = W - 430 + ki * 200, y = 24;
     s += '<line x1="' + x + '" x2="' + (x + 28) + '" y1="' + y + '" y2="' + y + '" stroke="' + COL[key] + '" stroke-width="3"' + (ki === 1 ? ' stroke-dasharray="9 6"' : '') + '/>';
-    s += '<text x="' + (x + 36) + '" y="' + (y + 4) + '" fill="#dce6f5" font-size="12">' + key + (ki === 0 ? '（短·实线）' : '（长·虚线）') + '</text>';
+    s += '<text x="' + (x + 36) + '" y="' + (y + 4) + '" fill="#dce6f5" font-size="12">' + (SER_LABEL[key] || key) + '</text>';
   });
   return s + '</svg>';
 }
@@ -153,9 +154,9 @@ function summary(keys) {
 const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>Epirus 考卷 A/B/C 趋势</title>' +
 '<style>body{margin:0;background:#0f1522;color:#dce6f5;font:13px system-ui,"Microsoft YaHei",sans-serif}main{max-width:1280px;margin:0 auto;padding:18px 20px 40px}h1{font-size:20px;margin:0 0 6px}a{color:#9fc3ff;text-decoration:none}.sub{color:#9fb0cc;line-height:1.7;margin-bottom:14px}.card{background:#131a29;border:1px solid #33415c;border-radius:8px;padding:10px 12px;margin:12px 0}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #2a3446;padding:5px 8px;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#9fb0cc;font-weight:500}.note{color:#9fb0cc;font-size:12px;line-height:1.6}</style></head><body><main>' +
 '<h1>Epirus 考卷 A/B/C 趋势</h1><div class="sub">LOWESS span=0.08（局部线性 + 2 次稳健迭代）· x = 点序（每点一枚，按 ts 排序）· 数据 data/display.tsv（' + N + ' 枚）· <a href="index.html">← 返回冠军查看器</a></div>' +
-'<div class="note">A = ' + aLabel + '（P5/P5L）‖ B = ' + bLabel + '（P5R/P5RL）‖ C = (A+B)/2。H5 是冻结旧参考，不在此图。x 不按时间留空，训练空档不会被拉平。</div>' +
+'<div class="note">A = ' + aLabel + '（P5/P5L）‖ B = ' + bLabel + '（P5R/P5RL 同源双程）‖ C = (A+B)/2。H5 是冻结旧参考，不在此图。x 不按时间留空，训练空档不会被拉平。</div>' +
 '<div class="card"><h2>A 轴 · ' + aLabel + '</h2>' + chart('A：P5（短）/ P5L（长）', ['P5','P5L']) + '</div>' +
-'<div class="card"><h2>B 轴 · ' + bLabel + '</h2>' + chart('B：P5R（短）/ P5RL（长）', ['P5R','P5RL']) + '</div>' +
+'<div class="card"><h2>B 轴 · ' + bLabel + '</h2>' + chart('B：P5R（短·Arena）/ P5RL（长·Arena）', ['P5R','P5RL']) + '</div>' +
 '<div class="card"><h2>C 轴 · 综合</h2>' + chart('C：C5R（短）/ C5RL（长）', ['C5R','C5RL']) + '</div>' +
 '<div class="card"><h2>首尾 25% 与斜率（每 100 点）</h2><table><thead><tr><th>列</th><th>early</th><th>late</th><th>Δ</th><th>slope/100</th></tr></thead><tbody>' + summary(SER) + '</tbody></table></div>' +
 '<div class="note">实线 = 短程，虚线 = 长程；曲线 = LOWESS span 0.08，保留局部起伏但不画原始噪声。</div>' +

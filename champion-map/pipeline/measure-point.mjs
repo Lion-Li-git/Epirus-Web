@@ -55,8 +55,19 @@ const curRuler = (axis) => {
  *   add-point 对 frozen 尺拒写；换尺后这里就是唯一要跟的地方。 */
 const RID_A = curRuler('A'), RID_B = curRuler('B'), RID_X = curRuler('X');
 const bRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.status] === 'current');
+const bShortRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.ruler_id] === 'b-f5-page-1114') || bRow;
+const RID_B_SHORT = String(bShortRow[rul.ix.ruler_id]);
 const F2 = bRow[rul.ix.fixture];
-const F2ARG = F2.replace(/x\d+$/, '').split('+').join(',');
+const F2_SHORT = bShortRow[rul.ix.fixture];
+const F2ARG = F2_SHORT.replace(/x\d+$/, '').split('+').join(',');
+const BP_WALLS = /bp1118/.test(RID_B) ? {
+  EXTA: 'MSB11-R2S306293884,MX6-GD-TF15,MX8-TN25-KL,MSB15R-HITMIX,OBS6-LH6P',
+  EXTB: 'MSB14-railgun-R1S175656469,MX3-GDEQ-GD,MX8-R6B-KL,OBS6-SHAPEDIST-V3S2,OBS6P4-S4000',
+  EXTC: 'MSB11-R2S306293884,MSB14-railgun-R1S175656469,MSB15R-HITMIX,MX6-GD-TF15,OBS6-LH6P',
+  EXTD: 'MSB15R-HITMIX,WSEL9-200,OBS6-LH6P,MX8-TN25-KL,MX1-GD-EQ',
+  EXTE: 'DEF-s16,EQ-S4-GD6ATEACH,MX3-GDEQ-GD,MX8-TN25-KL,MX5-GD-T2STR',
+} : null;
+const ARENA_B = /arena/.test(RID_B);
 const rel = PACK.replace(ROOT + '\\', '').replace(/\\/g, '/');
 const extra = join(ST, ID + '-extra.tsv'), only = join(ST, ID + '-only.txt');
 if (!DRY) {
@@ -75,8 +86,10 @@ const ex = (tag, mode, axis, dose, extraArgs) => {
 ex('a-multi', 'multi', 'A', 'page', ['--coop=v3']);
 if (!SKIP_LONG) ex('a-long', 'long', 'A', 'page', ['--coop=v3']);
 if (!SKIP_B) {
-  ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
-  if (!SKIP_LONG) ex('b-long', 'long', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
+  if (!ARENA_B) {
+    ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
+    if (!SKIP_LONG && !BP_WALLS) ex('b-long', 'long', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
+  }
   ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
   if (!SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
 }
@@ -120,6 +133,45 @@ if (!FROM_STAGING) {
           console.error('⛔ ' + r.tag + ' 失败：' + String(e.message || e).slice(0, 300));
           process.exit(2);
         }
+      });
+    }
+    if (!SKIP_B && !SKIP_LONG && BP_WALLS && (!REUSE || !hasFile(join(ST, ID + '-b-long.tsv')))) {
+      const bpRows = [];
+      for (const [fn, champs] of Object.entries(BP_WALLS)) {
+        for (const sd of ['77000', '77001']) {
+          tasks.push(async () => {
+            const { stdout } = await execFileP('node', ['tools/exam-4n.mjs', '6', sd, rel, '--exam=B', '--mode=long', '--champ=' + champs], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+            const line = stdout.split('\n').filter((l) => l.startsWith('[冠军4N-B]')).pop();
+            if (!line) throw new Error('bp1118 无 B 行：' + fn + '/' + sd);
+            const get = (k) => { const m = line.match(new RegExp('[ hnxpkc]' + k + '=([^ ]+)')); return m ? Number(m[1]) : NaN; };
+            bpRows.push({ wall: fn, seed: sd, x2: get('x2'), x3: get('x3'), x5: get('x5'), x8: get('x8'), n2: get('n2'), n3: get('n3'), n5: get('n5'), n8: get('n8') });
+          });
+        }
+      }
+      /* 任务池跑完后在下方按 5 墙均值落 b-long.tsv */
+      var _bpRows = bpRows;
+    }
+    if (!SKIP_B && ARENA_B && (!REUSE || !hasFile(join(ST, ID + '-b-multi.tsv')) || !hasFile(join(ST, ID + '-b-long.tsv')))) {
+      tasks.push(async () => {
+        const { stdout } = await execFileP('node', ['tools/arena-eval.mjs', '--pack=' + rel, '--id=' + ID], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+        const ar = JSON.parse(stdout.trim().split('\n').pop());
+        for (const [tag, mode, obj] of [['b-multi', 'multi', ar.short], ['b-long', 'long', ar.long]]) {
+          const c = obj.cells;
+          const row = [ID, '', '', '', '', c[2].x.toFixed(4), c[3].x.toFixed(4), c[5].x.toFixed(4), c[8].x.toFixed(4),
+            c[2].n, c[3].n, c[5].n, c[8].n, '82200', '1', mode, 'exam', 'B', 'arena24', 'ARENA24-PL-1118', '0'];
+          writeFileSync(join(ST, ID + '-' + tag + '.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
+        }
+        const metaAr = { arS: ar.short.x4.toFixed(4), arL: ar.long.x4.toFixed(4), arR: ar.rAll.toFixed(4) };
+        writeFileSync(join(ST, ID + '-bp.json'), JSON.stringify(metaAr) + '\n', 'utf8');
+        if (!NO_ADD) {
+          const arFile = join(HERE, 'data/exam4n-arena-1118.tsv');
+          const prev = existsSync(arFile) ? readFileSync(arFile, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').filter((l) => l && !l.startsWith(ID + '\t')) : [];
+          const rowLine = [ID, ar.short.cells[2].x.toFixed(4), ar.short.cells[3].x.toFixed(4), ar.short.cells[5].x.toFixed(4), ar.short.cells[8].x.toFixed(4), ar.short.x4.toFixed(4),
+            ar.long.cells[2].x.toFixed(4), ar.long.cells[3].x.toFixed(4), ar.long.cells[5].x.toFixed(4), ar.long.cells[8].x.toFixed(4), ar.long.x4.toFixed(4),
+            ar.rAll.toFixed(4), ar.short.r.toFixed(4), ar.long.r.toFixed(4)].join('\t');
+          writeFileSync(arFile, prev.concat([rowLine]).join('\n') + '\n', 'utf8');
+        }
+        console.log('—— arena-b —— arS=' + metaAr.arS + ' arL=' + metaAr.arL + ' arR=' + metaAr.arR);
       });
     }
   } else console.log('↷ 复用外部 readings：' + basename(EXT_READINGS));
@@ -169,6 +221,32 @@ if (!FROM_STAGING) {
     });
   }
   await runPool(tasks, JOBS, (fn) => fn());
+  if (typeof _bpRows !== 'undefined' && _bpRows.length) {
+    const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+    const walls = Object.keys(BP_WALLS);
+    const byCell = {};
+    const nSum = { 2: 0, 3: 0, 5: 0, 8: 0 };
+    for (const r of _bpRows) for (const c of [2, 3, 5, 8]) nSum[c] += r['n' + c];
+    for (const c of [2, 3, 5, 8]) {
+      byCell['x' + c] = mean(walls.map((w) => mean(_bpRows.filter((r) => r.wall === w).map((r) => r['x' + c])))).toFixed(4);
+    }
+    const xbWall = {};
+    for (const w of walls) {
+      const wr = _bpRows.filter((r) => r.wall === w);
+      xbWall['bp' + w.slice(3)] = mean(wr.map((r) => 0.15 * r.x2 + 0.25 * r.x3 + 0.45 * r.x5 + 0.15 * r.x8)).toFixed(4);
+    }
+    xbWall.bpM = mean(walls.map((w) => Number(xbWall['bp' + w.slice(3)]))).toFixed(4);
+    const row = [ID, '', '', '', '', byCell.x2, byCell.x3, byCell.x5, byCell.x8, nSum[2], nSum[3], nSum[5], nSum[8], '77000+77001', '6', 'long', 'exam', 'B', 'v2', 'EXTA..EXTE', '0'];
+    writeFileSync(join(ST, ID + '-b-long.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
+    writeFileSync(join(ST, ID + '-bp.json'), JSON.stringify(xbWall) + '\n', 'utf8');
+    if (!NO_ADD) {
+      const bpFile = join(HERE, 'data/exam4n-bp-1118.tsv');
+      const prev = existsSync(bpFile) ? readFileSync(bpFile, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').filter((l) => l && !l.startsWith(ID + '\t')) : [];
+      const addLines = _bpRows.map((r) => [ID, r.wall, r.seed, r.x2, r.x3, r.x5, r.x8, (0.15 * r.x2 + 0.25 * r.x3 + 0.45 * r.x5 + 0.15 * r.x8).toFixed(4)].join('\t'));
+      writeFileSync(bpFile, prev.concat(addLines).join('\n') + '\n', 'utf8');
+    }
+    console.log('—— b-long(bp1118) —— bpM=' + xbWall.bpM + ' (' + walls.map((w) => w + ':' + xbWall['bp' + w.slice(3)]).join(' ') + ')');
+  }
 }
 const cell = [2, 3, 5, 8];
 const rdFile = EXT_READINGS || join(ST, ID + '-readings.tsv');
@@ -190,7 +268,7 @@ if (EXT_READINGS) {
     for (const c of cell) {
       const x = row[t.ix['x' + c]], n = row[t.ix['n' + c]];
       if (x === undefined || x === '') continue;
-      const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : RID_X;
+      const rid = axis === 'a' ? RID_A : axis === 'b' ? ((horizon === 'multi' && BP_WALLS) ? RID_B_SHORT : RID_B) : RID_X;
       const hor = horizon === 'multi' ? 'short' : 'long';
       rd.push([rid, String(c), hor, x, n]);
       if (axis !== 'x') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
@@ -223,6 +301,11 @@ if (EXT_DISPLAY) {
     if (vals['a' + c + 'L'] !== undefined && vals['b' + c + 'L'] !== undefined) setD('C' + c + 'RL', (Number(vals['a' + c + 'L']) + Number(vals['b' + c + 'L'])) / 2);
   }
   setD('examG', fr[ft.ix.examG] || '120');
+  const bpJson = join(ST, ID + '-bp.json');
+  if (hasFile(bpJson)) {
+    const bpObj = JSON.parse(readFileSync(bpJson, 'utf8'));
+    for (const [k, v] of Object.entries(bpObj)) setD(k, v);
+  }
   /* 新点不写 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账；
    *   当前页面名次由 viewer 按 C·R 重算，新点没有“旧尺出厂名次”。旧 926 行保留历史值。 */
   /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */

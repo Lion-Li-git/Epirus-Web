@@ -267,3 +267,8 @@ TZ2C	fail	2		31
 RINGB11	pass	—			
 TZPUR	fail	2	16		
 TZT2D	pass	—			
+DIV-V3-PRESSURE-S2	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate			
+DIV-V3-ANTIDEF	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate			
+DIV-LH6-HEAVY-S2	block	field-a,breadth-multi,behavior-gate			
+RING-MINIT-CONT	pass	—			
+P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate			

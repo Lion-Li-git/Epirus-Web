@@ -71,3 +71,10 @@ measure-TZ2C	a-v2-page-1109	A	-	-	measure-TZ2C	TZ2C-readings.tsv	24	2026-11-17T2
 measure-TZPUR	a-v2-page-1109	A	-	-	measure-TZPUR	TZPUR-readings.tsv	24	2026-11-17T23:24:44.651Z	add-point
 measure-TZT2D	a-v2-page-1109	A	-	-	measure-TZT2D	TZT2D-readings.tsv	24	2026-11-17T23:26:12.459Z	add-point
 measure-RINGB11	a-v2-page-1109	A	-	-	measure-RINGB11	RINGB11-readings.tsv	24	2026-11-17T23:42:26.400Z	add-point
+b-bp1118-long-1118	b-bp1118-long-1118	B	EXTA+EXTB+EXTC+EXTD+EXTE	5墙混合(EXTA..EXTE)	1118	champion-map/data/exam4n-bp-1118.tsv	975	2026-11-18	2026-11-18 夜3 GLM 全图5墙B轴重测（--exam=B --mode=long · 975 枚）
+measure-DIV-V3-PRESSURE-S2	a-v2-page-1109	A	-	-	measure-DIV-V3-PRESSURE-S2	DIV-V3-PRESSURE-S2-readings.tsv	24	2026-11-18T08:20:58.429Z	add-point
+measure-DIV-V3-ANTIDEF	a-v2-page-1109	A	-	-	measure-DIV-V3-ANTIDEF	DIV-V3-ANTIDEF-readings.tsv	24	2026-11-18T08:27:17.043Z	add-point
+measure-DIV-LH6-HEAVY-S2	a-v2-page-1109	A	-	-	measure-DIV-LH6-HEAVY-S2	DIV-LH6-HEAVY-S2-readings.tsv	24	2026-11-18T08:33:23.921Z	add-point
+measure-RING-MINIT-CONT	a-v2-page-1109	A	-	-	measure-RING-MINIT-CONT	RING-MINIT-CONT-readings.tsv	24	2026-11-18T08:38:33.905Z	add-point
+measure-P9-CN-MINI-CONT	a-v2-page-1109	A	-	-	measure-P9-CN-MINI-CONT	P9-CN-MINI-CONT-readings.tsv	24	2026-11-18T08:44:12.326Z	add-point
+b-arena-pl-1118	b-arena-pl-1118	B	ARENA24-PL-1118	24锚多元联盟(multi+long统一)	1118	champion-map/data/exam4n-arena-1118.tsv	980	2026-11-18	2026-11-18 多人 Plackett-Luce Arena 全库评估（980 枚 × 176 局 × multi+long 双桌统一）

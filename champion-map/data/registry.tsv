@@ -993,3 +993,8 @@ TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	25	2.0 obs6.5 键道/覆盖训�
 TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:24:44.651Z	662ed5464d25bb04e7631b36b1fe418ae9478c247896f7c4be897419f53294a5	active
 TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active
 RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-17T23:42:26.400Z	7fab176c216212d7ab1e60bf91346a76e6066a62c2a9e2845a3b36a2bb7b6a34	active
+DIV-V3-PRESSURE-S2	docs/artifacts/obs6-coldstart/DIV-V3-PRESSURE-S2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-18T08:20:58.429Z	ffa814a7dcf954902c8019bc3dfbe8d640ed47d58d5eaed0bc92801ba682616b	active
+DIV-V3-ANTIDEF	docs/artifacts/obs6-coldstart/DIV-V3-ANTIDEF.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-18T08:27:17.043Z	a70ab72c50f2a93565f1da60010ef6fe1addf59b4e3add6f4a14c64df380efb3	active
+DIV-LH6-HEAVY-S2	docs/artifacts/obs6-coldstart/DIV-LH6-HEAVY-S2.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-18T08:33:23.921Z	8c764a60596a53e1be88cf35c6fe5fa7551db5ee09394761678ea400933e47ed	active
+RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-18T08:38:33.905Z	5c0ed7bd5209cad303c7eafbb5d1181d45e8d924b67cb76513eb1d97fa93b1fd	active
+P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-18T08:44:12.326Z	821d5ca3bd98c04d4ad26b1492f54a2ae7fcf398ef820ae78bf0318edbec8219	active

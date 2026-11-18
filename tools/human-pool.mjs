@@ -78,6 +78,192 @@ export function makeMimic(W, pool, tgt, rnd) {
   return fn;
 }
 
+/* 规则理解型人类替身（§2026-11-18）：结合规则真值（穿透/反弹/全息/大雷/蓄能珠/净化/过载炮相位）与
+ * `results/obs6.5/*.txt` 真人对局分布（前 3 手蓄能不乱枪、ep≥3 且局面安全时开聚能环连滚、优先狙杀/落雷
+ * 压制高 ep 与开环席、有珠优先兑现、残血/面对高 ep 威胁时按针对架势或避雷针设防）。
+ * ⚠ 不修改 `makeMimic` 口径，门 D209 与既有读数链不受影响。 */
+export function makeRuleHuman(W, opts, rnd) {
+  const R = W.EpirusRules;
+  const SK = R.SK;
+  const GUARD_SET = new Set(R.GUARD_FAMILY || [SK.GUARD, SK.REFLECT, SK.BAGUA, SK.SHIFT, SK.JINSHIELD, SK.ARMOR, SK.PROTO, SK.HOLO]);
+  const SOFT_GUARD = new Set([SK.GUARD, SK.BAGUA, SK.SHIFT, SK.JINSHIELD]);
+  const REFLECT_SET = new Set([SK.REFLECT, SK.ARMOR]);
+  const MINI_IMMUNE = new Set(R.MINI_T_IMMUNE || [SK.GUARD, SK.REFLECT, SK.PROTO]);
+  const cfg = Object.assign({ ringBias: 0.78, rodBias: 0.65, chargeBias: 0.45 }, opts || {});
+  const rand = typeof rnd === 'function' ? rnd : Math.random;
+  const st = { hits: {}, total: 0 };
+  const ret = function (key, target, target2, bead) {
+    st.total++;
+    st.hits[key] = (st.hits[key] || 0) + 1;
+    return { key, target: target == null ? null : target, target2: target2 == null ? null : target2, bead: bead || null };
+  };
+
+  const fn = function (state, pid, legal) {
+    const me = state && state.p && state.p[pid];
+    if (!me) return ret(SK.JI);
+    const ok = {};
+    for (const l of (legal || [])) if (l && l.affordable) ok[l.key] = l;
+    const aff = function (k) { return !!ok[k]; };
+    const opps = [];
+    for (let i = 0; i < state.p.length; i++) {
+      const q = state.p[i];
+      if (i !== pid && q && q.hp > 0) opps.push(q);
+    }
+    if (!opps.length) return ret(SK.JI);
+
+    const threatOf = function (q) {
+      let s = (q.ringStreak || 0) * 6 + (q.ep || 0) * 1.25 + ((q.elec || 0) ? 5 : 0) + ((q.boom || 0) ? 3 : 0);
+      if (q.hp >= 4) s += 2;
+      if (q.lastTarget === pid) s += 2;
+      if ((q.stickers || []).length > 0) s += 0.5;
+      return s;
+    };
+    const ranked = opps.slice().sort(function (a, b) {
+      return (threatOf(b) + rand() * 0.35) - (threatOf(a) + rand() * 0.35);
+    });
+    const topThreat = ranked[0];
+    const hp1 = ranked.filter(function (q) { return q.hp <= 1; });
+    const hp2 = ranked.filter(function (q) { return q.hp <= 2; });
+    let maxFoeEp = 0, richFoes = 0, bigTFoes = 0, elecFoes = 0, guardFoes = 0, aimedAtMe = 0;
+    for (const q of opps) {
+      const e = q.ep || 0;
+      if (e > maxFoeEp) maxFoeEp = e;
+      if (e >= 2 || (q.elec || 0) > 0 || (q.boom || 0) > 0) richFoes++;
+      if (e >= 5) bigTFoes++;
+      if ((q.elec || 0) > 0) elecFoes++;
+      if (GUARD_SET.has(q.lastSkill)) guardFoes++;
+      if (q.lastTarget === pid && (e >= 1 || (q.elec || 0) > 0)) aimedAtMe++;
+    }
+    const maxFoeHp = opps.reduce(function (m, q) { return Math.max(m, q.hp || 0); }, 0);
+    const myStickers = (function () {
+      let n = 0;
+      for (const q of opps) for (const s of (q.stickers || [])) if (s && s.owner === pid) n++;
+      return n;
+    })();
+    const disabledAny = me.cooldown && Object.keys(me.cooldown).some(function (k) { return (me.cooldown[k] || 0) > 0; });
+    const cannonPhase = ((me.cannonCount || 0) % 3) + 1;
+
+    /* ① 被挑衅时必须打合法进攻卡指向挑衅者 */
+    if (me.tauntActive) {
+      const taunter = (me.tauntBy && me.tauntBy.find(function (id) { return state.p[id] && state.p[id].hp > 0; })) ?? topThreat.id;
+      const tObj = state.p[taunter] || topThreat;
+      const order = [SK.LASER_EYE, SK.RAILGUN, SK.SNIPE, SK.TANK, SK.SWORD, SK.CANNON, SK.DRAIN, SK.GUN];
+      for (const k of order) {
+        if (!aff(k)) continue;
+        if (k === SK.GUN && GUARD_SET.has(tObj.lastSkill)) continue;
+        if (k === SK.TANK && REFLECT_SET.has(tObj.lastSkill)) continue;
+        return ret(k, tObj.id);
+      }
+      if (aff(SK.DUAL_GUN) && ranked.length >= 2) {
+        const second = ranked.find(function (q) { return q.id !== tObj.id; }) || ranked[1];
+        return ret(SK.DUAL_GUN, tObj.id, second.id);
+      }
+    }
+
+    /* ② 净化清负态/符咒 */
+    if (aff(SK.PURIFY) && ((me.stickers || []).length >= 2 || ((me.stickers || []).length >= 1 && (me.hp <= 2 || disabledAny)))) {
+      return ret(SK.PURIFY);
+    }
+
+    /* ③ 残血与斩杀机会（HP<=1 优先摄魂/穿透收人头） */
+    if (hp1.length) {
+      for (const t of hp1) {
+        if (t.lastSkill === SK.PROTO || t.lastSkill === SK.HOLO) continue;
+        if (me.hp < maxFoeHp && aff(SK.DRAIN)) return ret(SK.DRAIN, t.id);
+        if (aff(SK.SNIPE) && (REFLECT_SET.has(t.lastSkill) || SOFT_GUARD.has(t.lastSkill) || (me.ep || 0) >= 3)) return ret(SK.SNIPE, t.id);
+        if (aff(SK.SWORD) && !SOFT_GUARD.has(t.lastSkill) && !REFLECT_SET.has(t.lastSkill)) return ret(SK.SWORD, t.id);
+        if (aff(SK.GUN) && !GUARD_SET.has(t.lastSkill)) return ret(SK.GUN, t.id);
+        if (aff(SK.TANK) && !REFLECT_SET.has(t.lastSkill)) return ret(SK.TANK, t.id);
+      }
+    }
+
+    /* ④ 有能量珠优先兑现（珠回合末清零，过期浪费） */
+    if ((me.elec || 0) > 0 && aff(SK.RAILGUN)) {
+      const t = hp2.find(function (q) { return q.lastSkill !== SK.PROTO && q.lastSkill !== SK.HOLO; })
+        || ranked.find(function (q) { return q.lastSkill !== SK.PROTO && q.lastSkill !== SK.HOLO; })
+        || topThreat;
+      return ret(SK.RAILGUN, t.id);
+    }
+    if ((me.boom || 0) > 0 && aff(SK.LASER_EYE)) {
+      const guarded = ranked.find(function (q) { return GUARD_SET.has(q.lastSkill); }) || topThreat;
+      return ret(SK.LASER_EYE, guarded.id);
+    }
+
+    /* ⑤ 压制聚能环/大雷威胁与引爆贴符 */
+    if (aff(SK.FIRESTORM) && myStickers >= 2) return ret(SK.FIRESTORM);
+    if (aff(SK.BIG_T) && ((me.ringStreak || 0) === 0 || (me.ep || 0) >= 8 || hp2.length > 0)) {
+      const btTarget = hp2[0] || ranked.find(function (q) { return (q.ringStreak || 0) >= 1 || (q.ep || 0) >= 3; }) || topThreat;
+      return ret(SK.BIG_T, btTarget.id);
+    }
+    const channeller = ranked.find(function (q) { return (q.ringStreak || 0) >= 2 && !MINI_IMMUNE.has(q.lastSkill); });
+    if (aff(SK.MINI_T) && channeller && (me.ep || 0) >= 5 && (me.ringStreak || 0) === 0) {
+      return ret(SK.MINI_T, channeller.id);
+    }
+
+    /* ⑥ 避雷针与针对性保命（仅在残血/真被针对时防，避免无意义龟缩连防） */
+    if (aff(SK.ROD) && (bigTFoes >= 1 || elecFoes >= 1) && !(me.rodTurns > 0) && me.hp <= 2 && rand() < cfg.rodBias) {
+      return ret(SK.ROD);
+    }
+    if (me.hp <= 1 && richFoes >= 1 && (aimedAtMe >= 1 || bigTFoes >= 1 || rand() < 0.55)) {
+      const defOrder = bigTFoes > 0 ? [SK.PROTO, SK.REFLECT, SK.GUARD, SK.SHIFT, SK.BAGUA]
+        : [SK.PROTO, SK.REFLECT, SK.SHIFT, SK.BAGUA, SK.GUARD];
+      for (const dk of defOrder) if (aff(dk)) return ret(dk);
+    }
+    if (me.hp <= 2 && (aimedAtMe >= 1 || bigTFoes >= 1) && (me.ringStreak || 0) === 0 && me.lastSkill !== SK.REFLECT && rand() < 0.35) {
+      const defOrder2 = bigTFoes > 0 ? [SK.PROTO, SK.REFLECT, SK.GUARD] : [SK.REFLECT, SK.BAGUA];
+      for (const dk of defOrder2) if (aff(dk)) return ret(dk);
+    }
+
+    /* ⑦ 真人聚能环节奏：安全时开环连滚到 5 环/12ep 封顶，开局不乱放枪，攒钱开环或蓄能 */
+    if ((me.ringStreak || 0) >= 1 && (me.ringStreak || 0) < 5 && (me.ep || 0) < 12 && aff(SK.RING)) {
+      return ret(SK.RING);
+    }
+    if ((me.ringStreak || 0) === 0 && (me.ep || 0) >= 3 && (me.ep || 0) <= 6 && me.hp >= 2 && aimedAtMe <= 1 && aff(SK.RING) && rand() < cfg.ringBias) {
+      return ret(SK.RING);
+    }
+    if ((me.ringStreak || 0) === 0 && (me.ep || 0) < 3 && me.hp >= 2 && aimedAtMe === 0 && !hp1.length && aff(SK.JI)) {
+      return ret(SK.JI);
+    }
+
+    /* ⑧ 蓄能、地雷、过载炮与常规穿透进攻（避免空 ep 乱点枪自断经济） */
+    if (!(me.elec || 0) && !(me.boom || 0) && (me.ep || 0) >= 3 && aff(SK.CHARGE) && rand() < cfg.chargeBias) {
+      const bead = guardFoes >= 2 ? 'boom' : 'elec';
+      return ret(SK.CHARGE, null, null, bead);
+    }
+    if (aff(SK.MINE) && !(me.mine) && me.hp >= 3 && (me.ep || 0) >= 5 && richFoes >= 1 && rand() < 0.35) {
+      return ret(SK.MINE);
+    }
+    if (aff(SK.CANNON) && (me.ep || 0) >= 4) {
+      if (cannonPhase === 1 && !SOFT_GUARD.has(topThreat.lastSkill) && topThreat.lastSkill !== SK.PROTO) return ret(SK.CANNON, topThreat.id);
+    }
+    if (aff(SK.CANNON) && cannonPhase === 2 && (me.ep || 0) === 1 && topThreat.lastSkill !== SK.PROTO) return ret(SK.CANNON, topThreat.id);
+    if (aff(SK.CANNON) && cannonPhase === 3 && (me.ep || 0) === 0 && me.hp > 1) {
+      const rich = ranked.find(function (q) { return (q.ep || 0) >= 3 && q.lastSkill !== SK.PROTO; });
+      if (rich) return ret(SK.CANNON, rich.id);
+    }
+    if (aff(SK.DUAL_GUN) && ranked.length >= 2) {
+      const clean = ranked.filter(function (q) { return !REFLECT_SET.has(q.lastSkill) && !GUARD_SET.has(q.lastSkill); });
+      if (clean.length >= 2 && (me.ep || 0) >= 4 && rand() < 0.45) return ret(SK.DUAL_GUN, clean[0].id, clean[1].id);
+    }
+    if (aff(SK.SNIPE) && ((topThreat.ringStreak || 0) >= 1 || REFLECT_SET.has(topThreat.lastSkill) || SOFT_GUARD.has(topThreat.lastSkill) || (me.ep || 0) >= 4)) {
+      if (topThreat.lastSkill !== SK.PROTO && topThreat.lastSkill !== SK.HOLO) return ret(SK.SNIPE, topThreat.id);
+    }
+    if (aff(SK.SWORD) && !SOFT_GUARD.has(topThreat.lastSkill) && topThreat.lastSkill !== SK.PROTO && ((me.ep || 0) >= 4 || REFLECT_SET.has(topThreat.lastSkill))) {
+      return ret(SK.SWORD, topThreat.id);
+    }
+    if (aff(SK.TANK) && !REFLECT_SET.has(topThreat.lastSkill) && topThreat.lastSkill !== SK.PROTO && (SOFT_GUARD.has(topThreat.lastSkill) || (me.ep || 0) >= 4)) {
+      return ret(SK.TANK, topThreat.id);
+    }
+    if (aff(SK.GUN) && !GUARD_SET.has(topThreat.lastSkill) && ((me.ep || 0) >= 4 || (topThreat.ringStreak || 0) >= 1)) {
+      return ret(SK.GUN, topThreat.id);
+    }
+    if (aff(SK.JI)) return ret(SK.JI);
+    return ret((legal && legal[0] && legal[0].key) || SK.JI);
+  };
+  fn.stats = st;
+  return fn;
+}
+
 /* ---- 自证夹具（门 D209 跑它；形状照 D202/D203 的规矩：合成输入 + 手算值，不跑真引擎 ⇒ <1 秒） ---- */
 export function selfTest(mulberry32) {
   const errs = [];

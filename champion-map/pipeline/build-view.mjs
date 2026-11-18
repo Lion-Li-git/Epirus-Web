@@ -35,13 +35,14 @@ export function buildView(opts) {
   opts = opts || {};
   const data = resolve(opts.data || 'champion-map/data');
   /* 对照锚 = 上一代烤好的视图（换尺时新建 gen 锚并同步改这里的默认 + rebuild-map 的硬编码；gen3-1105 留档） */
-  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv');
+  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-18-arena/coords-gen6-arena-1118.tsv');
   const reg = readTable(join(data, 'registry.tsv'));
   const rd = readTable(join(data, 'readings/current.tsv'));
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
-  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（11-13 起在册；没有该尺行会响亮报错——不许静默缺族） */
+  const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
+  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（没有该尺行会响亮报错——不许静默缺族） */
   for (const c of ['pack_id', 'ruler_id', 'cell', 'horizon', 'value']) if (rd.ix[c] === undefined) throw new Error('readings 缺列 ' + c);
   const vals = new Map(), nvals = new Map();
   for (const r of rd.rows) {
@@ -64,7 +65,8 @@ export function buildView(opts) {
     for (const h of HORIZONS) for (const c of CELLS) {
       const suf = h[1];
       const av = v[A + '|' + c + '|' + h[0]];
-      const bv = v[B + '|' + c + '|' + h[0]];
+      const bv = v[B + '|' + c + '|' + h[0]] !== undefined ? v[B + '|' + c + '|' + h[0]]
+        : (h[0] === 'short' && B_SHORT ? v[B_SHORT + '|' + c + '|' + h[0]] : undefined);
       const xv = v[X + '|' + c + '|' + h[0]];
       const xn = vn[X + '|' + c + '|' + h[0]];
       const ai = HEAD.indexOf('P' + c + suf), bi = HEAD.indexOf('P' + c + 'R' + suf), ci = HEAD.indexOf('C' + c + 'R' + suf);
@@ -152,6 +154,7 @@ export function buildCoordsView(opts) {
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
+  const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
   const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（值 X<c>R(L) + 计数 n<c>R(L)，viewer DE4 的查找键） */
   const head = tpl.header.slice();
   const ix = Object.fromEntries(head.map((h, i) => [h, i]));
@@ -187,10 +190,13 @@ export function buildCoordsView(opts) {
     if (h) for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5']) set(row, c, h[h5.ix[c]]);
     for (const hz of HORIZONS) for (const cell of CELLS) {
       const suf = hz[1], hor = hz[0];
-      const av = get(pid, A, cell, hor), bv = get(pid, B, cell, hor);
+      const av = get(pid, A, cell, hor);
+      const bvRaw = get(pid, B, cell, hor);
+      const bRid = bvRaw !== undefined ? B : (hor === 'short' && B_SHORT ? B_SHORT : B);
+      const bv = bvRaw !== undefined ? bvRaw : (hor === 'short' && B_SHORT ? get(pid, B_SHORT, cell, hor) : undefined);
       const xv = get(pid, X, cell, hor);
       if (av !== undefined) { set(row, 'P' + cell + suf, av); set(row, 'n' + cell + suf, getN(pid, A, cell, hor)); }
-      if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, B, cell, hor)); }
+      if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, bRid, cell, hor)); }
       if (av !== undefined && bv !== undefined) set(row, 'C' + cell + 'R' + suf, (Number(av) + Number(bv)) / 2);
       if (xv !== undefined) { set(row, 'X' + cell + 'R' + suf, xv); set(row, 'n' + cell + 'R' + suf, getN(pid, X, cell, hor)); }
     }
@@ -224,7 +230,7 @@ export function buildCoordsView(opts) {
 const IS_MAIN = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_MAIN) {
   try {
-    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-14-swap/coords-gen4-1114.tsv'), noWrite: process.argv.includes('--no-write') });
+    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-18-arena/coords-gen6-arena-1118.tsv'), noWrite: process.argv.includes('--no-write') });
     const cv = buildCoordsView({ data: arg('data', 'champion-map/data'), noWrite: process.argv.includes('--no-write') });
     console.log('exam-view: ' + r.rows.length + ' 行 × ' + r.header.length + ' 列 ⇒ ' + r.viewPath);
     console.log('coords-view: ' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);

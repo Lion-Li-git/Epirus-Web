@@ -115,7 +115,7 @@ const PACK_DIMS = packDims(packText) || {};
 /* 11-17：按 id 前缀与观测面分代归族；仅 obs6 包允许进 obs6/obs6.5 家族，防 obs3b/obs5 混入。 */
 function autoFamLabel(id, dims) {
   if (dims.input === 'obs6') {
-    if (/^(MX[1-8]-|RINGB|TZ)/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
+    if (/^(MX[1-8]-|RING|TZ)/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
     if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
     if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
   }

@@ -308,7 +308,7 @@ if (PROJTSNE) {
    console.log('四格卷口径 ✅ ' + rows.length + ' 枚的 ' + XC(2) + '/' + XC(2, 'L') + ' 全部在册（' +
      (XSUF === 'R' ? '综合分 C·R=(A+B)/2：A=' + RULERINFO.aLabel + '，B=' + RULERINFO.bLabel + ' ' + CHAMP_SHORT
        : XCOL === 'C' ? '综合分 C=(A+B)/2（旧固定夹具）' : XCOL === 'P' ? '页面剂量 lv:regular' : 'ε=0 考卷') +
-     ' ‖ 短程+长程双桌，R=100 · seed=77000 ‖ 出处按注册表：A=' + RULERINFO.aId + ' ‖ B=' + RULERINFO.bId + '（批次 ' + RULERINFO.batchId + '））'); }
+     ' ‖ 追溯按注册表：A=' + RULERINFO.aId + ' ‖ B=' + RULERINFO.bId + '（批次 ' + RULERINFO.batchId + '））'); }
 const fitP = join(HERE, 'data/fit.tsv');
 const fit = existsSync(fitP) ? readFileSync(fitP, 'utf8').trim().split('\n') : [];
 /* 过线/混合桌闸：2026-11-11 数据模型统一后只读 data/feasibility.tsv。
@@ -630,6 +630,9 @@ const DATA = rows.map(r => ({
    *   对单挑 0.587/桌战 0.547 双真值均衡最优；两真值彼此仅 0.227 ⇒ 单值"实际强度"不存在）。空 = 未测。 */
   bpM: r.bpM === '' || r.bpM === undefined ? null : +r.bpM,
   bpA: r.bpA === '' || r.bpA === undefined ? null : +r.bpA,
+  arR: r.arR === '' || r.arR === undefined ? null : +r.arR,
+  arS: r.arS === '' || r.arS === undefined ? null : +r.arS,
+  arL: r.arL === '' || r.arL === undefined ? null : +r.arL,
   /* E393 DS（丙·投影）：坐标由 --proj 选（t-SNE 列 xt/yt/xt3/yt3/zt3 由 proj-tsne.mjs 写进 coords.tsv）。
    *   判据 kNN@10 保住率：旧力导向布局 0.08 → t-SNE 0.52（同一个 12 维招法空间；用户：不用死磕实际意义）。 */
   x2: (PROJTSNE && r.xt) ? +r.xt : +r.x2, y2: (PROJTSNE && r.yt) ? +r.yt : +r.y2,
@@ -953,7 +956,7 @@ var NSEL = 0;
 var NSKE = 0;
 (function () { for (var i = 0; i < N; i++) { var v = P[i].ske;
   if (v === null || v === undefined || !isFinite(v)) continue; NSKE++; } })();
-var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ftab: 'multi',
+var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ftab: 'long',
   /* 11-07 新标尺（用户令"跑完就换过来"）：ruler='exam4' = 四格加权 excess（DS §10.6）；'ref' = 旧 H5 参照系。
    * 权重默认 5P .45 / 3P .25 / 2P .15 / 8P .15（§10.7 待裁项由滑杆接手），页脚/提示随动显示权重串。 */
   wTilt: 0.5,   /* 统一权重参数（用户令）：0 = 最倾向 2P/3P ‖ 0.5 = 现状（15/25/45/15）‖ 1 = 最倾向 5P/8P；w2..w8 由 deriveW 派生 */
@@ -1249,7 +1252,14 @@ function X4P(d, L, pref) {
     if (x !== null && x !== undefined && isFinite(x) && d[(pref === 'P' ? 'm' : 'n') + n + st.XSUF + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
   return sw > 0 ? acc / sw : null;
 }
-function DE4(d, L) { var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
+function DE4(d, L) {
+  /* Δε = 同一张 B 夹具下的「page dose − ε=0」配对数。
+   * 11-18 B 轴换成 Arena PL 之后，Arena 只跑 ε=0（policyChooserN(params,0.15)），没有 page-dose 半边；
+   * 于是 P?R 列（原先 = b-f5-page-1114 的 page dose）不再承载 page dose，与 X?R（b-f5-eps0）不是同一夹具
+   * ⇒ 相减是跨尺误减，直接标"未测"（缺数据，不是 0）。要恢复 Δε 必须给 Arena 补一份同赛程同种子的 page-dose
+   * 半边，而不是在这里改公式。 */
+  if (/arena/.test('${RULERINFO.bId}') || (L === 'L' && /bp1118/.test('${RULERINFO.bId}'))) return '未测';
+  var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
   return (p === null || x === null) ? '未测' : ((p - x >= 0 ? '+' : '') + (p - x).toFixed(3)); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
   for (var i = 0; i < st.NS4.length; i++) { var x = d[CK(st.NS4[i], L)];
@@ -1264,7 +1274,7 @@ function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
 function XFAM() { return st.XP + (st.XSUF ? '·' + st.XSUF : ''); }   /* 族名怎么念：C·R / C / P / X（表里 10 处写的是 C·R，别在页面上印成 CR） */
 function FLBL() { return 'F = X̄₄(' + XFAM() + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=${A_SHORT}，B=' +
-  (st.XSUF === 'R' ? '${B_SHORT}（${CHAMP_SHORT}）' : '冠军桌固定夹具') +
+  (st.XSUF === 'R' ? ((st.ftab !== 'long' && /bp1118/.test('${RULERINFO.bId}')) ? 'F5 冠军夹具（短程参照）' : '${B_SHORT}（${CHAMP_SHORT}）') : '冠军桌固定夹具') +
   (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
@@ -1498,6 +1508,8 @@ function colOf(d, fr) { if (st.color === 'fam' || st.color === 'seed') return GR
     var kr = SKER(); return ramp(Math.max(0, Math.min(1, (d.ske - kr[0]) / (kr[1] - kr[0] || 1)))); }
   if (st.color === 'bpm') { if (d.bpM === null || d.bpM === undefined || !isFinite(d.bpM)) return '#5a6478';
     var br = BPMR(); return ramp(Math.max(0, Math.min(1, (d.bpM - br[0]) / (br[1] - br[0] || 1)))); }
+  if (st.color === 'arena') { if (d.arR === null || d.arR === undefined || !isFinite(d.arR)) return '#5a6478';
+    var ar = ARR(); return ramp(Math.max(0, Math.min(1, (d.arR - ar[0]) / (ar[1] - ar[0] || 1)))); }
   /* §E601（10-13 夜班 S4 · 用户：「这个红绿板块实际上变得只有红了，没有任何意义。整个删掉吧」）：第 6 档「rel」已**整档删除** ⇒ 点色只剩 LUT 一条读法。*/
   if (!fKnown(d)) return '#5a6478';   /* v1.8.27：当前桌形这档没读数 ⇒ 未测灰（与 'sc' 档同一支），不是"另一张桌的数" */
   return ramp(fCol(Fv(d))); }   /* 「F」档回到蓝→灰→红（§E338 之前那样），不再拿现役当中性灰 */
@@ -1537,6 +1549,13 @@ function BPMR() { var k = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.f
     .filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
   _BPMR.v = a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [-0.2, 0.4];
   return _BPMR.v; }
+var _ARR = { k: '', v: [-1.5, 0.7] };
+function ARR() { var k = st.T.toFixed(4) + '@' + st.flo.toFixed(3) + ',' + st.fhi.toFixed(3);
+  if (_ARR.k === k) return _ARR.v; _ARR.k = k;
+  var a = P.filter(function (d) { return inWin(d); }).map(function (d) { return d.arR; })
+    .filter(function (v) { return v !== null && isFinite(v); }).sort(function (x, y) { return x - y; });
+  _ARR.v = a.length > 8 ? [a[Math.floor(a.length * .02)], a[Math.floor(a.length * .98)]] : [-1.5, 0.7];
+  return _ARR.v; }
 function mix(c1, c2, t) {   /* 十六进制线性插值，t∈[0,1] */
   var p = function (c) { return [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)]; };
   var A = p(c1), B = p(c2);
@@ -1678,7 +1697,7 @@ function pfmt(kind, v) {
 /* 剖面那张表：卡片与页内自检读**同一份**（维名在两处各列一遍，早晚漂移 —— 白名单同族病） */
 var PROF = [['Ge', '广度', 'f2'], ['gl', '长程广度', 'f2'], ['mxsc', '当选键', 'f2'], ['ske', '跨环境技能', 'f0'], ['seat', '座位极差', 'pt'],
   ['dmg', '伤害/局', 'f1'], ['heavy', '重击/局', 'f1'], ['holo', '护盾/局', 'f1'], ['rounds', '回合', 'f1'],
-  ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0'], ['bpM', 'B轴5墙', 'f3'], ['bpA', 'B墙A桥', 'f3']];
+  ['chg', '蓄能/局', 'f1'], ['waste', '珠浪费', 'p0'], ['stance', '摆架势', 'p0'], ['arR', 'Arena分', 'f3'], ['bpM', 'B轴5墙', 'f3']];
 function prow(key, lab, v, txt) { var p = pctl(key, v);
   return padc(lab, 10) + padc(txt, 7) + ' ' + (p === null ? '               ' : padc('P' + Math.round(p), 5) + pbar(p)); }
 function prof(d) {
@@ -1714,7 +1733,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 R=100 · seed=77000 · 页面剂量 lv:regular · B 轴 ${B_SHORT} ${CHAMP_SHORT}' +
+    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 · A=${A_SHORT} · B ' + ((st.ftab !== 'long' && /bp1118/.test('${RULERINFO.bId}')) ? 'F5 冠军夹具（短程参照）' : '${B_SHORT} ${CHAMP_SHORT}') +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +
@@ -4547,6 +4566,7 @@ document.getElementById('labels').addEventListener('change', function () { st.la
  *   换档之后必须：① 重算名次（recalcRank，否则卡片"第 N 名"还是旧桌）；② 清高亮键（分组口径变了）；
  *   ③ 清 Fv 的缓存（fRange/色域/窗口都按值缓存过，键里没桌形 ⇒ 不清会拿旧域画新尺）；④ 重烘当前视图。 */
 (function () { var f = document.getElementById('ftab'); if (!f) return; f.value = st.ftab;
+  var b0 = document.getElementById('ftabl'); if (b0) b0.textContent = st.ftab === 'long' ? '桌形·长程' : '桌形';
   f.addEventListener('change', function () { st.ftab = (this.value === 'long' ? 'long' : 'multi');
     recalcRank(); FSRT.key = ''; _FR.k = ''; _EPR.k = ''; _SCR.k = '';
     st.hi = {}; buildGroups(); buildFamBar(); req();
@@ -6628,7 +6648,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var HIBK = {}; for (var hik in st.hi) HIBK[hik] = st.hi[hik];
   function fireEv(el, typ) { el.dispatchEvent(new Event(typ, { bubbles: true })); }
   var wireBad = [];
-  var WSEL = [['color', 'seed'], ['labels', 'all'], ['batch', 'all'], ['edges', 'hash'], ['ftab', 'long']];
+  var WSEL = [['color', 'seed'], ['labels', 'all'], ['batch', 'all'], ['edges', 'hash'], ['ftab', st.ftab === 'long' ? 'multi' : 'long']];
   for (var wi = 0; wi < WSEL.length; wi++) { var wid = WSEL[wi][0], wnt = WSEL[wi][1];
     var wel = document.getElementById(wid), wbk = wel.value;
     wel.value = wnt; fireEv(wel, 'change');
@@ -7173,8 +7193,8 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
   '<label title="统一权重：最左 = 最倾向 2P/3P ‖ 最右 = 最倾向 5P/8P ‖ 中 = 出厂（15/25/45/15）">倾向 2P/3P ←→ 5P/8P <input type="range" id="wt" min="0" max="1" step="0.01" value="0.5"><span id="wtv">0.50</span></label>' +
   '</span>' +
 '<span id="g2h" class="tbgrp" title="第二段：所有图通用的口径与筛选">通用</span>' +
-'<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;四格卷：短程 = X2..X8 列（3血）‖ 长程 = X2L..X8L 列（5血），同一批 seed=77000 · R=100；旧 H5 参照系已撤场（历史读数在表与 git 史里）；新四格卷(X2/X3/X5/X8)上线后旧 H5 系列整列退出。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong5 = Hplong5/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">默认（3血短程）</option><option value="long">长程（5血）</option></select></label>' +
-'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（标尺势 · 随权重滑杆动 · 四格卷=X̄₄+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option><option value="ske">有效技能数（跨环境 · mixed 夹具 · 实测）</option><option value="bpm">B轴5墙混合（bp1118 · 实测）</option></select></label>' +
+'<label id="ftabrow" title="§E617 头号尺 F 用哪张桌的读数（全局口径，不是颜色的一档）。&#10;四格卷：短程 = X2..X8 列（3血）‖ 长程 = X2L..X8L 列（5血），同一批 seed=77000 · R=100；旧 H5 参照系已撤场（历史读数在表与 git 史里）；新四格卷(X2/X3/X5/X8)上线后旧 H5 系列整列退出。&#10;长程（5血）= 同 seed、同档 exam=120、同剂量 lv:regular，只换 --mode=long 重测的那一版（Flong5 = Hplong5/100 + T·S）。&#10;换的是**整张图**：谱系点色、三维高度与颜色、一维位置与名次、立体、冠军序列都跟着 Fv 走。&#10;实测两桌 Spearman(F, Flong)=0.910 但 |Δrank| 中位 51/798 ⇒ 全局像同一把尺，逐枚不是。&#10;⚠ 绿环（过线）不随这一档变 —— 那是另一道闸的判据，见日志 #47。"><span id="ftabl">桌形</span> <select id="ftab"><option value="multi">短程（3血 · Arena）</option><option value="long">默认（5血长程 · Arena）</option></select></label>' +
+'<label id="colorrow">颜色 <select id="color"><option value="fam">训练方法家族</option><option value="seed">RNG seed（包名后缀）</option><option value="F">F（标尺势 · 随权重滑杆动 · 四格卷=X̄₄+T·S）</option><option value="gl">长程广度 G(long)</option><option value="pm">进池体检（实测）</option><option value="hp">页面口径夺1率（实测）</option><option value="de">部署脆弱性 Δε（实测）</option><option value="sc">当选键（绝对值 · 实测）</option><option value="ske">有效技能数（跨环境 · mixed 夹具 · 实测）</option><option value="bpm">B轴5墙混合（bp1118 · 实测）</option><option value="arena">Arena 多人积分（24锚 · 实测）</option></select></label>' +
 '<label>标签 <select id="labels"><option value="champ">历代上槽 + 池成员（避让）</option><option value="pool">只标当前池子里的冠军（避让）</option><option value="all">尽量全标（避让）</option><option value="off">不标（选中点/追溯链仍标）</option></select></label>' +
 '<label id="batchrow" title="§G3（11-05 用户令，退役 §E338 的训出日期批次）：版本三模式——1.8 及以前 = 旧池全部；2.0 系 = 只画 2.0 精选点（严格模式，v7 冠军行不钉住）；全部 = 两代并绘。强度列 Hp 的口径两代不同（2.0 = 5P long 200 局 ε=0；1.8 = 35 组合 120 局带剂量）⇒ 跨版本比强度只看方向不看小数">版本 <select id="batch"></select></label>' +
 '<label id="winrow" title="§E371（用户 10-06 深夜：「默认显示全范围，然后可以手动拉强度上下顶点，用满色域渲染中间的点而超出范围的不显示」）&#10;切的是头号尺 F（= Hp/100 + T·S），不是「当前颜色那一档」。&#10;§E378（用户 10-07：「两个独立的轴调很奇怪，直接做到右边图例边上，用一根纵轴两个端点可拖动来表示范围」）⇒ 两根横滑杆换成图例旁边那一根**竖轴**：整根 = 全库 F 值域，亮段 = 当前窗口，两端各一个可拖的柄（双击 = 回全范围）。&#10;窗口内：色带按**这一段**重新铺满（两端顶到色端）。窗口外：一律不画，冠军也不例外 ⇒ 现役被切掉时页脚会响亮说一句。">F窗口 <span id="wv">全范围</span><span id="whint">（拖右边图例旁那根竖轴的两端 · 双击 = 回全范围）</span></label>' +
