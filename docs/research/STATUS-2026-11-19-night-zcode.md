@@ -109,6 +109,17 @@ MS2-band2 wid=`c8f5f357ffb31a10`。**复现臂 MS2b/MS2c**（同配方 seed 7703
 | **S4** | R6C-KL + **教师=v7 tank+miniT 载体** | final: tank 7.5% + **miniT 5.0%** multi ‖ **miniT 10.9%** + curse 7.8% long ‖ snap0: 四张稀缺卡同包 | ✅ **多技能包成立**（tank+miniT+curse） |
 | U1/U2 | pg-train klTilt+shapeKey | 全零 | ✗ 负结果：klTilt 放大起点分布，零覆盖键 3×0=0（机制在 klW 注释） |
 
+**S6/S7/S8/S9（双教师轮替与巩固波）**：
+
+| 臂 | 配方 | 读数 | promote --dry |
+|---|---|---|---|
+| **S6** | pack:tank 载体 + toolkit 轮替 0.5 | tank 14.9/6.0 ‖ **armor 3.2/2.0-3.0** ‖ curse 2.2 ‖ 用卡 9-12 | **仅剩 1 阻断**：G5[long] 26% vs 25%（贴线）——广度/反弹墙/G5multi 全清 |
+| S7 | pack:MS2c + toolkit 0.5 | miniT 0.9/0.7 ‖ tank 1.5 | 未跑（S6 优先）|
+| S8 | S6 + toolkit 巩固一轮 | G5[long] 清了 ‖ F 还手率 17%<20%（跷跷板）| 1 阻断（换位置了）|
+| S9 | frac 0.35 偏 tank | G5[long] 42% 更差 | 1 阻断 |
+
+**promote-loop 结论**：双教师轮替解决了蒸馏窄化（S3 五阻断 → S6 一阻断贴线）；G5[long] 破龟是最后一座山（在册同类：池内 G5[long] 越线包 28-33% 的老病）。下一班的口子 = 更长步数 / teacher2frac 扫描 / snap 节点配合 promote 循环（每轮 4 分钟，标准仪器全在）。
+
 **统一管线战果**：v7 线的 GA 发现（tank / tank+miniT 载体）经 `supfit-gd --teacher=pack:<v7包>` **跨线蒸馏**成 2.0 线产物——v7 线退役但它的**知识**通过教师机制平移。加上 S1 的 armor/jinshield，死卡（tank/jinshield/armor/miniT）在 2.0 线全部有载体；**大雷 +17.3pt**（EQ-S4-E9 强度尺读出"没学会的强招"）列 S5（chain 教师，跑批中）。
 **pg-train klTilt 路线 = 负结果（8 节点全零）**，机制原因（`pg-train` klW 注释在册）：`--klTiltMul` 放大的是**起点策略分布**——起点从未用过的键 3×0=0；`--shapeKey` 又依赖键被采样（逐决策塑形挂不上未采样键，klW 注释原话）。**零覆盖键的正解 = supfit-gd 教师蒸馏**（标签来自教师、不依赖学生采样；toolkit 教师标签里正好有金刚盾 11/藤甲 11/贴贴 14/无极变速 7）。已换 `--teacher=toolkit --objective=cand --dagger=1` 蒸馏臂（S1/S2 双基座）。
 
