@@ -20,13 +20,7 @@ const BCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) BCOLS.push(h[0] === 'short' ? 'P' + c + 'R' : 'P' + c + 'RL');
 const CCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) CCOLS.push(h[0] === 'short' ? 'C' + c + 'R' : 'C' + c + 'RL');
-/* X 族（2026-11-13 · Δε ε=0 半边）：值列 X<c>R(L) + 计数列 n<c>R(L)。viewer 的 X4P(d,L,'X') 找的就是
- *   'X'+n+XSUF+L 值 + 'n'+n+XSUF+L 计数（champion-map/viewer.mjs:1181）——这族没量过 ⇒ 全图 Δε 一直印"未测"。 */
-const XCOLS = [];
-for (const h of HORIZONS) for (const c of CELLS) XCOLS.push(h[0] === 'short' ? 'X' + c + 'R' : 'X' + c + 'RL');
-const XNCOLS = [];
-for (const h of HORIZONS) for (const c of CELLS) XNCOLS.push(h[0] === 'short' ? 'n' + c + 'R' : 'n' + c + 'RL');
-const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS, XCOLS, XNCOLS);
+const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS);
 
 function toNum(v) { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return isFinite(n) ? n : null; }
 function put(row, ix, v) { if (v === null) return; row[ix] = String(v); }
@@ -41,10 +35,7 @@ export function buildView(opts) {
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
-  const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
-  /* X 轴已退役（2026-11-18 用户令：A 轴只有 page 一条，B 轴照办）⇒ 没有 current X 就不填 X 列，不再响亮报错 */
-  const _xr = rulers.rows.find((r) => r[rulers.ix.axis] === 'X' && r[rulers.ix.status] === 'current');
-  const X = _xr ? _xr[rulers.ix.ruler_id] : '';
+  const X = '';   /* X 轴已退役：不填 X 列 */
   for (const c of ['pack_id', 'ruler_id', 'cell', 'horizon', 'value']) if (rd.ix[c] === undefined) throw new Error('readings 缺列 ' + c);
   const vals = new Map(), nvals = new Map();
   for (const r of rd.rows) {
@@ -68,15 +59,10 @@ export function buildView(opts) {
       const suf = h[1];
       const av = v[A + '|' + c + '|' + h[0]];
       const bv = v[B + '|' + c + '|' + h[0]];
-      const xv = v[X + '|' + c + '|' + h[0]];
-      const xn = vn[X + '|' + c + '|' + h[0]];
       const ai = HEAD.indexOf('P' + c + suf), bi = HEAD.indexOf('P' + c + 'R' + suf), ci = HEAD.indexOf('C' + c + 'R' + suf);
-      const xi = HEAD.indexOf('X' + c + 'R' + suf), xni = HEAD.indexOf('n' + c + 'R' + suf);
       if (av !== null && av !== undefined) { row[ai] = String(av); any = true; }
       if (bv !== null && bv !== undefined) { row[bi] = String(bv); any = true; }
       if (av !== null && av !== undefined && bv !== null && bv !== undefined) { row[ci] = String((av + bv) / 2); all++; }
-      if (xv !== null && xv !== undefined) { row[xi] = String(xv); any = true; }
-      if (xn !== null && xn !== undefined) row[xni] = String(xn);
     }
     if (!any) missing.push(pid);
     out.push(row);
@@ -155,9 +141,7 @@ export function buildCoordsView(opts) {
   const rulers = loadRulers(join(data, 'rulers.tsv'));
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
-  const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
-  const _xr = rulers.rows.find((r) => r[rulers.ix.axis] === 'X' && r[rulers.ix.status] === 'current');
-  const X = _xr ? _xr[rulers.ix.ruler_id] : '';   /* X 轴退役后为空 ⇒ 不填 X 列 */
+  const X = '';   /* X 轴已退役：不填 X 列 */
   const head = tpl.header.slice();
   const ix = Object.fromEntries(head.map((h, i) => [h, i]));
   const by = (t, idCol) => new Map(t.rows.map((r) => [r[t.ix[idCol]], r]));
@@ -195,11 +179,9 @@ export function buildCoordsView(opts) {
       const av = get(pid, A, cell, hor);
       const bv = get(pid, B, cell, hor);
       const bRid = B;
-      const xv = get(pid, X, cell, hor);
       if (av !== undefined) { set(row, 'P' + cell + suf, av); set(row, 'n' + cell + suf, getN(pid, A, cell, hor)); }
       if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, bRid, cell, hor)); }
       if (av !== undefined && bv !== undefined) set(row, 'C' + cell + 'R' + suf, (Number(av) + Number(bv)) / 2);
-      if (xv !== undefined) { set(row, 'X' + cell + 'R' + suf, xv); set(row, 'n' + cell + 'R' + suf, getN(pid, X, cell, hor)); }
     }
     rows.push(row);
   }

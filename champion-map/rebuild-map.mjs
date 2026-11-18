@@ -30,14 +30,17 @@ const run = (args, tag) => {
 };
 
 console.log('rebuild-map: ' + (DRY ? 'dry' : 'run'));
-/* ① 数据戳：缺 unknown / 旧夹具 / C 不符会 exit 2 */
-run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
+/* ① 历史戳：只对 F2/F5 旧图有意义（2026-11-18 起 B=Arena，旧戳不参与当前图） */
+const _rul = readFileSync(join(HERE, 'data/rulers.tsv'), 'utf8').replace(/\r/g, '').split('\n').slice(1).filter(Boolean).map((l) => l.split('\t'));
+const _b = _rul.find((r) => r[1] === 'B' && r[3] === 'current');
+if (_b && ['b-f5-page-1114', 'b-f2-page-1111'].includes(_b[0])) run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
+else console.log('—— ① 历史戳检查：当前 B=' + (_b ? _b[0] : '?') + ' 非 F2/F5 夹具 ⇒ 跳过（旧戳只服务 gen3 旧图）——');
 if (DRY) process.exit(0);
 /* ② 从 data/ 编译完整页面视图（canonical + display 模板）
- *    对照锚 = gen8-noX-1118（11-18 用户令：A 轴只有 page 一条，B 轴照办 ⇒ X 轴退役、ε=0 转参考）。
+ *    对照锚 = gen9-clean-1118（11-18 清理：X 族 16 列从 display/coords-view 彻底删除）。
  *    换尺流程：build-view --compare=<不存在路径> 跳过守卫烤新视图 → 拷成新 gen 锚 → 本行指向新锚。 */
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=champion-map/archive/2026-11-18-noX/coords-gen8-noX-1118.tsv'], '② build-view 编译 coords-view');
+  '--compare=champion-map/archive/2026-11-18-clean/coords-gen9-clean-1118.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */

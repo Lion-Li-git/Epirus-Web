@@ -593,9 +593,7 @@ const DATA = rows.map(r => ({
    *   没量过的点落 null ⇒ DE4 如实印"未测"，不借旧族的数顶上（同族配对原则）。 */
   ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
     'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
-    'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL',
-    'X2R', 'X3R', 'X5R', 'X8R', 'X2RL', 'X3RL', 'X5RL', 'X8RL',
-    'n2R', 'n3R', 'n5R', 'n8R', 'n2RL', 'n3RL', 'n5RL', 'n8RL']
+    'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
     .map(k => [k, (r[k] === '' || r[k] === undefined) ? null : +r[k]])),
   S: +r.S, Ge: +r.Geff, rk: +r.rank,
   /* ⚠ 11-05 上午（用户点名"2.0 的点里为什么会有 D4a？D4a 是很早以前的 1.8 点"）：
@@ -1107,9 +1105,7 @@ var INC = (function () {
      *   11-13 追加 X 族同理（DE4 在伪行上也要能算，锚点 Δε 标签不许因缺列静默未测）。 */
     ...Object.fromEntries(['P2R', 'P3R', 'P5R', 'P8R', 'm2R', 'm3R', 'm5R', 'm8R',
       'P2RL', 'P3RL', 'P5RL', 'P8RL', 'm2RL', 'm3RL', 'm5RL', 'm8RL',
-      'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL',
-      'X2R', 'X3R', 'X5R', 'X8R', 'X2RL', 'X3RL', 'X5RL', 'X8RL',
-      'n2R', 'n3R', 'n5R', 'n8R', 'n2RL', 'n3RL', 'n5RL', 'n8RL']
+      'C2R', 'C3R', 'C5R', 'C8R', 'C2RL', 'C3RL', 'C5RL', 'C8RL']
       .map(function (k) { return [k, mean(function (d) { return d[k]; })]; })),
     /* 伪行也得带长程那一列：hpNow 现在两档各读 Hp / hpl2，只给 Hp 会让"最强一批均值"这条锚在长程档画成灰 */
     pt: ANCH_TIER, ts: '', lin: false };
@@ -1242,23 +1238,7 @@ function X4T(d, L) {
   return sw > 0 ? acc / sw : null;
 }
 function X4(d) { return X4T(d, (st.ftab === 'long') ? 'L' : ''); }
-/* Δε（11-07 用户令「小标签里 Δε 没上，现在有结果了也可以加上」）：同一条形上 **页面剂量 − 考卷口径**。
- *   单位与 X̄₄ 一致（excess）；正 = 开探索反而更高，负 = 开探索掉分（旧 Hp−H 的同族读法）。
- *   ⚠ 两侧必须同族（都带 XSUF）：F2 夹具那一族的 ε=0 半边还没量 ⇒ 这里如实印"未测"，
- *     不许拿旧考卷的 X 族顶上（那会把"换夹具"的差读成"开探索"的差）。 */
-function X4P(d, L, pref) {
-  var sw = 0, acc = 0;
-  for (var i = 0; i < st.NS4.length; i++) { var n = st.NS4[i], x = d[pref + n + st.XSUF + L];
-    if (x !== null && x !== undefined && isFinite(x) && d[(pref === 'P' ? 'm' : 'n') + n + st.XSUF + L]) { acc += st['w' + n] * x; sw += st['w' + n]; } }
-  return sw > 0 ? acc / sw : null;
-}
-function DE4(d, L) {
-  /* Δε = 同一张 B 夹具下的「page dose − ε=0」配对数。
-   * 2026-11-18：B 轴换 Arena 页面剂量版，X 半边同步换 Arena 贪心版（同赛程同种子）；
-   * F5 的 page/eps0 两条已退役 ⇒ 这里不再有跨夹具守卫，缺哪半边就按 null 返回"未测"。 */
-  if (/bp1118/.test('${RULERINFO.bId}')) return '未测';
-  var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
-  return (p === null || x === null) ? '未测' : ((p - x >= 0 ? '+' : '') + (p - x).toFixed(3)); }
+/* Δε / X 族已退役（2026-11-18）：页面不再显示 Δε；定义在 docs/MAP-PIPELINE.md §5。 */
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
   for (var i = 0; i < st.NS4.length; i++) { var x = d[CK(st.NS4[i], L)];
     if (!(x !== null && x !== undefined && isFinite(x))) m.push(st.NS4[i] + L); } return m; }

@@ -57,11 +57,8 @@ const RID_A = curRuler('A'), RID_B = curRuler('B');
 const _xrow = rul.rows.find((r) => r[rul.ix.axis] === 'X' && r[rul.ix.status] === 'current');
 const RID_X = _xrow ? String(_xrow[rul.ix.ruler_id]) : '';   /* X 轴退役后为空 ⇒ 不跑 x 复测 */
 const bRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.status] === 'current');
-const bShortRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.ruler_id] === 'b-f5-page-1114') || bRow;
-const RID_B_SHORT = String(bShortRow[rul.ix.ruler_id]);
 const F2 = bRow[rul.ix.fixture];
-const F2_SHORT = bShortRow[rul.ix.fixture];
-const F2ARG = F2_SHORT.replace(/x\d+$/, '').split('+').join(',');
+const F2ARG = F2.replace(/x\d+$/, '').split('+').join(',');
 const BP_WALLS = /bp1118/.test(RID_B) ? {
   EXTA: 'MSB11-R2S306293884,MX6-GD-TF15,MX8-TN25-KL,MSB15R-HITMIX,OBS6-LH6P',
   EXTB: 'MSB14-railgun-R1S175656469,MX3-GDEQ-GD,MX8-R6B-KL,OBS6-SHAPEDIST-V3S2,OBS6P4-S4000',
@@ -282,7 +279,7 @@ if (EXT_READINGS) {
     for (const c of cell) {
       const x = row[t.ix['x' + c]], n = row[t.ix['n' + c]];
       if (x === undefined || x === '') continue;
-      const rid = axis === 'a' ? RID_A : axis === 'b' ? ((horizon === 'multi' && BP_WALLS) ? RID_B_SHORT : RID_B) : RID_X;
+      const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : RID_X;
       const hor = horizon === 'multi' ? 'short' : 'long';
       rd.push([rid, String(c), hor, x, n]);
       if (axis !== 'x') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
