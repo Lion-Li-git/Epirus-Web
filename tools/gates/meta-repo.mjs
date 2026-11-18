@@ -13,14 +13,14 @@ const {
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, RGAIN, OPP_SPECS,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
   fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand,
   bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE, SEL_BASE0, SEL_STRIDE,
   SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns,
-  selNote, selGapNote, readTrainEnv, hasTrainOverride, TEK,
+  selNote, selGapNote,
   measureAll, KR_LIB, detectDarkKnobs, readKeysOf, wallCapExceeded,
   wallCapOf, sb, sandbox, stanceProfile, aggressionProfile,
   feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile,
@@ -46,8 +46,8 @@ t('REPRO 训练路径不得出现裸 Math.random / Date.now（白名单见下）
   ];
   /* 扩面（千问复核指出）：原先只扫 server/*.mjs —— **恰好只保护了刚修好的那条路**，
    * 而 tools/train-*.mjs 三个 CLI 训练器完全没播种，研究数字多半出自它们。 */
-  const files = ['training/server/train-server.mjs', 'training/server/train-worker.mjs', 'training/server/paralleltrain.mjs',
-    'training/train-fast.mjs', 'training/train-best.mjs', 'training/train-3p.mjs', 'js/train/evo.js'];
+  const files = ['training/proto2/pg-train.mjs', 'training/proto2/supfit-gd.mjs',
+    'training/proto2/pg-lib.mjs', 'training/proto2/arena2.mjs', 'js/train/evo.js'];
   /* v1.8.13：把"扫一个文件"抽成一个函数，好让这条门能**自己喂自己一行坏代码**（下面三条自检）。
    *   为什么必须有：这条门的白名单已经长到 9 条 `indexOf(...) >= 0 ⇒ continue`，
    *   于是"白名单把真违规也一起吃掉"这件事**只会让它变绿、不会让它变红** ⇒ 没有正对照的扫描器就是装饰
@@ -131,13 +131,6 @@ t('L3 复现工具必须保留冷/热启动断言（v1.5.128 诚实化：原名�
    * 浏览器按钮走 Node 服务，而 index.html 的"从头训练"默认不勾 ⇒ 默认热启动，
    * 种群围绕 js/bundled-champion*.js 长出来。那个文件会随每次训练变化 ⇒ 输入变了。
    * 修法与 v1.3.50 给 CLI 定的规矩一致：把输入标识记进产物。 */
-  const srv = readFileSync('training/server/train-server.mjs', 'utf8');
-  ok(srv.indexOf('weightsId') >= 0,
-    'server 必须能把"输入冠军"算成标识（weightsId）——否则热启动产物无法复现');
-  ok((srv.match(/hotstartFrom/g) || []).length >= 3,
-    'server 的冠军 meta 必须记录 hotstartFrom（2P 与 N 两条路径都要）');
-  ok(/seed:\s*(SEED0|Number\(\(cfg && cfg\.seed0\))/.test(srv),
-    'server 的冠军 meta 必须记录 seed');
 });
 
 t('L7 rankOf 不得有座位偏置（并列时不许按 pid 升序）', function () {
@@ -210,12 +203,7 @@ t('L5 测试跑不得给 shipped 文件留残留（会随 git add -A 提交）',
   ok(gi.indexOf('-out.js') >= 0, '.gitignore 必须忽略训练工具的非发布输出（docs/artifacts/*-out.js）');
 
   // 反向：真的会写那个落点的工具，必须同时有 EPIRUS_PUBLISH 门槛（否则它会写线下路径）
-  for (const f of ['training/train-3p.mjs', 'training/train-fast.mjs', 'training/train-best.mjs']) {
-    const src = readFileSync(f, 'utf8');
-    if (src.indexOf('-out.js') >= 0) {
-      ok(src.indexOf('EPIRUS_PUBLISH') >= 0, f + ' 用了 -out.js 落点，就必须有 EPIRUS_PUBLISH 门槛');
-    }
-  }
+  /* 〔撤编 2026-11-19〕v7 三训练器已删，EPIRUS_PUBLISH 门槛随它们进 git 史 */
 
   // index.html 的缓存戳副作用必须被测试工具还原
   const rc = readFileSync('tools/repro-check.mjs', 'utf8');

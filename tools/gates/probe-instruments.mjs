@@ -18,14 +18,14 @@ const {
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, RGAIN, OPP_SPECS,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
   fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand,
   bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE, SEL_BASE0, SEL_STRIDE,
   SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns,
-  selNote, selGapNote, readTrainEnv, hasTrainOverride, TEK,
+  selNote, selGapNote,
   measureAll, KR_LIB, detectDarkKnobs, readKeysOf, wallCapExceeded,
   wallCapOf, sb, sandbox, stanceProfile, aggressionProfile,
   feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile,
@@ -36,7 +36,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [3662, 5111, 5303, 6946, 7015, 7435, 7531, 7595, 7637, 7744, 7824, 7850, 8052, 8462, 9121, 9140, 9332, 9507, 9680, 9716, 9921, 9959, 10313, 10418, 10468, 10783, 10875, 11242, 11262, 11303, 11419, 11484, 11855];
+export const ords = [3662, 5111, 5303, 6946, 7015, 7435, 7531, 7595, 7637, 7744, 7824, 7850, 8052, 9121, 9140, 9332, 9507, 9680, 9716, 9921, 9959, 10313, 10418, 10468, 10783, 10875, 11242, 11262, 11303, 11419, 11484, 11855];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D34 旧包"逐位等价嵌入"：embedLegacy 的输出必须与按旧布局手算的参考逐位相同', function () {
@@ -689,45 +689,7 @@ t('D106 场A/场B 打印器必须真的能工作（`probe-aggr` 曾长期每行�
   }
 });
 
-t('D158 产物必须能自证**实际生效的 EPIRUS_* 配方**（v1.5.226 · 用户批准；千问 E9/E10 就是被这个缺口逼着绕道跑的）', function () {
-  /* 病：`meta.recipe` 原先是**手抄名单**（arm/seed/xn2w/kill/trainMode/counterOpps/…）⇒ **新旋钮天生不在里面**
-   * （METHODOLOGY 13「白名单两处各写一遍必出事」的同族）。后果很具体：想问"哪根旋钮养出这粒包"，
-   * 查 meta 却没有 env ⇒ 只能归因到"抽奖"，并用**前瞻实验绕道**才把问题问出来（千问 E9/E10）。
-   * 修法：读集问 `knob-guard.readKeysOf`（与 `enforceKnobs` **同一份**），再取环境里真设了的键 ⇒ 加旋钮不用改这里。 */
-  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
-  ok(/import \{ enforceKnobs, readKeysOf \}/.test(t3), '读集必须来自 knob-guard 单一来源');
-  ok(/readKeysOf\(\{ entry: 'training\/train-3p\.mjs', extraReadKeys: SELF_ENV_KEYS \}\)/.test(t3),
-    '必须用**与 enforceKnobs 同一个读集**（entry + SELF_ENV_KEYS），不许另抄一份名单');
-  ok(/const EFFECTIVE_ENV = \(function \(\) \{/.test(t3) && /env: EFFECTIVE_ENV, envKeys:/.test(t3),
-    '主 meta 的 recipe 必须带 env + envKeys');
-  ok(/recipe: \{ env: EFFECTIVE_ENV, envKeys:/.test(t3), 'band meta 也必须带配方（`.bak` 才是长期留存的那份）');
-  /* 行为断言：真跑一条小臂，读它写出来的 `.bak` 的 META —— 配方必须**逐键逐值**对上，且只记"真设了的"。
-   * ⚠️ 这条 spawn **故意不走缓存**：它要读子进程**产出的文件**（np-cache 的前置要求正好把这类排除在外）。 */
-  const d = mkdtempSync(join(tmpdir(), 'd158-'));
-  /* ⚠ 必须**改道**主产物（2026-10-16 实测）：这条 spawn 原先没设 `EPIRUS_T3P_OUT` ⇒ 它写的是**默认落点**
-   *   `docs/artifacts/train-3p-out.js` —— 而那是 `train-evo` 的 D123/D162 拿来当 CLI 基线的**同一个文件**
-   *   ⇒ CI 上没事（每个部分一台机），本机并行跑门时就变成"隔壁部分把我的基线文件写脏了"（实测 D162 红）。
-   *   本门要读的是 `EPIRUS_BAND_DIR` 里的 `.bak`，改道不影响它。 */
-  const r = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'], {
-    env: Object.assign({}, process.env, {
-      EPIRUS_BAND_DIR: d, EPIRUS_T3P_OUT: join(d, 'd158probe.js'), EPIRUS_ARM: 'd158probe', EPIRUS_KILL_REWARD: '2', EPIRUS_BIGT_CHAIN_W: '0.5'
-    }), encoding: 'utf8', timeout: 600000
-  });
-  eq(r.status, 0, '小臂要跑得通（' + String(r.stderr || '').slice(0, 160) + '）');
-  const baks = readdirSync(d).filter(function (f) { return /\.bak$/.test(f); });
-  ok(baks.length >= 1, '必须写出至少一粒 band（实测 ' + baks.length + '）');
-  const bsrc = readFileSync(join(d, baks[0]), 'utf8');
-  const mm = /window\.EPIRUS_CHAMPION_3P_META = (\{[\s\S]*?\});/.exec(bsrc);
-  ok(!!mm, 'band .bak 必须带 META');
-  const bmeta = JSON.parse(mm[1]);
-  ok(bmeta.recipe && bmeta.recipe.env, 'band META 必须有 recipe.env —— 实测 ' + JSON.stringify(bmeta.recipe || null));
-  eq(bmeta.recipe.env.EPIRUS_KILL_REWARD, '2', '配方必须逐值记下真设了的旋钮');
-  eq(bmeta.recipe.env.EPIRUS_BIGT_CHAIN_W, '0.5', '同上（按字符串形态原样记）');
-  eq(bmeta.recipe.env.EPIRUS_ARM, 'd158probe', '臂名也要在配方里');
-  ok(bmeta.recipe.env.EPIRUS_XN2W === undefined, '**没设的旋钮不许凭空出现在配方里**（记的是配方，不是默认值）');
-  eq(bmeta.recipe.envKeys, Object.keys(bmeta.recipe.env).length, 'envKeys 必须等于 env 的键数（自洽）');
-  try { rmSync(d, { recursive: true, force: true }); } catch (e) {}
-});
+/* 〔撤编 2026-11-19〕原 D158 产物自证 EPIRUS_* 配方 —— 主语 train-3p（EFFECTIVE_ENV）已删；pg-train/supfit-gd 的配方自证走 --flag 与 meta，见 training/README.md */
 
 t('D177 champ-audit 缺包必须点名 + 保留其余行 + exit 7（v1.5.270 · §E81）', function () {
   /* ⚑ 10-17 夜班（R3）：夹具由活槽换成在册 `FIXTURE_PACK`（这条断言全在工具回执上：exit 0 / exit 7 / 点名哪个包读不出 /

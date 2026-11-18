@@ -978,3 +978,13 @@ ok(readFileSync('server/opp-champs.mjs', 'utf8').true, '冠军对手必须走 po
   CI 用的 `--list-parts --json` 与 `--only="D230 "` ⇒ 逐字照旧（前者照吐 part 清单，后者自印"只跑 1/171"）✔。
 - **门数不变**：171（`--list-parts --json` 的 total 现读）。**这条动了 runner 自己** ⇒ 按 §本节真源表的规矩要跑整轮：
   本班跑的是 `--group=engine`（该组累计恰好=全部，实测 171/171 绿 ‖ 216s）。
+
+## 2026-11-19 凌夜（zcode）：v7 训练线整体退役（用户裁定「旧的全删了，统一管线」）
+
+- **动的是什么**：删 `training/train-3p.mjs`（248KB）/ `train-best` / `train-fast` / `train-selftest` / `start-train-server.cmd` / `server/{train-server,train-worker,paralleltrain,train-env,econ-env,fight-env}`；产品「训练场」tab（index.html section + ui.js 训练场/远程训练/图表三段 ~310 行，导入冠军包控件回归对局区）；门腿 D73 / D124 / D125 / D121 / D158 / D116 整撤 + D228 摘⑥⑦⑧（纯函数腿保留）；探针 `probe-econ-reset-audit.mjs`；proto2 四件死文件（obs2-from-v7 / grow-modebias-nmode / chain-supfit / supfit-full）。
+- **门数**：171 → 166。撤编腿的主语都是 v7 训练器（接线钉源码文本 / 真跑臂），训练器删了它们没有可测对象；D228 的纯函数腿（selNote/selGapNote 噪声纪律）保留，`pick-best.mjs` 是活主体（promote 家族在用）。
+- **为什么**：用户裁定「禁止默认训老网络；现在训练的根本不是 3p 包了；把训练机制提炼进统一管线，旧的全删」。直接动因 = 11-18 夜 19 臂经 `P.embedLegacy` 把 obs6 祖先投影成 v7 张量（2026-11-18 事故，见 STATUS-2026-11-19-night §更正）。
+- **统一管线（机制映射）**：教师三件套（IMIT_*）→ `supfit-gd --teacher=toolkit|pack:<v7包>`（pack: 即跨线蒸馏）‖ 事件奖励（REFLECT_W 族提案）→ `pg-train --shapeKey=key:weight`（native）‖ KL 锚定 → `pg-train --klW/--klTilt` ‖ band-save → `pg-train --segEvery` ‖ 当选地板/veto 家族 → promote 侧考卷门（GA 选择层不再存在）。权威地图 = `training/README.md`（全面重写）。
+- **验证**：np **166/166 全绿**（门数变了，本班跑的就是新整轮）‖ spec 81/81 ‖ smoke / battle CDP 重建后绿 ‖ map 100 PASS（coords/registry 的 exam4 夹具路径随归位同步改）。
+- **旋钮账**：194 → **65**（−129 根随 v7 线消失）；暗键 46 列为下批删除候选。
+- **连带修正**：coords/registry 的 GD6a-TILT 路径随 exam4 夹具归位同步（⑫c wid 回填）；`pack-aliases.tsv` 补 3 行 role=exam4-fixture-move；training/knobs.mjs 自指指针修正（生成器=它自己）。

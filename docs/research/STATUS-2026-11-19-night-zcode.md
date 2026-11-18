@@ -75,6 +75,14 @@ hotstart=A1-band3 + `IMIT_PLAN="pickTankLine:0.3:tank,pickToolKit:0.5:X"` + FRAC
 
 **总账：19 臂**（R1×7 + R2×4 + MS×4 + 复现×2 + laserEye×2），产出 **3 枚载体**：A1-band3（tank 双桌形 30%+，wid `efab8849384e9e62`）‖ MS2c-band1（tank+miniT 双桌形，wid `857b80775d5e2b80`）‖ MS2-band2（tank+miniT multi，wid `c8f5f357ffb31a10`）。
 
+### ⚠ 更正（01:5x 用户抓到）：19 臂全部掉进 v7 线
+
+- **事实**：19 臂产物全部 `v:7 / 5689 张量`——SEEDPACK 祖先（R6C-KL/TZT2D）明明是 obs6（v:92/S1o/16561）。
+- **根因**：我的臂没带 `EPIRUS_ARCH2` ⇒ train-3p 热启动走 `P.embedLegacy` 把 obs6 祖先**投影成 v7 张量**再训（meta.hotstartFrom 记着 2.0 父亲的 wid，张量整个掉线）。这是我漏读口径，不是工具静默故障。
+- **执法**：train-3p 已加守卫——缺 ARCH2 且无 `EPIRUS_ALLOW_V7=1` ⇒ exit 5（用户裁定「禁止默认训老网络」落仓；`EPIRUS_ALLOW_V7` 已入旋钮册，全集 194）。
+- **后果与回收**：三枚载体是 **v7 线包**，不能直接进 S1o 池；机制结论（教师→tank 成功 / retention 要奖励 / 载体×载体融合强化 / F4 融合双卡）与形状无关，仍成立。**2.0 线重跑**改用产线机器：`pg-train`（`--shapeKey` 事件塑形 + `--klW/--klTilt` 键频锚——retention 机制 native 存在）与 `supfit-gd`（`--teacher=pack:<v7载体>` 可把 v7 载体跨线蒸馏进 obs6）。融合工具 `tools/pack-fuse.mjs` 已就位（同盆地融合验证：F4 载体×载体双卡）。
+- **训练侧理清（用户令）**：`training/README.md` 全面重写为权威地图（30 秒决策表/训练器清单/守卫说明/验尸脚本/流程速查）；已删 4 件死文件（obs2-from-v7 / grow-modebias-nmode / chain-supfit / supfit-full）；根 README 训练入口同步更正。归档候选清单（proto2 十月一次性探针 ~27 件）立在 README，下一批逐个对谱系后批量删。
+
 MS2-band2 wid=`c8f5f357ffb31a10`。**复现臂 MS2b/MS2c**（同配方 seed 77031/77032）→ 结果回填于下：
 
 **复现：3 跑 2 中**。MS2c（seed 77032）band1 = **tank 11.9% + miniT 4.12%（multi）‖ 10.4% + 5.55%（long）——双桌形双卡全过**（wid `857b80775d5e2b80`），band3 = miniT 1.85%/0.92%（tank 弱）；MS2（seed 77022）band2 = multi 双卡（wid `c8f5f357ffb31a10`）；MS2b（seed 77031）tank 5/6 band 留存但 miniT 全零 ✗。结论：配方**可行但 band 随机性大**（3 臂各 ≥1 枚 band 载体），稳定量产仍要走事件奖励旋钮。

@@ -19,14 +19,14 @@ const {
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, RGAIN, OPP_SPECS,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
   fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand,
   bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE, SEL_BASE0, SEL_STRIDE,
   SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns,
-  selNote, selGapNote, readTrainEnv, hasTrainOverride, TEK,
+  selNote, selGapNote,
   measureAll, KR_LIB, detectDarkKnobs, readKeysOf, wallCapExceeded,
   wallCapOf, sb, sandbox, stanceProfile, aggressionProfile,
   feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile,
@@ -39,7 +39,7 @@ const {
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。
  * 10-23 夜班：删掉 D219（整门，冠军经济行为 ⇒ 归入池侧）⇒ 首位的 `1184` 同批移除，数量与 t() 调用数对齐。 */
-export const ords = [60, 86, 123, 167, 264, 342, 380, 447, 504, 523, 625, 677, 723, 771, 795, 818, 844, 933, 1012, 1051];
+export const ords = [60, 86, 123, 167, 264, 342, 380, 504, 523, 625, 677, 723, 771, 795, 818, 844, 933, 1012, 1051];  /* 2026-11-19：D116 随 train-best 2P 切片线删除 */
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 /* §删（10-23 夜班 · 用户 10-22/23 裁定「冠军有什么表现该在入池时判；上线后的门只测引擎是否正常工作」）：
@@ -121,11 +121,9 @@ t('D16 两个线上冠军包（2P/3P）的规则指纹都必须等于当前规�
 });
 
 t('D61 五道门槛是单一真源：落盘处与出厂换包都必须走 feasibilityOf（复核 §4-6）', function () {
-  const srv = readFileSync('training/server/train-server.mjs', 'utf8');
+  /* 〔撤编 2026-11-19〕srv 臂（train-server 落盘可行性）—— 主语已删；promote/lib 两臂保留 */
   const pro = readFileSync('tools/promote-champion.mjs', 'utf8');
   const lib = readFileSync('tools/audit-lib.mjs', 'utf8');
-  ok(srv.indexOf('audit.feasibilityOf(') >= 0, '训练落盘处必须调用 audit.feasibilityOf');
-  ok(srv.indexOf('fieldB.clearedPerGame < 0.3') < 0, '落盘处不得再自己写一份阈值（应已搬进 audit-lib）');
   ok(pro.indexOf('feasibilityOf(') >= 0, '出厂换包处必须调用 feasibilityOf（线上包曾因绕过落盘而没有 feasibility 记录）');
   ok(pro.indexOf('meta.feasibility') >= 0, '出厂包必须把可行性记录写进 meta');
   /* 阈值必须在 lib 里，且五道齐全（搬运时漏一条 = 静默放宽） */
@@ -444,62 +442,7 @@ t('D103 「珠爆发」线必须同时在册（2P 考卷 + G4 克制表），且
     '前提：gate-drafts 必须真的把 EpirusBots 取出来（否则「珠爆发」格会静默退化成"只出ジ"的**假安全读数**）');
 });
 
-t('D116 §N6 修正（v1.5.150 · DS）：2P 切片必须打**2P 强参照**（对多人池 ⇒ 常数 ⇒ 空枪）+ 参照读不出必须响 + 带内候选落盘', function () {
-  /* 病（DS 09-22 实测 · `docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §2）：切片原来拿多人池 `OPPS` 当 2P 对手，
-   * 而现役包对池子脚本在 2P 里**0% 胜率** ⇒ 人人 ≈0 分 ⇒ 该切片是常数 ⇒ 加常数不改变排序
-   * ⇒ 第一臂 `v7xn1-31.bak` 与热启动**逐字节相同**（空枪，白跑）。 */
-  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
-  ok(t3.indexOf('T.scoreMemberN(params, XN2_OPPS') >= 0,
-    '2P 切片必须用参照列表 XN2_OPPS（改成 OPPS 就退回"常数切片"= 空枪）');
-  ok(t3.indexOf("EPIRUS_XN2REF || 'js/bundled-champion.js'") >= 0, '默认参照 = 现役 2P 冠军（不设环境变量也得有梯度）');
-  /* v1.7.73 · gate-sentinel ③ 分诊：摘掉 `indexOf('拒绝静默退化')`（措辞）；响亮 = `exit 2`，那半句仍在判。 */
-  ok(t3.indexOf('process.exit(2)') >= 0,
-    '参照包读不出必须**立刻退出**（静默退化正是这次踩的坑）');
-  ok(t3.indexOf('-band') >= 0 && t3.indexOf('EPIRUS_BAND_DIR') >= 0,
-    '必须带内候选落盘，且目录可指（门才测得了它，且不欠 D82 的账）');
-  /* v1.5.150 追加：`exam` 关键词 = 直接用 2P 考卷那 20 个基准当切片对手（与产品判据同表）。
-   * 为什么钉：臂 3 的教训是"混入弱对手 ⇒ 信号被平均稀释 ⇒ 退回常数切片"；而考卷基准**全部可打**
-   * （现役 2P 冠军对它们 99%）⇒ "对着验收标准训"是唯一能让目标与验收一致的路径，这条接线不许悄悄断。 */
-  ok(t3.indexOf("from '../tools/p2-baselines.mjs'") >= 0 && t3.indexOf("rp === 'exam'") >= 0,
-    'exam 模式必须接**单一来源** p2-baselines（自己抄一份基准表 = 本仓栽过三次的老坑）');
-  ok(t3.indexOf('exam:') >= 0 && t3.indexOf('p2-baselines 与 bots.js 漂移') >= 0,
-    'exam 模式的基准函数缺失必须响（不许静默少几个对手 ⇒ 验收口径偷偷变窄）');
-  /* 行为一：坏参照 ⇒ 训练前就 exit 2（无副作用、不写任何产物）。 */
-  const bad = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2REF: 'no/such/pack.bak' }), encoding: 'utf8', timeout: 120000 });
-  ok(bad.status === 2, '坏参照必须 exit 2（实测 exit=' + bad.status + '）');
-  /* 行为二：迷你臂（1 代 · N=3 · pop 2 · 2P 局 2）写进**临时目录** ⇒ 断言候选落盘 + meta 自证口径。 */
-  const dir = mkdtempSync(join(tmpdir(), 'xn2band-'));
-  const run = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
-    /* §E654：这条迷你臂原先只给 `EPIRUS_BAND_DIR`、没给落点 ⇒ 写的是 D123 的基线文件；
-     *   而 10-19 它连基线都写不成了——§E589 守卫发现同一粒权重已在 `docs/artifacts/train-3p-out-band1.bak`（手跑残留）⇒ exit 9 ⇒ 本腿"必须跑通"必红。
-     *   补上落点两件事一起解决：不再碰共享基线，也不再撞那条残留真身。 */
-    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dir, EPIRUS_ARM: 'nptest-arm', EPIRUS_T3P_OUT: join(dir, 'nptest-arm.js') }), encoding: 'utf8', timeout: 300000 });
-  ok(run.status === 0, '迷你臂必须跑通（exit=' + run.status + '）');
-  const bands = readdirSync(dir).filter(function (f) { return /-band\d+\.bak$/.test(f); });
-  ok(bands.length > 0, '带内候选必须落盘（实测 ' + bands.length + ' 个）');
-  /* 行为二b（v1.5.247）：**目录不存在**时必须自己建，不许静默跳过。
-   * 为什么单独钉：上面那条"行为二"用 `mkdtempSync` 先把目录建好了 ⇒ **门自己替被测代码满足了它的前置条件**，
-   * 于是 09-26 两批共 52 支臂（把 BAND_DIR 指到没建过的嵌套路径）每支都打 `[band-save] 无 … 目录，跳过`
-   * 把带内候选全丢了，而门一直是绿的 —— 这是"用例把前提喂饱"的典型盲区（METHODOLOGY 63 同族）。 */
-  const bandRoot = mkdtempSync(join(tmpdir(), 'xn2band2-'));
-  const dir2 = join(bandRoot, 'deep', 'nested');
-  const run2 = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
-    { env: Object.assign({}, process.env, { EPIRUS_XN2W: '1', EPIRUS_XN2G: '2', EPIRUS_SUPPORT_PRIOR: '0', EPIRUS_BAND_DIR: dir2, EPIRUS_ARM: 'nptest-nodir', EPIRUS_T3P_OUT: join(bandRoot, 'out.js') }), encoding: 'utf8', timeout: 300000 });
-  eq(run2.status, 0, 'BAND_DIR 不存在时迷你臂仍须跑通（exit=' + run2.status + ' ' + String(run2.stderr || '').slice(0, 80) + '）');
-  const bands2 = existsSync(dir2) ? readdirSync(dir2).filter(function (f) { return /-band\d+\.bak$/.test(f); }) : [];
-  ok(bands2.length > 0, 'BAND_DIR 不存在 ⇒ 必须**自建嵌套目录**并落盘带内候选（实测目录在场=' + existsSync(dir2) + ' · 候选 ' + bands2.length + ' 个）——'
-    + '静默跳过 = 臂"跑成功"但落选证据全丢（09-26 实测丢过 52 支）');
-  ok(String(run2.stdout || '').indexOf('目录，跳过') < 0, '不许再出现"无目录，跳过"这条静默退路');
-  rmSync(bandRoot, { recursive: true, force: true });
-  if (bands.length) {
-    const txt = readFileSync(join(dir, bands[0]), 'utf8');
-    ok(txt.indexOf('"xn2w":1') >= 0 && txt.indexOf('bundled-champion.js') >= 0,
-      'band 产物的 meta 必须自证 2P 口径（权重 + 参照路径），否则没人能追溯"它是跟谁训的"');
-  }
-  ok(String(run.stdout || '').indexOf('2P对手=ref:bundled-champion.js') >= 0,
-    'banner 必须打出 2P 对手（非空枪自检就靠这一行）');
-});
+/* 〔撤编 2026-11-19〕原 D116 2P 切片强参照（v1.5.150）—— 主语 train-best 2P 切片线已删（v7 线整体退役），见 docs/GATE-SHIFTS.md */
 
 t('D118 体检必须并报"产品代理栏"（真桌 1+4 · ε=0.2 soft）—— **只记录不阻断**（v1.5.152 · 用户裁定）', function () {
   /* 病（DS 09-22 §7 实测 · 用户追问"ε=0 下防御 0% 也不是很对吧"）：同一包同一 **ε=0**，

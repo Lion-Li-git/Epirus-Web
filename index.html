@@ -15,7 +15,6 @@
 
   <nav class="tabs">
     <button id="tab-battle" class="on">⚔ 对局</button>
-    <button id="tab-train">🧪 训练场（自对战）</button>
     <button id="tab-rules">📖 规则说明</button>
   </nav>
 
@@ -70,6 +69,8 @@
         <button class="ctl" id="btn-undo">悔一步（重开本回合）</button>
         <button class="ctl" id="btn-exportlog">导出对局记录</button>
         <button class="ctl" id="btn-lastlog">上局记录</button>
+        <button class="ctl" id="btn-import">导入冠军包</button><input type="file" id="file-import" accept=".bak,.js" style="display:none">
+        <!-- 2026-11-19：导入控件原在训练场 tab；v7 训练线退役后随产品功能回归对局区 -->
       </div>
       <div class="hint" id="battle-hint">点击下方一个技能出招（与电脑同时行动）。首次使用需确认能量珠的：蓄能 / 电磁炮 / 激光眼 会弹窗选择。</div>
       <div class="skillgrid" id="skillgrid"></div>
@@ -81,55 +82,6 @@
   </section>
 
   <!-- ============ 训练场 ============ -->
-  <section id="page-train" class="panel train hidden">
-    <div class="row">
-      <fieldset><legend>对抗自对战训练（Node 并行服务）</legend>
-        <label>训练人数
-          <select id="tr-n">
-            <option value="2" selected>2 人（2 人冠军）</option>
-            <option value="3">3 人（多人冠军）</option>
-            <option value="4">4 人</option>
-            <option value="5">5 人</option>
-          </select>
-        </label>
-        <label>每代个体数（14 建议）<input type="number" id="tr-pop" value="14" min="6" max="40"></label>
-        <label>本次代数 <input type="number" id="tr-remote-gens" value="100" style="width:70px"></label>
-        <!-- 留空 = 按人数自动（2 人 5 局 / 多人 20 局）；填数字才覆盖。ui.js 的 `parseInt(...) || 自动` 依赖空值 -->
-        <label>每人每代局数 <input type="number" id="tr-gpo" min="2" max="60" placeholder="自动" style="width:64px"></label>
-        <label>种子数 <input type="number" id="tr-seeds" value="3" min="1" max="8" style="width:60px"></label>
-        <label>轮数 <input type="number" id="tr-rounds" value="5" min="1" max="20" style="width:60px"></label>
-        <label style="cursor:pointer"><input type="checkbox" id="tr-fresh"> 从头训练（清空旧冠军、随机重开种群，破“冠军蝉联”）</label>
-        <label class="ctl" style="color:var(--accent)">⚡ 已改用 Node 多核并行训练，更稳更快：
-          <code style="font-size:12px">双击 training/start-train-server.cmd</code> 一键启动服务。本页「开始训练」自动连接；训练完可再点一次继续训练。
-        </label>
-      </fieldset>
-      <button class="ctl primary" id="btn-train">开始训练(Node服务)</button>
-      <button class="ctl" id="btn-stop" disabled>停止(断开)</button>
-      <button class="ctl" id="btn-eval">评测冠军</button>
-      <button class="ctl" id="btn-export">导出冠军 JSON</button>
-      <label class="ctl" style="cursor:pointer" title="导入冠军包：页面的导出 JSON，或训练产物 docs/artifacts/*.bak（含 window.EPIRUS_CHAMPION[_3P] 外壳，槽位按外壳名自动判定）——导入多人包后对局“困难”档即时生效，可用「用内置冠军」还原">导入冠军包
-        <input type="file" id="file-import" accept="application/json,.json,.bak,.js,.txt" style="display:none">
-      </label>
-      <button class="ctl" id="btn-reset" style="color:var(--red)">清空冠军</button>
-      <button class="ctl" id="btn-train-csv">导出训练CSV</button>
-      <button class="ctl" id="btn-remote" style="color:var(--red)">重置训练服务</button>
-      <label class="ctl">端口 <input type="number" id="tr-port" value="8787" style="width:70px"></label>
-      <span class="ctl" id="tr-remote" style="color:var(--accent)">未连接</span>
-    </div>
-    <div class="progress"><div id="tr-progress"></div></div>
-    <div class="statline">
-      <span>状态：<b id="tr-state">未开始</b></span>
-      <div id="tr-seeds-status" style="margin-top:6px;color:var(--dim);font-size:12px;line-height:1.7"></div>
-    </div>
-    <div class="statline">
-      <span>当前冠军：<b id="tr-has">检测中…</b></span>
-    </div>
-    <div id="chartWrap"><canvas id="chart"></canvas></div>
-    <div id="tr-evalbox"></div>
-    <p class="hint">训练 = 候选策略与「当前冠军 + 脚本基准」对战打分 → 精英保留+变异/交叉 → 由真实胜率选最强写盘。
-    需先双击 <code>training/start-train-server.cmd</code> 启动 Node 服务；「开始训练」会自动探测并连接，训练完再点一次可继续训练。
-    注：当前页面训练服务接的是旧版 <code>v7</code> 训练入口（仅支持 2~5 人）；现役 2.0（<code>obs5</code>）冠军池训练由 <code>training/</code> 脚本执行。冠军可导出 JSON 分享。</p>
-  </section>
 
   <!-- ============ 规则说明 ============ -->
   <section id="page-rules" class="panel rules hidden">

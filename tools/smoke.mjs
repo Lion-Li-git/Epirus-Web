@@ -138,19 +138,11 @@ async function main() {
   await shot(join(tmpdir(), 'screenshot-battle.png'));
   console.log('screenshot-battle saved');
 
-  // --- 训练场：远程 Node 服务流程 ---
-  await evalJS(`document.getElementById('tab-train').click()`);
-  await sleep(300);
-  check('远程训练UI存在', await evalJS(`!!document.getElementById('tr-port') && !!document.getElementById('btn-train') && !!document.getElementById('btn-remote') && !!document.getElementById('tr-remote-gens')`));
-  // 无服务时点击「开始训练」：应优雅提示"服务未启动/自动连接"，不抛 JS 错误
-  await evalJS(`document.getElementById('tr-port').value=8799; document.getElementById('tr-remote-gens').value=3; document.getElementById('btn-train').click()`);
-  await sleep(2500);
-  const remoteHint = await evalJS(`document.getElementById('tr-remote').textContent`);
-  console.log('remoteHint =', JSON.stringify(remoteHint));
-  check('服务未启动提示', /服务未启动|自动|启动/.test(remoteHint));
-  check('按钮未锁死', await evalJS(`!document.getElementById('btn-train').disabled`));
-  await shot(join(tmpdir(), 'screenshot-train.png'));
-  console.log('screenshot-train saved');
+  /* 〔撤编 2026-11-19〕原「训练场：远程 Node 服务流程」一节 —— 训练场 tab 与 v7 服务随旧线退役
+   *  （训练入口统一到 training/proto2/pg-train|supfit-gd，见 training/README.md）；本节主语已删。
+   *  顶替它的新烟囱断言：对局区的「导入冠军包」控件在位（原训练场里的产品功能回归对局区）。 */
+  check('导入冠军包控件在位', await evalJS(`!!document.getElementById('btn-import') && !!document.getElementById('file-import')`));
+  check('训练场 tab 已退场', await evalJS(`!document.getElementById('tab-train') && !document.getElementById('page-train')`));
 
   /* --- v1.6.5\uff08\u7528\u6237\u88c1\u5b9a\u300c\u628a 2 \u4eba\u5408\u5e76\u8fdb\u591a\u4eba\uff0c\u53d8\u6210\u9009\u4eba\u6570 \u00d7 3\u8840/5\u8840\u6b63\u4ea4\uff1b4 \u8840\u4e5f\u53ef\u4ee5\u4e0a\u300d\uff09\uff1a
    * \u628a **12 \u79cd\u7ec4\u5408**\u5728\u771f\u9875\u9762\u91cc\u5168\u8fc7\u4e00\u904d\uff0c\u5224\u7684\u662f\u884c\u4e3a\u800c\u4e0d\u662f\u6587\u672c

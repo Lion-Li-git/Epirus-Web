@@ -13,7 +13,7 @@
 ## 快速开始
 
 1. 双击 `index.html`。默认「**3 人 · 3 血** + 普通难度」直接开打：点技能出招，所有席位同时行动，回合日志逐条结算；技能按钮按当前资源实时置灰（ジ/珠不足或条件不满足不可点）。
-2. 想自训 AI：运行 `training/train-3p.mjs`（2.0 `obs6` 主线）或双击 `training/start-train-server.cmd` 在页内「训练场」连接 `v7` 本机服务。
+2. 想自训 AI：走 `training/proto2/pg-train.mjs`（2.0 塑形后训练）或 `training/proto2/supfit-gd.mjs`（2.0 教师蒸馏）；GA 路要带 `EPIRUS_ARCH2`（详见 [`training/README.md`](training/README.md)）。页内「训练场」tab 连接的 `v7` 本机服务是冻结旧线。
 3. 冠军策略可「导出 JSON」分享，也可「导入」别人的冠军包。
 
 > 本机包（`localStorage['epirus.champion.v3']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**：当前桌对应的槽有手工载入的包时，池整桌不生效（2P 槽空但有多人本机包时也优先，标签会写「3P 槽回退」）。内置 2P/3P 包只作池失效时的回退；想打「每席随机抽一枚冠军」的桌子，先清空本机包。
@@ -71,7 +71,7 @@ Epirus-Web/
 ├─ training/                     训练侧独立子仓（入口 / 服务 / 旋钮真源；产品侧零依赖）
 │   ├─ knobs.mjs                   旋钮单一真源生成器（--check 拦截未登记/无注解键）
 │   ├─ TRAINING-KNOBS.md           旋钮唯一配置真源手册
-│   ├─ train-3p.mjs                2.0 GA 训练主入口（多人/混合桌）‖ train-best / train-fast（v7 2P）‖ train-selftest
+│   ├─ train-3p.mjs                多人 GA（2.0 需 ARCH2；缺它 exit 5 禁默认训老网络）‖ train-best / train-fast（v7 冻结线）‖ train-selftest
 │   ├─ start-train-server.cmd      一键启动页面本地训练服务
 │   ├─ server/                     训练服务 + 并行 worker + 对手池 + 旋钮来源表
 │   └─ proto2/                     2.0 网络与训练栈（arch2 与 js/train/policy2.js 为双胞胎实现）
@@ -123,15 +123,20 @@ node training/train-selftest.mjs             # 训练侧凭据自检
 
 ## 训练
 
-### 入口
+### 入口（权威地图：[`training/README.md`](training/README.md)）
 
 ```bash
-# 2.0 多人/混合桌 GA 主入口（参数与配方旋钮见 training/TRAINING-KNOBS.md）
-node training/train-3p.mjs 200 5 24 8
+# ① 2.0 包的强化/塑形后训练（现役主力：行为塑形 + 键频锚 + 多节点快照）
+node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --games=6000 --shapeKey=tank:0.25 --out=scratch/arms/<臂>.bak
 
-# 旧版 v7 2P 快速训练
+# ② 2.0 教师蒸馏 / DAgger（toolkit 多技能教师；pack:<v7包> = 跨线蒸馏）
+node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --teacher=toolkit --objective=cand --dagger=1 --lr=0.0004 --steps=180 --groups=3300 --out=scratch/arms/<臂>.bak
+
+# ③ GA + 教师三件套（2.0 形状必须带 ARCH2；缺它 exit 5——2026-11-19 起禁止默认训老网络）
+EPIRUS_ARCH2=S1o:input=obs6,gen=3,keySplit=1 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=<obs6包> node training/train-3p.mjs 100 5 24 8
+
+# 旧版 v7 线（冻结维护：train-fast / train-best / train-server；例外臂要 EPIRUS_ALLOW_V7=1）
 node training/train-fast.mjs 500
-node training/train-best.mjs 4 600
 ```
 
 - **真实评测口径**：`js/core/play.js` 的 `autoGame` 中各方均基于行动前状态同时决策；任何非法或买不起的动作兜底为 ジ。

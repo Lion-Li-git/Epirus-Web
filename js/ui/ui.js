@@ -525,11 +525,6 @@
      *   于是全部"解不开"、静默退回单包（浏览器实机跑出来的：`PK.unpack is not a function`）。
      *   `allowLegacy=true`：池成员跨代（3P 侧 `K2`/`SHIPPED-Ldemo` 是 v6 形状、`T8-s114` 是 v7；
      *   2P 侧是 2P 原生形状）⇒ 与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
-    /* ⚠ 解包用本文件顶上的别名 `P = window.EpirusPolicy`（`unpack` 挂在那里）——
-     *   第一版这里写成 `window.EpirusChampionPack.unpack` 是**错的**：那个对象只导出 `extract`/`version`，
-     *   于是全部"解不开"、静默退回单包（浏览器实机跑出来的：`PK.unpack is not a function`）。
-     *   `allowLegacy=true`：池成员跨代（3P 侧 `K2`/`SHIPPED-Ldemo` 是 v6 形状、`T8-s114` 是 v7；
-     *   2P 侧是 2P 原生形状）⇒ 与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
     for (const m of raw.members) {
       let p = null;
       try { p = P.unpack(m.pack, true); } catch (e) { p = null; }
@@ -646,7 +641,6 @@
     /* v1.5.131：2P 侧也要重开一局（原先只判 `B.multi`）。2P 的 chooser **每次决策都重读**
      * `Champ.store.load()`（`chooseAI:574`）⇒ 清键下次决策即生效；重开只是让这一局从干净状态开始。 */
     if (tierIsChamp(B.diff)) newGame();   // v1.6.6：2 人/多人同一条路 ⇒ 不再分"只有 hard 槽才重开"
-    renderChampState();   // 训练场「当前冠军」必须立刻反映"已改回内置"
     hint(had3 || had2
       ? ('已清除本机冠军（' + [(had3 ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
          '），改回内置冠军（' + (loaded ? '多人包已加载' : '⚠ 多人内置包缺失/不兼容') + '）')
@@ -1193,6 +1187,7 @@
   }
   /* 上局记录：从 localStorage 读（即使已点过“再来一局”也还在） */
   function showLastBattle() {
+    $('btn-import').onclick = function () { $('file-import').click(); };
     let txt = '';
     try { txt = localStorage.getItem('epirus.lastBattle') || ''; } catch (e) { txt = ''; }
     if (!txt) { hint('暂无上局记录'); return; }
@@ -1382,323 +1377,10 @@
   /* ---------- Tab ---------- */
   function showTab(which) {
     $('tab-battle').classList.toggle('on', which === 'battle');
-    $('tab-train').classList.toggle('on', which === 'train');
     $('tab-rules').classList.toggle('on', which === 'rules');
     $('page-battle').classList.toggle('hidden', which !== 'battle');
-    $('page-train').classList.toggle('hidden', which !== 'train');
     $('page-rules').classList.toggle('hidden', which !== 'rules');
-    if (which === 'train') { drawChart(); renderChampState(); }
     if (which === 'rules' && window.EpirusRulesPanel) window.EpirusRulesPanel.render();
-  }
-
-  /* ---------- 训练场 ---------- */
-  let lastTrainer = null;
-  let stats = { swaps: 0 };
-  function renderChampState() {
-    applyPackTypeLock();   /* v1.8.45：本机 3P 包的代际决定人数下拉锁 —— 所有会改本机包的路径（导入/还原内置/远训写回）最终都走这里 */
-    /* v1.5.131：**原先"内置包"也会被标成"已保存本地冠军"** —— 因为 `store.load()` 在本地缺失时会回退内置，
-     * `c` 照样是真值 ⇒ "当前冠军"永远显示成"已保存本地冠军"（handoff §4-10 的第 3 个症状：
-     * 2P 用户既看不出自己在打哪个包，也看不到"用内置冠军"到底有没有生效）。
-     * 现在按 `store.lastSource`（由 `trainer.js` 单一来源回传）如实区分三种情形。 */
-    const c = Champ.store.load();
-    const from = Champ.store.lastSource;
-    let has3pLocal = false;
-    try { has3pLocal = !!localStorage.getItem('epirus.champion3p'); } catch (e) { has3pLocal = false; }
-    const el = $('tr-has');
-    let label;
-    if (from === 'local' || has3pLocal) {
-      const slots = [from === 'local' ? '2 人' : '', has3pLocal ? '多人' : ''].filter(Boolean).join(' + ');
-      label = '已保存本地冠军（本机自训/导入 · ' + slots + '）';
-    } else if (from === 'builtin') {
-      const m = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) || null;
-      label = m
-        ? ('内置冠军 · ' + (m.source || '?') + ' · ' + (m.seeds != null ? m.seeds + '×' : '') + (m.gens != null ? m.gens + '代' : '') + (m.ts ? ' · ' + m.ts : ''))
-        : '内置冠军';
-    } else {
-      label = '无（困难难度将代打中等逻辑）';
-    }
-    el.textContent = label;
-  }
-  function exportTrainCsv() {
-    const trainer = (remoteHistory && remoteHistory.length)
-      ? { history: remoteHistory, gen: remoteHistory[remoteHistory.length - 1].gen }
-      : lastTrainer;
-    if (!trainer || !trainer.history || !trainer.history.length) { alert('还没有训练历史可导出（先训练）。'); return; }
-    Champ.saveTrainLogCSV(trainer);
-  }
-  function stopRemote() {
-    if (remoteES) remoteES.close();
-    remoteES = null; remoteActive = false;
-    $('tr-state').textContent = '已断开显示（服务端可能仍在完成本批训练）';
-  }
-  function resetServerTrain() {
-    fetch(remoteBase() + '/reset').then(function (r) { return r.json(); }).then(function () {
-      remoteHistory = []; remoteDoneSeeds = {}; stats.swaps = 0;
-      $('tr-state').textContent = '服务端已重置（新种子）'; $('tr-progress').style.width = '0%';
-      renderSeedStatus(); drawChart();
-    }).catch(function () { $('tr-remote').textContent = '重置失败：服务未启动？'; });
-  }
-  const EVAL_GAMES = 30;   // 局数只写这一处：按钮文案与结果标题都由它生成（两处各写一遍必漂移）
-  $('btn-eval').textContent = '评测冠军(' + EVAL_GAMES + '局/基线)';
-  function doEval() {
-    const rows = Champ.quickEval(EVAL_GAMES, Date.now() % 100000);
-    if (!rows) { $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有冠军可评测，先训练。</p>'; return; }
-    renderEval(rows, '评测：冠军 vs ' + rows.length + ' 脚本基准（各 ' + EVAL_GAMES + ' 局）');
-  }
-  function renderEval(rows, title) {
-    let h = '<h4 style="margin:12px 0 2px">' + title + '</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';
-    for (const r of rows) {
-      h += '<tr><td>' + r.name + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td><td>' + (r.wr * 100).toFixed(0) + '%</td></tr>';
-    }
-    h += '</table>';
-    $('tr-evalbox').innerHTML = h;
-  }
-
-  /* ---------- 远程训练（Node 服务，SSE 实时进度） ---------- */
-  let remoteES = null;
-  let remoteHistory = [];   // 累积的远程 rec（跨批保留，供 CSV + 曲线）
-  let remoteParents = [];   // 本轮各种子的父种子 id（-1=无父代/现有冠军），用于 CSV 的 parent_seed_id
-  let remoteActive = false; // 当前是否处于远程训练（画图用）
-  let remoteStart = 0;      // 本次批次的起始代（来自 start 事件）
-  let remoteDoneSeeds = {}; // 已早停/完成的种子：{seed: {reason, gen, wr}}
-  let remoteGens = 500;     // 本次批次要新增的代
-  let remoteRetry = null;   // 服务未启动时的自动探测定时器
-  function remoteBase() {
-    const port = ($('tr-port').value || '8787');
-    return 'http://127.0.0.1:' + port;
-  }
-  // 探测服务是否可达；1.5s 无响应视为未启动（避免 file:// 页连不上时一直"探测中"）
-  function fetchProbe(base) {
-    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    const tid = setTimeout(function () { if (ctl) ctl.abort(); }, 1500);
-    return fetch(base + '/', ctl ? { signal: ctl.signal } : undefined).then(function (r) {
-      clearTimeout(tid); return { ok: r.ok };
-    }).catch(function () { clearTimeout(tid); return { ok: false }; });
-  }
-  let remoteN = 2;
-  function connectRemoteTrain() {
-    const gens = Math.max(1, Number($('tr-remote-gens').value || 500));
-    remoteGens = gens;
-    const nPlayers = Math.max(2, Math.min(5, parseInt($('tr-n') && $('tr-n').value, 10) || 2));
-    remoteN = nPlayers;
-    // 多人：每代评估更重（一局有 N 个人），默认种群/局数自动拉高
-    const pop = Math.max(6, parseInt($('tr-pop').value, 10) || (nPlayers > 2 ? 32 : 14));
-    const gpoIn = Math.max(2, parseInt($('tr-gpo') && $('tr-gpo').value, 10) || (nPlayers > 2 ? 20 : 5));
-    const seedsN = Math.max(1, Math.min(8, parseInt($('tr-seeds').value, 10) || 3));
-    const roundsN = Math.max(1, Math.min(20, parseInt($('tr-rounds').value, 10) || 1));
-    const fresh = $('tr-fresh') && $('tr-fresh').checked;
-    const base = remoteBase();
-    if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
-    if (remoteES) { remoteES.close(); remoteES = null; }
-    stats.swaps = 0;
-    remoteHistory = []; remoteDoneSeeds = {};
-    $('tr-remote').textContent = '正在探测服务…';
-    // 先探测服务是否已启动：未启动则提示双击 launcher 并自动重试（页面上"一键"体验）
-    fetchProbe(base).then(function (res) { if (res.ok) openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); else waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); });
-  }
-  function waitForServer(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers) {
-    $('tr-remote').textContent = '服务未启动。请双击 training/start-train-server.cmd 启动（或 node training/server/train-server.mjs）——检测到后自动连接…';
-    if (remoteRetry) clearInterval(remoteRetry);
-    remoteRetry = setInterval(function () {
-      fetchProbe(base).then(function (res) { if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers); } });
-    }, 2000);
-  }
-  function renderSeedStatus() {
-    const el = $('tr-seeds-status');
-    if (!el) return;
-    // 必须按「轮-种子」分组：每轮种子号都会从 0 重新开始，只按 seed 分组会让第二轮之后的行永远不更新
-    // （第二轮 gen 从 0 起，永远不大于第一轮的 gen，旧代码的 `r.gen > by[s].gen` 判定直接失效）
-    const by = {}, order = [];
-    for (const r of remoteHistory) {
-      const s = r.seed != null ? r.seed : 0;
-      const rd = r.round != null ? r.round : 0;
-      const k = rd + '-' + s;
-      if (!by[k]) { by[k] = { round: rd, seed: s, gen: -1, best: null, champAge: null, sigma: null, swaps: 0 }; order.push(k); }
-      const d = by[k];
-      if (r.gen > d.gen) { d.gen = r.gen; d.best = r.best; d.champAge = r.champAge; d.sigma = r.sigma; }
-      if (r.champChanged) d.swaps++;
-    }
-    if (!order.length) { el.innerHTML = ''; return; }
-    const maxRound = order.reduce(function (m, k) { return Math.max(m, by[k].round); }, 0);
-    const out = [];
-    // 历史轮：各压成一行摘要
-    for (let rd = 0; rd < maxRound; rd++) {
-      const same = order.filter(function (k) { return by[k].round === rd; });
-      if (!same.length) continue;
-      let best = -1;
-      for (const k of same) if (by[k].best != null && by[k].best > best) best = by[k].best;
-      out.push('<div style="opacity:.62">第' + (rd + 1) + '轮完成 · ' + same.length + ' 种子 · 最高最优分 ' + (best >= 0 ? best.toFixed(3) : '--') + '</div>');
-    }
-    // 当前轮：逐种子实时行
-    for (const k of order.filter(function (x) { return by[x].round === maxRound; })) {
-      const d = by[k], done = remoteDoneSeeds[k];
-      const seg = ['第' + (d.round + 1) + '轮 · 种子' + d.seed, '世代' + d.gen,
-        (d.best != null ? '最优' + d.best.toFixed(3) : '最优-'),
-        '更换' + d.swaps + '次',
-        (d.champAge != null ? '蝉联' + d.champAge + '代' : ''),
-        (d.sigma != null ? 'σ' + d.sigma.toFixed(3) : '')];
-      out.push('<div>' + seg.filter(Boolean).join('  ') + (done ? '  ⚠' + done.reason : '') + '</div>');
-    }
-    el.innerHTML = out.join('');
-  }
-  function openRemote(base, gens, pop, gpoIn, fresh, seedsN, roundsN, nPlayers) {
-    if (remoteES) { remoteES.close(); remoteES = null; }
-    remoteActive = true;
-    $('tr-remote').textContent = '连接中…';
-    const es = new EventSource(base + '/train?gens=' + gens + '&pop=' + pop + '&gpo=' + gpoIn + (fresh ? '&fresh=1' : '') + '&seeds=' + seedsN + '&rounds=' + roundsN + '&n=' + (nPlayers || 2));
-    remoteES = es;
-    es.onopen = function () { $('tr-remote').textContent = '已连接，服务端训练中（可切去对战）'; };
-    es.onmessage = function (ev) {
-      let d = {}; try { d = JSON.parse(ev.data); } catch (e) { return; }
-      if (d.type === 'start' && d.n > 2) {
-        remoteStart = 0;
-        $('tr-remote').textContent = '多人训练（' + d.n + ' 人）已启动：' + d.gens + ' 代 · 每代 ' + d.pop + ' 个体 · 每人 ' + d.gpo + ' 局 · ' + (d.workers != null ? d.workers + ' 个 worker' : '串行') + (d.fresh ? ' · 从头训练' : ' · 热启动');
-      } else if (d.type === 'start') {
-        remoteStart = d.fresh ? 0 : (d.from || 0);
-        const n = d.seeds || seedsN, rd = d.rounds || roundsN;
-        $('tr-remote').textContent = d.fresh
-          ? '已重置，从头训练（' + rd + ' 轮 × ' + n + ' 种子，清空旧冠军）'
-          : rd + ' 轮 × ' + n + ' 种子（每轮 ' + gens + ' 代），继续精修现有冠军';
-      } else if (d.type === 'roundStart') {
-        remoteParents = (d.parents || []).map(function (p) { return p && p.seedId != null ? p.seedId : -1; });
-        const par = (d.parents && d.parents.length) ? ('｜' + d.parents.map(function (p, i) { return '种子' + i + '←' + ((p && p.label) || '随机'); }).join(' ')) : '';
-        $('tr-state').textContent = '第 ' + (d.round + 1) + '/' + d.rounds + ' 轮开始（' + d.seeds + ' 种子 × ' + d.gens + ' 代）' + par;
-      } else if (d.type === 'lineage') {
-        $('tr-state').textContent = '第 ' + (d.round + 1) + ' 轮种子谱系：' + d.parents.map(function (p, i) { return '种子' + i + '←' + p.label; }).join('  ');
-      } else if (d.type === 'gen' && d.n > 2) {
-        const r = d.rec;
-        remoteHistory.push({ round: 0, seed: 0, parentSeed: -1, gen: r.gen, best: r.best, sigma: r.sigma, baseline: null });
-        $('tr-state').textContent = '多人（' + d.n + '人）训练中… 第 ' + r.gen + ' 代 · 1st ' + (r.firstRate * 100).toFixed(0) + '% / top2 ' + (r.top2Rate * 100).toFixed(0) + '%';
-        $('tr-progress').style.width = Math.min(100, (r.gen + 1) / gens * 100) + '%';
-        renderSeedStatus();
-        drawChart();
-      } else if (d.type === 'gen') {
-        const r = d.rec;
-        const sd = d.seed != null ? d.seed : 0;
-        const rd = d.round != null ? d.round : 0;
-        remoteHistory.push({ round: rd, seed: sd, parentSeed: (remoteParents[sd] != null ? remoteParents[sd] : -1), gen: r.gen, best: r.best, champChanged: r.champChanged, champAge: r.champAge, sigma: r.sigma, baseline: r.baseline });
-        if (r.champChanged) stats.swaps++;
-        $('tr-state').textContent = '远程训练中… 第 ' + (rd + 1) + ' 轮 · 世代 ' + r.gen;
-        $('tr-progress').style.width = Math.min(100, (r.gen - remoteStart) / gens * 100) + '%';
-        renderSeedStatus();
-        drawChart();   // 实时画多条种子曲线（y 轴自适应，最优分可>1）
-      } else if (d.type === 'seedDone') {
-        remoteDoneSeeds[(d.round != null ? d.round : 0) + '-' + d.seed] = { reason: d.reason, gen: d.gen, wr: d.wr };
-        $('tr-remote').textContent = 'R' + (d.round != null ? d.round : 0) + ' 种子' + d.seed + ' 已早停：' + d.reason + '（第' + d.gen + '代，真实胜率 ' + (d.wr != null ? (d.wr * 100).toFixed(0) + '%' : '--') + '）';
-        renderSeedStatus();
-      } else if (d.type === 'seedEval') {
-        $('tr-state').textContent = '第 ' + ((d.round || 0) + 1) + ' 轮收尾评估… 种子' + d.seed + ' 真实胜率 ' + (d.wr * 100).toFixed(0) + '%';
-      } else if (d.type === 'roundDone') {
-        const bestSeedTxt = d.bestSeed != null && d.bestSeed >= 0 ? (' 最优=种子' + d.bestSeed) : ' 保留现有冠军';
-        $('tr-state').textContent = '第 ' + (d.round + 1) + '/' + d.rounds + ' 轮完成：冠军真实胜率 ' + (d.champWr != null ? (d.champWr * 100).toFixed(0) + '%' : '--') + bestSeedTxt;
-      } else if (d.type === 'done' && d.n > 2) {
-        $('tr-progress').style.width = '100%';
-        $('tr-state').textContent = '多人（' + d.n + '人）训练完成：1st ' + (d.firstRate * 100).toFixed(1) + '% / top2 ' + (d.top2Rate * 100).toFixed(1) + '%（' + d.secs + 's）';
-        $('tr-remote').textContent = '多人冠军已写入 js/bundled-champion-3p.js 并存入本机（对局困难档即时生效；可用「用内置冠军」还原）；再点一次可继续训练';
-        remoteActive = false;
-        es.close(); remoteES = null;
-        if (d.champ) {
-          window.EPIRUS_CHAMPION_3P = d.champ;
-          try { localStorage.setItem('epirus.champion3p', JSON.stringify(d.champ)); } catch (e) { /* ignore */ }
-          resetMultiChampCache();
-          renderChampState();
-        }
-      } else if (d.type === 'done') {
-        $('tr-progress').style.width = '100%';
-        const bestSeedTxt = d.bestSeed != null && d.bestSeed >= 0 ? (' 最优=种子' + d.bestSeed) : ' 保留现有冠军';
-        $('tr-state').textContent = '远程训练完成：' + (d.rounds || roundsN) + ' 轮 × ' + (d.seeds || seedsN) + ' 种子 (' + d.secs + 's)，冠军真实胜率 ' + (d.champWr != null ? (d.champWr * 100).toFixed(0) + '%' : '--') + bestSeedTxt;
-        $('tr-remote').textContent = '训练完成（' + (d.rounds || roundsN) + ' 轮 × ' + (d.seeds || seedsN) + ' 种子' + bestSeedTxt + '），冠军已写入 js/bundled-champion.js；再点一次可继续训练';
-        remoteActive = false;
-        es.close(); remoteES = null;
-        // 把冠军拉进内存并写入本机覆盖（困难档无需刷新即可生效，不被池覆盖）
-        fetch(base + '/champion').then(function (r) { return r.json(); }).then(function (j) {
-          if (j && j.champion) {
-            window.EPIRUS_CHAMPION = j.champion;
-            try { localStorage.setItem('epirus.champion.v3', JSON.stringify(j.champion)); } catch (e) { /* ignore */ }
-            renderChampState();
-            $('tr-remote').textContent = '冠军已载入内存并存入本机（困难档即时生效；可用「用内置冠军」还原）；再点一次可继续训练';
-          }
-        });
-      } else if (d.type === 'error') { $('tr-remote').textContent = '服务错误：' + d.msg; }
-    };
-    es.onerror = function () {
-      remoteActive = false;
-      $('tr-remote').textContent = '连接中断。请确认服务仍在运行（training/start-train-server.cmd）。';
-      es.close(); remoteES = null;
-    };
-  }
-
-  /* ---------- 图表 ---------- */
-  function drawChart() {
-    const cv = $('chart');
-    if (!cv || $('page-train').classList.contains('hidden')) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = cv.clientWidth || 600, h = 220;
-    cv.width = w * dpr; cv.height = h * dpr;
-    const g = cv.getContext('2d');
-    g.scale(dpr, dpr);
-    g.clearRect(0, 0, w, h);
-    let hist = null;
-    if (remoteHistory.length) hist = remoteHistory;
-    else if (lastTrainer && lastTrainer.history && lastTrainer.history.length)
-      hist = lastTrainer.history.map(function (r) { return { seed: 0, gen: r.gen, best: r.best, baseline: r.baseline }; });
-    if (!hist || !hist.length) { g.fillStyle = '#8b93c4'; g.font = '13px sans-serif'; g.fillText('训练历史将显示在此，连接远程训练或先训练一次', 16, h / 2); return; }
-    // 按「轮-种子」分组：每轮种子号都从 0 重新开始，只按 seed 分组会把各轮曲线首尾相接成锯齿
-    const bySeries = {}, keys = [];
-    for (const r of hist) {
-      const s = r.seed != null ? r.seed : 0;
-      const rd = r.round != null ? r.round : 0;
-      const k = rd + '-' + s;
-      if (!bySeries[k]) { bySeries[k] = { round: rd, seed: s, arr: [] }; keys.push(k); }
-      bySeries[k].arr.push(r);
-    }
-    keys.sort(function (a, b) { return bySeries[a].round - bySeries[b].round || bySeries[a].seed - bySeries[b].seed; });
-    const pad = 38;
-    let maxV = 1;
-    for (const k of keys) for (const r of bySeries[k].arr) if (r.best > maxV) maxV = Math.ceil(r.best * 100) / 100;
-    if (!(maxV > 0)) maxV = 1;
-    // x 轴按「轮」连续推进：第 N 轮的曲线接在第 N-1 轮右侧（不再各自从 0 起、叠在旧图上）
-    let genMax = 0, roundMax = 0;
-    for (const k of keys) {
-      const s = bySeries[k];
-      if (s.round > roundMax) roundMax = s.round;
-      for (const r of s.arr) if (r.gen > genMax) genMax = r.gen;
-    }
-    const stride = genMax + 1;
-    const span = Math.max(1, (roundMax + 1) * stride - 1);
-    const X = function (rd, gen) { return pad + (w - pad * 2) * ((rd * stride + gen) / span); };
-    const Y = function (v) { return h - 20 - (h - 44) * Math.max(0, Math.min(maxV, v)) / maxV; };
-    g.strokeStyle = '#2c3560'; g.beginPath();
-    for (let x = pad; x <= w - pad; x += 60) { g.moveTo(x, 10); g.lineTo(x, h - 20); }
-    g.stroke();
-    // 轮分界线 + 轮号（每轮一段横向区间）
-    g.setLineDash([4, 4]);
-    for (let rd = 1; rd <= roundMax; rd++) {
-      const x = X(rd, 0);
-      g.strokeStyle = '#3d4a7d'; g.beginPath(); g.moveTo(x, 10); g.lineTo(x, h - 20); g.stroke();
-    }
-    g.setLineDash([]);
-    g.strokeStyle = '#8b93c4'; g.font = '11px sans-serif';
-    for (let rd = 0; rd <= roundMax; rd++) {
-      const x = X(rd, 0);
-      g.fillStyle = '#6f7aa8'; g.fillText('R' + (rd + 1), x + 3, h - 6);
-    }
-    g.strokeStyle = '#8b93c4'; g.font = '11px sans-serif';
-    g.fillText(maxV.toFixed(2), 4, Y(maxV) + 4); g.fillText((maxV / 2).toFixed(2), 4, Y(maxV / 2) + 4); g.fillText('0', 4, Y(0) + 4);
-    g.fillText('上限 ' + maxV.toFixed(2), w - 62, 14);
-    const COLORS = ['#5ad0ff', '#ff8fa3', '#7be08a', '#ffc94d', '#c39bff', '#7fd7ff', '#ff9f6b', '#9be0c3'];
-    keys.forEach(function (k, si) {
-      const ser = bySeries[k], arr = ser.arr, color = COLORS[si % COLORS.length];
-      g.strokeStyle = color; g.lineWidth = 2; g.beginPath();
-      arr.forEach(function (r, i) { const x = X(ser.round, r.gen), y = Y(r.best); i ? g.lineTo(x, y) : g.moveTo(x, y); });
-      g.stroke();
-      g.fillStyle = color;
-      arr.forEach(function (r) { if (r.baseline != null) g.fillRect(X(ser.round, r.gen) - 2, Y(r.baseline) - 2, 3, 3); });
-    });
-    g.fillStyle = '#8b93c4'; g.font = '11px sans-serif';
-    const shown = keys.length > 8 ? keys.slice(keys.length - 8) : keys;
-    const lg = (keys.length > 8 ? '… ' : '') + shown.map(function (k) { return 'R' + (bySeries[k].round + 1) + 's' + bySeries[k].seed; }).join(' ');
-    g.fillText('各轮种子最优分曲线（' + lg + '；点=对基线真实胜率）', pad, 12);
   }
 
   /* ---------- 导出/导入 ---------- */
@@ -1745,6 +1427,10 @@
       if (B.state) newGame();                                  // 局中导入/切档 ⇒ 按换人数同款重开
     }
   }
+
+  /* 2026-11-19：训练场 tab 已删（v7 训练线退役）。renderChampState 的调用方（导入/清空/换包流程）保留，
+   *  兼容壳只保留它真正需要的副作用：applyPackTypeLock（人数下拉按包代锁 6/7/8 人）。 */
+  function renderChampState() { applyPackTypeLock(); }
   function exportChamp() {
     /* v2.0.9：导出按**当前桌面**的 AI 槽走。旧实现永远读 2P 槽（Champ.store.load）⇒
      * 3P/多人桌上点「导出冠军 JSON」拿到的是 2P 包（或内置 2P），与 README「冠军策略可导出分享」不符。 */
@@ -1873,7 +1559,6 @@
   /* ---------- 事件绑定 ---------- */
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
-    $('tab-train').onclick = function () { showTab('train'); };
   $('tab-rules').onclick = function () { showTab('rules'); };
     applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
@@ -1911,15 +1596,7 @@
     if ($('inp-sd-dmg')) $('inp-sd-dmg').addEventListener('change', saveSd);
     $('btn-undo').onclick = undo;
     $('btn-exportlog').onclick = exportLog;
-    $('btn-train').onclick = connectRemoteTrain;
-    $('btn-stop').onclick = stopRemote;
-    $('btn-eval').onclick = doEval;
-    $('btn-export').onclick = exportChamp;
-    $('btn-reset').onclick = resetChamp;
-    $('btn-train-csv').onclick = exportTrainCsv;
-    $('btn-remote').onclick = resetServerTrain;
     $('file-import').onchange = function (ev) { importChamp(ev.target.files && ev.target.files[0]); ev.target.value = ''; };
-    window.addEventListener('resize', function () { drawChart(); });
   }
 
   /* logbox 注入到 DOM（index.html 中 .logbox 属于电脑侧栏） */

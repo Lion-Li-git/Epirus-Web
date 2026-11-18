@@ -6,20 +6,20 @@ import { makeCtx, NP_GATE_FILES, npSourceAll } from './_ctx.mjs';
 const {
   existsSync, readFileSync, readdirSync, statSync, mkdtempSync,
   mkdirSync, writeFileSync, rmSync, copyFileSync, tmpdir,
-  join, createHash, _spawnSync, T3P_ENTRY, spawnSync,
+  join, createHash, _spawnSync, spawnSync,
   parsePairTable, makeGuardCost, resolveOutPath, loadSlotId, sigOf,
   LADDER_CLAIM, pushTarget, hardwiredLine, widOfArr, seatRd,
   seatKillIndex, pairHasBase, classifyDefenseWindow, defenseQuality, formatQuality,
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
-  spawnBatch, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, RGAIN, OPP_SPECS,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
   fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand,
   bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE, SEL_BASE0, SEL_STRIDE,
   SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns,
-  selNote, selGapNote, readTrainEnv, hasTrainOverride, TEK,
+  selNote, selGapNote,
   measureAll, KR_LIB, detectDarkKnobs, readKeysOf, wallCapExceeded,
   wallCapOf, sb, sandbox, stanceProfile, aggressionProfile,
   feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile,
@@ -30,7 +30,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [3697, 3971, 4278, 4324, 4388, 4781, 5888, 6293, 6344, 7206, 8175, 8272, 8767, 11526];
+export const ords = [3697, 3971, 4278, 4324, 4388, 7206, 8175, 8272, 8767, 11526];  /* 2026-11-19：D73/D124/D125/D121 随 v7 训练器删除（见 GATE-SHIFTS） */
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('D35 训练侧"自对局健康门槛"必须存在、默认开、且与体检共用同一实现', function () {
@@ -207,21 +207,7 @@ t('D62 座位判据的样本量守卫：小样本必须报"不知道"，不得�
  * 也就是说池子里**没有任何对手会瞄人**（脚本走 pickTargetN = 击杀优先 → 血量最高，满血不出头的狙击手
  * 永远进不了任何人的候选集）。这条用例盯三件事：① 它真的指威胁；② 目标**不被引擎剥掉**（否则退化成
  * 又一个 pickTargetN ⇒ 整批实验白跑）；③ 无威胁时攒钱（它是惩罚者，不是又一个乱打的激进派）。 */
-t('D73 落盘阻断开关：EPIRUS_FEASIBILITY_BLOCK=1 时不可行候选不写盘（默认关）', function () {
-  const src = readFileSync('training/server/train-server.mjs', 'utf8');
-  ok(src.indexOf("EPIRUS_FEASIBILITY_BLOCK === '1'") >= 0, '开关必须显式要求 =1（默认关，出厂口径不变）');
-  ok(src.indexOf('feasibilityReject: true') >= 0 && src.indexOf('wrote: false') >= 0, '拒绝时必须发 done 事件并标 wrote:false（否则 runner 干等超时）');
-  const i = src.indexOf('EPIRUS_FEASIBILITY_BLOCK');
-  /* ⚠ 用"就近"判定：文件里 writeBundleMP 出现**两次**（2P 路径也有一处）——
-   * 我第一版拿全局 indexOf 比大小，被前面那一处骗红（同 D72 的教训：锚点/位置判定要就近）。 */
-  ok(i > 0, '必须有落盘阻断判断');
-  /* v1.5.201（审计 D73）：原来切 1500 字符窗 —— 窗口一挪空，报错读成「阻断逻辑放错地方」，
-   * 而真相多半是"代码被搬远/被注释掉了"。改成**就近判据**：锚点之后的第一次落盘调用。 */
-  const jW = src.indexOf('writeBundleMP(pack', i);
-  ok(jW > i && (jW - i) < 4000, '阻断判断必须紧邻 writeBundleMP（在其之前，否则写了再拦等于没拦）—— ' +
-    '若这条红了但代码确实在附近，先怀疑「它被搬远了/被注释了」，别当成阈值写错（实测距离 ' + (jW - i) + ' 字符）');
-  ok(src.indexOf('feasibility: feasibleInfo') >= 0, '可行时仍要把结论写进产物 meta（可追溯）');
-});
+/* 〔撤编 2026-11-19〕原 D73 落盘阻断开关（train-server 已删） —— 主语（v7 训练器）已删，见 docs/GATE-SHIFTS.md */
 
 t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草案、待用户裁定**）· V2 记录不阻断（09-21 晨回滚，理由见 ③）', function () {
   /* 动机（两条独立证据，都出自 v1.5.131）：
@@ -285,153 +271,9 @@ t('D105 V4「满桌同包」必须有地板（v1.5.132 立门；**阈值是草�
   ok(pb.indexOf('pickBalanced') < 0, ' 且探针里不许再出现对手名清单（它是装配定义的一部分）');
 });
 
-t('D124 当选面的 3P 第二栏（v1.5.161 · P1 · §N14 实证"band2 被 hill05 挤掉、当选者 3P 场B/墙双 0"）：纯函数四向 + 缺栏即不合格 + 全否决必须响', function () {
-  /* 这一族病叫"择优看不见本臂目标"：`train-best` 的 fit 就是 2P 考卷，收口臂里 3P 那一栏**从来没进过选择**，
-   * 于是 §N14 里两栏都更强的 band2（考卷 98.25%/最差 85、3P 五道全过、场B 4.00、score 0.916>0.891）被 hill05 挤掉。
-   * ⚠️ 判据必须判在**作用点**上（§N12 的教训）：既钉纯函数，也钉"栏真的跑过"的那行输出，不钉横幅口号。 */
-  const mk = function (tag, ok, measured, inc) {
-    return { tag: tag, isIncumbent: !!inc, col3p: measured === false ? undefined : { measured: true, ok: !!ok, fails: ok ? [] : ['场B 清场 0.00 < 0.3/局'] } };
-  };
-  const inc = mk('现有冠军', false, true, true);
-  /* ① 全合格 ⇒ 一个不拒 */
-  let r = vetoBy3p([inc, mk('A', true), mk('B', true)]);
-  eq(r.rejected.length, 0, '全合格时不许拒任何候选'); eq(r.allRejected, false, '全合格不许报"全否决"');
-  /* ② 部分不合格 ⇒ 拒的是那粒，在位参照永不参与否决 */
-  r = vetoBy3p([inc, mk('A', true), mk('B', false)]);
-  eq(r.rejected.length, 1, '不合格的那粒必须被拒');
-  eq(r.rejected[0].tag, 'B', '被拒的必须是 B');
-  ok(r.kept.indexOf(inc) >= 0, '在位参照必须永远留在池里（它是不回归层的基线，不是竞争者）');
-  /* ③ **缺栏/未测 = 不合格**（拒绝"看不见就当过"的静默降级 —— §N11 那两臂正是"读到了值就当生效了"）*/
-  r = vetoBy3p([inc, mk('A', true, false)]);
-  eq(r.rejected.length, 1, 'col3p 缺失的候选必须判不合格（没测 ≠ 过了）');
-  /* ④ 全否决 ⇒ allRejected 为真（调用方据此 exit 9，不许退回单栏硬选） */
-  r = vetoBy3p([inc, mk('A', false), mk('B', false)]);
-  eq(r.allRejected, true, '有竞争者但无一合格 ⇒ 必须报全否决');
-  eq(r.kept.length, 1, '全否决时池里应只剩在位参照');
-  /* ⑤ 空池不误判（没有竞争者 ≠ 全否决） */
-  eq(vetoBy3p([inc]).allRejected, false, '只有在位参照时不许误报全否决');
-  /* ⑥ 接线：必须在 `pickBestByExam` **之前**否决，且用的是 audit-lib 那批量具（不许另抄实现） */
-  const tb = readFileSync('training/train-best.mjs', 'utf8');
-  ok(tb.indexOf('vetoBy3p(') >= 0 && tb.indexOf('process.exit(9)') >= 0, 'train-best 必须接 vetoBy3p 并有全否决的 exit 9');
-  ok(tb.indexOf('pickBestByExam(pool') >= 0 && tb.indexOf('vetoBy3p(cands)') < tb.indexOf('pickBestByExam(pool'),
-    '否决必须发生在择优**之前**（之后改结果就是暗改）');
-  ok(tb.indexOf("from '../tools/audit-lib.mjs'") >= 0 && tb.indexOf('feasibilityOf(') >= 0,
-    '3P 栏必须复用 audit-lib 的 feasibilityOf/量具（另抄一份 = 本仓栽过四次的"两处各写一遍"）');
-  ok(tb.indexOf('EPIRUS_TB_OUT') >= 0 && tb.indexOf('if (OUT === dest)') >= 0,
-    '产物必须可改道，且**只有真覆写 2P 槽时**才动 index.html 的缓存戳（§N14 实测：还原了槽、忘了还原戳 ⇒ 工作区脏）');
-  ok(/const dir = TB_OUT \? dirname\(/.test(tb),
-    '改道必须**改彻底**：带内候选也要跟着走 —— 否则门每跑一次就在 docs/artifacts 欠一粒未点名 .bak（实测 D82 抓住 `tb31-band1.bak`）');
-  /* ⑦ 行为：迷你臂开栏 ⇒ 必须真跑出那一栏（默认关的逐位不变另有实测：HEAD 对照跑权重同为 f256cb100f） */
-  const dir = mkdtempSync(join(tmpdir(), 'd124-'));
-  const out = join(dir, 'tb-out.js');
-  /* 10-23 夜班（用户口径"门禁目标是功能实现而不是判文本"）：本腿原先判的是 `so.indexOf('已写入 js/bundled-champion.js') < 0`
-   *   —— **反文案钉**（train-tool-dev 规约明令禁止的那种）：promote 哪天换一种说法（"已覆写 2P 槽"/"wrote js/…"），
-   *   即使真的写了槽，这条也照样绿。改成正面判据：**跑之前取 2P 槽的字节哈希，跑完比一次** ⇒ 写了必红，与措辞无关。 */
-  const before2p = createHash('sha1').update(readFileSync('js/bundled-champion.js')).digest('hex');
-  const __t0 = Date.now();
-  const run = spawnSync(process.execPath, ['training/train-best.mjs', '1', '4'], {
-    env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB3P_GAMES: '20', EPIRUS_TB_OUT: out, EPIRUS_ARM: 'd124' }),
-    encoding: 'utf8', timeout: 600000,
-  });
-  const __ms = Date.now() - __t0;
-  const so = String(run.stdout || '') + String(run.stderr || '');
-  /* v1.7.124（千问 §E674「别起并发批去追，让它自己红一次带证据」）：红的时候**把全文落盘** ——
-   *   400 字尾巴只够判"崩了还是没跑"，判不了"崩在哪"。落到 gitignore 的 `docs/artifacts/` 下，不污染库。 */
-  if (run.status !== 0 && run.status !== 9) {
-    try { writeFileSync('docs/artifacts/feas-d124-last.txt', '## exit=' + run.status + (run.error ? ' error=' + run.error.code : '') + ' ms=' + __ms + '\n\n' + so); } catch (e) { void e; }
-  }
-  /* 10-19 下午：这条腿在册的并发红（12/14）复现不出来，而它的失败文案只写"输出无该行"——**下一班拿不到任何东西**。
-   *   真正有信息量的那条断言（下面 exit= 那行）永远轮不到跑：前面这条先红、整条腿就短路了。
-   *   ⇒ 把 exit 码与输出尾巴挪进**这条**的文案里（只加文案，判据一字未动）。 */
-  ok(/\[3P栏 n=20[\/]/.test(so), '开了 EPIRUS_TB3P 必须真跑 3P 栏并打印读数（实测输出无该行 = 又一处死作用点'
-    + ' ‖ exit=' + run.status + (run.error ? ' ‖ error=' + run.error.code : '')
-    + ' ‖ stdout ' + String(run.stdout || '').length + ' 字 ‖ 耗时 ' + __ms + 'ms'
-    + (run.status !== 0 && run.status !== 9 ? ' ‖ **全文已落 docs/artifacts/feas-d124-last.txt**' : '')
-    + ' ‖ stderr 末尾：' + String(run.stderr || '').slice(-400) + '）');
-  ok(run.status === 0 || run.status === 9, '只许两种收场：0=有合格候选并择优、9=全否决响亮退出（实测 exit=' + run.status + '）\n' + so.slice(-500));
-  /* 10-23 夜班（清小毛病）：原来这里是 `if (run.status === 9) ok(so.trim().length > 0, 'exit 9 必须出声')` ——
-   *   **恒真腿**：上面 :347 那条已经要求 `so` 里必须匹配到 `[3P栏 n=20/`，走到这一支时 `so` 不可能为空。
-   *   "响亮失败"的真判据就是 **exit 码本身**（9 ≠ 0，且 :353 已把只许 0/9 两种收场钉住）⇒ 删掉这句假覆盖，
-   *   只留 exit 0 那一侧真正有内容的断言（产物必须落在改道位置）。 */
-  if (run.status === 0) ok(existsSync(out), 'exit 0 时产物必须写在 EPIRUS_TB_OUT 指的位置（实测 ' + out + ' 存在=' + existsSync(out) + '）');
-  /* 正面判据取代原反文案钉：改道跑**一个字都不许碰 2P 槽**（跑前后比字节哈希，与打印措辞无关） */
-  eq(createHash('sha1').update(readFileSync('js/bundled-champion.js')).digest('hex'), before2p,
-    '改道跑（EPIRUS_TB_OUT 已设）不许动 2P 线上槽 —— 动了就是写坏落盘路径，与本工具打印什么话无关');
-});
+/* 〔撤编 2026-11-19〕原 D124 当选面 3P 第二栏（train-best 已删） —— 主语（v7 训练器）已删，见 docs/GATE-SHIFTS.md */
 
-t('D125 可行性五道的样本量 = 单一来源（v1.5.162 · §N17 · 实测同一包两条路径读出 墙 17.85 vs 18.04）', function () {
-  /* 病（§N16 实测，不是猜）：`promote-champion` 的 selfPlay/reflectWall 吃 `--games`（默认 20）、
-   * `train-best` 的 3P 栏默认 120、`train-server` 干脆把 seat 60 / wall 20 / aggr 20 **硬编码**在服务器路径里
-   * （而 `champ-audit` 的注释写着"座位探针 ≥100 才有判别力"）⇒ 同一个包三条路径三把尺子，读数互相不等。
-   * 本仓为"量具抄两遍"栽过至少四次，这次抄的是**默认值**。 */
-  /* ① 纯函数：默认 / env / 显式 override 的优先级，以及非法值必须回落到默认而不是变成 0 */
-  eq(FEAS_N_DEFAULTS.games, 20, '体检默认 n 仍是 20（改了 = 历史读数口径变了，得走裁定）');
-  eq(FEAS_N_DEFAULTS.seat, 100, '座位探针默认 100（champ-audit 注释：≥100 才有判别力）');
-  let p = feasPlan({});
-  /* §E492 这三个数原来抄死成 `20/40/100` ⇒ 把"某年拍的样本量"钉成了判据：改 n 就必须来改这里，
-   *   而这条门真正判的是「`feasPlan` 空 env 时读的是不是**同一个单一来源**」（门体标题那件事：同一包两条路径读出不同的尺）。
-   *   所以期望值改成从 `FEAS_N_DEFAULTS` 取 —— 门照样能抓"feasPlan 自己硬编码了一个数"，但不再钉死具体值。 */
-  eq(p.games, FEAS_N_DEFAULTS.games, 'games 默认'); eq(p.aggr, FEAS_N_DEFAULTS.aggr, 'aggr 默认'); eq(p.seat, FEAS_N_DEFAULTS.seat, 'seat 默认');
-  p = feasPlan({ EPIRUS_FEAS_GAMES: '120' });
-  eq(p.games, 120, 'EPIRUS_FEAS_GAMES 必须能整体换尺');
-  p = feasPlan({ EPIRUS_FEAS_GAMES: '120' }, { games: 40 });
-  eq(p.games, 40, '调用点显式 override 必须赢过 env（体检与训练栏各自要能声明自己用了多少局）');
-  eq(feasPlan({ EPIRUS_FEAS_GAMES: 'abc' }).games, 20, '非法 n 必须回落默认（不许变 NaN 把五道全判糊）');
-  eq(feasPlan({ EPIRUS_SEAT_GAMES: '0' }).seat, 100, 'n=0 必须回落默认 —— 0 局探针 = 空读数冒充测量');
-  ok(/n=\d+\/aggr\d+\/seat\d+/.test(feasPlan({}).tag), '必须自带可打印的尺子标签（读数旁边不印 n = 可疑）');
-  /* ② 反抄：五道用到的四个 n 的字面默认值，**只许出现在 audit-lib** */
-  const dupes = [];
-  const mjsFiles = readdirSync('tools').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'tools/' + x; })
-    .concat(readdirSync('training/server').filter(function (x) { return /\.mjs$/.test(x); }).map(function (x) { return 'training/server/' + x; })).concat(NP_GATE_FILES);   /* v1.7.8：门体源码原先在 tools/np-test.mjs 的读取面上 ⇒ 拆分后把 tools/gates/** 补回这条腿的读取面 */
-  for (const f of mjsFiles) {
-    if (f.indexOf('audit-lib') >= 0) continue;
-    const hits = (readFileSync(f, 'utf8').match(/EPIRUS_(SEAT|AGGR|DENSITY|CHARGE)_GAMES\s*\|\|\s*\d/g) || []);
-    if (hits.length) dupes.push(f + ' → ' + hits.join(','));
-  }
-  eq(dupes.join(' | '), '', '五道的 n 不许再有任何第二处默认（统一走 feasPlan）');
-  ok(readFileSync('tools/promote-champion.mjs', 'utf8').indexOf("flag('games', 20)") < 0, 'promote 不许留自己的 --games 默认');
-  /* ②b v1.5.164（§N19）：镜像 G 在服务器路径上有**两种用途**，参数不许混。
-   *   · 记 `feasibility` 那处 = **体检读数** ⇒ 必须与 CLI 同尺（games 走 feasPlan、席位固定 5）；
-   *   · `[health]` 那处 = **产物决定点的健康门槛** ⇒ 必须按**当前训练人数**评估（判的是"这张桌子上能不能打"）。
-   * 旧参数 `(40, n, mode)` 记的是体检，却用 40 局 + n 席 ⇒ 与全仓另外 8 个调用点（20 局 / 5 席）不可比。 */
-  const tsv = readFileSync('training/server/train-server.mjs', 'utf8');
-  ok(/mirrorHealth\(finalParams, FPN\.games, 5, '(multi|long)'\)/.test(tsv), 'server 记 feasibility 的 G 必须与 CLI 同尺（games=plan · 5 席）');
-  ok(tsv.indexOf('mirrorHealth(finalParams, 40, n, mode)') < 0, '旧的 (40, n) 不许复活（同包在 3 人桌读的 G ≠ 5 人桌读的）');
-  ok(/mirrorHealth\(finalParams, HGD\.games, HGD\.n, mode\)/.test(tsv), '健康门槛那处必须继续按训练人数评估（它是门槛不是体检读数，别顺手统一掉）');
-  /* ②c v1.5.165（§N20）：浏览器路径的 feasibility 也必须**两个模式都判**（对齐 CLI 的 v1.5.145 用户裁定），
-   * 且不许把"训练模式"当 G 喂 —— 训练长程时那会让 meta 里的 `G(multi)` 其实是 long 读数（标签与实测量不符）。 */
-  ok(/mirrorHealth\(finalParams, FPN\.games, 5, 'multi'\)/.test(tsv) && /mirrorHealth\(finalParams, FPN\.games, 5, 'long'\)/.test(tsv),
-    'server 记 feasibility 必须显式跑 multi 与 long 两遍（与 promote 同尺）');
-  ok(tsv.indexOf("mirrorHealth(finalParams, FPN.games, 5, mode)") < 0, '不许拿训练模式当 G 喂（会造成 meta 标签与实测量不符）');
-  ok(/feasibilityOf\(\{[^}]*G2: ggL/.test(tsv), 'G2 必须真传进 feasibilityOf —— 否则第四道（long 的 G）在浏览器路径上根本不存在');
-  /* 尺子必须落在**那一条** [feasible] 日志里（只查"文件里两个字符串都存在"是假断言 —— 换个位置就糊过去了） */
-  const fS = tsv.indexOf("console.log('[feasible] '");
-  const fE = tsv.indexOf("for (const c of clients) sse(c, { type: 'feasibility'");
-  ok(fS >= 0 && fE > fS && tsv.slice(fS, fE).indexOf('G=mirrorHealth(') >= 0,
-    'server 的 [feasible] 那条日志本身必须印尺子（以后改 n/席位要能从日志看出来）');
-  for (const f of ['tools/promote-champion.mjs', 'training/train-best.mjs', 'tools/champ-audit.mjs', 'training/server/train-server.mjs']) {
-    ok(readFileSync(f, 'utf8').indexOf('feasPlan') >= 0, f + ' 必须改用 feasPlan（漏一个 = 那条路径继续用自己的尺子）');
-  }
-  /* ③ 行为式（判作用点，不判声明）：迷你收口臂不设 `EPIRUS_TB3P_GAMES` ⇒ 3P 栏必须打印体检那把尺子 */
-  const dir = mkdtempSync(join(tmpdir(), 'd125-'));
-  const r = spawnSync(process.execPath, ['training/train-best.mjs', '1', '3'], {
-    env: Object.assign({}, process.env, { EPIRUS_SEED: '31', EPIRUS_TB3P: '1', EPIRUS_TB_OUT: join(dir, 'o.js'), EPIRUS_ARM: 'd125' }),
-    encoding: 'utf8', timeout: 600000,
-  });
-  const so = String(r.stdout || '');
-  /* 10-19 下午：同 D124 —— 这条红的时候文案只说"（没跑这一栏）"，而**这个腿原先把 stderr 整个丢了**（`so` 只取 stdout）
-   *   ⇒ 迷你臂真崩了也读不到崩在哪。判据不动，只把 exit / error / stderr 尾巴补进失败文案。 */
-  const FAILTAIL = ' ‖ exit=' + r.status + (r.error ? ' ‖ error=' + r.error.code : '')
-    + ' ‖ stderr 末尾：' + String(r.stderr || '').slice(-400);
-  /* §E492 这一行原来写死 `/\[3P栏 n=20\/aggr40\/seat100\]/` ⇒ 把"当年拍的样本量"钉成了判据。
-   *   这条腿真正判的是**3P 栏必须与体检同一把尺**（同一个 `feasPlan`），所以期望值必须从
-   *   `FEAS_N_DEFAULTS` 派生 —— 否则改 n 就要来改这里，而"改一处忘一处"正是这条规矩要防的东西。
-   *   用 indexOf 而不是正则：tag 里带斜杠，转义只是给下一次漏改留坑。 */
-  const WANT3P = '[3P栏 n=' + FEAS_N_DEFAULTS.games + '/aggr' + FEAS_N_DEFAULTS.aggr + '/seat' + FEAS_N_DEFAULTS.seat + ']';
-  ok(so.indexOf(WANT3P) >= 0,
-    '不设 EPIRUS_TB3P_GAMES 时 3P 栏必须与体检同尺（期望 ' + WANT3P + ' ‖ 实测打印的是：' + ((so.match(/\[3P栏[^\]]*\]/) || ['（没跑这一栏）'])[0]) + FAILTAIL + '）');
-  ok(r.status === 0 || r.status === 9, '迷你臂只许 0/9 收场（实测 ' + r.status + '）');
-});
+/* 〔撤编 2026-11-19〕原 D125 样本量单一来源（train-best/server 已删） —— 主语（v7 训练器）已删，见 docs/GATE-SHIFTS.md */
 
 t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必须存在、必须与 `resolve.js` 的判胜口径同源、且**不是恒 0 的死读数**', function () {
   /* 病（今晚量出来的）：`--field=guardwall` 的 1st 是**下限判据** —— 那格 4 席不还手 ⇒ 全员被终局收缩清场 ⇒
@@ -479,33 +321,7 @@ t('D141 破龟群栏（v1.5.195）：`归因伤害/局` 与 `终场存活` 必�
   ok(/归因伤害\/局.*终场存活/.test(out), '表头必须印出这两栏（读表人看得见才知道不能只看 1st）');
 });
 
-t('D121 当选面退化闸三处对齐（§N9 · xn10b 龟包以带内最高 trainFit 当选的反例）', function () {
-  /* 纯函数行为：退化但分数最高 ⇒ 必须让位给干净的第二名；阈值边界（0.89 过 / 0.90 剔）与 promote 同 0.9；
-   * 全退化 ⇒ best:null（调用方必须响亮，门③钉 train-3p 真的接了这条响亮路径）。 */
-  const A = { ref: 'A', score: 1.15, zeroAtkRate: 0.95 };
-  const B = { ref: 'B', score: 1.02, zeroAtkRate: 0.30 };
-  const C = { ref: 'C', score: 0.90, zeroAtkRate: 0.89 };
-  let r = rejectDegenerateWinners([A, B, C]);
-  eq(r.best.ref, 'B', 'trainFit 最高的退化龟包不许当选，第一名让位给最高分干净候选');
-  eq(r.dropped, 1, '只剔 A（0.95）；C=0.89 在阈值内侧（与 promote 的 ≥0.9 一字同界）');
-  r = rejectDegenerateWinners([A, { ref: 'D', score: 2, zeroAtkRate: 0.9 }]);
-  eq(r.best, null, '全退化 ⇒ best:null（调用方必须响亮，不许回退当选）');
-  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
-  ok(t3.indexOf('rejectDegenerateWinners(hallEntries)') >= 0 && t3.indexOf('degenerateOnlyWinner') >= 0,
-    'train-3p 必须真接这道闸（当选过滤 + 全退化写 meta.degenerateOnlyWinner）——纯函数有闸不接线=没闸');
-  /* v1.7.x（11-03）：**接线的"接"包括控制流**。上面那条只查调用串在不在，抓不到 `else` 挂错先行词：
-   *   11-01 有人把 `if (HALL_TRACE) {…}` 插在 `if (sel.best) {…}` 与 `else if (hallEntries.length) {…}` 之间，
-   *   `else` 于是改挂 HALL_TRACE ⇒ 默认档**每臂**假报"名人堂全部退化"并写 `meta.degenerateOnlyWinner=true`，
-   *   而开了 HALL_TRACE 的臂把这条真报警**整个吞掉**（31/37 夜臂中招，门当时全绿）。
-   *   牙的验证：把那行原样插回去 ⇒ 本 clause 红（注释文本不算，先剥块注释再比）。 */
-  const t3norm = t3.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\s+/g, ' ');
-  ok(t3norm.indexOf('if (sel.best) { finalParams = sel.best.ref.params; ev = sel.best.ev; } else if (hallEntries.length) { DEGENERATE_ONLY = true;') >= 0,
-    '退化闸的"全退化 ⇒ 响亮 + 写 meta"必须**直接**挂在 `if (sel.best)` 之后（两句之间不许插任何语句）');
-  ok(t3norm.indexOf('else if (hallEntries.length)') >= 0 && /if \(HALL_TRACE\)/.test(t3),
-    'HALL_TRACE 与退化闸两条腿都还在（前者丢=逐代指纹失效，后者丢=这道闸没接）');
-  ok(t3.indexOf('densityProfile(sb, h.params') >= 0,
-    '零攻击率必须走 audit-lib 单一来源（不许在 CLI 里再造一个"数出手"的口径）');
-});
+/* 〔撤编 2026-11-19〕原 D121 退化闸三处对齐（train-3p 臂已删） —— 主语（v7 训练器）已删，见 docs/GATE-SHIFTS.md */
 
 t('D145 座位极差线必须随 n 标定（v1.5.202）：固定 30pt 线在 n=400 会**放走**真偏置包（26.6pt）—— 而座位事故在本仓真实发生过', function () {
   /* 历史实测（np-test D59 注释的收敛表 + `docs/research/reviews/REVIEW-3P.md:29`）：
@@ -633,69 +449,7 @@ t('D228 §E322 当选键的多评估种子（v1.6.7）：步长不许让两粒 b
   ok(/极差 无从估|极差无从估/.test(selNote({ n: 1, spreadPt: 0 })), '⑤ 每枚读数也一样：n=1 不许印成"极差 0.0pt"（会被读成"这枚很稳"）');
   ok(/极差 9\.4pt/.test(selNote({ n: 4, spreadPt: 9.4 })), '⑤ n≥2 照旧印实测极差');
 
-  /* ===== ⑥ 接线：两条入口都必须真的在用（门绿着但没看你要上线的东西 = 改门禁账本第 27 条那条病） ===== */
-  const t3 = readFileSync('training/train-3p.mjs', 'utf8');
-  const sv = readFileSync('training/server/train-server.mjs', 'utf8');
-  ok(t3.indexOf('scoreRuns(') >= 0 && t3.indexOf('selBases(') >= 0 && t3.indexOf('selGapNote(') >= 0,
-    '⑥ `train-3p` 必须真用这三个（接了不看结果 = 死作用点）');
-  ok(sv.indexOf('scoreRuns(') >= 0 && sv.indexOf('selBases(') >= 0, '⑥ `train-server`（页面训练场那条路）同样必须用');
-  ok(t3.indexOf('T.evalN(h.params, ALL_PAIRS, 20, N, 987654)') < 0,
-    '⑥ 旧的"单粒 987654"调用必须从 CLI 入口消失（还留着就是两条路并存，没人知道自己跑在哪条上）');
-  ok(sv.indexOf('T.evalN(h.params, PAIRS, 20, n, 987654)') < 0, '⑥ 旧的单粒调用必须从 server 入口消失');
-  ok(t3.indexOf("EPIRUS_SEL_EVAL_SEEDS") >= 0 && t3.indexOf("'EPIRUS_SEL_EVAL_SEEDS'") >= 0,
-    '⑥ 新键必须登记进 CLI 的已知 env 闭集（否则暗键侦测会把活键报成黑键 ⇒ exit 6）');
-  ok(t3.indexOf('28 对') < 0,
-    '⑥ 对手对数必须从 `ALL_PAIRS.length` 插值，不许硬写（POOL 是 9 个脚本 ⇒ C(9,2)=36 对；曾硬写 28 把 §E316 的锚读歪过一次）');
-  ok(t3.indexOf('sc > (ev.firstRate + 0.5 * ev.top2Rate)') < 0,
-    '⑥ 终局改判必须直接比 `ev.sc`（均值已在 `scoreRuns` 里算过；这里再拿两个均值拼一遍 = 第二个口径，日后必分叉）');
-  /* §删（2026-10-11 分诊·千问复核 A/B）：原腿只钉源码文本或打印文案（恒真式 / 数函数名出现次数）⇒ 违反规矩 1，整条删掉
-   *   （不留「恒真式 + 原文案」那种"看着有覆盖"的假象 —— 它照样印一行 ✔，但底下什么都不测）。
-   *   终态见 `docs/GATE-SHIFTS.md` §十：哪几条已换成行为级腿、哪几条判为**接受损失**，只在那一处记账，不在门体里复制 13 遍。 */
-
-  /* ===== ⑦ 默认那"多粒"的路**必须有一腿真跑**（不然 np 全绿却从没走过上线那条路 = 改门禁账本第 27 条） =====
-   * 下面 ⑧ 把整份门钉在单粒上（认证时长的账），所以这一腿反过来显式要 3 粒，并**逐字核对粒数、base 序列与分差行**。 */
-  {
-    const dir7 = mkdtempSync(join(tmpdir(), 'd228-')), out7 = join(dir7, 'arm.js');
-    const r7 = spawnSync(process.execPath, ['training/train-3p.mjs', '1', '3', '2', '2'],
-      { env: Object.assign({}, process.env, { EPIRUS_SEL_EVAL_SEEDS: '3', EPIRUS_SEED: '5', EPIRUS_ARM: 'd228multi',
-        EPIRUS_BAND_DIR: dir7, EPIRUS_T3P_OUT: out7, EPIRUS_PUBLISH: '' }), encoding: 'utf8', timeout: 300000 });
-    eq(r7.status, 0, '⑦ 3 粒那一档要跑得通（status=' + r7.status + ' ' + String(r7.stderr || '').slice(-140) + '）');
-    const so7 = String(r7.stdout || '');
-    /* v1.7.74 · gate-sentinel ③ 分诊：原来钉的是**一整句中文+分隔符**（`每粒候选重验 3 粒 seedBase（987654 ‖ 1087654 ‖ 1187654）`）
-   *   ⇒ 换个说法/换种分隔符就红，行为没变。要保的语义是「重验用的是这**三粒** seedBase」⇒ 直接判那三个数在不在。 */
-  ok(['987654', '1087654', '1187654'].every(function (n) { return so7.indexOf(n) >= 0; }) && so7.indexOf('seedBase') >= 0,
-      '⑦ 必须把**粒数与 base 序列**一起印出来（只印"重验 3 粒"不印 base = 没人能核对步长真的生效）');
-    ok(/\[当选键\] 第 1 与第 2 名分差 [0-9.]+pt/.test(so7), '⑦ 当选现场必须印出"分差 vs 噪声"那行（§E318 的病就是这句从来没印过）');
-    ok(/（n=3 粒 seedBase ‖ 自身极差 [0-9.]+pt）/.test(so7), '⑦ n≥2 时每枚要印实测极差（n=1 那一档才改印"无从估"）');
-    const jm7 = /window\.EPIRUS_CHAMPION_3P_META = ([\s\S]*?);\n/.exec(readFileSync(out7, 'utf8'));
-    const mt7 = JSON.parse(jm7[1]);
-    eq(mt7.selSeeds, 3, '⑦ 产物要自证用了 3 粒（不写 = 事后只能信日志）');
-    eq(mt7.selSeedBases.length, 3, '⑦ 三粒 base 都要落进 meta');
-    ok(mt7.selSeedBases[1] - mt7.selSeedBases[0] === SEL_STRIDE, '⑦ meta 里相邻两粒的差必须就是 SEL_STRIDE（落盘写了别的数 = 步长被动过）');
-  }
-
-  /* ===== ⑧ 认证时长也是判据，但**钉值必须只落在真读它的入口上** ===== */
-  const npSrc = npSourceAll();   /* v1.7.8：本组判的是源码形状（SEL_PIN / spawnSync 包装 / spawn 处数）⇒ 面 = runner + _ctx + 全部部件（`import.meta.url` 只指到本部件） */
-  /* ⚠ 这一组判的是"源码形状"，必须**只看代码**：禁令要讲清楚就得把反例原样写进注释（`process.env.X = '1'`
-   *   那种全局钉法为什么不行），而整份源码 indexOf 会把**注释里的反例**判成违规 ⇒ 实测第一版就这样红在
-   *   自己身上（np 271/272，红的正是这条"不许退回全局钉法"的守卫）。守卫判的是有没有人这么**写**，不是有没有人这么**说**。
-   * ⚠ 而且**检索式自己也不能含那个字面量**：`indexOf("process.env.EPIRUS_SEL_EVAL_SEEDS = '1'")` 这一行就是代码行，
-   *   剥完注释照样命中自己 ⇒ 第二版红在这里。拼起来，源码里就永远没有那串连续字符。*/
-  const npCode = npSrc.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
-  const BAD_PIN = 'process.env.' + 'EPIRUS_SEL_EVAL_SEEDS' + " = '1'";
-  const pinAt = npCode.indexOf(SEL_PIN);                       // 包装里那句"缺省才钉"
-  ok(pinAt > 0, '⑧ np 必须把 train-3p 的臂钉在单粒 seedBase（§E324：默认 4 粒让 np 从 570.7s 涨到 1238.6s）');
-  ok(npCode.indexOf(BAD_PIN) < 0,
-    '⑧ ⛔ 不许退回"写全局 process.env"那种钉法 —— 认证 40 就是那样写的，结果泄漏给 `train-best` 的腿、'
-    + '被它自己的黑键闸 `exit 6` 拦掉（D124/D125 红，np 270/272）。那个红是对的：传了没人读 = 黑键。');
-  const firstSpawn = npCode.indexOf("spawnSync(process.execPath, ['training/train-3p.mjs'");
-  ok(firstSpawn > 0 && pinAt < firstSpawn, '⑧ 包装必须定义在**第一处 spawn 之前**（写在后面 = 前面那几处已经按 4 粒跑完了）');
-  ok(npCode.indexOf('function spawnSync(') < firstSpawn, '⑧ 包装本体要在第一处 spawn 之前（否则那些调用拿到的是原始 import）');
-  const nSpawn = (npCode.match(/spawnSync\(process\.execPath, \['training\/train-3p\.mjs'/g) || []).length;
-  ok(nSpawn >= 5, '⑧ 训练组 108 条删除后（2026-10-27）本套只剩这几处 `spawn train-3p`（实测 ' + nSpawn + '）——这条是给"处数"那句注释兜底的：'
-    + '我一度以为是 5 处、实为 28 处，靠单点改动去提速会漏掉大半 ⇒ 有人加腿/删腿时这里要响，别让人凭印象写注释');
-  /* 包装"显式给了就尊重"这条也得有牙，否则 ⑦ 会被静默压回 1 粒、而 ⑦ 看起来还是绿的 */
-  ok(/env\.EPIRUS_SEL_EVAL_SEEDS === undefined/.test(npCode), '⑧ 包装必须**只补缺省**（腿自己写了粒数就得听腿的，不然 ⑦ 永远测不到 3 粒那一档）');
+/* 〔撤编 2026-11-19〕原 ⑥⑦⑧ trainer 接线与 np 钉数（train-3p/server 已删） —— 主语（v7 训练器）已删，见 docs/GATE-SHIFTS.md */
 });
 
 /* ===== §E340（用户 ⑦）全息屏障 → 原型制御 的映射档 ===== */

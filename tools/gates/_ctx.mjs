@@ -30,6 +30,9 @@ function spawnSync(cmd, args, opts) {
   const o = opts || {}, env = Object.assign({}, o.env || process.env);
   /* 腿自己显式给了粒数就**尊重它**（D228 ⑦ 要跑 `=3` 那一档；包装不许把它压回 1，否则那条腿永远测默认档以外的那条路） */
   if (env.EPIRUS_SEL_EVAL_SEEDS === undefined) env.EPIRUS_SEL_EVAL_SEEDS = '1';
+  /* 2026-11-19（「禁止默认训老网络」）：门体里 ~30 处 train-3p 腿测的是 **v7 线内部行为**（D116 切片/D228 种子等），
+   *   它们就是 ALLOW_V7 的显式例外主体——在这里集中点名，而不是改 30 个调用点。 */
+  if (env.EPIRUS_ALLOW_V7 === undefined) env.EPIRUS_ALLOW_V7 = '1';
   return __echoWriteDefault(_spawnSync(cmd, args, Object.assign({}, o, { env })));
 }
 import { parsePairTable } from '../defense-axis.mjs';   /* D155 用：配对表解析的单一来源（不许在门里再写一份） */
@@ -71,7 +74,6 @@ import { spawnBatch, batchCap } from '../np-parallel.mjs';   // v1.7.117：`batc
 import * as RGAIN from '../routing-gain-lib.mjs';
 import { OPP_SPECS } from '../../training/server/opp-pool.mjs';
 /* D206 用（DS 清单 B7）：奖励键名单与默认表**从同一来源拿**（不许在门里抄一份键名单——那正是 B7 要防的"第五处"）。 */
-import { ECON_REWARD_KEYS, readEconEnv } from '../../training/server/econ-env.mjs';
 /* D207 用（§E164）：落点集中度的算术**只许住在 behavior-profile 里** ⇒ 门直接 import 它做手算自证（被 import 时不跑 main，那条守卫由 D168 系钉着）。 */
 import { conc, fieldProfile, tallyPick, WIN } from '../behavior-profile.mjs';
 /* D209 用（§E168）：人类形状对手池的单一来源（两台仪器共用它 ⇒ 门来钉"不许再抄第二份"）。 */
@@ -86,7 +88,6 @@ import { rulesFingerprint, fingerprintOfBundle } from '../rules-fingerprint.mjs'
 /* v1.5.130：择优纯函数 —— D104 直接喂**合成候选表**验"不回归层"的行为（不是钉文本）。 */
 import { pickBestByExam, regressionsOf, fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand, bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE,
   SEL_BASE0, SEL_STRIDE, SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns, selNote, selGapNote } from '../pick-best.mjs';
-import { readTrainEnv, hasTrainOverride, TRAIN_ENV_KEYS as TEK } from '../../training/server/train-env.mjs';   // v1.5.169 D129：训练旋钮单一来源
 /* v1.5.132：V1/V2/V4「整局」三装配的**单一来源**（D105 与 `probe-ring-ablate.mjs` 共用一份实现）。 */
 import { measureAll } from '../v2v4-lib.mjs';
 /* v1.5.194：击杀奖励规则的单一来源实现（D140 直接喂合成局面验语义）*/
@@ -224,14 +225,14 @@ export function makeCtx() {
   parseQuality, formatQualityRecord, AUDIT, PS, PF_FRONT,
   spawnCached, inputHash, cacheStats, cacheDir, spawnNC,
   packMetaOf, packMetaFrom, packWeightsOf, packWeightsFrom,
-  spawnBatch, batchCap, RGAIN, OPP_SPECS, ECON_REWARD_KEYS, readEconEnv,
+  spawnBatch, batchCap, RGAIN, OPP_SPECS,
   conc, fieldProfile, tallyPick, WIN, loadPool,
   selfTest, vm, isChampOpp, loadChampParams, makeChampOppResolver,
   makeShapeScorer, rulesFingerprint, fingerprintOfBundle, pickBestByExam, regressionsOf,
   fixesOf, INCUMBENT_TAG, rejectDegenerateWinners, vetoBy3p, bandPickByLand,
   bandPickByUsage, rejectNarrowWinners, COLLAPSE_LINE, SEL_BASE0, SEL_STRIDE,
   SEL_SEEDS_DEFAULT, parseSelSeeds, selBase, selBases, scoreRuns,
-  selNote, selGapNote, readTrainEnv, hasTrainOverride, TEK,
+  selNote, selGapNote,
   measureAll, KR_LIB, detectDarkKnobs, readKeysOf, wallCapExceeded,
   wallCapOf, sb, sandbox, stanceProfile, aggressionProfile,
   feasibilityOf, attackAttribution, feasPlan, FEAS_N_DEFAULTS, nullSpreadQuantile,
