@@ -45,8 +45,15 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
   eq(A.dupWid, 0, '① 同一粒权重占了 ' + A.dupWid + ' 个成员 ⇒ "池里有 N 枚"会虚高，而抽签会连着抽到同一颗（§E589：1443 文件 = 1130 粒）');
   eq(A.blockedAuto, 0, '③ 自动成员里有 ' + A.blockedAuto + ' 枚被进池体检判 block（送盾/G4/G5）⇒ 自动挑出来的包必须过体检，要点名请走 --invite');
   eq(A.seatKilledAuto, 0, '③ 自动成员里有 ' + A.seatKilledAuto + ' 枚被人席杀刀判死（§E531 两批同号 ≥20pt）⇒ 它已经给人类送分了');
+  /* ⑭ 11-18 第三道留痕（前线读数 · 记录腿）。**读数本身不许在这里阻断**（它是"看得见"，不是"合不合格"），
+   *   这条判的是两件事：原件表进没进 git（CI 读不到的原件 = 这条留痕在 CI 上是空话）‖ 接线断没断
+   *   （字段被改名/删掉 ⇒ `undefined ≠ 1` 立刻红，这一格才不是恒绿装饰）。
+   *   三态：1 在且进 git ‖ 0 在但没进 git ‖ -1 从没跑过。 */
+  eq(A.arenaFloor, 1, '⑭ 前线读数原件的在册态=' + A.arenaFloor +
+    '（1=在且进 git ‖ 0=在但**没进 git** ⇒ CI 里根本读不到 ‖ -1=从没跑过）⇒ 跑 node tools/arena-noise-floor.mjs，再 git add champion-map/data/arena-noise-floor-1118.tsv');
   console.log('   ⚑ 池成员 ' + A.members + ' 枚 ' + JSON.stringify(A.tiers) +
-    ' ‖ 体检没量过的自动成员 ' + A.untestedAuto + ' 枚 ‖ 人席没量过的 ' + A.seatUnknown + ' 枚（**没测 ≠ 过关**）');
+    ' ‖ 体检没量过的自动成员 ' + A.untestedAuto + ' 枚 ‖ 人席没量过的 ' + A.seatUnknown + ' 枚（**没测 ≠ 过关**）' +
+    ' ‖ 前线没量过的 ' + A.arenaUnknown + ' 枚 ‖ 批间 σ 超当选判决窗口 ' + A.decideBandPt + 'pt 的 ' + A.arenaOverBand + ' 枚（σ 口径见 POOL-CONTRACT §5.2，不用极差；超了就只能看，不能当排序键）');
 
   /* ② bundle 与表同权重：读 bundle（committed）里的内嵌权重**重算** wid，再与表逐条对 —— 只比"两边都写着同一个字符串"是抓不到"表改了没重烘"的 */
   ok(existsSync(BD), '② 池 bundle 不在：' + BD + ' ⇒ 跑 node tools/build-pool-bundle.mjs');
