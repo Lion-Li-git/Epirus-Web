@@ -1254,11 +1254,9 @@ function X4P(d, L, pref) {
 }
 function DE4(d, L) {
   /* Δε = 同一张 B 夹具下的「page dose − ε=0」配对数。
-   * 11-18 B 轴换成 Arena PL 之后，Arena 只跑 ε=0（policyChooserN(params,0.15)），没有 page-dose 半边；
-   * 于是 P?R 列（原先 = b-f5-page-1114 的 page dose）不再承载 page dose，与 X?R（b-f5-eps0）不是同一夹具
-   * ⇒ 相减是跨尺误减，直接标"未测"（缺数据，不是 0）。要恢复 Δε 必须给 Arena 补一份同赛程同种子的 page-dose
-   * 半边，而不是在这里改公式。 */
-  if (/arena/.test('${RULERINFO.bId}') || (L === 'L' && /bp1118/.test('${RULERINFO.bId}'))) return '未测';
+   * 2026-11-18：B 轴换 Arena 页面剂量版，X 半边同步换 Arena 贪心版（同赛程同种子）；
+   * F5 的 page/eps0 两条已退役 ⇒ 这里不再有跨夹具守卫，缺哪半边就按 null 返回"未测"。 */
+  if (/bp1118/.test('${RULERINFO.bId}')) return '未测';
   var p = X4P(d, L, 'P'), x = X4P(d, L, 'X');
   return (p === null || x === null) ? '未测' : ((p - x >= 0 ? '+' : '') + (p - x).toFixed(3)); }
 function X4miss(d) { var L = (st.ftab === 'long') ? 'L' : '', m = [];
@@ -1274,7 +1272,7 @@ function X4D(d) { var a = X4T(d, ''), b = X4T(d, 'L');
   return (a === null || b === null || !isFinite(a) || !isFinite(b)) ? '未测' : ((b - a >= 0 ? '+' : '') + (b - a).toFixed(3)); }
 function XFAM() { return st.XP + (st.XSUF ? '·' + st.XSUF : ''); }   /* 族名怎么念：C·R / C / P / X（表里 10 处写的是 C·R，别在页面上印成 CR） */
 function FLBL() { return 'F = X̄₄(' + XFAM() + ') + T·S（X̄₄ = 四格加权 excess · 综合 = (A+B)/2：A=${A_SHORT}，B=' +
-  (st.XSUF === 'R' ? ((st.ftab !== 'long' && /bp1118/.test('${RULERINFO.bId}')) ? 'F5 冠军夹具（短程参照）' : '${B_SHORT}（${CHAMP_SHORT}）') : '冠军桌固定夹具') +
+  (st.XSUF === 'R' ? '${B_SHORT}（${CHAMP_SHORT}）' : '冠军桌固定夹具') +
   (st.ftab === 'long' ? '，长程桌' : '，短程桌') + '）'; }
 function Fv(d) {
   /* 11-07 H5 撤场：单一标尺 = 四格卷（X̄₄ 随桌形切列）+ T·S */
@@ -1733,7 +1731,7 @@ function tip(d) {
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
     (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
-    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 · A=${A_SHORT} · B ' + ((st.ftab !== 'long' && /bp1118/.test('${RULERINFO.bId}')) ? 'F5 冠军夹具（短程参照）' : '${B_SHORT} ${CHAMP_SHORT}') +
+    '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 · A=${A_SHORT} · B ' + '${B_SHORT} ${CHAMP_SHORT}' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
     /* §E590 池层：只印读数，口径那句话（"两批同号 ≥20pt"）留给图例，卡片不写旁注（用户 10-10 的排版裁定）。 */
     (d.pt ? '\\n冠军池 · ' + d.pt + ' 档' + (d.pi ? '（点名）' : '') +

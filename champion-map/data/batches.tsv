@@ -78,3 +78,4 @@ measure-DIV-LH6-HEAVY-S2	a-v2-page-1109	A	-	-	measure-DIV-LH6-HEAVY-S2	DIV-LH6-H
 measure-RING-MINIT-CONT	a-v2-page-1109	A	-	-	measure-RING-MINIT-CONT	RING-MINIT-CONT-readings.tsv	24	2026-11-18T08:38:33.905Z	add-point
 measure-P9-CN-MINI-CONT	a-v2-page-1109	A	-	-	measure-P9-CN-MINI-CONT	P9-CN-MINI-CONT-readings.tsv	24	2026-11-18T08:44:12.326Z	add-point
 b-arena-pl-1118	b-arena-pl-1118	B	ARENA24-PL-1118	24锚多元联盟(multi+long统一)	1118	champion-map/data/exam4n-arena-1118.tsv	980	2026-11-18	2026-11-18 多人 Plackett-Luce Arena 全库评估（980 枚 × 176 局 × multi+long 双桌统一）
+b-arena-page-1118	b-arena-page-1118	B	ARENA24-PL-1118-PAGE	24锚多元联盟(multi+long统一·页面剂量)	1118	champion-map/data/exam4n-arena-page-1118.tsv	980	2026-11-18	2026-11-18 Arena 页面剂量全库评估（980 枚 × 176 局，整桌 lv:regular 剂量）

@@ -65,8 +65,7 @@ export function buildView(opts) {
     for (const h of HORIZONS) for (const c of CELLS) {
       const suf = h[1];
       const av = v[A + '|' + c + '|' + h[0]];
-      const bv = v[B + '|' + c + '|' + h[0]] !== undefined ? v[B + '|' + c + '|' + h[0]]
-        : (h[0] === 'short' && B_SHORT ? v[B_SHORT + '|' + c + '|' + h[0]] : undefined);
+      const bv = v[B + '|' + c + '|' + h[0]];
       const xv = v[X + '|' + c + '|' + h[0]];
       const xn = vn[X + '|' + c + '|' + h[0]];
       const ai = HEAD.indexOf('P' + c + suf), bi = HEAD.indexOf('P' + c + 'R' + suf), ci = HEAD.indexOf('C' + c + 'R' + suf);
@@ -191,9 +190,8 @@ export function buildCoordsView(opts) {
     for (const hz of HORIZONS) for (const cell of CELLS) {
       const suf = hz[1], hor = hz[0];
       const av = get(pid, A, cell, hor);
-      const bvRaw = get(pid, B, cell, hor);
-      const bRid = bvRaw !== undefined ? B : (hor === 'short' && B_SHORT ? B_SHORT : B);
-      const bv = bvRaw !== undefined ? bvRaw : (hor === 'short' && B_SHORT ? get(pid, B_SHORT, cell, hor) : undefined);
+      const bv = get(pid, B, cell, hor);
+      const bRid = B;
       const xv = get(pid, X, cell, hor);
       if (av !== undefined) { set(row, 'P' + cell + suf, av); set(row, 'n' + cell + suf, getN(pid, A, cell, hor)); }
       if (bv !== undefined) { set(row, 'P' + cell + 'R' + suf, bv); set(row, 'm' + cell + 'R' + suf, getN(pid, bRid, cell, hor)); }

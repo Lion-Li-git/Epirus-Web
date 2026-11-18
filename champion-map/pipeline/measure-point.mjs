@@ -90,8 +90,8 @@ if (!SKIP_B) {
     ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
     if (!SKIP_LONG && !BP_WALLS) ex('b-long', 'long', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
   }
-  ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
-  if (!SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
+  if (!ARENA_B) ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
+  if (!ARENA_B && !SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
 }
 const featOut = join(ST, ID + '-ruler.tsv');
 const RULER_ARGS = ['champion-map/ruler-measure.mjs', '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),
@@ -153,23 +153,35 @@ if (!FROM_STAGING) {
     }
     if (!SKIP_B && ARENA_B && (!REUSE || !hasFile(join(ST, ID + '-b-multi.tsv')) || !hasFile(join(ST, ID + '-b-long.tsv')))) {
       tasks.push(async () => {
-        const { stdout } = await execFileP('node', ['tools/arena-eval.mjs', '--pack=' + rel, '--id=' + ID], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-        const ar = JSON.parse(stdout.trim().split('\n').pop());
-        for (const [tag, mode, obj] of [['b-multi', 'multi', ar.short], ['b-long', 'long', ar.long]]) {
+        /* 2026-11-18：Arena 分两半测——页面剂量（B 轴）+ 贪心（X 半边），同赛程同种子（176 局/包） */
+        const runArena = async (dose) => {
+          const { stdout } = await execFileP('node', ['tools/arena-eval.mjs', '--pack=' + rel, '--id=' + ID, '--dose=' + dose], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+          return JSON.parse(stdout.trim().split('\n').pop());
+        };
+        const ar = await runArena('page');
+        const arX = await runArena('exam');
+        for (const [tag, mode, obj, doseTag, axis, fix] of [
+          ['b-multi', 'multi', ar.short, 'page', 'B', 'ARENA24-PL-1118-PAGE'],
+          ['b-long', 'long', ar.long, 'page', 'B', 'ARENA24-PL-1118-PAGE'],
+          ['x-multi', 'multi', arX.short, 'exam', 'x', 'ARENA24-PL-1118'],
+          ['x-long', 'long', arX.long, 'exam', 'x', 'ARENA24-PL-1118'],
+        ]) {
           const c = obj.cells;
           const row = [ID, '', '', '', '', c[2].x.toFixed(4), c[3].x.toFixed(4), c[5].x.toFixed(4), c[8].x.toFixed(4),
-            c[2].n, c[3].n, c[5].n, c[8].n, '82200', '1', mode, 'exam', 'B', 'arena24', 'ARENA24-PL-1118', '0'];
+            c[2].n, c[3].n, c[5].n, c[8].n, '82200', '1', mode, doseTag, axis, 'arena24', fix, '0'];
           writeFileSync(join(ST, ID + '-' + tag + '.tsv'), [EXHEAD.join('\t'), row.join('\t')].join('\n') + '\n', 'utf8');
         }
         const metaAr = { arS: ar.short.x4.toFixed(4), arL: ar.long.x4.toFixed(4), arR: ar.rAll.toFixed(4) };
         writeFileSync(join(ST, ID + '-bp.json'), JSON.stringify(metaAr) + '\n', 'utf8');
         if (!NO_ADD) {
-          const arFile = join(HERE, 'data/exam4n-arena-1118.tsv');
-          const prev = existsSync(arFile) ? readFileSync(arFile, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').filter((l) => l && !l.startsWith(ID + '\t')) : [];
-          const rowLine = [ID, ar.short.cells[2].x.toFixed(4), ar.short.cells[3].x.toFixed(4), ar.short.cells[5].x.toFixed(4), ar.short.cells[8].x.toFixed(4), ar.short.x4.toFixed(4),
-            ar.long.cells[2].x.toFixed(4), ar.long.cells[3].x.toFixed(4), ar.long.cells[5].x.toFixed(4), ar.long.cells[8].x.toFixed(4), ar.long.x4.toFixed(4),
-            ar.rAll.toFixed(4), ar.short.r.toFixed(4), ar.long.r.toFixed(4)].join('\t');
-          writeFileSync(arFile, prev.concat([rowLine]).join('\n') + '\n', 'utf8');
+          for (const [arObj, suffix] of [[ar, '-page'], [arX, '']]) {
+            const arFile = join(HERE, 'data/exam4n-arena' + suffix + '-1118.tsv');
+            const prev = existsSync(arFile) ? readFileSync(arFile, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').filter((l) => l && !l.startsWith(ID + '\t')) : [];
+            const rowLine = [ID, arObj.short.cells[2].x.toFixed(4), arObj.short.cells[3].x.toFixed(4), arObj.short.cells[5].x.toFixed(4), arObj.short.cells[8].x.toFixed(4), arObj.short.x4.toFixed(4),
+              arObj.long.cells[2].x.toFixed(4), arObj.long.cells[3].x.toFixed(4), arObj.long.cells[5].x.toFixed(4), arObj.long.cells[8].x.toFixed(4), arObj.long.x4.toFixed(4),
+              arObj.rAll.toFixed(4), arObj.short.r.toFixed(4), arObj.long.r.toFixed(4)].join('\t');
+            writeFileSync(arFile, prev.concat([rowLine]).join('\n') + '\n', 'utf8');
+          }
         }
         console.log('—— arena-b —— arS=' + metaAr.arS + ' arL=' + metaAr.arL + ' arR=' + metaAr.arR);
       });

@@ -26,7 +26,7 @@ import {
 } from './arena-lib.mjs';
 
 if (isMainThread) {
-  rejectUnknownFlags(process.argv.slice(2), ['calibrate', 'validate', 'all', 'resume', 'pack', 'id', 'jobs', 'seed'], 'arena-eval');
+  rejectUnknownFlags(process.argv.slice(2), ['calibrate', 'validate', 'all', 'resume', 'pack', 'id', 'jobs', 'seed', 'dose', 'eps-tier'], 'arena-eval');
 }
 
 const arg = (k, d) => {
@@ -39,8 +39,8 @@ const hasFlag = (k) => process.argv.includes('--' + k);
 if (!isMainThread) {
   const W = sandbox(ROOT);
   const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay;
-  const { taskType, league, seedBase } = workerData;
-  const anchorChoosers = loadAnchorChoosers(W, league, ROOT);
+  const { taskType, league, seedBase, dose } = workerData;
+  const anchorChoosers = loadAnchorChoosers(W, league, ROOT, dose);
 
   parentPort.on('message', (msg) => {
     if (msg.stop) process.exit(0);
@@ -61,7 +61,7 @@ if (!isMainThread) {
         for (const item of msg.items) {
           const p = loadChamp(W, item.path, ROOT);
           if (!p) { resList.push({ id: item.id, err: 'loadChamp 失败' }); continue; }
-          const ev = evaluatePackArena(W, p, item.id, anchorChoosers, league, { seedBase });
+          const ev = evaluatePackArena(W, p, item.id, anchorChoosers, league, { seedBase, dose });
           resList.push(ev);
         }
         parentPort.postMessage({ ok: true, id: msg.id, results: resList });
@@ -73,7 +73,7 @@ if (!isMainThread) {
 }
 
 /* ============ 主线程工具函数 ============ */
-function runWorkers(taskType, league, seedBase, jobsNum, items, batchSize, onBatch) {
+function runWorkers(taskType, league, seedBase, jobsNum, items, batchSize, onBatch, dose) {
   const scriptPath = fileURLToPath(import.meta.url);
   const nWorkers = Math.max(1, Math.min(jobsNum, items.length || 1));
   return new Promise((resolveAll, rejectAll) => {
@@ -88,7 +88,7 @@ function runWorkers(taskType, league, seedBase, jobsNum, items, batchSize, onBat
     };
     const cleanup = () => { for (const w of workers) try { w.postMessage({ stop: true }); w.terminate(); } catch {} };
     for (let i = 0; i < nWorkers; i++) {
-      const w = new Worker(scriptPath, { workerData: { taskType, league, seedBase } });
+      const w = new Worker(scriptPath, { workerData: { taskType, league, seedBase, dose } });
       workers.push(w);
       const assign = () => {
         if (finished) return;
@@ -143,8 +143,15 @@ function spearman(a, b) {
 if (isMainThread) {
   const JOBS = Math.max(1, Number(arg('jobs', Math.min(14, Math.max(2, cpus().length - 2)))) || 4);
   const SEED = Number(arg('seed', 82200)) || 82200;
-  const LEAGUE_FILE = join(ROOT, 'champion-map/data/arena-league-1118.tsv');
-  const OUT_ALL = join(ROOT, 'champion-map/data/exam4n-arena-1118.tsv');
+  /* --dose=exam（缺省，ε=0 考卷口径）| page（页面剂量：DIFF_TIERS 那档 + 前 3 回合斜坡）
+   *   page 模式单独一套联盟标定与读数文件，**不许与 exam 混表**（同尺 = 同文件，§E597）。 */
+  const DOSE = String(arg('dose', 'exam'));
+  if (DOSE !== 'exam' && DOSE !== 'page') { console.error('⛔ --dose 只认 exam/page，收到 ' + DOSE); process.exit(2); }
+  const EPS_TIER = String(arg('eps-tier', 'lv:regular'));
+  const DOSE_OBJ = DOSE === 'page' ? { tierId: EPS_TIER } : null;
+  const DOSE_SUF = DOSE === 'page' ? '-page' : '';
+  const LEAGUE_FILE = join(ROOT, 'champion-map/data/arena-league-1118' + DOSE_SUF + '.tsv');
+  const OUT_ALL = join(ROOT, 'champion-map/data/exam4n-arena' + DOSE_SUF + '-1118.tsv');
   const t0 = Date.now();
   const regMap = loadRegistryPaths(ROOT);
 
@@ -163,7 +170,7 @@ if (isMainThread) {
     const allRecs = [];
     await runWorkers('calibrate', anchors, SEED, JOBS, calJobs, 40, (m) => {
       for (const r of m.records) allRecs.push(r);
-    });
+    }, DOSE_OBJ);
     const shortRecs = allRecs.filter((r) => r.mode === 'multi');
     const longRecs = allRecs.filter((r) => r.mode === 'long');
     const rShort = fitPlackettLuceLeague(shortRecs, anchors.length, 0.05, 250);
@@ -194,7 +201,7 @@ if (isMainThread) {
     const resMap = new Map();
     await runWorkers('eval', league, SEED, JOBS, items, 2, (m) => {
       for (const r of m.results) resMap.set(r.id, r);
-    });
+    }, DOSE_OBJ);
     /* 读 GLM 1v1 RR 与 5 席桌战真值 */
     const rrSum = {}, rrCnt = {};
     for (const l of readFileSync(join(ROOT, 'scratch/zcode-1113-deps/bp-validity-1118-rr.tsv'), 'utf8').trim().split('\n')) {
@@ -270,7 +277,7 @@ if (isMainThread) {
       if (done % 120 === 0 || done === todo.length) {
         console.log('… ' + done + '/' + todo.length + '（fail=' + fail + ' · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's）');
       }
-    });
+    }, DOSE_OBJ);
     console.log('✅ 全库 Arena 评估完成 ⇒ ' + OUT_ALL + '（总耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's，fail=' + fail + '）');
   }
 
@@ -281,8 +288,8 @@ if (isMainThread) {
     const W = sandbox(ROOT);
     const p = loadChamp(W, packPath, ROOT);
     if (!p) { console.error('⛔ 载入失败：' + packPath); process.exit(2); }
-    const anchorChoosers = loadAnchorChoosers(W, league, ROOT);
-    const r = evaluatePackArena(W, p, id, anchorChoosers, league, { seedBase: SEED });
+    const anchorChoosers = loadAnchorChoosers(W, league, ROOT, DOSE_OBJ);
+    const r = evaluatePackArena(W, p, id, anchorChoosers, league, { seedBase: SEED, dose: DOSE_OBJ });
     console.log(JSON.stringify(r));
   }
 }

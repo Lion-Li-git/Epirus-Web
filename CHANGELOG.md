@@ -4,6 +4,17 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.4 — 11-18 晚（B 轴换页面剂量 Arena + F5 退役）
+
+**这一版是什么**：演化图 B 轴从 ε=0 贪心换成实机 page dose；X 半边同步换成 Arena 贪心版，F5 两条尺退役。产品池不变（22 枚，8/14）。
+
+- **B 轴 b-arena-page-1118**：24 锚联盟整桌按 DIFF_TIERS lv:regular（eps 0.1 / epsK 5 / soft + 前 3 回合斜坡）出手；全库 980 包 × 176 局（multi+long 双桌），289 秒、fail=0。页面 B 轴读数口径即玩家默认拿到的剂量。
+- **X 半边 b-arena-pl-1118**：把贪心版从 B 轴改挂到 X 轴（同赛程同种子），F5 的 b-f5-page-1114 / b-f5-eps0-1114 转 reference（保留历史行，不删数据）。
+- **Δε 恢复**：P?R（Arena 页面）− X?R（Arena 贪心）同赛程；例 EQ-S4-E9 5P short −0.0024 − (−0.0805) = +0.078；RING-MINIT-CONT 5P short −0.1932 − 0.0727 = −0.266、long +0.152 − (−0.083) = +0.235。两版各自标定锚点联盟（page short/long corr 0.7035，greedy 0.6696），读数按各自联盟均值归一 ⇒ 同赛程近似配对，不是逐局配对。
+- **数据层**：page/coords.tsv 补 5 枚到 999；readings +7840 行（57524 → 65364）；display 的 arS/arL/arR 换页面版；重建图 999 行、rebuild-map 100 PASS（新对照锚 archive/2026-11-18-arena-page/coords-gen7-arena-page-1118.tsv）。
+- **工具**：arena-eval 新增 --dose=exam|page --eps-tier=；新增 tools/attach-arena.mjs；build-view 去掉 F5 短程兜底；measure-point 的 Arena 新点分 page+exam 两半测；viewer 的 Δε 守卫只保留 bp1118 跨夹具一条。
+- **版本**：v2.1.3 → v2.1.4。
+
 ## v2.1.3 — 11-18 下午（**人类替身重做 + 池 22 枚 + B 轴换 Arena 尺 + 5 枚多样性包入图**）
 
 **这一版是什么**：产品侧池 20→22（hard 8 / soft 14），演化图 B 轴从 bp1118 五墙换为 Arena Plackett-Luce 尺，并补入 5 枚多样性包；人类替身新增规则理解型（默认仍 legacy）。

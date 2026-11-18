@@ -81,12 +81,24 @@ export function loadLeagueTable(tsvPath = join(ROOT, 'champion-map/data/arena-le
   });
 }
 
-/** 为每个锚点载入 chooser (policyChooserN(params, 0.15)) */
-export function loadAnchorChoosers(W, anchors, root = ROOT) {
+/** 按剂量建 chooser：null = 考卷 ε=0；{tierId} = 页面剂量（DIFF_TIERS 那一档 + 前 3 回合斜坡，与 exam-4n --dose=page 同一实现） */
+export function makeDoseChooser(W, params, dose) {
+  const T = W.EpirusTrainer;
+  if (!dose || !dose.tierId) return T.policyChooserN(params, 0.15);
+  const B = W.EpirusBots;
+  const tier = (B.DIFF_TIERS || []).find((x) => x.id === dose.tierId);
+  if (!tier) throw new Error('Arena page dose 的档不在 DIFF_TIERS：' + dose.tierId);
+  const mk = (e) => e > 0 ? T.policyChooserN(params, 0.15, e, tier.epsK, tier.epsMode) : T.policyChooserN(params, 0.15);
+  const byRound = { 1: mk(B.tierEps(tier, 1)), 2: mk(B.tierEps(tier, 2)), 3: mk(B.tierEps(tier, 3)) };
+  return (state, id, legal) => byRound[Math.min(3, state.round)](state, id, legal);
+}
+
+/** 为每个锚点载入 chooser（默认 ε=0；传 dose 则整桌按页面剂量） */
+export function loadAnchorChoosers(W, anchors, root = ROOT, dose = null) {
   return anchors.map((a) => {
     const params = loadChamp(W, a.path, root);
     if (!params) throw new Error('Arena 联盟包载入失败：' + a.id + ' (' + a.path + ')');
-    return W.EpirusTrainer.policyChooserN(params, 0.15);
+    return makeDoseChooser(W, params, dose);
   });
 }
 
@@ -260,7 +272,7 @@ export function buildSubjectSchedule(nAnchors, excludeIdx = -1, seedBase = 82200
 /** 用已标定联盟（anchorRatingsShort/Long/All）评估单枚待测包并返回短/长程分格与总 Arena 分 */
 export function evaluatePackArena(W, subjParams, subjId, anchorChoosers, league, opts = {}) {
   const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay;
-  const subjChooser = T.policyChooserN(subjParams, 0.15);
+  const subjChooser = makeDoseChooser(W, subjParams, opts.dose);
   const excludeIdx = league.findIndex((a) => a.id === subjId);
   const rShort = league.map((a) => a.rShort);
   const rLong = league.map((a) => a.rLong);
