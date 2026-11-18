@@ -1724,7 +1724,6 @@ function tip(d) {
         : (d.psrc === 'synthetic' ? '：合成锚点（盘上没留档，占位）'
           : (d.psrc === 'unresolved' ? '：不可考（权重解不出 ⇒ 待补证据）' : '')))) +
     '\\n短程四格 ' + H4STR(d, '') + ' ‖ 长程四格 ' + H4STR(d, 'L') + ' ‖ 加权差(长−短) ' + X4D(d) +
-    '\\nΔε(短) ' + DE4(d, '') + ' ‖ Δε(长) ' + DE4(d, 'L') + '（页面剂量 − 考卷口径）' +
     '\\n环/过线：短程 ' + RYESNO(d.oks) + (d.oks === 0 && d.fshorts ? '（' + String(d.fshorts).slice(0, 44) + '）' : '')
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')

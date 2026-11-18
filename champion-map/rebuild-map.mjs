@@ -34,10 +34,10 @@ console.log('rebuild-map: ' + (DRY ? 'dry' : 'run'));
 run([join(HERE, 'attach-exam-stamp.mjs'), '--check'], '① exam 批次戳');
 if (DRY) process.exit(0);
 /* ② 从 data/ 编译完整页面视图（canonical + display 模板）
- *    对照锚 = gen7-arena-page-1118（11-18 B 轴换页面剂量 Arena；X 半边同步换 Arena 贪心，F5 退役）。
+ *    对照锚 = gen8-noX-1118（11-18 用户令：A 轴只有 page 一条，B 轴照办 ⇒ X 轴退役、ε=0 转参考）。
  *    换尺流程：build-view --compare=<不存在路径> 跳过守卫烤新视图 → 拷成新 gen 锚 → 本行指向新锚。 */
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=champion-map/archive/2026-11-18-arena-page/coords-gen7-arena-page-1118.tsv'], '② build-view 编译 coords-view');
+  '--compare=champion-map/archive/2026-11-18-noX/coords-gen8-noX-1118.tsv'], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */

@@ -53,7 +53,9 @@ const curRuler = (axis) => {
 };
 /* 11-14 白班（ZCode）：尺 id 从 rulers.tsv 现役行取——旧硬编码 a-v2-page-1109/b-f2-page-1111 已冻结，
  *   add-point 对 frozen 尺拒写；换尺后这里就是唯一要跟的地方。 */
-const RID_A = curRuler('A'), RID_B = curRuler('B'), RID_X = curRuler('X');
+const RID_A = curRuler('A'), RID_B = curRuler('B');
+const _xrow = rul.rows.find((r) => r[rul.ix.axis] === 'X' && r[rul.ix.status] === 'current');
+const RID_X = _xrow ? String(_xrow[rul.ix.ruler_id]) : '';   /* X 轴退役后为空 ⇒ 不跑 x 复测 */
 const bRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.status] === 'current');
 const bShortRow = rul.rows.find((r) => r[rul.ix.axis] === 'B' && r[rul.ix.ruler_id] === 'b-f5-page-1114') || bRow;
 const RID_B_SHORT = String(bShortRow[rul.ix.ruler_id]);
@@ -90,8 +92,8 @@ if (!SKIP_B) {
     ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
     if (!SKIP_LONG && !BP_WALLS) ex('b-long', 'long', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
   }
-  if (!ARENA_B) ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
-  if (!ARENA_B && !SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
+  if (!ARENA_B && RID_X) ex('x-multi', 'multi', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
+  if (!ARENA_B && RID_X && !SKIP_LONG) ex('x-long', 'long', 'B', 'exam', ['--champ=' + F2ARG, '--champn=1']);
 }
 const featOut = join(ST, ID + '-ruler.tsv');
 const RULER_ARGS = ['champion-map/ruler-measure.mjs', '--extra=' + extra.replace(HERE + '\\', '').replace(/\\/g, '/'),

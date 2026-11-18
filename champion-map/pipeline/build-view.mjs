@@ -42,7 +42,9 @@ export function buildView(opts) {
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
   const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
-  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（没有该尺行会响亮报错——不许静默缺族） */
+  /* X 轴已退役（2026-11-18 用户令：A 轴只有 page 一条，B 轴照办）⇒ 没有 current X 就不填 X 列，不再响亮报错 */
+  const _xr = rulers.rows.find((r) => r[rulers.ix.axis] === 'X' && r[rulers.ix.status] === 'current');
+  const X = _xr ? _xr[rulers.ix.ruler_id] : '';
   for (const c of ['pack_id', 'ruler_id', 'cell', 'horizon', 'value']) if (rd.ix[c] === undefined) throw new Error('readings 缺列 ' + c);
   const vals = new Map(), nvals = new Map();
   for (const r of rd.rows) {
@@ -154,7 +156,8 @@ export function buildCoordsView(opts) {
   const A = currentRuler(rulers, 'A')[rulers.ix.ruler_id];
   const B = currentRuler(rulers, 'B')[rulers.ix.ruler_id];
   const B_SHORT = (rulers.rows.find((r) => r[rulers.ix.axis] === 'B' && r[rulers.ix.ruler_id] === 'b-f5-page-1114') || [])[rulers.ix.ruler_id] || '';
-  const X = currentRuler(rulers, 'X')[rulers.ix.ruler_id];   /* Δε ε=0 半边（值 X<c>R(L) + 计数 n<c>R(L)，viewer DE4 的查找键） */
+  const _xr = rulers.rows.find((r) => r[rulers.ix.axis] === 'X' && r[rulers.ix.status] === 'current');
+  const X = _xr ? _xr[rulers.ix.ruler_id] : '';   /* X 轴退役后为空 ⇒ 不填 X 列 */
   const head = tpl.header.slice();
   const ix = Object.fromEntries(head.map((h, i) => [h, i]));
   const by = (t, idCol) => new Map(t.rows.map((r) => [r[t.ix[idCol]], r]));

@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.5 — 11-18 晚（X 轴退役：B 轴照 A 轴，只留 page 一条）
+
+**这一版是什么**：按用户裁定，A 轴只有 page 一条，B 轴照办，不再单独维护 X 轴。
+
+- **X 轴退役**：`b-arena-pl-1118` 从 X current 改回 B reference（ε=0 读数留作参考，不再上图）；F5 的 `b-f5-page-1114` / `b-f5-eps0-1114` 保持 reference。
+- **数据层**：display 的 16 个 X/n 列清空；`build-view` 与 `measure-point` 容忍无 current X（不再响亮报错，X 列留空；新点不再跑 x 复测）。
+- **页面**：viewer 移除 Δε 标签；F 公式不变——X̄₄ 读的始终是 C 族 `(A+B)/2`，A/B 现在都是页面剂量。
+- **重建**：新对照锚 `archive/2026-11-18-noX/coords-gen8-noX-1118.tsv`；`rebuild-map` **100 PASS**。
+- **版本**：v2.1.4 → v2.1.5。
+
 ## v2.1.4 — 11-18 晚（B 轴换页面剂量 Arena + F5 退役）
 
 **这一版是什么**：演化图 B 轴从 ε=0 贪心换成实机 page dose；X 半边同步换成 Arena 贪心版，F5 两条尺退役。产品池不变（22 枚，8/14）。
