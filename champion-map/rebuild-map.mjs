@@ -12,6 +12,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_COMPARE } from './pipeline/build-view.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -37,10 +38,9 @@ if (_b && ['b-f5-page-1114', 'b-f2-page-1111'].includes(_b[0])) run([join(HERE, 
 else console.log('—— ① 历史戳检查：当前 B=' + (_b ? _b[0] : '?') + ' 非 F2/F5 夹具 ⇒ 跳过（旧戳只服务 gen3 旧图）——');
 if (DRY) process.exit(0);
 /* ② 从 data/ 编译完整页面视图（canonical + display 模板）
- *    对照锚 = gen10-de-1118（11-18 新增 De/DeL：Δε = C_page − C_greedy，A/B 各用贪心参考尺）。
- *    换尺流程：build-view --compare=<不存在路径> 跳过守卫烤新视图 → 拷成新 gen 锚 → 本行指向新锚。 */
+ *    对照锚从 pipeline/build-view.mjs 的 DEFAULT_COMPARE 单源读取（gen10-de-1118），防止与无参 build-view 门禁漂移。 */
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=champion-map/archive/2026-11-18-de/coords-gen10-de-1118.tsv'], '② build-view 编译 coords-view');
+  '--compare=' + DEFAULT_COMPARE], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */

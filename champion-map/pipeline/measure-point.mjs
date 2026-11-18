@@ -279,7 +279,8 @@ if (EXT_READINGS) {
     for (const c of cell) {
       const x = row[t.ix['x' + c]], n = row[t.ix['n' + c]];
       if (x === undefined || x === '') continue;
-      const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : RID_X;
+      const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : (ARENA_B ? 'b-arena-pl-1118' : RID_X);
+      if (!rid) continue;
       const hor = horizon === 'multi' ? 'short' : 'long';
       rd.push([rid, String(c), hor, x, n]);
       if (axis !== 'x') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;

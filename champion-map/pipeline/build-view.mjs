@@ -25,11 +25,13 @@ const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS);
 function toNum(v) { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return isFinite(n) ? n : null; }
 function put(row, ix, v) { if (v === null) return; row[ix] = String(v); }
 
+export const DEFAULT_COMPARE = 'champion-map/archive/2026-11-18-de/coords-gen10-de-1118.tsv';
+
 export function buildView(opts) {
   opts = opts || {};
   const data = resolve(opts.data || 'champion-map/data');
-  /* 对照锚 = 上一代烤好的视图（换尺时新建 gen 锚并同步改这里的默认 + rebuild-map 的硬编码；gen3-1105 留档） */
-  const comparePath = resolve(opts.compare || 'champion-map/archive/2026-11-18-arena/coords-gen6-arena-1118.tsv');
+  /* 对照锚 = 上一代烤好的视图（换尺时新建 gen 锚并更新这里的 DEFAULT_COMPARE，rebuild-map 共用同一常量） */
+  const comparePath = resolve(opts.compare || DEFAULT_COMPARE);
   const reg = readTable(join(data, 'registry.tsv'));
   const rd = readTable(join(data, 'readings/current.tsv'));
   const rulers = loadRulers(join(data, 'rulers.tsv'));
@@ -230,7 +232,7 @@ export function buildCoordsView(opts) {
 const IS_MAIN = !!process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (IS_MAIN) {
   try {
-    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', 'champion-map/archive/2026-11-18-arena/coords-gen6-arena-1118.tsv'), noWrite: process.argv.includes('--no-write') });
+    const r = buildView({ data: arg('data', 'champion-map/data'), compare: arg('compare', DEFAULT_COMPARE), noWrite: process.argv.includes('--no-write') });
     const cv = buildCoordsView({ data: arg('data', 'champion-map/data'), noWrite: process.argv.includes('--no-write') });
     console.log('exam-view: ' + r.rows.length + ' 行 × ' + r.header.length + ' 列 ⇒ ' + r.viewPath);
     console.log('coords-view: ' + cv.rows.length + ' 行 × ' + cv.header.length + ' 列 ⇒ ' + cv.path + ' ‖ 无 display 模板 ' + cv.missingDisplay.length);
