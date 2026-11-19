@@ -7,8 +7,8 @@
  *   node tools/anchor-recover.mjs --ledger=docs/ARTIFACT-LOSS-1119.tsv --sources=D:/x,Q://y --do
  *
  * 身份判定：wid（权重数组 sha1）逐位相同才算同一枚——路径/META.ts 都不算数（本仓铁律：身份按权重）。
- * 已知边界（11-19 夜实测）：wid 目标来自 lineage-g3.tsv（188 行里仅部分带 wid）——覆盖不到的缺失枚
- *   需要先补 wid 账（registry 只有 sha256，文件没了就没法算；这也是「恢复件必须当天入 git」的原因）。
+ * wid 目标：两张 lineage 表并读（11-20 起）——lineage-g3=2.0 节点 ‖ page/lineage.tsv=1.8 全集（662 枚缺失全有 wid 判据）；
+ *   wid 只能验身份，盘上没源就得批量重产（11-20 实测 3525 源文件只直接对回 3 枚）。
  * 实战战绩：V3S2 六路融合重建一发命中 669145027f8020ae（scratch/v3s2-build.mjs → tools/pack-soup.mjs）。
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, readdirSync } from 'node:fs';
@@ -28,12 +28,13 @@ const lix = Object.fromEntries(lh.map((c, i) => [c, i]));
 const missing = L.slice(1).filter(Boolean).map(l => l.split('\t')).filter(r => r[lix.state] === 'missing');
 console.log('台账 missing ' + missing.length + ' 条（' + LEDGER + '）');
 
-/* wid 目标：--wids=<id=wid,...> 优先，否则 lineage-g3.tsv 的 wid 列 */
+/* wid 目标：--wids=<id=wid,...> 优先，否则 lineage 两张表（g3=2.0 节点 ‖ lineage.tsv=1.8 全集，c10 wid 列——
+ *   11-20 实测 662 枚缺失全部在 lineage.tsv 里有 wid，只读 g3 会漏掉整个 1.8 库存） */
 const wids = new Map();
 const warg = arg('wids', '');
 if (warg) for (const kv of warg.split(',')) { const [id, w] = kv.split('='); if (id && w) wids.set(id, w); }
 else {
-  for (const lp of ['champion-map/data/page/lineage-g3.tsv']) {
+  for (const lp of ['champion-map/data/page/lineage-g3.tsv', 'champion-map/data/page/lineage.tsv']) {
     if (!existsSync(lp)) continue;
     const t = readFileSync(lp, 'utf8').replace(/\r/g, '').split('\n');
     const h = Object.fromEntries(t[0].replace(/^\ufeff/, '').split('\t').map((c, i) => [c, i]));

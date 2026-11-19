@@ -321,7 +321,15 @@ if (DISP) {
 }
 const sha = createHash('sha256').update(readFileSync(PACK)).digest('hex');
 const relPack = relative(resolve(DATA, '../..'), PACK).replace(/\\/g, '/');
-const newReg = [ID, relPack, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'];
+/* registry 16 列训练配置（d78ef34f 契约，列序与 lineage.tsv c12-27 同构）：1.8 从 lineage.tsv 同名/wid 行回填
+ *   （单一来源=lineage，与白班批量回填同法）；2.0/G3 留空——在册 83 枚 2.0 行全空，META 配置提取未接 2.0。 */
+const REG_CFG_COLS = ['divW', 'divK', 'divRoleW', 'divCatW', 'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb'];
+let regCfg = new Array(REG_CFG_COLS.length).fill('');
+if (VER !== '2.0') {
+  const linSelf = linMain.rows.find((r) => r[linMain.ix.id] === ID || (pointWid && r[linMain.ix.wid] === pointWid));
+  if (linSelf) regCfg = REG_CFG_COLS.map((c) => linMain.ix[c] !== undefined ? String(linSelf[linMain.ix[c]] ?? '') : '');
+}
+const newReg = [ID, relPack, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'].concat(regCfg);
 const bid = BATCH || ('add-' + ID + '-' + now.slice(0, 10).replace(/-/g, ''));
 const newBatch = [bid, rd.rows.length ? rd.rows[0][rd.ix.ruler_id] : 'a-v2-page-1109', 'A', FIXTURE, '-', bid, basename(RD), String(RT.rows.length), now, 'add-point'];
 console.log('add-point: ' + ID + ' ‖ pack ' + basename(PACK) + ' ‖ readings ' + newReadings.length + ' ‖ display ' + (dispRow ? '有' : '无') + ' ‖ batch ' + bid);

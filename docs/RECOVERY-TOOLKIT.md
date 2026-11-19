@@ -43,8 +43,9 @@ node tools/anchor-recover.mjs --wids=ID=wid,... --sources=D:/x,D:/y --do   # 手
 ```
 
 - 身份判定 = wid 逐位（路径/META.ts 都不算数）。
-- **已知边界**：wid 目标来自 lineage-g3.tsv（覆盖有限）——缺失枚没有 wid 目标就无法验证身份 ⇒ **恢复件必须当天 `git add -f` 入仓**（registry 只有 sha256，文件没了连 wid 都算不出来）。
-- 恢复后必做：`git add -f` ‖ registry sha256 同步 ‖ ARTIFACT-LOSS 台账 `missing→ok` ‖ `node tools/arena-eval.mjs`（静默 exit 0 = 接线自证绿）。
+- **wid 目标 = 两张 lineage 表并读**（lineage-g3=2.0 ‖ page/lineage.tsv=1.8 全集，11-20 实测 662 枚缺失全部有 wid 判据）——但 wid 只能验身份，**盘上没源就得批量重产**（11-20 实测：3525 个源文件只直接对回 3 枚）。
+- 恢复后必做：`git add -f` ‖ registry sha256 同步 ‖ 台账 `missing→ok` ‖ `node tools/arena-eval.mjs`（静默 exit 0 = 接线自证绿）。
+- ⚠ 新包入账走 `champion-map/pipeline/add-point.mjs`（registry 25 列契约：1.8 从 lineage.tsv 回填 16 列配置、2.0 留空）——手搓 registry 行会对不上表头被 writeTable 咬。
 
 ## 4. `tools/pool-xray.mjs` —— 池 X 光（分带维护量具）
 
