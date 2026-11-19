@@ -44,7 +44,7 @@ const DATA_DIR = join(ROOT, arg('out', 'champion-map/data/skill-report'));
 const POOL_TSV = join(ROOT, 'champion-map/data/page/pool-members.tsv');
 /* ① 命名（PLAN §1.6）：合并尺 = pool-skill-report；产物页 = champion-map/skill-report.html */
 
-const FIXTURE_KEY = 'fx-pool1119a';
+const FIXTURE_KEY = 'fx-pool1119a';   /* 11-19 清晨：短暂换到 1119b（mid 带表序）被 D234⑬a 拦回——mid 必须拆空（§E590），重切后 fixture 组合与 1119a 全同 ⇒ 键回 1119a（同尺同键，AGENTS 8） */
 /* 观察层脚本对手（承 crossenv 11-16 的 10 名单，全部在 OPP_SPECS） */
 const CENSUS_SCRIPTS = ['gunspam', 'wall', 'baguaspam', 'guardgun', 'heavyfire', 'deepsaver', 'ringspam', 'tankline', 'targeter', 'beadburst'];
 /* 真包对手 = 现役池 hard 带前 4 + soft 带前 1（表序；随池滚动，fixtureKey 换代 ⇒ 换列族） */

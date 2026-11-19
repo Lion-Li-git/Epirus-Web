@@ -154,7 +154,22 @@ MS2-band2 wid=`c8f5f357ffb31a10`。**复现臂 MS2b/MS2c**（同配方 seed 7703
 
 **班内自省（用户 07:5x 两次点名）**：X1/X2 开臂前没先读 `docs/METHODOLOGY.md` 相关节——X2 就是 §148.6 在 pack-fuse 语境的重复。此后流程钉死：**开臂前 grep 方法论相邻节 + PROPOSAL/FINDING，臂计划里写明「这是不是已有结论」**（已入 §149 规矩 3 + 记忆）。
 
-## 十三、复算命令（更新）
+## 十三、X2b 入池 + 分带重切 + 池覆盖维护（08:0x · 用户令「不要等裁，直接做；维护池技能覆盖并做好强度和尽量完整技能覆盖的分带」）
+
+- **AGENTS #23**：夜班不设「待裁」——裁量即执行、文书留痕（X2b 停在"待裁"被点名后立的规矩）。
+- **X2b 全链**：measure-point --bake（图节点 100 PASS，parent=MX8-R6C-KL）→ pool-add 点名入池 ⇒ **池 24 枚**（wid 见表行；B=**−87.2pt** 极差 55.4）。普查并集 18/30（自对局 15）。它的 promote 0 阻断（G5[long] 17/25 余 8.0）在册于 `docs/artifacts/promote-night2-X2b-fuse.txt`。
+- **分带重切（两带终态）**：第一版切了 hard/mid/soft 三带（mid 从 0 建起），**被 D234⑬a 当场拦回**——在册裁定「上档 lv:regular 必须走到按带加权（mid 已拆空）」，混抽证据只量在两带表上 ⇒ 按 AGENTS「与门禁冲突以门禁为准」拆掉 mid，两带内做强度相干切分（`scratch/band-scan-1119.mjs` 扫描 → `scratch/fix-bands.mjs` + 中途 7 行二次修正）：
+
+| 带 | 枚数 | arenaB 中位（底/顶） | 带内覆盖并集 | 变动 |
+|---|---|---|---|---|
+| hard | 11 | **+14.2**（底 +2.3） | **21 技**（旧 17） | +OBS6E9（+14.0）/+MX6-TF15（+8.4）/+MX6-TF20（+4.1）/+RING-MINIT-CONT（+2.3，带 miniT/ring）从 soft 上来；−MX8-TN35-KL3（−7.3）下去 |
+| soft | 13 | **−21.0**（顶 +0.7） | **22 技** | +night2-S6（−104.8）+night2-X2b-fuse（−87.2）两枚蒸馏载体垫底；−上面四枚 |
+
+  对比旧表（hard 底 −7.3 ‖ soft 顶 +14.0 互相穿插）**强度与覆盖同时改善**：hard 全员 ≥+2.3 且覆盖 17→21 技（RING 系广包上带补了 miniT/ring），soft 顶 0.7 且覆盖 22 技。带内覆盖仍缺的强载体（armor/cannon/mine/jinshield 高强度版）= 载体训练的下一个落点。
+- **真 bug 修掉**：`arenaFloorOf` 返回值漏 `id` ⇒ pool-add 落的地板行 pack_id 全空（night2-S6/X2b 两行受害，「没量过」审计 join 不到 = 账面假空白）——修 `tools/arena-noise-floor.mjs`（id 随行返回）+ 两行 id 手工补齐。
+- **fixtures 键回**：mid 带表序曾让 soft 头 1 变（MSB11 上来）⇒ 短暂用 `fx-pool1119b` 重测过一轮（24/24 fail=0；读数：环 3/24 ‖ 大雷 19 ‖ 电磁炮 21 ‖ 激光眼 5 ‖ 过载炮 1——该代作废留档）；mid 拆空后 fixture 组合与 1119a **全同**（hard 头 4 不变 + soft 头 1 回到 DEF-s16）⇒ **键回 `fx-pool1119a` 重测**（同尺同键，AGENTS 8 不许同键异夹具，也不许同夹具异键）。终版配额账（**24 枚 · fx-pool1119a · ≥3 格**）：T1 = 环 **3/24 (13%) ✗** ‖ 大雷 19/24 (79%) ✓ ‖ 电磁炮 21/24 (88%) ✓；T2 = 激光眼 **5/24 (21%) ✗边缘** ‖ **过载炮 1/24 (4%) ✗ 全池最缺**。死卡族：tank 4 ‖ armor 2 ‖ jinshield 2 ‖ miniT 1（night2-S6/X2b 是目前唯一载体）‖ curse 6 ‖ firestorm 0。两个夹具代（1119a/b）配额读数一致 ⇒ 这些缺口对夹具选择不敏感，是池的真实形状。
+
+## 十四、复算命令（更新）
 
 ```bash
 # 合并尺（两级）

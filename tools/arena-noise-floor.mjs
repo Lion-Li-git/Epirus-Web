@@ -81,7 +81,9 @@ export function arenaFloorOf(packPath, id, k) {
   }
   const s = vals.slice().sort((a, b) => a - b);
   const med = s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-  return { med: Number(med.toFixed(4)), spread: Number((s[s.length - 1] - s[0]).toFixed(4)), values: vals.map(v => Number(v.toFixed(4))), n: k };
+  /* ⚑ id 必须随行返回：appendFloor 按 rec.id 落列与去重——11-19 夜 pool-add 落的行 id 全空（本函数漏返回），
+   *   结果「没量过」审计读不出它（scan 按 pack_id join 不到）⇒ 账面假空白。 */
+  return { id, med: Number(med.toFixed(4)), spread: Number((s[s.length - 1] - s[0]).toFixed(4)), values: vals.map(v => Number(v.toFixed(4))), n: k };
 }
 
 /* ---------- 这张表的读者（`tools/pool-add.mjs` 用它做引用，不复制读数） ---------- */
