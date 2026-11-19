@@ -1,12 +1,14 @@
 # ARTIFACT-LOSS-1119 -- 11-19 批 1 清理删除的权重文件
 
-> 2026-11-19 白班清理删除了 22,029 个未跟踪文件；其中 docs/artifacts/*-out 在 .gitignore 里（从未入库），删后不可恢复。
+> 2026-11-19 白班清理删除了 22,029 个未跟踪文件；其中 docs/artifacts/*-out 在 .gitignore 里（从未入库），删后遇 NVMe SSD TRIM 不可从盘恢复。
 
 ## 账
 
-- 缺失总数：**800 枚**（全部 status=active，registry path 非空但盘上不存在）
+- 原始缺失：**800 枚**（`1.8` 706 + `2.0` 94；全部 `status=active`，`registry path` 非空但盘上不存在）
+- 已挽回：**130 枚**（11-19 晚由 Git 历史提交逐字节找回 **46 枚**〔`2.0` 40 枚 + `1.8` 6 枚〕，由 `D:\code\Epirus-Web-artifacts-quarantine` 找回 **84 枚**〔`1.8` 7 枚同 sha256 + 77 枚同权重 `wid`〕；`winfr` 扫描 D 盘 711 条 MFT 路径中 701 枚已被 TRIM 清零、10 枚已覆盖，盘恢复 `0` 枚）
+- **当前实缺：670 枚**（`1.8` 616 + `2.0` 54；见 `node tools/map-audit.mjs`）
 - 池成员：**0 枚**（page/pool-members.tsv 的 25 枚文件都在，游戏/池不受影响）
-- 影响：这 800 枚历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
+- 影响：其余 670 枚历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
 
 ## 按目录
 
