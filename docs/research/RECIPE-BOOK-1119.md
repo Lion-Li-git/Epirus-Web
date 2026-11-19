@@ -80,13 +80,17 @@ node training/proto2/supfit-gd.mjs \
 
 - 依赖：OBS6-GA2PG-8K.bak（**缺失**，创建命令未在 5ae 班——11-14 或更早，待挖 ZCode db/其余 brain）。
 
-### 1.4 OBS6-LH6P（LH6 恢复后即可跑；FINDING §二/三 + HANDOFF §3.1）
+### 1.4 OBS6-LH6P（✅ 原始命令出土 · 2026-11-15 13:06）
 
 ```bash
-node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6-LH6.bak \
-  --obs=obs6 --arenaPool=product --games=3000 --lamExp=0.04 --seed=7 \
-  --out=docs/artifacts/obs6-coldstart/OBS6-LH6P.bak   # 核 wid 457e635123000e85
+node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-LH6.bak \
+  --games=3000 --batch=48 --lr=0.0002 --temp=0.5 --baseline=mean --lamC=0 --lamF=0.02 \
+  --lamExp=0.04 --klW=0.06 --arenaPool=product --arenaShapes=2:multi,3:long,5:multi,5:long,8:multi \
+  --segEvery=1000 --out=scratch/arms/OBS6-LH6P.bak --tag=OBS6-LH6P
 ```
+
+- 无 `--seed`（默认 20261031）‖ e2816572 时代 pg-train 无 `--obs` 旗标（架构从包自读）；HANDOFF §3.1 的重构命令（--obs=obs6 --lamExp=0.04 --seed=7）是错的，首跑未中（`79c8b0ca`）。
+- 核 wid `457e635123000e85`。
 
 ### 1.5 DIV-V3-PRESSURE-S2 → DIV-V3-ANTIDEF（V3S2 恢复后；HANDOFF §2.1 全文 + transcript 双源一致）
 
