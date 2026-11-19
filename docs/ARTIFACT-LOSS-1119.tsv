@@ -152,7 +152,7 @@ plainAnchor-s12	docs/artifacts/e502-out/plainAnchor-s12.js	missing
 plainAnchor-s13	docs/artifacts/e502-out/plainAnchor-s13.js	missing	
 Q-s33	docs/artifacts/e507-out/Q-s33.js	missing	
 Q-s38	docs/artifacts/e507-out/Q-s38.js	missing	
-Q-s47	docs/artifacts/e507-out/Q-s47.js	missing	
+Q-s47	docs/artifacts/e507-out/Q-s47.js	ok	
 Q-s51	docs/artifacts/e507-out/Q-s51.js	missing	
 Q151	docs/artifacts/e234-out/Q151.js	sha-diff-wid-same	4d07666593044736b37dfeabeffc0eb0767bde6fc9362e369d1610bd37464438
 Q191	docs/artifacts/e234-out/Q191.js	sha-diff-wid-same	a403e22555f5c1c63e30695969eea9267607b0faa8ae185599d74f5a20c8d2c8

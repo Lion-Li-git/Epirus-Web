@@ -22,6 +22,7 @@ const MODES = {
   supfit: ['training/proto2/supfit-gd.mjs'],
   distill: ['training/proto2/supfit-gd.mjs'],
   fuse: ['tools/pack-fuse.mjs'],
+  v7: ['training/train-3p.mjs'],
   selftest: [
     'training/proto2/selftest2.mjs',
     'training/proto2/selftest3.mjs',
@@ -31,11 +32,12 @@ const MODES = {
 
 function usage() {
   console.error(
-    '用法：node training/train.mjs --mode=<pg|supfit|distill|fuse|selftest> [其余透传旗标]\n' +
+    '用法：node training/train.mjs --mode=<pg|supfit|distill|fuse|v7|selftest> [其余透传旗标]\n' +
     '  快捷：node training/train.mjs --selftest\n' +
     '  说明：pg -> training/proto2/pg-train.mjs\n' +
     '        supfit|distill -> training/proto2/supfit-gd.mjs\n' +
     '        fuse -> tools/pack-fuse.mjs\n' +
+    '        v7   -> training/train-3p.mjs（旧 v7 演化线；位置参数/EPIRUS_* 透传）\n' +
     '        selftest -> selftest2 + selftest3 + browser-parity'
   );
 }
