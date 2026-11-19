@@ -36,13 +36,13 @@ def-33	docs/artifacts/def-33.bak	missing
 def-34	docs/artifacts/def-34.bak	missing	
 def-35	docs/artifacts/def-35.bak	missing	
 def-36	docs/artifacts/def-36.bak	missing	
-E00-31	docs/artifacts/e85-out/E00-31.bak	missing	
-E00-71	docs/artifacts/e85-out/E00-71.bak	missing	
+E00-31	docs/artifacts/e85-out/E00-31.bak	ok	
+E00-71	docs/artifacts/e85-out/E00-71.bak	ok	
 E1	docs/artifacts/e234-out/E1.js	missing	
 E10-31	docs/artifacts/kept/e85-out__E10-31.bak	ok	
 E2	docs/artifacts/e234-out/E2.js	missing	
-E20-31	docs/artifacts/e85-out/E20-31.bak	missing	
-E20-71	docs/artifacts/e85-out/E20-71.bak	missing	
+E20-31	docs/artifacts/e85-out/E20-31.bak	ok	
+E20-71	docs/artifacts/e85-out/E20-71.bak	ok	
 E3	docs/artifacts/e234-out/E3.js	ok	
 e35prod807	docs/artifacts/E35-prod-807.bak	missing	
 e35prod814	docs/artifacts/E35-prod-814.bak	ok	
@@ -175,7 +175,7 @@ r61fix-91	docs/artifacts/r61fix-91.bak	missing
 r61fix-92	docs/artifacts/r61fix-92.bak	ok	
 r61fix-93	docs/artifacts/r61fix-93.bak	missing	
 RG1-31	docs/artifacts/e127-out/RG1-31.bak	ok	
-RG1-71	docs/artifacts/e127-out/RG1-71.bak	missing	
+RG1-71	docs/artifacts/e127-out/RG1-71.bak	ok	
 rwd0-31	docs/artifacts/rwd0-31.bak	missing	
 rwd0-32	docs/artifacts/rwd0-32.bak	missing	
 rwd0-33	docs/artifacts/rwd0-33.bak	missing	
