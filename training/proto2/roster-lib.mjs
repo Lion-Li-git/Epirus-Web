@@ -15,7 +15,8 @@
  */
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { makeAsChooser } from '../../tools/bot-chooser-lib.mjs';
-import { loadChamp } from '../../tools/audit-lib.mjs';
+import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
+import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -42,6 +43,38 @@ function buildPackSeat(W, T, item, tag) {
   const path = isPath ? item : regPath(item);
   if (!path || (!isAbsolute(path) && !existsSync(join('.', path)) && !existsSync(path))) {
     console.error('⛔ ' + tag + '：pack 对手席「' + item + '」解析不出（' + (isPath ? '文件不存在' : 'registry 无此 id 或已 archived') + '）'); process.exit(2);
+  }
+  /* 2026-11-19: 跨维度真包席。agent 侧 P 只装当前 arch2 的布局，16411 维的 OBS6P9 直喂会 checkPack 失败
+   *   => 这里给每枚 pack 席装**它自己的** arch2 布局（独立沙箱），chooser 用那套参数；
+   *   同一维度的包仍然等价，v7/旧壳走下面 loadChamp 原路。 */
+  let raw = null;
+  try { raw = readPack2(path); } catch (e) { raw = null; }
+  if (raw && raw.dims && raw.a) {
+    let got;
+    try { got = packCfgExit(raw, path); }
+    catch (e) {
+      const seg = ((raw.layout && raw.layout.seg) || []).find((x) => x.name === 'qHead');
+      if (!seg) throw e;
+      const d = raw.dims || {};
+      got = { cfg: { mutMode: 'seg', seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, input: d.input, inter: d.inter || 0, tinter: d.tinter || 0, gen: 3, keySplit: d.keySplit || 0 }, carried: seg };
+    }
+    const W2 = sandbox();
+    installArch2(W2, Object.assign({ mutMode: 'seg' }, got.cfg));
+    const P2 = W2.EpirusPolicy;
+    let prm;
+    if (got.carried) {
+      const a = Float64Array.from(raw.a || []);
+      const out = new Float64Array(a.length - got.carried.len);
+      out.set(a.subarray(0, got.carried.off), 0);
+      out.set(a.subarray(got.carried.off + got.carried.len), got.carried.off);
+      prm = out;
+    } else prm = P2.unpack(raw, true);
+    if (!prm || prm.length !== P2.paramCount()) {
+      console.error('⛔ ' + tag + '：pack 席「' + item + '」独立布局参数数不符（' + (prm ? prm.length : 'null') + ' vs ' + P2.paramCount() + '）');
+      process.exit(2);
+    }
+    const nm = 'pack:' + (isPath ? item.replace(/^.*[\\/]/, '').replace(/\.(bak|js)$/i, '') : item);
+    return { name: nm, kind: 'pack', sel: W2.EpirusTrainer.policyChooserN(prm, 0.15) };
   }
   const params = loadChamp(W, path, '.');
   if (!params) { console.error('⛔ ' + tag + '：pack 对手席读不出参数：' + path); process.exit(2); }
