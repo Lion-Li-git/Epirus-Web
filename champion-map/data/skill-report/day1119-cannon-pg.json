@@ -1,0 +1,7533 @@
+{
+ "stage1": {
+  "unionN": 15,
+  "selfUnionN": 14,
+  "envOnlySkills": [
+   "reflect"
+  ],
+  "selfOnlySkills": [],
+  "coverage": {
+   "ji": 120,
+   "gun": 111,
+   "charge": 107,
+   "railgun": 107,
+   "jinshield": 1,
+   "armor": 81,
+   "shift": 41,
+   "snipe": 17,
+   "proto": 17,
+   "holo": 15,
+   "cannon": 28,
+   "bagua": 0,
+   "guard": 0,
+   "transfer": 0,
+   "reflect": 0
+  },
+  "totalUses": {
+   "ji": 12804,
+   "gun": 2685,
+   "charge": 2472,
+   "railgun": 2393,
+   "jinshield": 30,
+   "armor": 682,
+   "shift": 384,
+   "snipe": 116,
+   "proto": 148,
+   "holo": 109,
+   "cannon": 217,
+   "bagua": 11,
+   "guard": 5,
+   "transfer": 8,
+   "reflect": 2
+  },
+  "totalCells": 120,
+  "decN": 22066,
+  "switchJs": 0.0151,
+  "switchJsCells": 12,
+  "winRate": 0.3425,
+  "bead": {
+   "elecGained": 2469,
+   "elecSpent": 2393,
+   "elecExpired": 54,
+   "boomGained": 0,
+   "boomSpent": 0,
+   "boomExpired": 0
+  },
+  "curseStats": {
+   "curseOk": 0,
+   "curseLanded": 0,
+   "firestormOk": 0,
+   "firestormHits": 0
+  },
+  "winBy": {
+   "gunspam@2m": {
+    "w": 0,
+    "g": 10
+   },
+   "gunspam@2l": {
+    "w": 1,
+    "g": 10
+   },
+   "gunspam@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "gunspam@3l": {
+    "w": 2,
+    "g": 10
+   },
+   "gunspam@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "gunspam@5l": {
+    "w": 2,
+    "g": 10
+   },
+   "gunspam@8m": {
+    "w": 0,
+    "g": 10
+   },
+   "gunspam@8l": {
+    "w": 1,
+    "g": 10
+   },
+   "wall@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@2l": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@3m": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@3l": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@5m": {
+    "w": 8,
+    "g": 10
+   },
+   "wall@5l": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@8m": {
+    "w": 10,
+    "g": 10
+   },
+   "wall@8l": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@2l": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@3m": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@3l": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@5m": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@5l": {
+    "w": 10,
+    "g": 10
+   },
+   "baguaspam@8m": {
+    "w": 9,
+    "g": 10
+   },
+   "baguaspam@8l": {
+    "w": 10,
+    "g": 10
+   },
+   "guardgun@2m": {
+    "w": 8,
+    "g": 10
+   },
+   "guardgun@2l": {
+    "w": 4,
+    "g": 10
+   },
+   "guardgun@3m": {
+    "w": 3,
+    "g": 10
+   },
+   "guardgun@3l": {
+    "w": 0,
+    "g": 10
+   },
+   "guardgun@5m": {
+    "w": 2,
+    "g": 10
+   },
+   "guardgun@5l": {
+    "w": 1,
+    "g": 10
+   },
+   "guardgun@8m": {
+    "w": 0,
+    "g": 10
+   },
+   "guardgun@8l": {
+    "w": 1,
+    "g": 10
+   },
+   "heavyfire@2m": {
+    "w": 8,
+    "g": 10
+   },
+   "heavyfire@2l": {
+    "w": 3,
+    "g": 10
+   },
+   "heavyfire@3m": {
+    "w": 2,
+    "g": 10
+   },
+   "heavyfire@3l": {
+    "w": 5,
+    "g": 10
+   },
+   "heavyfire@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "heavyfire@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "heavyfire@8m": {
+    "w": 0,
+    "g": 10
+   },
+   "heavyfire@8l": {
+    "w": 1,
+    "g": 10
+   },
+   "deepsaver@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "deepsaver@2l": {
+    "w": 4,
+    "g": 10
+   },
+   "deepsaver@3m": {
+    "w": 8,
+    "g": 10
+   },
+   "deepsaver@3l": {
+    "w": 2,
+    "g": 10
+   },
+   "deepsaver@5m": {
+    "w": 6,
+    "g": 10
+   },
+   "deepsaver@5l": {
+    "w": 2,
+    "g": 10
+   },
+   "deepsaver@8m": {
+    "w": 8,
+    "g": 10
+   },
+   "deepsaver@8l": {
+    "w": 2,
+    "g": 10
+   },
+   "ringspam@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "ringspam@2l": {
+    "w": 4,
+    "g": 10
+   },
+   "ringspam@3m": {
+    "w": 8,
+    "g": 10
+   },
+   "ringspam@3l": {
+    "w": 4,
+    "g": 10
+   },
+   "ringspam@5m": {
+    "w": 10,
+    "g": 10
+   },
+   "ringspam@5l": {
+    "w": 4,
+    "g": 10
+   },
+   "ringspam@8m": {
+    "w": 10,
+    "g": 10
+   },
+   "ringspam@8l": {
+    "w": 3,
+    "g": 10
+   },
+   "tankline@2m": {
+    "w": 8,
+    "g": 10
+   },
+   "tankline@2l": {
+    "w": 3,
+    "g": 10
+   },
+   "tankline@3m": {
+    "w": 2,
+    "g": 10
+   },
+   "tankline@3l": {
+    "w": 5,
+    "g": 10
+   },
+   "tankline@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "tankline@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "tankline@8m": {
+    "w": 0,
+    "g": 10
+   },
+   "tankline@8l": {
+    "w": 1,
+    "g": 10
+   },
+   "targeter@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "targeter@2l": {
+    "w": 2,
+    "g": 10
+   },
+   "targeter@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "targeter@3l": {
+    "w": 0,
+    "g": 10
+   },
+   "targeter@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "targeter@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "targeter@8m": {
+    "w": 2,
+    "g": 10
+   },
+   "targeter@8l": {
+    "w": 2,
+    "g": 10
+   },
+   "beadburst@2m": {
+    "w": 10,
+    "g": 10
+   },
+   "beadburst@2l": {
+    "w": 1,
+    "g": 10
+   },
+   "beadburst@3m": {
+    "w": 5,
+    "g": 10
+   },
+   "beadburst@3l": {
+    "w": 1,
+    "g": 10
+   },
+   "beadburst@5m": {
+    "w": 4,
+    "g": 10
+   },
+   "beadburst@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "beadburst@8m": {
+    "w": 4,
+    "g": 10
+   },
+   "beadburst@8l": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@2m": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@2l": {
+    "w": 4,
+    "g": 10
+   },
+   "EQ-S4-E9@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@3l": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-E9@8m": {
+    "w": 3,
+    "g": 10
+   },
+   "EQ-S4-E9@8l": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@2m": {
+    "w": 1,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@2l": {
+    "w": 4,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@3l": {
+    "w": 1,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@5m": {
+    "w": 1,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@5l": {
+    "w": 2,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@8m": {
+    "w": 2,
+    "g": 10
+   },
+   "EQ-S4-GD6ATEACH@8l": {
+    "w": 0,
+    "g": 10
+   },
+   "MX1-GD-EQ@2m": {
+    "w": 1,
+    "g": 10
+   },
+   "MX1-GD-EQ@2l": {
+    "w": 5,
+    "g": 10
+   },
+   "MX1-GD-EQ@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX1-GD-EQ@3l": {
+    "w": 0,
+    "g": 10
+   },
+   "MX1-GD-EQ@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX1-GD-EQ@5l": {
+    "w": 1,
+    "g": 10
+   },
+   "MX1-GD-EQ@8m": {
+    "w": 1,
+    "g": 10
+   },
+   "MX1-GD-EQ@8l": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@2m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@2l": {
+    "w": 1,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@3m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@3l": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@5m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@5l": {
+    "w": 1,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@8m": {
+    "w": 0,
+    "g": 10
+   },
+   "MX3-GDEQ-GD@8l": {
+    "w": 0,
+    "g": 10
+   },
+   "day1119-cannon-pg@2m": {
+    "w": 5,
+    "g": 10
+   },
+   "day1119-cannon-pg@2l": {
+    "w": 6,
+    "g": 10
+   },
+   "day1119-cannon-pg@3m": {
+    "w": 5,
+    "g": 10
+   },
+   "day1119-cannon-pg@3l": {
+    "w": 3,
+    "g": 10
+   },
+   "day1119-cannon-pg@5m": {
+    "w": 3,
+    "g": 10
+   },
+   "day1119-cannon-pg@5l": {
+    "w": 0,
+    "g": 10
+   },
+   "day1119-cannon-pg@8m": {
+    "w": 3,
+    "g": 10
+   },
+   "day1119-cannon-pg@8l": {
+    "w": 2,
+    "g": 10
+   }
+  },
+  "cells": [
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 52,
+     "gun": 11,
+     "charge": 10,
+     "railgun": 10,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 22
+     },
+     "5": {
+      "gun": 11,
+      "ji": 10,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 10
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 10
+     },
+     "10": {
+      "railgun": 10
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 72,
+     "armor": 20,
+     "charge": 10,
+     "railgun": 10,
+     "shift": 4,
+     "gun": 9
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "armor": 6,
+      "ji": 9,
+      "shift": 4,
+      "gun": 4
+     },
+     "2": {
+      "ji": 9
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "armor": 7,
+      "gun": 3,
+      "ji": 1
+     },
+     "6": {
+      "railgun": 9,
+      "ji": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "armor": 7,
+      "gun": 2
+     },
+     "10": {
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 55,
+     "gun": 14,
+     "charge": 8,
+     "railgun": 8,
+     "shift": 3,
+     "jinshield": 1,
+     "armor": 2,
+     "snipe": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 26
+     },
+     "5": {
+      "gun": 10,
+      "ji": 9,
+      "shift": 2,
+      "jinshield": 1,
+      "armor": 2
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "gun": 4,
+      "shift": 1
+     },
+     "10": {
+      "railgun": 6,
+      "ji": 5,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 5
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 99,
+     "gun": 38,
+     "charge": 12,
+     "railgun": 12,
+     "armor": 8,
+     "proto": 1,
+     "snipe": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 26
+     },
+     "1": {
+      "gun": 9,
+      "ji": 10,
+      "armor": 2,
+      "proto": 1
+     },
+     "2": {
+      "ji": 6,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 6
+     },
+     "4": {
+      "ji": 32
+     },
+     "5": {
+      "gun": 21,
+      "armor": 6,
+      "ji": 4
+     },
+     "6": {
+      "snipe": 2,
+      "railgun": 6,
+      "ji": 6
+     },
+     "7": {
+      "charge": 5
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "gun": 8,
+      "ji": 3
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 55,
+     "gun": 10,
+     "shift": 4,
+     "armor": 3,
+     "charge": 9,
+     "railgun": 7
+    },
+    "buckets": {
+     "4": {
+      "ji": 19
+     },
+     "5": {
+      "gun": 9,
+      "shift": 3,
+      "ji": 6
+     },
+     "6": {
+      "ji": 2,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 14
+     },
+     "9": {
+      "armor": 3,
+      "ji": 6,
+      "shift": 1,
+      "gun": 1
+     },
+     "10": {
+      "ji": 8,
+      "railgun": 6
+     },
+     "11": {
+      "charge": 7
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 95,
+     "gun": 31,
+     "charge": 12,
+     "railgun": 11,
+     "armor": 5,
+     "proto": 3,
+     "snipe": 4,
+     "holo": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 24
+     },
+     "1": {
+      "gun": 10,
+      "ji": 9,
+      "proto": 1,
+      "armor": 1
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 3,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 18
+     },
+     "5": {
+      "armor": 3,
+      "gun": 6,
+      "proto": 2,
+      "ji": 6
+     },
+     "6": {
+      "railgun": 3,
+      "snipe": 3,
+      "ji": 4
+     },
+     "7": {
+      "charge": 2,
+      "holo": 1
+     },
+     "8": {
+      "ji": 20
+     },
+     "9": {
+      "gun": 15,
+      "ji": 4,
+      "armor": 1
+     },
+     "10": {
+      "ji": 5,
+      "railgun": 5
+     },
+     "11": {
+      "charge": 6
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 59,
+     "gun": 11,
+     "charge": 8,
+     "railgun": 7,
+     "armor": 7,
+     "shift": 4
+    },
+    "buckets": {
+     "4": {
+      "ji": 19
+     },
+     "5": {
+      "gun": 7,
+      "ji": 5,
+      "shift": 3,
+      "armor": 3
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 20
+     },
+     "9": {
+      "ji": 6,
+      "gun": 4,
+      "armor": 4,
+      "shift": 1
+     },
+     "10": {
+      "ji": 6,
+      "railgun": 6
+     },
+     "11": {
+      "charge": 5
+     }
+    }
+   },
+   {
+    "opp": "gunspam",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 57,
+     "gun": 13,
+     "charge": 8,
+     "railgun": 6,
+     "armor": 3,
+     "snipe": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 22
+     },
+     "1": {
+      "gun": 8,
+      "ji": 9,
+      "armor": 2
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 1,
+      "snipe": 2
+     },
+     "3": {
+      "charge": 5
+     },
+     "4": {
+      "ji": 8
+     },
+     "5": {
+      "ji": 4,
+      "gun": 2
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 5,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 4
+     },
+     "9": {
+      "gun": 3,
+      "armor": 1,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 69,
+     "gun": 8,
+     "charge": 17,
+     "railgun": 17,
+     "jinshield": 1,
+     "cannon": 5,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 32
+     },
+     "5": {
+      "gun": 8,
+      "ji": 20,
+      "jinshield": 1,
+      "cannon": 2,
+      "shift": 1
+     },
+     "6": {
+      "ji": 17,
+      "railgun": 17,
+      "cannon": 3
+     },
+     "7": {
+      "charge": 17
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 123,
+     "shift": 29,
+     "charge": 25,
+     "railgun": 25,
+     "armor": 3,
+     "cannon": 10,
+     "gun": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 68
+     },
+     "1": {
+      "shift": 29,
+      "ji": 30,
+      "armor": 3,
+      "cannon": 5,
+      "gun": 1
+     },
+     "2": {
+      "ji": 25,
+      "railgun": 25,
+      "cannon": 5
+     },
+     "3": {
+      "charge": 25
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 135,
+     "shift": 6,
+     "proto": 1,
+     "holo": 1,
+     "charge": 38,
+     "railgun": 38,
+     "gun": 5,
+     "armor": 1,
+     "cannon": 4,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 57
+     },
+     "5": {
+      "shift": 6,
+      "proto": 1,
+      "holo": 1,
+      "ji": 40,
+      "gun": 5,
+      "armor": 1,
+      "cannon": 2,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 38,
+      "railgun": 38,
+      "cannon": 2
+     },
+     "7": {
+      "charge": 38
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 187,
+     "charge": 57,
+     "railgun": 57,
+     "cannon": 6,
+     "proto": 3,
+     "gun": 2,
+     "holo": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 70
+     },
+     "1": {
+      "ji": 60,
+      "cannon": 3,
+      "proto": 3,
+      "gun": 2,
+      "holo": 2
+     },
+     "2": {
+      "ji": 57,
+      "railgun": 57,
+      "cannon": 3
+     },
+     "3": {
+      "charge": 57
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 256,
+     "charge": 69,
+     "railgun": 67,
+     "proto": 4,
+     "gun": 12,
+     "bagua": 1,
+     "armor": 2,
+     "shift": 13,
+     "jinshield": 4,
+     "cannon": 7,
+     "holo": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 106,
+      "bagua": 1,
+      "cannon": 1
+     },
+     "5": {
+      "ji": 71,
+      "proto": 4,
+      "gun": 8,
+      "armor": 1,
+      "shift": 13,
+      "jinshield": 4,
+      "cannon": 3,
+      "holo": 1
+     },
+     "6": {
+      "ji": 68,
+      "railgun": 65,
+      "cannon": 3
+     },
+     "7": {
+      "charge": 67
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "ji": 2,
+      "holo": 1,
+      "armor": 1,
+      "gun": 4
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 381,
+     "charge": 115,
+     "railgun": 115,
+     "gun": 9,
+     "proto": 5,
+     "holo": 4,
+     "snipe": 1,
+     "armor": 2,
+     "shift": 2,
+     "cannon": 8
+    },
+    "buckets": {
+     "0": {
+      "ji": 145
+     },
+     "1": {
+      "ji": 119,
+      "gun": 9,
+      "proto": 5,
+      "holo": 4,
+      "armor": 2,
+      "shift": 2,
+      "cannon": 4
+     },
+     "2": {
+      "ji": 114,
+      "railgun": 114,
+      "snipe": 1,
+      "cannon": 4
+     },
+     "3": {
+      "charge": 114
+     },
+     "4": {
+      "ji": 1
+     },
+     "5": {
+      "ji": 1
+     },
+     "6": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 276,
+     "charge": 74,
+     "railgun": 74,
+     "cannon": 4,
+     "shift": 14,
+     "proto": 11,
+     "gun": 5,
+     "holo": 7,
+     "jinshield": 1,
+     "bagua": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 120,
+      "bagua": 1
+     },
+     "5": {
+      "ji": 78,
+      "cannon": 1,
+      "shift": 14,
+      "proto": 11,
+      "gun": 5,
+      "holo": 7,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 74,
+      "railgun": 71,
+      "cannon": 2
+     },
+     "7": {
+      "charge": 74
+     },
+     "8": {
+      "ji": 1
+     },
+     "9": {
+      "ji": 2,
+      "cannon": 1
+     },
+     "10": {
+      "railgun": 3,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "wall",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 602,
+     "charge": 183,
+     "railgun": 182,
+     "shift": 4,
+     "armor": 4,
+     "gun": 19,
+     "cannon": 4,
+     "proto": 11,
+     "holo": 4,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 231
+     },
+     "1": {
+      "ji": 186,
+      "shift": 4,
+      "armor": 4,
+      "gun": 19,
+      "cannon": 2,
+      "proto": 11,
+      "holo": 4
+     },
+     "2": {
+      "ji": 182,
+      "railgun": 179,
+      "cannon": 2,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 181
+     },
+     "4": {
+      "ji": 2
+     },
+     "6": {
+      "railgun": 2,
+      "ji": 1
+     },
+     "7": {
+      "charge": 2
+     },
+     "10": {
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 105,
+     "gun": 8,
+     "charge": 32,
+     "railgun": 32,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 41
+     },
+     "5": {
+      "gun": 8,
+      "ji": 32,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 32,
+      "railgun": 32
+     },
+     "7": {
+      "charge": 32
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 194,
+     "shift": 39,
+     "charge": 51,
+     "railgun": 51,
+     "armor": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 92
+     },
+     "1": {
+      "shift": 39,
+      "ji": 51,
+      "armor": 2
+     },
+     "2": {
+      "ji": 51,
+      "railgun": 51
+     },
+     "3": {
+      "charge": 51
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 238,
+     "shift": 9,
+     "jinshield": 1,
+     "gun": 1,
+     "charge": 74,
+     "railgun": 74,
+     "proto": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 88
+     },
+     "5": {
+      "shift": 9,
+      "jinshield": 1,
+      "gun": 1,
+      "ji": 75,
+      "proto": 1
+     },
+     "6": {
+      "ji": 75,
+      "railgun": 74
+     },
+     "7": {
+      "charge": 74
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 355,
+     "charge": 117,
+     "railgun": 117,
+     "shift": 1,
+     "proto": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 121
+     },
+     "1": {
+      "ji": 117,
+      "shift": 1,
+      "proto": 3
+     },
+     "2": {
+      "ji": 117,
+      "railgun": 117
+     },
+     "3": {
+      "charge": 117
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 279,
+     "charge": 83,
+     "railgun": 83,
+     "shift": 12,
+     "proto": 7,
+     "jinshield": 1,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 107
+     },
+     "5": {
+      "ji": 84,
+      "shift": 12,
+      "proto": 7,
+      "jinshield": 1,
+      "armor": 1
+     },
+     "6": {
+      "ji": 83,
+      "railgun": 80
+     },
+     "7": {
+      "charge": 83
+     },
+     "8": {
+      "ji": 2
+     },
+     "9": {
+      "ji": 2
+     },
+     "10": {
+      "railgun": 3,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 600,
+     "charge": 189,
+     "railgun": 189,
+     "proto": 13,
+     "gun": 1,
+     "shift": 6
+    },
+    "buckets": {
+     "0": {
+      "ji": 210
+     },
+     "1": {
+      "ji": 189,
+      "proto": 13,
+      "gun": 1,
+      "shift": 6
+     },
+     "2": {
+      "ji": 188,
+      "railgun": 184
+     },
+     "3": {
+      "charge": 187
+     },
+     "4": {
+      "ji": 4
+     },
+     "5": {
+      "ji": 3
+     },
+     "6": {
+      "railgun": 4,
+      "ji": 1
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 1
+     },
+     "9": {
+      "ji": 2
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 9,
+    "keys": {
+     "ji": 285,
+     "charge": 79,
+     "railgun": 76,
+     "shift": 18,
+     "proto": 10,
+     "jinshield": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 115
+     },
+     "5": {
+      "ji": 84,
+      "shift": 18,
+      "proto": 10,
+      "jinshield": 2
+     },
+     "6": {
+      "ji": 79,
+      "railgun": 76
+     },
+     "7": {
+      "charge": 76
+     },
+     "8": {
+      "ji": 1
+     },
+     "9": {
+      "ji": 1
+     },
+     "10": {
+      "ji": 5
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "baguaspam",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 626,
+     "charge": 198,
+     "railgun": 196,
+     "proto": 11,
+     "shift": 5,
+     "jinshield": 1,
+     "holo": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 217
+     },
+     "1": {
+      "ji": 196,
+      "proto": 11,
+      "shift": 5,
+      "jinshield": 1,
+      "holo": 1
+     },
+     "2": {
+      "ji": 194,
+      "railgun": 191
+     },
+     "3": {
+      "charge": 194
+     },
+     "4": {
+      "ji": 5
+     },
+     "5": {
+      "ji": 5
+     },
+     "6": {
+      "railgun": 3,
+      "ji": 4
+     },
+     "7": {
+      "charge": 2
+     },
+     "9": {
+      "ji": 3
+     },
+     "10": {
+      "railgun": 2,
+      "ji": 2
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 50,
+     "gun": 17,
+     "charge": 9,
+     "railgun": 9,
+     "shift": 1,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 28
+     },
+     "5": {
+      "gun": 14,
+      "ji": 9,
+      "shift": 1
+     },
+     "6": {
+      "ji": 9,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 2
+     },
+     "9": {
+      "gun": 3,
+      "ji": 2,
+      "armor": 1
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 110,
+     "shift": 12,
+     "charge": 17,
+     "railgun": 17,
+     "armor": 20,
+     "gun": 15,
+     "cannon": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 39
+     },
+     "1": {
+      "shift": 7,
+      "ji": 9,
+      "armor": 9,
+      "gun": 3,
+      "cannon": 2
+     },
+     "2": {
+      "ji": 8,
+      "railgun": 8,
+      "cannon": 1
+     },
+     "3": {
+      "charge": 8
+     },
+     "4": {
+      "ji": 25
+     },
+     "5": {
+      "armor": 10,
+      "ji": 9,
+      "gun": 7,
+      "shift": 4
+     },
+     "6": {
+      "ji": 8,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "armor": 1,
+      "ji": 2,
+      "gun": 5,
+      "shift": 1
+     },
+     "10": {
+      "railgun": 3,
+      "ji": 1
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 77,
+     "shift": 4,
+     "armor": 6,
+     "charge": 14,
+     "railgun": 13,
+     "gun": 14,
+     "cannon": 2,
+     "guard": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 36,
+      "guard": 1
+     },
+     "5": {
+      "shift": 4,
+      "armor": 4,
+      "ji": 14,
+      "gun": 9
+     },
+     "6": {
+      "ji": 11,
+      "railgun": 10,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "ji": 4,
+      "gun": 5,
+      "cannon": 1,
+      "armor": 2
+     },
+     "10": {
+      "ji": 3,
+      "railgun": 3
+     },
+     "11": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 122,
+     "charge": 13,
+     "railgun": 13,
+     "gun": 30,
+     "snipe": 14,
+     "shift": 1,
+     "armor": 4,
+     "proto": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 31
+     },
+     "1": {
+      "ji": 13,
+      "gun": 10,
+      "proto": 1,
+      "armor": 1
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 5,
+      "snipe": 5
+     },
+     "3": {
+      "charge": 5
+     },
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 14,
+      "ji": 14,
+      "armor": 3,
+      "proto": 1
+     },
+     "6": {
+      "snipe": 5,
+      "ji": 8,
+      "railgun": 7
+     },
+     "7": {
+      "charge": 7
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "shift": 1,
+      "gun": 6,
+      "ji": 8
+     },
+     "10": {
+      "snipe": 4,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 84,
+     "charge": 18,
+     "railgun": 16,
+     "shift": 6,
+     "gun": 8,
+     "proto": 2,
+     "bagua": 1,
+     "armor": 5
+    },
+    "buckets": {
+     "4": {
+      "ji": 38,
+      "bagua": 1
+     },
+     "5": {
+      "ji": 18,
+      "shift": 6,
+      "gun": 6,
+      "proto": 2,
+      "armor": 2
+     },
+     "6": {
+      "ji": 18,
+      "railgun": 12
+     },
+     "7": {
+      "charge": 15
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 2,
+      "ji": 2,
+      "armor": 3
+     },
+     "10": {
+      "railgun": 4
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 141,
+     "snipe": 7,
+     "gun": 33,
+     "charge": 22,
+     "railgun": 21,
+     "bagua": 1,
+     "armor": 6,
+     "shift": 1,
+     "proto": 1,
+     "holo": 1,
+     "transfer": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 29
+     },
+     "1": {
+      "ji": 17,
+      "gun": 7,
+      "armor": 1,
+      "shift": 1,
+      "proto": 1
+     },
+     "2": {
+      "snipe": 6,
+      "ji": 10,
+      "railgun": 7
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 44,
+      "bagua": 1
+     },
+     "5": {
+      "ji": 13,
+      "gun": 20,
+      "armor": 4,
+      "holo": 1
+     },
+     "6": {
+      "snipe": 1,
+      "ji": 12,
+      "railgun": 14,
+      "transfer": 1
+     },
+     "7": {
+      "charge": 12
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "armor": 1,
+      "ji": 7,
+      "gun": 6
+     },
+     "10": {
+      "ji": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 90,
+     "charge": 18,
+     "railgun": 18,
+     "gun": 16,
+     "shift": 6,
+     "armor": 2,
+     "proto": 4
+    },
+    "buckets": {
+     "4": {
+      "ji": 43
+     },
+     "5": {
+      "ji": 18,
+      "gun": 10,
+      "armor": 2,
+      "shift": 5,
+      "proto": 4
+     },
+     "6": {
+      "ji": 15,
+      "railgun": 13
+     },
+     "7": {
+      "charge": 14
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 6,
+      "shift": 1,
+      "ji": 3
+     },
+     "10": {
+      "railgun": 5,
+      "ji": 3
+     },
+     "11": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "guardgun",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 144,
+     "snipe": 9,
+     "gun": 33,
+     "transfer": 1,
+     "charge": 23,
+     "railgun": 23,
+     "armor": 5,
+     "proto": 2,
+     "holo": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 38
+     },
+     "1": {
+      "ji": 18,
+      "armor": 1,
+      "gun": 10,
+      "proto": 2,
+      "holo": 1
+     },
+     "2": {
+      "snipe": 4,
+      "ji": 13,
+      "railgun": 12
+     },
+     "3": {
+      "charge": 13
+     },
+     "4": {
+      "ji": 34
+     },
+     "5": {
+      "gun": 16,
+      "ji": 17,
+      "armor": 4
+     },
+     "6": {
+      "transfer": 1,
+      "ji": 10,
+      "railgun": 11,
+      "snipe": 5
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "gun": 7,
+      "ji": 3
+     },
+     "10": {
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 61,
+     "gun": 27,
+     "charge": 9,
+     "railgun": 9,
+     "armor": 2,
+     "snipe": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 30
+     },
+     "5": {
+      "gun": 19,
+      "ji": 10,
+      "armor": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 8,
+      "ji": 1,
+      "armor": 1
+     },
+     "10": {
+      "ji": 9,
+      "railgun": 9,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 9
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 92,
+     "armor": 28,
+     "gun": 25,
+     "shift": 10,
+     "charge": 5,
+     "railgun": 5,
+     "snipe": 4
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "armor": 9,
+      "gun": 11,
+      "shift": 4,
+      "ji": 6
+     },
+     "4": {
+      "ji": 34
+     },
+     "5": {
+      "armor": 15,
+      "gun": 9,
+      "ji": 3,
+      "shift": 3
+     },
+     "6": {
+      "ji": 5,
+      "railgun": 5,
+      "snipe": 2
+     },
+     "7": {
+      "charge": 5
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "shift": 3,
+      "gun": 5,
+      "armor": 4,
+      "ji": 1
+     },
+     "10": {
+      "snipe": 2
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 46,
+     "gun": 21,
+     "shift": 1,
+     "armor": 4,
+     "charge": 4,
+     "railgun": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 25
+     },
+     "5": {
+      "gun": 11,
+      "shift": 1,
+      "armor": 3,
+      "ji": 4
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 10,
+      "armor": 1,
+      "ji": 3
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 103,
+     "gun": 39,
+     "charge": 15,
+     "railgun": 15,
+     "armor": 9,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "gun": 10,
+      "ji": 4,
+      "armor": 2
+     },
+     "2": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "3": {
+      "charge": 3
+     },
+     "4": {
+      "ji": 36
+     },
+     "5": {
+      "gun": 22,
+      "ji": 13,
+      "armor": 5
+     },
+     "6": {
+      "ji": 11,
+      "railgun": 13,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 12
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "gun": 7,
+      "armor": 2
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 65,
+     "gun": 15,
+     "shift": 4,
+     "charge": 14,
+     "railgun": 7,
+     "proto": 2,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 14,
+      "shift": 2,
+      "ji": 7,
+      "proto": 1
+     },
+     "6": {
+      "ji": 7,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 7
+     },
+     "8": {
+      "ji": 6
+     },
+     "9": {
+      "ji": 7,
+      "gun": 1,
+      "armor": 1,
+      "shift": 2,
+      "proto": 1
+     },
+     "10": {
+      "ji": 7,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 7
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 123,
+     "gun": 27,
+     "charge": 25,
+     "railgun": 24,
+     "armor": 8,
+     "proto": 1,
+     "snipe": 3,
+     "holo": 1,
+     "jinshield": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 27
+     },
+     "1": {
+      "gun": 11,
+      "ji": 12,
+      "proto": 1,
+      "armor": 2
+     },
+     "2": {
+      "ji": 11,
+      "railgun": 4,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "ji": 14,
+      "gun": 10,
+      "armor": 4,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 14,
+      "railgun": 15,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 14,
+      "holo": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "ji": 2,
+      "gun": 6,
+      "armor": 2
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 5,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 77,
+     "gun": 15,
+     "charge": 17,
+     "railgun": 13,
+     "shift": 5,
+     "armor": 2,
+     "proto": 1,
+     "jinshield": 1,
+     "bagua": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 37
+     },
+     "5": {
+      "gun": 12,
+      "ji": 13,
+      "shift": 5,
+      "armor": 2,
+      "proto": 1
+     },
+     "6": {
+      "ji": 16,
+      "railgun": 10
+     },
+     "7": {
+      "charge": 15
+     },
+     "8": {
+      "ji": 8,
+      "bagua": 1
+     },
+     "9": {
+      "gun": 3,
+      "ji": 1,
+      "jinshield": 1
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 3
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "heavyfire",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 114,
+     "gun": 22,
+     "charge": 26,
+     "railgun": 23,
+     "proto": 1,
+     "armor": 8,
+     "shift": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 35
+     },
+     "1": {
+      "gun": 14,
+      "ji": 14,
+      "armor": 4,
+      "shift": 1
+     },
+     "2": {
+      "ji": 14,
+      "railgun": 9
+     },
+     "3": {
+      "charge": 11
+     },
+     "4": {
+      "ji": 18
+     },
+     "5": {
+      "ji": 11,
+      "gun": 5,
+      "proto": 1,
+      "armor": 1
+     },
+     "6": {
+      "ji": 12,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 12
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 3,
+      "armor": 3,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 5,
+      "ji": 1
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 51,
+     "gun": 20,
+     "charge": 9,
+     "railgun": 9,
+     "armor": 1,
+     "cannon": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 30
+     },
+     "5": {
+      "gun": 20,
+      "ji": 9,
+      "armor": 1
+     },
+     "6": {
+      "ji": 9,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 2
+     },
+     "9": {
+      "ji": 1,
+      "cannon": 1
+     },
+     "10": {
+      "cannon": 1
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 94,
+     "armor": 18,
+     "gun": 27,
+     "shift": 10,
+     "cannon": 20,
+     "charge": 5,
+     "railgun": 5
+    },
+    "buckets": {
+     "0": {
+      "ji": 50
+     },
+     "1": {
+      "armor": 17,
+      "gun": 24,
+      "shift": 5,
+      "ji": 3
+     },
+     "2": {
+      "ji": 2,
+      "railgun": 2
+     },
+     "3": {
+      "charge": 2
+     },
+     "4": {
+      "ji": 23,
+      "cannon": 6
+     },
+     "5": {
+      "ji": 9,
+      "cannon": 6,
+      "gun": 3,
+      "shift": 5,
+      "armor": 1
+     },
+     "6": {
+      "cannon": 6,
+      "ji": 3,
+      "railgun": 3
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 3
+     },
+     "9": {
+      "ji": 1,
+      "cannon": 1
+     },
+     "10": {
+      "cannon": 1
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 93,
+     "armor": 3,
+     "gun": 37,
+     "cannon": 1,
+     "charge": 12,
+     "railgun": 12,
+     "holo": 8,
+     "proto": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 45
+     },
+     "5": {
+      "armor": 1,
+      "gun": 29,
+      "ji": 6,
+      "proto": 1,
+      "holo": 2
+     },
+     "6": {
+      "ji": 6,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 23
+     },
+     "9": {
+      "ji": 7,
+      "armor": 2,
+      "gun": 8,
+      "holo": 6
+     },
+     "10": {
+      "cannon": 1,
+      "ji": 6,
+      "railgun": 6
+     },
+     "11": {
+      "charge": 6
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 76,
+     "gun": 29,
+     "shift": 1,
+     "armor": 4,
+     "charge": 4,
+     "railgun": 4,
+     "cannon": 19
+    },
+    "buckets": {
+     "0": {
+      "ji": 33
+     },
+     "1": {
+      "gun": 26,
+      "armor": 4,
+      "ji": 3
+     },
+     "2": {
+      "ji": 2,
+      "railgun": 1,
+      "cannon": 1
+     },
+     "3": {
+      "charge": 1,
+      "cannon": 1
+     },
+     "4": {
+      "ji": 4
+     },
+     "5": {
+      "gun": 1,
+      "ji": 3
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 3
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 19,
+      "cannon": 3
+     },
+     "9": {
+      "shift": 1,
+      "gun": 2,
+      "ji": 7,
+      "cannon": 7
+     },
+     "10": {
+      "cannon": 5,
+      "ji": 2
+     },
+     "11": {
+      "cannon": 2
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 6,
+    "keys": {
+     "ji": 37,
+     "gun": 25,
+     "armor": 3,
+     "charge": 3,
+     "railgun": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 25,
+      "armor": 3,
+      "ji": 3
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 3
+     },
+     "7": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 57,
+     "gun": 25,
+     "armor": 5,
+     "jinshield": 1,
+     "cannon": 9,
+     "charge": 3,
+     "railgun": 3,
+     "proto": 1,
+     "holo": 4
+    },
+    "buckets": {
+     "0": {
+      "ji": 37,
+      "cannon": 1
+     },
+     "1": {
+      "gun": 25,
+      "armor": 4,
+      "jinshield": 1,
+      "ji": 5,
+      "cannon": 2
+     },
+     "2": {
+      "cannon": 3,
+      "ji": 2,
+      "railgun": 2
+     },
+     "3": {
+      "charge": 2
+     },
+     "4": {
+      "ji": 4,
+      "cannon": 1
+     },
+     "5": {
+      "ji": 2,
+      "cannon": 1
+     },
+     "6": {
+      "cannon": 1,
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 6
+     },
+     "9": {
+      "proto": 1,
+      "holo": 4,
+      "armor": 1
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 43,
+     "gun": 23,
+     "shift": 2,
+     "charge": 4,
+     "railgun": 4,
+     "cannon": 1,
+     "armor": 4
+    },
+    "buckets": {
+     "4": {
+      "ji": 34
+     },
+     "5": {
+      "gun": 23,
+      "shift": 2,
+      "ji": 5,
+      "armor": 4
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 4,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "deepsaver",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 85,
+     "gun": 36,
+     "cannon": 5,
+     "armor": 7,
+     "holo": 13,
+     "proto": 1,
+     "charge": 6,
+     "railgun": 6,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 39
+     },
+     "1": {
+      "gun": 28,
+      "armor": 3,
+      "proto": 1,
+      "ji": 5,
+      "holo": 1
+     },
+     "2": {
+      "ji": 4,
+      "railgun": 4,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 3
+     },
+     "5": {
+      "armor": 1,
+      "gun": 2
+     },
+     "8": {
+      "ji": 27,
+      "cannon": 1
+     },
+     "9": {
+      "ji": 4,
+      "cannon": 2,
+      "holo": 12,
+      "armor": 3,
+      "gun": 6
+     },
+     "10": {
+      "ji": 3,
+      "cannon": 1,
+      "railgun": 2
+     },
+     "11": {
+      "cannon": 1,
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 53,
+     "gun": 21,
+     "charge": 10,
+     "railgun": 10,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 20,
+      "ji": 9,
+      "armor": 1
+     },
+     "6": {
+      "ji": 9,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 2
+     },
+     "9": {
+      "gun": 1,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 130,
+     "armor": 29,
+     "gun": 29,
+     "shift": 15,
+     "cannon": 11,
+     "charge": 8,
+     "railgun": 6
+    },
+    "buckets": {
+     "0": {
+      "ji": 39
+     },
+     "1": {
+      "armor": 13,
+      "gun": 16,
+      "ji": 1
+     },
+     "2": {
+      "ji": 1
+     },
+     "4": {
+      "ji": 41
+     },
+     "5": {
+      "armor": 14,
+      "shift": 12,
+      "ji": 4,
+      "gun": 10
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 23
+     },
+     "9": {
+      "ji": 7,
+      "cannon": 6,
+      "armor": 2,
+      "gun": 3,
+      "shift": 3
+     },
+     "10": {
+      "cannon": 5,
+      "ji": 6,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 4,
+      "ji": 4,
+      "railgun": 2
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 75,
+     "gun": 33,
+     "armor": 6,
+     "charge": 6,
+     "railgun": 6,
+     "cannon": 8,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 51
+     },
+     "5": {
+      "gun": 33,
+      "armor": 6,
+      "ji": 6,
+      "shift": 1
+     },
+     "6": {
+      "ji": 6,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "ji": 4,
+      "cannon": 4
+     },
+     "10": {
+      "cannon": 4
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 93,
+     "gun": 38,
+     "holo": 4,
+     "cannon": 8,
+     "charge": 5,
+     "railgun": 5,
+     "snipe": 1,
+     "armor": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 41
+     },
+     "1": {
+      "gun": 29,
+      "ji": 1,
+      "armor": 2
+     },
+     "2": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 2
+     },
+     "5": {
+      "ji": 2
+     },
+     "6": {
+      "snipe": 1,
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 29
+     },
+     "9": {
+      "holo": 4,
+      "ji": 11,
+      "gun": 9,
+      "cannon": 3,
+      "armor": 1
+     },
+     "10": {
+      "cannon": 3,
+      "ji": 5,
+      "railgun": 3
+     },
+     "11": {
+      "charge": 3,
+      "cannon": 2
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 56,
+     "gun": 26,
+     "shift": 1,
+     "charge": 8,
+     "railgun": 8,
+     "bagua": 1,
+     "cannon": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 39,
+      "bagua": 1
+     },
+     "5": {
+      "gun": 26,
+      "shift": 1,
+      "ji": 9
+     },
+     "6": {
+      "ji": 8,
+      "railgun": 8,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 8
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 69,
+     "gun": 26,
+     "armor": 5,
+     "holo": 4,
+     "charge": 5,
+     "railgun": 5,
+     "proto": 1,
+     "cannon": 7
+    },
+    "buckets": {
+     "0": {
+      "ji": 42,
+      "cannon": 1
+     },
+     "1": {
+      "gun": 25,
+      "armor": 5,
+      "ji": 2,
+      "cannon": 1
+     },
+     "2": {
+      "cannon": 1,
+      "ji": 1,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 14
+     },
+     "5": {
+      "holo": 4,
+      "gun": 1,
+      "ji": 6,
+      "proto": 1,
+      "cannon": 2
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 4,
+      "cannon": 2
+     },
+     "7": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 46,
+     "gun": 22,
+     "shift": 2,
+     "charge": 2,
+     "railgun": 2,
+     "armor": 4,
+     "cannon": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 39
+     },
+     "5": {
+      "gun": 22,
+      "shift": 2,
+      "ji": 4,
+      "armor": 4,
+      "cannon": 1
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 2,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "ringspam",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 94,
+     "gun": 32,
+     "armor": 7,
+     "charge": 10,
+     "railgun": 10,
+     "cannon": 5,
+     "holo": 4,
+     "shift": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 46
+     },
+     "1": {
+      "gun": 27,
+      "armor": 5,
+      "ji": 4
+     },
+     "2": {
+      "ji": 4,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 5
+     },
+     "5": {
+      "gun": 3,
+      "ji": 1,
+      "armor": 1
+     },
+     "6": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 19,
+      "cannon": 1
+     },
+     "9": {
+      "ji": 9,
+      "cannon": 2,
+      "gun": 2,
+      "armor": 1,
+      "holo": 4,
+      "shift": 1
+     },
+     "10": {
+      "cannon": 2,
+      "ji": 5,
+      "railgun": 5
+     },
+     "11": {
+      "charge": 5
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 8,
+    "keys": {
+     "ji": 61,
+     "gun": 27,
+     "charge": 9,
+     "railgun": 9,
+     "armor": 2,
+     "snipe": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 30
+     },
+     "5": {
+      "gun": 19,
+      "ji": 10,
+      "armor": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 8,
+      "ji": 1,
+      "armor": 1
+     },
+     "10": {
+      "ji": 9,
+      "railgun": 9,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 9
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 92,
+     "armor": 28,
+     "gun": 25,
+     "shift": 10,
+     "charge": 5,
+     "railgun": 5,
+     "snipe": 4
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "armor": 9,
+      "gun": 11,
+      "shift": 4,
+      "ji": 6
+     },
+     "4": {
+      "ji": 34
+     },
+     "5": {
+      "armor": 15,
+      "gun": 9,
+      "ji": 3,
+      "shift": 3
+     },
+     "6": {
+      "ji": 5,
+      "railgun": 5,
+      "snipe": 2
+     },
+     "7": {
+      "charge": 5
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "shift": 3,
+      "gun": 5,
+      "armor": 4,
+      "ji": 1
+     },
+     "10": {
+      "snipe": 2
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 46,
+     "gun": 21,
+     "shift": 1,
+     "armor": 4,
+     "charge": 4,
+     "railgun": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 25
+     },
+     "5": {
+      "gun": 11,
+      "shift": 1,
+      "armor": 3,
+      "ji": 4
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 10,
+      "armor": 1,
+      "ji": 3
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 103,
+     "gun": 39,
+     "charge": 15,
+     "railgun": 15,
+     "armor": 9,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "gun": 10,
+      "ji": 4,
+      "armor": 2
+     },
+     "2": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "3": {
+      "charge": 3
+     },
+     "4": {
+      "ji": 36
+     },
+     "5": {
+      "gun": 22,
+      "ji": 13,
+      "armor": 5
+     },
+     "6": {
+      "ji": 11,
+      "railgun": 13,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 12
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "gun": 7,
+      "armor": 2
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 65,
+     "gun": 15,
+     "shift": 4,
+     "charge": 14,
+     "railgun": 7,
+     "proto": 2,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 14,
+      "shift": 2,
+      "ji": 7,
+      "proto": 1
+     },
+     "6": {
+      "ji": 7,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 7
+     },
+     "8": {
+      "ji": 6
+     },
+     "9": {
+      "ji": 7,
+      "gun": 1,
+      "armor": 1,
+      "shift": 2,
+      "proto": 1
+     },
+     "10": {
+      "ji": 7,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 7
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 123,
+     "gun": 27,
+     "charge": 25,
+     "railgun": 24,
+     "armor": 8,
+     "proto": 1,
+     "snipe": 3,
+     "holo": 1,
+     "jinshield": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 27
+     },
+     "1": {
+      "gun": 11,
+      "ji": 12,
+      "proto": 1,
+      "armor": 2
+     },
+     "2": {
+      "ji": 11,
+      "railgun": 4,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "ji": 14,
+      "gun": 10,
+      "armor": 4,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 14,
+      "railgun": 15,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 14,
+      "holo": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "ji": 2,
+      "gun": 6,
+      "armor": 2
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 5,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 77,
+     "gun": 15,
+     "charge": 17,
+     "railgun": 13,
+     "shift": 5,
+     "armor": 2,
+     "proto": 1,
+     "jinshield": 1,
+     "bagua": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 37
+     },
+     "5": {
+      "gun": 12,
+      "ji": 13,
+      "shift": 5,
+      "armor": 2,
+      "proto": 1
+     },
+     "6": {
+      "ji": 16,
+      "railgun": 10
+     },
+     "7": {
+      "charge": 15
+     },
+     "8": {
+      "ji": 8,
+      "bagua": 1
+     },
+     "9": {
+      "gun": 3,
+      "ji": 1,
+      "jinshield": 1
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 3
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "tankline",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 114,
+     "gun": 22,
+     "charge": 26,
+     "railgun": 23,
+     "proto": 1,
+     "armor": 8,
+     "shift": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 35
+     },
+     "1": {
+      "gun": 14,
+      "ji": 14,
+      "armor": 4,
+      "shift": 1
+     },
+     "2": {
+      "ji": 14,
+      "railgun": 9
+     },
+     "3": {
+      "charge": 11
+     },
+     "4": {
+      "ji": 18
+     },
+     "5": {
+      "ji": 11,
+      "gun": 5,
+      "proto": 1,
+      "armor": 1
+     },
+     "6": {
+      "ji": 12,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 12
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 3,
+      "armor": 3,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 5,
+      "ji": 1
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 82,
+     "gun": 19,
+     "charge": 20,
+     "railgun": 20,
+     "armor": 2,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 22
+     },
+     "5": {
+      "gun": 11,
+      "ji": 10,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 10
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 20
+     },
+     "9": {
+      "armor": 2,
+      "ji": 10,
+      "gun": 8
+     },
+     "10": {
+      "railgun": 20,
+      "ji": 10
+     },
+     "11": {
+      "charge": 10
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 76,
+     "armor": 20,
+     "charge": 12,
+     "railgun": 12,
+     "shift": 4,
+     "gun": 8
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "armor": 6,
+      "ji": 9,
+      "shift": 4,
+      "gun": 4
+     },
+     "2": {
+      "ji": 9
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "armor": 7,
+      "gun": 3,
+      "ji": 2
+     },
+     "6": {
+      "railgun": 10,
+      "ji": 2
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "armor": 7,
+      "gun": 1,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 2,
+      "ji": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 54,
+     "gun": 12,
+     "charge": 8,
+     "railgun": 8,
+     "shift": 1,
+     "jinshield": 1,
+     "cannon": 2,
+     "armor": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 26
+     },
+     "5": {
+      "gun": 10,
+      "ji": 10,
+      "shift": 1,
+      "jinshield": 1,
+      "armor": 2
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "gun": 2
+     },
+     "10": {
+      "railgun": 6,
+      "ji": 4,
+      "cannon": 2
+     },
+     "11": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 85,
+     "gun": 22,
+     "charge": 11,
+     "railgun": 11,
+     "cannon": 5,
+     "armor": 3,
+     "proto": 2,
+     "snipe": 2,
+     "holo": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 26
+     },
+     "1": {
+      "gun": 9,
+      "ji": 10,
+      "armor": 2,
+      "proto": 1
+     },
+     "2": {
+      "ji": 6,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 6
+     },
+     "4": {
+      "ji": 16
+     },
+     "5": {
+      "gun": 8,
+      "ji": 3,
+      "armor": 1,
+      "proto": 1,
+      "holo": 1
+     },
+     "6": {
+      "snipe": 2,
+      "railgun": 5,
+      "ji": 5
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "ji": 6,
+      "gun": 5,
+      "cannon": 2,
+      "holo": 2
+     },
+     "10": {
+      "cannon": 3,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 75,
+     "gun": 18,
+     "shift": 3,
+     "proto": 2,
+     "holo": 5,
+     "charge": 12,
+     "railgun": 10,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 21
+     },
+     "5": {
+      "gun": 9,
+      "shift": 2,
+      "proto": 1,
+      "holo": 1,
+      "ji": 6
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 25
+     },
+     "9": {
+      "shift": 1,
+      "gun": 9,
+      "ji": 10,
+      "armor": 1,
+      "proto": 1,
+      "holo": 4
+     },
+     "10": {
+      "ji": 9,
+      "railgun": 8
+     },
+     "11": {
+      "charge": 8
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 106,
+     "gun": 17,
+     "charge": 17,
+     "railgun": 17,
+     "cannon": 8,
+     "armor": 3,
+     "proto": 4,
+     "holo": 3,
+     "snipe": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 24
+     },
+     "1": {
+      "gun": 10,
+      "ji": 9,
+      "proto": 1,
+      "armor": 1
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 3,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 13
+     },
+     "5": {
+      "ji": 5,
+      "cannon": 1,
+      "gun": 3,
+      "proto": 1,
+      "holo": 1,
+      "armor": 1
+     },
+     "6": {
+      "railgun": 4,
+      "cannon": 1,
+      "snipe": 2,
+      "ji": 3
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 26
+     },
+     "9": {
+      "armor": 1,
+      "ji": 12,
+      "holo": 2,
+      "gun": 4,
+      "cannon": 3,
+      "proto": 2
+     },
+     "10": {
+      "ji": 9,
+      "railgun": 10,
+      "cannon": 3
+     },
+     "11": {
+      "charge": 10
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 107,
+     "gun": 15,
+     "charge": 22,
+     "railgun": 21,
+     "shift": 4,
+     "proto": 3,
+     "holo": 4,
+     "armor": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 21
+     },
+     "5": {
+      "gun": 7,
+      "ji": 7,
+      "shift": 3,
+      "armor": 3
+     },
+     "6": {
+      "ji": 2,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 37
+     },
+     "9": {
+      "ji": 19,
+      "gun": 8,
+      "proto": 3,
+      "holo": 4,
+      "shift": 1
+     },
+     "10": {
+      "ji": 21,
+      "railgun": 20
+     },
+     "11": {
+      "charge": 20
+     }
+    }
+   },
+   {
+    "opp": "targeter",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 83,
+     "gun": 11,
+     "charge": 17,
+     "railgun": 15,
+     "proto": 2,
+     "holo": 2,
+     "armor": 2,
+     "snipe": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 22
+     },
+     "1": {
+      "gun": 8,
+      "ji": 9,
+      "armor": 2
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 1,
+      "snipe": 2
+     },
+     "3": {
+      "charge": 5
+     },
+     "4": {
+      "ji": 7
+     },
+     "5": {
+      "ji": 5,
+      "gun": 1
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 5,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 14
+     },
+     "9": {
+      "gun": 2,
+      "ji": 8,
+      "proto": 2,
+      "holo": 2
+     },
+     "10": {
+      "ji": 9,
+      "railgun": 9
+     },
+     "11": {
+      "charge": 9
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 10,
+    "keys": {
+     "ji": 31,
+     "gun": 30,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 30
+     },
+     "5": {
+      "gun": 19,
+      "armor": 1
+     },
+     "8": {
+      "ji": 1
+     },
+     "9": {
+      "gun": 11
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 79,
+     "armor": 27,
+     "gun": 41,
+     "cannon": 4
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "armor": 9,
+      "gun": 11
+     },
+     "4": {
+      "ji": 27,
+      "cannon": 1
+     },
+     "5": {
+      "armor": 12,
+      "gun": 20,
+      "ji": 1,
+      "cannon": 1
+     },
+     "6": {
+      "cannon": 1
+     },
+     "8": {
+      "ji": 19
+     },
+     "9": {
+      "gun": 10,
+      "armor": 6,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1
+     },
+     "11": {
+      "cannon": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 73,
+     "gun": 36,
+     "armor": 7,
+     "jinshield": 1,
+     "charge": 8,
+     "railgun": 8,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 45
+     },
+     "5": {
+      "gun": 22,
+      "armor": 6,
+      "jinshield": 1,
+      "ji": 8,
+      "shift": 1
+     },
+     "6": {
+      "ji": 8,
+      "railgun": 8
+     },
+     "7": {
+      "charge": 8
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "gun": 14,
+      "armor": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 64,
+     "gun": 44,
+     "armor": 7,
+     "charge": 1,
+     "railgun": 1,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "gun": 19,
+      "armor": 1
+     },
+     "4": {
+      "ji": 13
+     },
+     "5": {
+      "armor": 3,
+      "gun": 12,
+      "ji": 1
+     },
+     "6": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 18
+     },
+     "9": {
+      "gun": 13,
+      "ji": 1,
+      "armor": 3
+     },
+     "10": {
+      "snipe": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 75,
+     "gun": 61,
+     "armor": 4,
+     "bagua": 1,
+     "charge": 3,
+     "railgun": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 60,
+      "bagua": 1
+     },
+     "5": {
+      "gun": 50,
+      "armor": 4,
+      "ji": 2
+     },
+     "6": {
+      "ji": 2,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 11,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 142,
+     "gun": 57,
+     "armor": 20,
+     "charge": 18,
+     "railgun": 18,
+     "reflect": 1,
+     "snipe": 2,
+     "proto": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 29,
+      "reflect": 1
+     },
+     "1": {
+      "gun": 16,
+      "armor": 4
+     },
+     "4": {
+      "ji": 63
+     },
+     "5": {
+      "armor": 13,
+      "gun": 33,
+      "ji": 20
+     },
+     "6": {
+      "ji": 18,
+      "railgun": 17,
+      "snipe": 2
+     },
+     "7": {
+      "charge": 18
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "armor": 3,
+      "gun": 8,
+      "proto": 1
+     },
+     "10": {
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 120,
+     "gun": 64,
+     "charge": 13,
+     "railgun": 13,
+     "armor": 12,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 78
+     },
+     "5": {
+      "gun": 53,
+      "ji": 13,
+      "armor": 10,
+      "shift": 1
+     },
+     "6": {
+      "ji": 13,
+      "railgun": 12
+     },
+     "7": {
+      "charge": 13
+     },
+     "8": {
+      "ji": 16
+     },
+     "9": {
+      "gun": 11,
+      "armor": 2
+     },
+     "10": {
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "beadburst",
+    "real": false,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 93,
+     "gun": 76,
+     "armor": 6,
+     "snipe": 1,
+     "charge": 1,
+     "railgun": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 43
+     },
+     "1": {
+      "gun": 29,
+      "armor": 4,
+      "ji": 1
+     },
+     "2": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 40
+     },
+     "5": {
+      "gun": 41,
+      "armor": 2
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "ji": 1,
+      "gun": 6
+     },
+     "10": {
+      "snipe": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 41,
+     "gun": 28,
+     "armor": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 30
+     },
+     "5": {
+      "gun": 19,
+      "armor": 1
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "gun": 9,
+      "armor": 1,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 87,
+     "gun": 10,
+     "charge": 14,
+     "railgun": 14,
+     "armor": 14,
+     "shift": 7,
+     "snipe": 1,
+     "cannon": 5
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "gun": 5,
+      "ji": 9,
+      "armor": 10,
+      "shift": 4
+     },
+     "2": {
+      "ji": 8,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "armor": 4,
+      "gun": 3,
+      "ji": 8,
+      "shift": 3,
+      "cannon": 1
+     },
+     "6": {
+      "railgun": 7,
+      "ji": 6,
+      "cannon": 2
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 6
+     },
+     "9": {
+      "gun": 2,
+      "cannon": 2
+     },
+     "10": {
+      "railgun": 3,
+      "snipe": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 39,
+     "gun": 21,
+     "armor": 3,
+     "charge": 1,
+     "railgun": 1,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "gun": 9,
+      "armor": 2,
+      "shift": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 12,
+      "armor": 1,
+      "ji": 5
+     },
+     "10": {
+      "ji": 3,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 81,
+     "gun": 27,
+     "armor": 5,
+     "snipe": 4,
+     "charge": 10,
+     "railgun": 9,
+     "cannon": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 21
+     },
+     "1": {
+      "gun": 10,
+      "armor": 1,
+      "ji": 1
+     },
+     "4": {
+      "ji": 25
+     },
+     "5": {
+      "armor": 4,
+      "ji": 14,
+      "gun": 13,
+      "cannon": 1
+     },
+     "6": {
+      "ji": 9,
+      "railgun": 7,
+      "snipe": 1,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 8
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 4,
+      "ji": 2
+     },
+     "10": {
+      "snipe": 3,
+      "railgun": 2,
+      "ji": 1
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 30,
+     "gun": 14,
+     "charge": 1,
+     "railgun": 1,
+     "shift": 1,
+     "armor": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 24
+     },
+     "5": {
+      "gun": 13,
+      "ji": 1,
+      "shift": 1,
+      "armor": 1
+     },
+     "6": {
+      "ji": 1
+     },
+     "8": {
+      "ji": 2
+     },
+     "9": {
+      "ji": 1,
+      "gun": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 74,
+     "gun": 22,
+     "charge": 12,
+     "railgun": 11,
+     "holo": 1,
+     "armor": 3,
+     "snipe": 1,
+     "cannon": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 21
+     },
+     "1": {
+      "gun": 12,
+      "ji": 7,
+      "armor": 1
+     },
+     "2": {
+      "ji": 3,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 17
+     },
+     "5": {
+      "ji": 6,
+      "gun": 9,
+      "holo": 1,
+      "armor": 2
+     },
+     "6": {
+      "ji": 8,
+      "railgun": 8
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "ji": 4,
+      "gun": 1
+     },
+     "10": {
+      "snipe": 1,
+      "cannon": 2,
+      "railgun": 2,
+      "ji": 1
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 74,
+     "gun": 24,
+     "shift": 8,
+     "armor": 5,
+     "snipe": 2,
+     "proto": 1,
+     "charge": 10,
+     "railgun": 10,
+     "guard": 1,
+     "bagua": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 44,
+      "guard": 1,
+      "bagua": 1
+     },
+     "5": {
+      "gun": 15,
+      "shift": 8,
+      "armor": 3,
+      "ji": 12,
+      "proto": 1
+     },
+     "6": {
+      "ji": 10,
+      "railgun": 9
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "armor": 2,
+      "gun": 9
+     },
+     "10": {
+      "snipe": 2,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-E9",
+    "real": true,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 90,
+     "gun": 19,
+     "armor": 7,
+     "charge": 17,
+     "railgun": 17,
+     "proto": 3,
+     "shift": 1,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 33
+     },
+     "1": {
+      "gun": 11,
+      "proto": 3,
+      "ji": 11,
+      "shift": 1,
+      "armor": 4
+     },
+     "2": {
+      "ji": 10,
+      "railgun": 9
+     },
+     "3": {
+      "charge": 10
+     },
+     "4": {
+      "ji": 15
+     },
+     "5": {
+      "armor": 3,
+      "ji": 8,
+      "gun": 5
+     },
+     "6": {
+      "ji": 6,
+      "railgun": 6,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 5
+     },
+     "9": {
+      "ji": 1,
+      "gun": 3
+     },
+     "10": {
+      "railgun": 2,
+      "ji": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 41,
+     "gun": 29,
+     "armor": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 20,
+      "armor": 1
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 9,
+      "armor": 1,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 4,
+    "keys": {
+     "ji": 87,
+     "gun": 16,
+     "charge": 15,
+     "railgun": 14,
+     "shift": 5,
+     "armor": 18
+    },
+    "buckets": {
+     "0": {
+      "ji": 30
+     },
+     "1": {
+      "gun": 6,
+      "ji": 7,
+      "shift": 4,
+      "armor": 10
+     },
+     "2": {
+      "ji": 7,
+      "railgun": 3
+     },
+     "3": {
+      "charge": 3
+     },
+     "4": {
+      "ji": 18
+     },
+     "5": {
+      "armor": 5,
+      "ji": 7,
+      "gun": 6,
+      "shift": 1
+     },
+     "6": {
+      "ji": 6,
+      "railgun": 7
+     },
+     "7": {
+      "charge": 10
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 4,
+      "armor": 3,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 4,
+      "ji": 2
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 36,
+     "gun": 21,
+     "armor": 3,
+     "charge": 1,
+     "railgun": 1,
+     "shift": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "gun": 9,
+      "armor": 2,
+      "shift": 1
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 12,
+      "armor": 1,
+      "ji": 3,
+      "shift": 1
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 75,
+     "gun": 25,
+     "armor": 5,
+     "snipe": 3,
+     "charge": 9,
+     "railgun": 9,
+     "cannon": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 21
+     },
+     "1": {
+      "gun": 10,
+      "armor": 1,
+      "ji": 1
+     },
+     "4": {
+      "ji": 19
+     },
+     "5": {
+      "armor": 3,
+      "ji": 11,
+      "gun": 11
+     },
+     "6": {
+      "ji": 9,
+      "railgun": 6,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "gun": 4,
+      "ji": 6,
+      "armor": 1
+     },
+     "10": {
+      "snipe": 2,
+      "railgun": 3,
+      "cannon": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 53,
+     "gun": 26,
+     "charge": 5,
+     "railgun": 5,
+     "shift": 2,
+     "proto": 1,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 23
+     },
+     "5": {
+      "gun": 12,
+      "ji": 1
+     },
+     "6": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 17
+     },
+     "9": {
+      "gun": 14,
+      "ji": 6,
+      "shift": 2,
+      "proto": 1,
+      "jinshield": 1
+     },
+     "10": {
+      "ji": 5,
+      "railgun": 4
+     },
+     "11": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 80,
+     "gun": 28,
+     "charge": 11,
+     "railgun": 10,
+     "holo": 1,
+     "snipe": 2,
+     "armor": 5,
+     "shift": 2,
+     "cannon": 2
+    },
+    "buckets": {
+     "0": {
+      "ji": 31
+     },
+     "1": {
+      "gun": 14,
+      "armor": 2,
+      "ji": 5,
+      "shift": 2
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 12
+     },
+     "5": {
+      "gun": 5,
+      "ji": 9,
+      "holo": 1,
+      "armor": 2,
+      "cannon": 1
+     },
+     "6": {
+      "ji": 5,
+      "railgun": 4,
+      "cannon": 1,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "gun": 9,
+      "ji": 1,
+      "armor": 1
+     },
+     "10": {
+      "railgun": 2,
+      "snipe": 1,
+      "ji": 2
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 59,
+     "gun": 20,
+     "shift": 6,
+     "proto": 3,
+     "charge": 6,
+     "railgun": 5,
+     "armor": 4,
+     "guard": 1,
+     "transfer": 1,
+     "cannon": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 43,
+      "guard": 1
+     },
+     "5": {
+      "gun": 19,
+      "shift": 6,
+      "proto": 3,
+      "ji": 8,
+      "armor": 3
+     },
+     "6": {
+      "ji": 6,
+      "railgun": 4,
+      "transfer": 1
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 1
+     },
+     "9": {
+      "gun": 1,
+      "armor": 1,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 1,
+      "cannon": 1
+     }
+    }
+   },
+   {
+    "opp": "EQ-S4-GD6ATEACH",
+    "real": true,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 78,
+     "gun": 23,
+     "snipe": 8,
+     "proto": 2,
+     "charge": 7,
+     "railgun": 7,
+     "armor": 4,
+     "holo": 2,
+     "transfer": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 32
+     },
+     "1": {
+      "gun": 14,
+      "ji": 12,
+      "proto": 1,
+      "armor": 3,
+      "holo": 1
+     },
+     "2": {
+      "snipe": 6,
+      "ji": 6,
+      "railgun": 6
+     },
+     "3": {
+      "charge": 6
+     },
+     "4": {
+      "ji": 15
+     },
+     "5": {
+      "gun": 7,
+      "ji": 4,
+      "armor": 1
+     },
+     "6": {
+      "ji": 1,
+      "snipe": 2,
+      "transfer": 1
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "ji": 1,
+      "gun": 2,
+      "proto": 1,
+      "holo": 1
+     },
+     "10": {
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 41,
+     "gun": 29,
+     "armor": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 20,
+      "armor": 1
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 9,
+      "armor": 1,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 99,
+     "gun": 13,
+     "charge": 19,
+     "railgun": 18,
+     "armor": 19,
+     "shift": 7
+    },
+    "buckets": {
+     "0": {
+      "ji": 31
+     },
+     "1": {
+      "gun": 4,
+      "ji": 9,
+      "armor": 11,
+      "shift": 3
+     },
+     "2": {
+      "ji": 8,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 26
+     },
+     "5": {
+      "gun": 9,
+      "armor": 8,
+      "shift": 3,
+      "ji": 10
+     },
+     "6": {
+      "railgun": 9,
+      "ji": 9
+     },
+     "7": {
+      "charge": 13
+     },
+     "8": {
+      "ji": 4
+     },
+     "9": {
+      "shift": 1
+     },
+     "10": {
+      "railgun": 5,
+      "ji": 2
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 43,
+     "gun": 21,
+     "armor": 4,
+     "charge": 2,
+     "railgun": 2,
+     "shift": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 21
+     },
+     "5": {
+      "gun": 8,
+      "armor": 2,
+      "ji": 2,
+      "shift": 1
+     },
+     "6": {
+      "ji": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "gun": 13,
+      "armor": 2,
+      "ji": 3,
+      "shift": 1
+     },
+     "10": {
+      "ji": 3,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 78,
+     "gun": 27,
+     "armor": 4,
+     "charge": 12,
+     "railgun": 11,
+     "shift": 1,
+     "cannon": 1,
+     "holo": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 20
+     },
+     "1": {
+      "gun": 9,
+      "armor": 1,
+      "ji": 1
+     },
+     "2": {
+      "ji": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 19
+     },
+     "5": {
+      "armor": 3,
+      "ji": 10,
+      "gun": 13,
+      "shift": 1,
+      "holo": 1
+     },
+     "6": {
+      "ji": 7,
+      "railgun": 4
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 5,
+      "ji": 5
+     },
+     "10": {
+      "railgun": 7,
+      "ji": 4,
+      "cannon": 1
+     },
+     "11": {
+      "charge": 8
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 61,
+     "gun": 24,
+     "charge": 6,
+     "railgun": 5,
+     "bagua": 1,
+     "shift": 5,
+     "armor": 3,
+     "jinshield": 2,
+     "proto": 1,
+     "holo": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "gun": 10
+     },
+     "8": {
+      "ji": 27,
+      "bagua": 1
+     },
+     "9": {
+      "gun": 14,
+      "ji": 7,
+      "shift": 5,
+      "armor": 3,
+      "jinshield": 2,
+      "proto": 1,
+      "holo": 1
+     },
+     "10": {
+      "ji": 7,
+      "railgun": 5
+     },
+     "11": {
+      "charge": 6
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 84,
+     "gun": 29,
+     "charge": 13,
+     "railgun": 12,
+     "holo": 3,
+     "armor": 5,
+     "proto": 1,
+     "transfer": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "gun": 10,
+      "armor": 1,
+      "ji": 2,
+      "proto": 1
+     },
+     "2": {
+      "ji": 2,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 22
+     },
+     "5": {
+      "gun": 14,
+      "ji": 10,
+      "holo": 3,
+      "armor": 2
+     },
+     "6": {
+      "ji": 10,
+      "railgun": 8
+     },
+     "7": {
+      "charge": 11
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "gun": 5,
+      "ji": 3,
+      "armor": 2
+     },
+     "10": {
+      "railgun": 3,
+      "ji": 1,
+      "transfer": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 76,
+     "gun": 26,
+     "shift": 4,
+     "charge": 11,
+     "railgun": 11,
+     "jinshield": 1,
+     "holo": 1,
+     "armor": 3,
+     "guard": 1,
+     "bagua": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 43,
+      "guard": 1
+     },
+     "5": {
+      "gun": 18,
+      "shift": 4,
+      "ji": 12,
+      "jinshield": 1,
+      "holo": 1,
+      "armor": 2
+     },
+     "6": {
+      "ji": 11,
+      "railgun": 11
+     },
+     "7": {
+      "charge": 11
+     },
+     "8": {
+      "ji": 9,
+      "bagua": 1
+     },
+     "9": {
+      "gun": 8,
+      "ji": 1,
+      "armor": 1
+     }
+    }
+   },
+   {
+    "opp": "MX1-GD-EQ",
+    "real": true,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 90,
+     "gun": 22,
+     "proto": 2,
+     "holo": 11,
+     "charge": 13,
+     "railgun": 13,
+     "armor": 3,
+     "shift": 1,
+     "cannon": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 30,
+      "cannon": 1
+     },
+     "1": {
+      "gun": 10,
+      "proto": 1,
+      "ji": 10,
+      "holo": 3,
+      "armor": 3,
+      "shift": 1,
+      "cannon": 1
+     },
+     "2": {
+      "ji": 7,
+      "railgun": 6,
+      "cannon": 1
+     },
+     "3": {
+      "charge": 6
+     },
+     "4": {
+      "ji": 23
+     },
+     "5": {
+      "proto": 1,
+      "gun": 9,
+      "holo": 5,
+      "ji": 5
+     },
+     "6": {
+      "ji": 5,
+      "railgun": 6
+     },
+     "7": {
+      "charge": 6
+     },
+     "8": {
+      "ji": 8
+     },
+     "9": {
+      "holo": 3,
+      "gun": 3,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 41,
+     "gun": 29,
+     "armor": 2
+    },
+    "buckets": {
+     "4": {
+      "ji": 31
+     },
+     "5": {
+      "gun": 20,
+      "armor": 1
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 9,
+      "armor": 1,
+      "ji": 1
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 92,
+     "gun": 18,
+     "cannon": 9,
+     "shift": 6,
+     "armor": 12,
+     "charge": 12,
+     "railgun": 10
+    },
+    "buckets": {
+     "0": {
+      "ji": 25
+     },
+     "1": {
+      "gun": 6,
+      "armor": 8,
+      "ji": 4,
+      "shift": 2
+     },
+     "2": {
+      "ji": 4,
+      "railgun": 1
+     },
+     "3": {
+      "charge": 1
+     },
+     "4": {
+      "ji": 27
+     },
+     "5": {
+      "gun": 8,
+      "ji": 10,
+      "cannon": 5,
+      "armor": 4,
+      "shift": 2
+     },
+     "6": {
+      "cannon": 3,
+      "railgun": 7,
+      "ji": 5
+     },
+     "7": {
+      "charge": 8
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "shift": 2,
+      "gun": 4,
+      "ji": 4,
+      "cannon": 1
+     },
+     "10": {
+      "ji": 3,
+      "railgun": 2
+     },
+     "11": {
+      "charge": 3
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 53,
+     "gun": 20,
+     "armor": 3,
+     "charge": 5,
+     "railgun": 4,
+     "shift": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "gun": 8,
+      "armor": 2
+     },
+     "8": {
+      "ji": 17
+     },
+     "9": {
+      "gun": 12,
+      "armor": 1,
+      "ji": 9,
+      "shift": 1
+     },
+     "10": {
+      "ji": 7,
+      "railgun": 4
+     },
+     "11": {
+      "charge": 5
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 63,
+     "gun": 16,
+     "armor": 4,
+     "cannon": 4,
+     "charge": 5,
+     "snipe": 4,
+     "railgun": 3,
+     "shift": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 20
+     },
+     "1": {
+      "gun": 9,
+      "armor": 1
+     },
+     "4": {
+      "ji": 13
+     },
+     "5": {
+      "armor": 3,
+      "ji": 14,
+      "gun": 6,
+      "cannon": 1,
+      "shift": 1
+     },
+     "6": {
+      "ji": 6,
+      "snipe": 3,
+      "railgun": 1
+     },
+     "7": {
+      "cannon": 3,
+      "charge": 3
+     },
+     "8": {
+      "ji": 6
+     },
+     "9": {
+      "gun": 1,
+      "ji": 2
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 2,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 47,
+     "gun": 19,
+     "charge": 5,
+     "railgun": 4,
+     "armor": 3,
+     "transfer": 1,
+     "shift": 2,
+     "holo": 1,
+     "proto": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 24
+     },
+     "5": {
+      "gun": 12,
+      "armor": 1,
+      "ji": 1
+     },
+     "6": {
+      "ji": 1,
+      "railgun": 1
+     },
+     "7": {
+      "charge": 1
+     },
+     "8": {
+      "ji": 12
+     },
+     "9": {
+      "gun": 7,
+      "ji": 5,
+      "armor": 2,
+      "shift": 2,
+      "holo": 1,
+      "proto": 1
+     },
+     "10": {
+      "ji": 4,
+      "railgun": 3,
+      "transfer": 1
+     },
+     "11": {
+      "charge": 4
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 1,
+    "keys": {
+     "ji": 70,
+     "gun": 24,
+     "charge": 9,
+     "railgun": 9,
+     "holo": 2,
+     "armor": 3,
+     "cannon": 4,
+     "snipe": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 25
+     },
+     "1": {
+      "gun": 13,
+      "ji": 7,
+      "armor": 2
+     },
+     "2": {
+      "ji": 5,
+      "railgun": 4
+     },
+     "3": {
+      "charge": 5
+     },
+     "4": {
+      "ji": 13
+     },
+     "5": {
+      "gun": 7,
+      "holo": 2,
+      "ji": 3
+     },
+     "6": {
+      "snipe": 1,
+      "ji": 3,
+      "railgun": 4
+     },
+     "7": {
+      "charge": 3
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "ji": 4,
+      "gun": 4,
+      "cannon": 1,
+      "armor": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1,
+      "cannon": 3
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 56,
+     "gun": 19,
+     "shift": 7,
+     "charge": 8,
+     "railgun": 5,
+     "armor": 4,
+     "guard": 1,
+     "proto": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 32,
+      "guard": 1
+     },
+     "5": {
+      "gun": 13,
+      "shift": 7,
+      "ji": 5,
+      "armor": 2
+     },
+     "6": {
+      "ji": 4,
+      "railgun": 2
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "gun": 6,
+      "armor": 2,
+      "proto": 1,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 2,
+      "ji": 3
+     },
+     "11": {
+      "charge": 4,
+      "ji": 2,
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "MX3-GDEQ-GD",
+    "real": true,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 92,
+     "gun": 27,
+     "armor": 7,
+     "charge": 15,
+     "railgun": 14,
+     "proto": 1,
+     "snipe": 2,
+     "holo": 1,
+     "cannon": 3
+    },
+    "buckets": {
+     "0": {
+      "ji": 37
+     },
+     "1": {
+      "gun": 15,
+      "proto": 1,
+      "ji": 15,
+      "armor": 4
+     },
+     "2": {
+      "ji": 12,
+      "railgun": 8,
+      "snipe": 1
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 11
+     },
+     "5": {
+      "armor": 2,
+      "ji": 2,
+      "gun": 5,
+      "holo": 1
+     },
+     "6": {
+      "ji": 2,
+      "railgun": 4,
+      "snipe": 1
+     },
+     "7": {
+      "charge": 4
+     },
+     "8": {
+      "ji": 10,
+      "cannon": 1
+     },
+     "9": {
+      "gun": 7,
+      "armor": 1,
+      "cannon": 1,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 2,
+      "ji": 2
+     },
+     "11": {
+      "cannon": 1,
+      "charge": 2
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 2,
+    "mode": "multi",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 123,
+     "gun": 33,
+     "charge": 24,
+     "railgun": 24,
+     "cannon": 4,
+     "armor": 2,
+     "shift": 1,
+     "jinshield": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 62
+     },
+     "5": {
+      "gun": 28,
+      "ji": 26,
+      "cannon": 1,
+      "armor": 2,
+      "shift": 1,
+      "jinshield": 1
+     },
+     "6": {
+      "ji": 24,
+      "railgun": 20,
+      "cannon": 1
+     },
+     "7": {
+      "charge": 23
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "gun": 5,
+      "ji": 3,
+      "cannon": 1
+     },
+     "10": {
+      "railgun": 4,
+      "ji": 1,
+      "cannon": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 2,
+    "mode": "long",
+    "games": 10,
+    "win": 6,
+    "keys": {
+     "ji": 102,
+     "gun": 24,
+     "armor": 28,
+     "shift": 8,
+     "charge": 13,
+     "railgun": 13
+    },
+    "buckets": {
+     "0": {
+      "ji": 37
+     },
+     "1": {
+      "gun": 9,
+      "armor": 10,
+      "shift": 4,
+      "ji": 10
+     },
+     "2": {
+      "ji": 10,
+      "railgun": 7
+     },
+     "3": {
+      "charge": 10
+     },
+     "4": {
+      "ji": 25
+     },
+     "5": {
+      "gun": 10,
+      "armor": 11,
+      "shift": 2,
+      "ji": 3
+     },
+     "6": {
+      "ji": 3,
+      "railgun": 5
+     },
+     "7": {
+      "charge": 2
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "armor": 7,
+      "shift": 2,
+      "gun": 5,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 3,
+    "mode": "multi",
+    "games": 10,
+    "win": 5,
+    "keys": {
+     "ji": 63,
+     "gun": 24,
+     "charge": 9,
+     "railgun": 9,
+     "jinshield": 1,
+     "shift": 2,
+     "armor": 3
+    },
+    "buckets": {
+     "4": {
+      "ji": 37
+     },
+     "5": {
+      "gun": 18,
+      "ji": 10,
+      "jinshield": 1,
+      "shift": 2,
+      "armor": 3
+     },
+     "6": {
+      "ji": 10,
+      "railgun": 8
+     },
+     "7": {
+      "charge": 9
+     },
+     "8": {
+      "ji": 5
+     },
+     "9": {
+      "gun": 6,
+      "ji": 1
+     },
+     "10": {
+      "railgun": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 3,
+    "mode": "long",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 116,
+     "gun": 42,
+     "charge": 15,
+     "railgun": 15,
+     "armor": 7,
+     "snipe": 5,
+     "proto": 2,
+     "cannon": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 29
+     },
+     "1": {
+      "gun": 12,
+      "ji": 10,
+      "armor": 3,
+      "proto": 2
+     },
+     "2": {
+      "ji": 9,
+      "railgun": 9
+     },
+     "3": {
+      "charge": 9
+     },
+     "4": {
+      "ji": 37
+     },
+     "5": {
+      "gun": 22,
+      "ji": 10,
+      "armor": 3
+     },
+     "6": {
+      "ji": 6,
+      "snipe": 3,
+      "railgun": 4
+     },
+     "7": {
+      "charge": 5
+     },
+     "8": {
+      "ji": 13
+     },
+     "9": {
+      "gun": 8,
+      "ji": 2,
+      "armor": 1
+     },
+     "10": {
+      "railgun": 2,
+      "snipe": 2,
+      "cannon": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 5,
+    "mode": "multi",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 100,
+     "gun": 28,
+     "charge": 17,
+     "railgun": 16,
+     "armor": 6,
+     "shift": 5,
+     "transfer": 1,
+     "proto": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 52
+     },
+     "5": {
+      "gun": 22,
+      "ji": 18,
+      "armor": 4,
+      "shift": 4,
+      "proto": 1
+     },
+     "6": {
+      "ji": 16,
+      "railgun": 15,
+      "armor": 1,
+      "transfer": 1
+     },
+     "7": {
+      "charge": 16
+     },
+     "8": {
+      "ji": 11
+     },
+     "9": {
+      "armor": 1,
+      "gun": 6,
+      "ji": 1,
+      "shift": 1
+     },
+     "10": {
+      "ji": 2,
+      "railgun": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 5,
+    "mode": "long",
+    "games": 10,
+    "win": 0,
+    "keys": {
+     "ji": 77,
+     "gun": 25,
+     "holo": 2,
+     "snipe": 5,
+     "proto": 1,
+     "charge": 10,
+     "railgun": 10,
+     "armor": 4
+    },
+    "buckets": {
+     "0": {
+      "ji": 23
+     },
+     "1": {
+      "gun": 14,
+      "ji": 6,
+      "armor": 1
+     },
+     "2": {
+      "ji": 6,
+      "railgun": 3
+     },
+     "3": {
+      "charge": 4
+     },
+     "4": {
+      "ji": 20
+     },
+     "5": {
+      "gun": 7,
+      "ji": 9,
+      "armor": 1
+     },
+     "6": {
+      "snipe": 4,
+      "ji": 5,
+      "railgun": 7
+     },
+     "7": {
+      "holo": 1,
+      "charge": 6
+     },
+     "8": {
+      "ji": 7
+     },
+     "9": {
+      "proto": 1,
+      "holo": 1,
+      "gun": 4,
+      "ji": 1,
+      "armor": 2
+     },
+     "10": {
+      "snipe": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 8,
+    "mode": "multi",
+    "games": 10,
+    "win": 3,
+    "keys": {
+     "ji": 79,
+     "gun": 25,
+     "proto": 1,
+     "cannon": 2,
+     "shift": 2,
+     "charge": 12,
+     "railgun": 10,
+     "transfer": 1,
+     "armor": 3,
+     "snipe": 2,
+     "jinshield": 1,
+     "reflect": 1,
+     "holo": 1
+    },
+    "buckets": {
+     "4": {
+      "ji": 42
+     },
+     "5": {
+      "gun": 17,
+      "proto": 1,
+      "ji": 14,
+      "cannon": 1,
+      "shift": 2,
+      "armor": 3,
+      "holo": 1
+     },
+     "6": {
+      "ji": 12,
+      "railgun": 9,
+      "transfer": 1,
+      "snipe": 1
+     },
+     "7": {
+      "cannon": 1,
+      "charge": 11
+     },
+     "8": {
+      "ji": 9,
+      "reflect": 1
+     },
+     "9": {
+      "gun": 8,
+      "jinshield": 1,
+      "ji": 1
+     },
+     "10": {
+      "ji": 1,
+      "railgun": 1,
+      "snipe": 1
+     },
+     "11": {
+      "charge": 1
+     }
+    }
+   },
+   {
+    "opp": "day1119-cannon-pg",
+    "real": true,
+    "n": 8,
+    "mode": "long",
+    "games": 10,
+    "win": 2,
+    "keys": {
+     "ji": 101,
+     "gun": 32,
+     "proto": 3,
+     "charge": 13,
+     "railgun": 13,
+     "snipe": 1,
+     "armor": 11,
+     "cannon": 2,
+     "holo": 1
+    },
+    "buckets": {
+     "0": {
+      "ji": 40
+     },
+     "1": {
+      "gun": 17,
+      "proto": 2,
+      "ji": 12,
+      "armor": 7
+     },
+     "2": {
+      "ji": 11,
+      "railgun": 9,
+      "armor": 1
+     },
+     "3": {
+      "charge": 10
+     },
+     "4": {
+      "ji": 19
+     },
+     "5": {
+      "ji": 4,
+      "gun": 11,
+      "armor": 3
+     },
+     "6": {
+      "snipe": 1,
+      "ji": 4,
+      "railgun": 4
+     },
+     "7": {
+      "charge": 3,
+      "holo": 1
+     },
+     "8": {
+      "ji": 9
+     },
+     "9": {
+      "proto": 1,
+      "gun": 4,
+      "ji": 2,
+      "cannon": 1
+     },
+     "10": {
+      "cannon": 1
+     }
+    }
+   }
+  ]
+ },
+ "id": "day1119-cannon-pg",
+ "wid": "ae28c0aaf8bf6098",
+ "tier": "soft",
+ "rulesFingerprint": "4fcadaad",
+ "fixtureKey": "fx-pool1119a",
+ "measuredAt": "2026-11-19T04:51:47.120Z",
+ "stageSec": 11,
+ "stage2": {
+  "shortlist": [
+   "tank",
+   "jinshield",
+   "armor",
+   "miniT",
+   "rod",
+   "firestorm",
+   "taunt",
+   "purify"
+  ],
+  "selected": [
+   "charge",
+   "gun",
+   "tank",
+   "snipe",
+   "guard",
+   "reflect",
+   "bagua",
+   "shift",
+   "jinshield",
+   "armor",
+   "proto",
+   "holo",
+   "railgun",
+   "miniT",
+   "rod",
+   "transfer",
+   "firestorm",
+   "taunt",
+   "cannon",
+   "purify"
+  ],
+  "inUse": [
+   "charge",
+   "gun",
+   "shift",
+   "armor",
+   "railgun"
+  ],
+  "results": [
+   {
+    "key": "tank",
+    "name": "坦克",
+    "stratum": "break",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": -0.5,
+      "se": 0.15075567228888181,
+      "forceHit": 0.9351351351351351
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": -0.08333333333333333,
+      "se": 0.08333333333333333,
+      "forceHit": 0.9351351351351351
+     }
+    ]
+   },
+   {
+    "key": "snipe",
+    "name": "狙击枪",
+    "stratum": "break",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": 0.14583333333333334,
+      "se": 0.0514814513637229,
+      "forceHit": 0.9258343634116193
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": 0.0625,
+      "se": 0.09131743597733774,
+      "forceHit": 0.9258343634116193
+     }
+    ]
+   },
+   {
+    "key": "railgun",
+    "name": "电磁炮",
+    "stratum": "counter",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": 0,
+      "se": 0,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "miniT",
+    "name": "雷击之枪",
+    "stratum": "counter",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.5625,
+      "se": 0.07824680221413262,
+      "forceHit": 0.9599465954606141
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": 0.041666666666666664,
+      "se": 0.06629996666059658,
+      "forceHit": 0.9599465954606141
+     }
+    ]
+   },
+   {
+    "key": "rod",
+    "name": "避雷针",
+    "stratum": "counter",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": -0.5,
+      "se": 0.19462473604038075,
+      "forceHit": 0.9666666666666667
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": -0.16666666666666666,
+      "se": 0.11236664374387367,
+      "forceHit": 0.9666666666666667
+     }
+    ]
+   },
+   {
+    "key": "firestorm",
+    "name": "天火",
+    "stratum": "aoe",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.020833333333333332,
+      "se": 0.046979542602795195,
+      "forceHit": 1
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": -0.14583333333333334,
+      "se": 0.07286915878889005,
+      "forceHit": 1
+     }
+    ]
+   },
+   {
+    "key": "transfer",
+    "name": "转移伤害",
+    "stratum": "react",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": 0.22916666666666666,
+      "se": 0.09982068734360333,
+      "forceHit": 0.9731663685152058
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": -0.041666666666666664,
+      "se": 0.06629996666059658,
+      "forceHit": 0.9731663685152058
+     }
+    ]
+   },
+   {
+    "key": "purify",
+    "name": "净化",
+    "stratum": "react",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": -0.5,
+      "se": 0.15075567228888181,
+      "forceHit": 0.9302325581395349
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": 0.16666666666666666,
+      "se": 0.20719385350268701,
+      "forceHit": 0.9302325581395349
+     }
+    ]
+   },
+   {
+    "key": "guard",
+    "name": "防御",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.020833333333333332,
+      "se": 0.0814843637555269,
+      "forceHit": 1
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": 0,
+      "se": 0.07877609890611015,
+      "forceHit": 1
+     }
+    ]
+   },
+   {
+    "key": "reflect",
+    "name": "反弹",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": 0.4166666666666667,
+      "se": 0.19299604852813632,
+      "forceHit": 1
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": 0.6666666666666666,
+      "se": 0.1421338109037403,
+      "forceHit": 1
+     }
+    ]
+   },
+   {
+    "key": "bagua",
+    "name": "八卦阵",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.1875,
+      "se": 0.05693291124629693,
+      "forceHit": 0.9929161747343566
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": -0.25,
+      "se": 0.06316139407998891,
+      "forceHit": 0.9929161747343566
+     }
+    ]
+   },
+   {
+    "key": "shift",
+    "name": "无极变速",
+    "stratum": "util",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": -0.3333333333333333,
+      "se": 0.1421338109037403,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "jinshield",
+    "name": "金刚盾",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": 0.125,
+      "se": 0.08221770960717432,
+      "forceHit": 0.9518459069020867
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": 0.125,
+      "se": 0.08221770960717432,
+      "forceHit": 0.9518459069020867
+     }
+    ]
+   },
+   {
+    "key": "armor",
+    "name": "藤甲",
+    "stratum": "util",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": -0.25,
+      "se": 0.13055824196677338,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "proto",
+    "name": "原型制御",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": 0.8333333333333334,
+      "se": 0.11236664374387366,
+      "forceHit": 0.9282868525896414
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": 0.3333333333333333,
+      "se": 0.1421338109037403,
+      "forceHit": 0.9282868525896414
+     }
+    ]
+   },
+   {
+    "key": "holo",
+    "name": "全息屏障",
+    "stratum": "util",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.020833333333333332,
+      "se": 0.0814843637555269,
+      "forceHit": 0.7962616822429907
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": -0.125,
+      "se": 0.07663698161041188,
+      "forceHit": 0.7962616822429907
+     }
+    ]
+   },
+   {
+    "key": "charge",
+    "name": "蓄能",
+    "stratum": "econ",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": 0,
+      "se": 0.12309149097933274,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "charge",
+    "name": "蓄能",
+    "stratum": "econLong",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": -0.16666666666666666,
+      "se": 0.11236664374387367,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "gun",
+    "name": "枪",
+    "stratum": "mixed",
+    "inUse": true,
+    "arms": [
+     {
+      "kind": "ban",
+      "econ": "native",
+      "games": 12,
+      "deltaLost": 0.08333333333333333,
+      "se": 0.19299604852813632,
+      "forceHit": null
+     }
+    ]
+   },
+   {
+    "key": "taunt",
+    "name": "挑衅",
+    "stratum": "mixed",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 48,
+      "delta": -0.041666666666666664,
+      "se": 0.07854129630064867,
+      "forceHit": 0.8681318681318682
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 48,
+      "delta": 0.041666666666666664,
+      "se": 0.07267881673425382,
+      "forceHit": 0.8681318681318682
+     }
+    ]
+   },
+   {
+    "key": "cannon",
+    "name": "过载炮",
+    "stratum": "mixed",
+    "inUse": false,
+    "arms": [
+     {
+      "kind": "forced",
+      "econ": "rich",
+      "games": 12,
+      "delta": -0.5,
+      "se": 0.15075567228888181,
+      "forceHit": 0.711864406779661
+     },
+     {
+      "kind": "forced",
+      "econ": "native",
+      "games": 12,
+      "delta": 0,
+      "se": 0.12309149097933274,
+      "forceHit": 0.711864406779661
+     }
+    ]
+   }
+  ]
+ }
+}

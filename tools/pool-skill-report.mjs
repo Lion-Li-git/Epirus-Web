@@ -97,9 +97,11 @@ function pickPacks(pool, argPack, argPacks, allPool) {
  * ⚠ 对手 chooser 必须在**被测包同一个沙箱**里构建（policy 推理与引擎缓存不能跨 W 混用）
  *   ⇒ 这里收描述符（{name, kind:'script'|'real', fn|path}），chooser 在本函数内建。 */
 function stage1(W, pack, oppDesc, gamesCensus) {
-  const T = W.EpirusTrainer, B = W.EpirusBots;
+  const R = W.EpirusRules, T = W.EpirusTrainer, B = W.EpirusBots;
   const params = loadChamp(W, pack.path);
   const base = T.policyChooserN(params, TEMP);
+  const bead = { elecGained: 0, elecSpent: 0, elecExpired: 0, boomGained: 0, boomSpent: 0, boomExpired: 0 };
+  const curseStats = { curseOk: 0, curseLanded: 0, firestormOk: 0, firestormHits: 0 };
   const oppChoosers = oppDesc.map(od => {
     if (od.kind === 'script') {
       if (typeof B[od.fn] !== 'function') { console.error('⛔ 脚本对手取不到：' + od.name + '（fn=' + od.fn + '）'); process.exit(2); }
@@ -153,6 +155,26 @@ function stage1(W, pack, oppDesc, gamesCensus) {
         const r = T.oneGameN(choosers, gseed, n, { mode });
         cell.games++;
         cell.win += T.rankOf(r.state, seat, gseed) === 1 ? 1 : 0;
+        for (const e of ((r.state && r.state.events) || [])) {
+          if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
+            if (e.key === R.SK.CURSE) curseStats.curseOk++;
+            else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
+          } else if (e.type === 'curse' && e.owner === seat) {
+            curseStats.curseLanded++;
+          } else if (e.type === 'firestorm' && e.pid === seat) {
+            curseStats.firestormHits += (e.n || 0);
+          } else if (e.type === 'bead' && e.pid === seat) {
+            const cnt = Math.abs(e.delta || 0);
+            if ((e.delta || 0) > 0) {
+              if (e.kind === 'boom') bead.boomGained += cnt; else bead.elecGained += cnt;
+            } else if ((e.delta || 0) < 0) {
+              if (e.kind === 'boom') bead.boomSpent += cnt; else bead.elecSpent += cnt;
+            }
+          } else if (e.type === 'beadExpire' && e.pid === seat) {
+            const cnt = Math.abs(e.n != null ? e.n : (e.delta != null ? e.delta : 1));
+            if (e.kind === 'boom') bead.boomExpired += cnt; else bead.elecExpired += cnt;
+          }
+        }
       }
       cells.push(cell);
     }
@@ -192,6 +214,7 @@ function stage1(W, pack, oppDesc, gamesCensus) {
     coverage, totalUses, totalCells: cells.length, decN,
     switchJs: pairN ? +(pairSum / pairN).toFixed(4) : null, switchJsCells: pairN,
     winRate: +(cells.reduce((a, c) => a + c.win, 0) / cells.reduce((a, c) => a + c.games, 0)).toFixed(4),
+    bead, curseStats,
     winBy, cells,
   };
 }

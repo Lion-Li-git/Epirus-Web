@@ -52,6 +52,20 @@
   "switchJs": 0.0621,
   "switchJsCells": 12,
   "winRate": 0.4225,
+  "bead": {
+   "elecGained": 305,
+   "elecSpent": 147,
+   "elecExpired": 155,
+   "boomGained": 259,
+   "boomSpent": 253,
+   "boomExpired": 6
+  },
+  "curseStats": {
+   "curseOk": 14,
+   "curseLanded": 14,
+   "firestormOk": 0,
+   "firestormHits": 0
+  },
   "winBy": {
    "gunspam@2m": {
     "w": 10,
@@ -7501,8 +7515,8 @@
  "tier": "soft",
  "rulesFingerprint": "4fcadaad",
  "fixtureKey": "fx-pool1119a",
- "measuredAt": "2026-11-19T00:03:42.658Z",
- "stageSec": 6.9,
+ "measuredAt": "2026-11-19T04:22:25.145Z",
+ "stageSec": 16,
  "stage2": {
   "shortlist": [
    "tank",

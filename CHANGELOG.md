@@ -4,6 +4,19 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.8 — 11-19 午（`skill-report` 行内引爆率与电/爆珠使用率 ‖ 池 25 枚 `day1119-cannon-pg` 入 `soft` 带）
+
+**这一版是什么**：在 `skill-report` 去掉卡片顶部重复横幅，把**真实引爆率**与**蓄能电/爆珠使用率**内联进表格行；同时把全项 0 阻断通过体检的过载炮宽谱候选 `day1119-cannon-pg` 走完整管道入池 `soft` 带（池 24 → **25 枚**，hard 11 / soft 14）。
+
+- **`skill-report` 观察层指标与页面优化**：
+  - [tools/pool-skill-report.mjs](tools/pool-skill-report.mjs) Stage 1 在 120 格跨环境对局同步统计 `curseStats`（`curseOk` / `curseLanded` / `firestormOk` / `firestormHits`）与 `bead`（`elec`/`boom` 的获得/消耗/过期数）。
+  - [champion-map/build-skill-page.mjs](champion-map/build-skill-page.mjs) 删除顶部冗余 `.wastewarn` 横幅，改为在「天火 / 贴贴」行内标注真实引爆率（可超过 `100%`）并在「蓄能」行内分列**电珠/爆珠使用率**；重跑全池 25 枚 Stage 1 与 [champion-map/skill-report.html](champion-map/skill-report.html)（207,124 字节）。
+- **池 24 → 25（`day1119-cannon-pg` 入 `soft` 带）**：
+  - `day1119-cannon-pg`（`docs/artifacts/day1119-cannon-pg.bak`，wid `ae28c0aaf8bf6098`，`MX8-R6C-KL` 上 `toolkit+cannon 0.25` 双教师 + PG 1,500 局）：`promote --dry --support=2` **0 阻断全过**（`G4[long] 23%/60%` · `G4[multi] 19%/60%` · `G5 3%/25%` · `场A 21.0%` · `G(multi/long) 5.12/4.59` · `花珠率 98.8%`），Stage 1 覆盖 `cannon` 28 格、`armor` 81 格、`shift` 41 格、电珠使用 **`97%`**（`2393/2469`）、0 废贴；`measure-point` A 轴 `P2=+0.4077 / P3=+0.1677 / P5L=+0.0828 / MxSkE=20`，`arenaB=-82.28pt`（强于现役 `night2-X2b-fuse` `-87.25pt` 与 `night2-S6` `-104.76pt`）。
+  - 完成 `measure-point --bake` → `pool-add` → `exam4n-mixedfix-1116`（`MxC/MxCL`）→ `rebuild-map`（`1002` 行，`100 PASS`）→ `build-pool-bundle.mjs`（`js/bundled-champion-pool.js` `7642 KB`，`D234` 验收 25 枚全齐）。
+- **24h 产物点名（D82）**：`day1119-cannon-pg.bak`、`night2-S6.bak`、`night2-X2b-fuse.bak`、`night1119-A1-tank-band3.bak`、`night1119-MS2c-band1.bak` 均在 `docs/artifacts/` 在场对账。
+- **版本**：`v2.1.7 → v2.1.8`。
+
 ## v2.1.7 — 11-19 午（移除 skill-report `ji` 消融 · 补齐天火贴符前置与废贴告警 · 训练侧治「只贴不爆」）
 
 **这一版是什么**：修复 `skill-report` 把 0 费基础回资源动作 `ji` 纳入消融以及天火无贴符前置恒报“实验未生效”的两处测量缺陷，并在可视化页与训练管线里同时显形和治理「只贴不爆（贴贴而不接天火）」纯浪费。
