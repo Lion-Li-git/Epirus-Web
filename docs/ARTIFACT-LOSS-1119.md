@@ -4,11 +4,11 @@
 
 ## 账
 
-- 原始缺失：**800 枚**（`1.8` 706 + `2.0` 94；全部 `status=active`，`registry path` 非空但盘上不存在）
-- 已挽回：**130 枚**（11-19 晚由 Git 历史提交逐字节找回 **46 枚**〔`2.0` 40 枚 + `1.8` 6 枚〕，由 `D:\code\Epirus-Web-artifacts-quarantine` 找回 **84 枚**〔`1.8` 7 枚同 sha256 + 77 枚同权重 `wid`〕；`winfr` 扫描 D 盘 711 条 MFT 路径中 701 枚已被 TRIM 清零、10 枚已覆盖，盘恢复 `0` 枚）
-- **当前实缺：670 枚**（`1.8` 616 + `2.0` 54；见 `node tools/map-audit.mjs`）
+- 原始缺失：**800 枚**（1.8 706 + 2.0 94；全部 status=active，registry path 非空但盘上不存在）
+- 已挽回：**131 枚**（Git 历史 46 枚逐字节 + quarantine 84 枚〔7 枚同 sha256 + 77 枚同 wid〕+ GitHub Release v1.5.0 冠军档案 1 枚〔long-33，sha+wid 一致〕；winfr 扫 D 盘 711 条 MFT：701 枚 TRIM 清零、10 枚覆盖，盘恢复 0 枚）
+- **当前实缺：669 枚**（1.8 616 + 2.0 53；见 node tools/map-audit.mjs）
 - 池成员：**0 枚**（page/pool-members.tsv 的 25 枚文件都在，游戏/池不受影响）
-- 影响：其余 670 枚历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
+- 影响：其余 669 枚历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
 
 ## 按目录
 
@@ -660,7 +660,7 @@ B-s63, B-s64, B0-111, B0L-31, B0L-71, B1, B2, B5-05-71, BIG0, cal-ctl, D005-31, 
 
 ## 2026-11-19 20:0x Gemini 恢复后复核
 
-- 仍缺：**670 枚**；已存在：**227 枚 sha256 与 registry 逐字节一致** + **86 枚 sha256 不同但 wid 与 lineage 在册一致**（quarantine 恢复件，权重等价；registry sha256 是字节哈希，恢复时重序列化/meta 变化会让它不同，**不能拿 sha 不等当"旧版本"**）。
+- 仍缺：**669 枚**；已存在：**228 枚 sha256 与 registry 逐字节一致** + **86 枚 sha256 不同但 wid 与 lineage 在册一致**（quarantine 恢复件，权重等价；registry sha256 是字节哈希，恢复时重序列化/meta 变化会让它不同，**不能拿 sha 不等当"旧版本"**）。
 - 池成员 25 枚 sha256 全对；SOUP-s9-82XD4a / SOUP-stock1XK2-l35 的父粒 D4a / K2 已在盘且 sha 对，E20-71 仍缺 ⇒ lineage 仍不能完整重生成。
 - 全量对账表：docs/ARTIFACT-LOSS-1119.tsv（state = ok / missing / sha-diff-wid-same）。
 - 处置：86 枚 sha 不同但 wid 相同的恢复件按"可用"对待，不再计入不可信；rebuild-map 的 lineage 预检只按**缺文件数**跳过（670 枚）。
