@@ -14,9 +14,40 @@
 | 浏览器页面本地 SSE 训练服务 | `node training/server/train-server.mjs`（或双击 `training/start-train-server.cmd`） | — |
 | 融合两枚同形状包 | `tools/pack-fuse.mjs`（--a --b --t --out；产物只当教师/候选） | ❌ 融合产物不能当自由巩固起点（单教师巩固 = 洗掉融合） |
 | 旋钮改了/加了 | `node training/knobs.mjs` 重生成册（**--check 供 CI**） | — |
-| 判断产物血统（30 秒） | 本页 §五 验尸脚本 | — |
+| 判断产物血统（30 秒） | 本页 §六 验尸脚本 | — |
 
-## 一、训练器清单
+## 一、训练核心机制（2.0 精确梯度 vs 旧 v7 变异进化）
+
+早期的 v7 线采用「小 MLP + 种群 + 高斯变异 `mutatePolicy` + 交叉 `crossover` + 淘汰赛 / CEM」的无梯度黑盒神经演化；而当前唯一的 2.0 产线（`obs6 · S1o · v:92`）已经**彻底取消了群体、变异和交叉**，全线改用**单粒子解析反向传播 + Adam 梯度更新**：
+
+| 维度 | 旧 v7 时期（已退役） | 当前 2.0 产线（在用） |
+|---|---|---|
+| **优化方式** | 群体无梯度进化：每代评估整个种群，每局约 26 手压成 1 个带噪声标量分，按排名做高斯变异与基因交叉 | **单粒子精确梯度（Adam）**：每一步对局或样本的每个决策节点都算解析梯度（`tapeForward` → `dLogPi`/`dLogKeyP` → `tapeBackward`） |
+| **退场原因** | 网络扩到 `16561` 维后，整局标量适应度方差太大（同代相关仅约 `0.41`），盲目随机变异几乎退化成抽签 | 全网由线性层 + ReLU + RMSNorm/Attention + 两级 Softmax 构成，解析导数信噪比高出数量级 |
+| **防漂与多样性靠什么** | 靠种群、精英保留、`sigma` 衰减与随机注入新个体 | 靠**多教师蒸馏 + DAgger** 注入技能，**批级 KL 锚**锁住键频不塌缩，**分段快照 `--segEvery`** + **探针回滚**选节点 |
+
+### 1. 网络前向结构（`proto2/arch2.mjs` · `obs6`）
+
+1. **席位集合与注意力（人数无关）**：己方全局/私有/3 回合记忆特征走 `selfEnc`；场上每名存活玩家走同一套 `seatEnc` → 2 头自注意力（`attnQ/K/V/O` + `RMSNorm` + `rff1/2` 残差前馈）→ 对我方做交叉注意力（`xattnQ/K/V`）并与对手 `oppMax` 池化拼接过 `ctx` 得到局面隐状态 `hctx`。
+2. **候选动作编码与交互打分**：每个合法候选过 `actEnc`，与 `hctx` 及双目标席位编码 `(te1, te2)` 拼接过 `cand` + `policyHead`；再叠加 `skillHead`（技能全局偏置）与 `tBilin`（动作 × 目标双线性项；可选 `modeBias` 分桌形模式偏置）。
+3. **两级 Softmax 输出**：先按决策键 `DK(cand)`（`keySplit=1` 时把 `蓄能#elec` 与 `蓄能#boom` 拆成独立决策键）取组内最大 logit 做技能层 softmax，再在键内做候选层 softmax。
+
+### 2. 三条训练通路（均在单粒子上做，不做交叉变异）
+
+1. **教师蒸馏 + DAgger（`proto2/supfit-gd.mjs`，`--mode=supfit|distill`）—— 注入新技能与纠正零覆盖键**
+   - **采样**：在 `arena2` 桌面上收集 `(状态, 合法候选, 教师动作)`，支持 `--shapeBal=1` 按桌形均摊配额、`--winOnly=1|2` 仅采胜/败局语境、`--classPow/--classCap` 压低稀有类过拟合，以及 `closeCurseStorm` 标签闭环兜底。
+   - **多教师轮替**：支持 `--teacher` 搭配 `--teacher2/3/4`（按比例、指定技能键或桌形切教师，可以是内置脚本专精如 `toolkit`/`cannon`/`detonate`，也可以是任意 `pack:<v7或2.0包>`），防止单教师洗塌基础攻防。
+   - **DAgger（`--dagger=R`）**：第 0 轮只采教师自访轨迹；后续每轮改由**当前学生自己走出来的局面**请教师重标并入训练集再训，消除上线后走偏到陌生局面的协变量漂移。
+   - **梯度更新**：对 `--objective=cand`（推荐）精确最大化 `log π(教师候选)`（`dLogPi` + `tapeBackward` + Adam，可选 `seatDrop` 与 `onlySeg`）。
+2. **策略梯度 REINFORCE + 行为塑形 + 键频锚（`proto2/pg-train.mjs`，`--mode=pg`）—— 实战强度拔高**
+   - **采样对手池（`--arenaPool`）**：用当前模型以 `--temp`（默认 `0.5`）在 `arena2` 打 `batch` 局；不传 `--arenaPool` 时默认为全脚本池 `buildPoolSeeded`，传入 `--arenaPool=names:pack:...,aggro,...` 可让训练桌上同时坐着现役真冠军包和关键对抗脚本。
+   - **回报与优势**：决策点累积回报 `G_t = 终局 scoreNet + 事后事件塑形`（常驻 `lamC`/`lamF`，以及可选 `lamExp` 废珠罚、`penDeadElec` 死电罚、`--shapeKey=key:w` 正/负塑形如孤儿贴符罚分），减去批均值 `mean` 或闭式岭回归 `ridge` 状态基线，按批内 `G` 标准差标准化得到优势 `A`。
+   - **梯度 + KL 锚**：主梯度为 `A · dLogPi`；若开 `--klW > 0`，每步叠加对冻结起点键分布的交叉熵拉力（`dLogKeyP`，mode-covering），配合 `--klTilt/--klTiltMul` 拉抬弱键，并自动在 KL 目标里剔除负塑形键。
+   - **防漂**：内置 `--segEvery` 定时落盘多节点快照（供后筛）与未见 seed 探针回滚闸（`--probe`）。
+3. **同形状权重线性融合（`tools/pack-fuse.mjs`，`--mode=fuse`）**
+   - 对同盆地/同维度的两枚包按 `t·A + (1−t)·B` 对 `.a` 数组线性混合；通常只作为再蒸馏起点或教师，不代替梯度训练。
+
+## 二、训练器清单
 
 ### 产线（2.0 · obs6 · S1o 容器 v:92）
 
@@ -45,13 +76,13 @@
 
 `proto2/` 里 10 月 PREREG 波的一次性研究探针（battery/matrix2/rankfit/rank-signal/rank-inter/breadth2/capacity/behav-shift/composite-score/def-drain-trace/def-gate/dimgate/fit2/fitness-noise/head-health/longrange-offer/margin-n/mixprobe/obs2.mjs/offer-trace/pool-check/preflight2/project-blocks/ref-baseline/chain-price/chain-clone/convert-obs3c 等）——零 import 但属 CLI 仪器，**删除前要逐个对谱系**（docs/research 在册读数可能引用）。删法照 11-14 白班批先例（a30f1098：白名单+读取代码同删零残留）。
 
-## 二、纪律：禁止训老网络（2026-11-19 用户裁定）
+## 三、纪律：禁止训老网络（2026-11-19 用户裁定）
 
-- **唯一合法产物形状 = `v:92 / S1o`**。判断一件产物在不在 2.0 线：`packed.v ≥ 92` 且 `arch==='S1o'`（验尸脚本见 §五）。
+- **唯一合法产物形状 = `v:92 / S1o`**。判断一件产物在不在 2.0 线：`packed.v ≥ 92` 且 `arch==='S1o'`（验尸脚本见 §六）。
 - 执法点：pg-train/supfit-gd 天然只认 v:92（`readPack2`+`assertObsArch`）；v7 训练线（唯一能产 v:7 的入口）已整体删除 ⇒ **训练侧已无 v7 生产者**。
 - v7 时代的**知识**不删：`--teacher=pack:<v7包>` 跨线蒸馏把它平移进 2.0（A1/MS2c 载体 → S3/S4/S6 即此路）。
 
-## 三、与产品面的边界（谁在哪，为什么）
+## 四、与产品面的边界（谁在哪，为什么）
 
 | 资产 | 位置 | 理由 |
 |---|---|---|
@@ -63,13 +94,13 @@
 | `js/train/trainer.js` | `js/train/` | 冠军存取 + quickEval + 训练 CSV 导出（产品接线；供对局区及 2.0「🧪 训练场」tab 调用） |
 | `training/train.mjs` + `server/train-server.mjs` | `training/` | 2.0 统一 CLI 总入口与本地 SSE 训练服务（支持页面「🧪 训练场」在线启动 `pg` / `supfit`） |
 
-## 四、门禁与 CI
+## 五、门禁与 CI
 
 - 产品门禁每 push 跑全量 np + spec + 旋钮册 `--check`；训练侧 np 部件的**分家（paths 过滤 + 手动档）是下一批**（11-13 用户裁定：训练的门禁只随训练开）。
 - 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**重生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40；当前全集 40 / 在用 19 / 暗键 21）。
 - 训练侧自查：统一执行 `node training/train.mjs --selftest`（涵盖 `selftest2` + `selftest3` + `browser-parity`）。
 
-## 五、常用验尸（30 秒判断产物血统）
+## 六、常用验尸（30 秒判断产物血统）
 
 ```bash
 # 一件 .bak 是哪条线？
@@ -77,7 +108,7 @@ node -e "const vm=require('vm'),fs=require('fs');const sb={window:{}};sb.globalT
 # v≥92 + S1o = 2.0 线（唯一合法训练产物）
 ```
 
-## 六、训练流程速查（2.0 产线）
+## 七、训练流程速查（2.0 产线）
 
 ```bash
 # ① 行为塑形后训练（多技能包的主力路）：键频锚抬稀缺卡 + 事件塑形锁目标卡 + 多节点防漂
