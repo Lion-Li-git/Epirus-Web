@@ -38,13 +38,17 @@
 | night2-E4-t2str-det | E1 单变量：锚换 MX5-GD-T2STR（+20.5，t1/t2=4540/2060，seed 2026112003，wid aeae5686ca04a5a3） | **−25.09pt（极差 24.5，双峰 −10.5×3 / −31~−35×3）** | ⚠ 中位好 5.3pt 但稳定性降级（E1 极差 10.6）——**强锚换装方向值得跟**，下一臂=同配方换 seed 对跑验证双峰是不是种子噪声，或 0.65/0.35 份额下压 |
 | night2-E5-det-share25 | E1 镜像：专科份额 0.25（AGENTS 18 镜像对照，seed 2026112004） | **−25.10pt（极差 28.4）** | 剂量曲线闭合：**0.25→−25.1 / 0.30→−30.4 / 0.35→−39.5，两侧都塌且极差 10.6→28.4→53.2 爆炸**——E1 的 0.30 是窄甜点；"份额加码"与"减码"两方向同时被否。新经验：teacher2 份额的剂量扫描必须带极差轴，偏离甜点 = 中位掉 + 稳定性双杀（是否跨专科教师普适待复证，暂不进方法论） |
 | night2-E6-t2str-det-s2 | E4 同配方换 seed 2026112005（双峰归因设计） | **与 E4 wid 逐位相同（aeae5686ca04a5a3），arena 读数逐字节同** | 臂作废但换来方法论 §150：**supfit-gd 的 `--seed` 是 META 记录字段不是训练变量**（训练 RNG 硬编码 LCG 20261030）——"种子对照"在这条管线里天然无效；E4 的 arenaB 双峰是**权重的固有环境方差**（3 环境 −10~−19 / 3 环境 −31~−35），换 seed 平抑不了 |
+| night2-E7-cannon30 | E1 单变量：专科教师 detonate→**cannon**（过载炮专职，X4 toolkit 失败的正解教师；0.30 同份额，seed 2026112006，wid 4dbee487194173f4） | **−39.64pt（极差 24.3）** | ✗ 负结果：换专科轴也否——cannon 比 detonate 差 9.3pt 且抖；**E1（EQ-S4-E9 锚 + detonate 0.30）在"换份额/换锚/换专科"三轴上全是局部最优**，DS-P0 配方定型 |
+
+**用户令追加（01:2x）**：① 千问 v7 期训练会话重挖（此前"0 命中"结论错——v7 用 train-3p/EPIRUS_* 形态，不是重构后形态）② v7 图上配方直接复刻。**复刻路线实验定案**：主仓 `--mode=v7` 恢复版**不能**逐位复现 era 包（Q-s47 探针 band4 `d24ac807`≠在册；Q-s33 band2 `e70875ad`≠在册）——v7 训练沙箱消费**整树 js/***，era 包必须 **era 整树 worktree**（Q-s33 在 Temp/epirus-v7-1009 @15c568b2 **一发命中** `937d3a2d`；11-19 的 s47 命中实际也来自该 temp worktree，87c58dcb 提交语只写配方没写运行位置）⇒ 方法论 §151 立账。Q-s33 已落 `docs/artifacts/e507-out/Q-s33.js`+台账翻；Q-s38/51 与 B1/B2（dsh 原文配方：win-Lctl 母本+seed 31/71+CONV_RATIO/HOARD_LEFTOVER+1200 代）在各自 era 树跑批中。会话挖掘 corpus：qoder 段 404 条（10-17→11-18）+ dsh 970 条（581 train-3p）→ 单独文档 `docs/research/V7-ERA-SESSION-MINING-2026-11-20.md`。
 
 **E 系终局判定**：E1（EQ-S4-E9 锚 + 0.30 份额）仍是 DS-P0 路线的入池代表——剂量曲线 0.25/0.30/0.35 两侧都塌且极差爆炸（10.6→28.4→53.2），0.30 是窄甜点；MX5-GD-T2STR 锚 = 更高上限更偏科（med −25.1 但固有极差 24.5，最坏格 −34.9 ≈ E1 的 −34.5），按"进图只收代表性包"留 scratch，池里若要"高上限偏科带"再提。E4/E6 同 wid 只算一枚。
 
 ## 五、P2 · 批量重产：wid 目标账已全齐，剩下的是源盘
 
 - **wid 目标账不用考古了**：1.8 全集的 wid 本来就在 `page/lineage.tsv`（1002 行）——`tools/anchor-recover.mjs` 之前只读 lineage-g3.tsv 才显得缺 614 枚。两表并读后 **wid 目标 1004 条，缺失 662 枚全部有 wid 身份判据（无 wid 目标 = 0）**。
-- **批量重产工作清单已建**：`tools/recipe-index.mjs` 四 harness 全量挖 `--out=` 命令（64959 条）对缺失台账 → **11 枚缺失包已有原始命令**（UNIFIED-U1/U4、EQ-E9-A1/EQ-S5-P9、GD3-SWORD、KD 线等；dsh 4 / gemini 4 / zcode 5；qoder 非纯文本 0 命中探路保留）。下一班照 RECOVERY-TOOLKIT §6 复产。
+- **批量重产工作清单已建并全部闭环**：`tools/recipe-index.mjs` 四 harness 全量挖 `--out=` 命令（64959 条）对缺失台账 → 11 枚缺失包有原始命令 → **当晚全部定性**：KD 链 4 枚逐位复产（见上）；CB-combo-v2 阻断（era 冒烟闸）；**EQ-E9-A1/S5-P9 阻断（新类别：非在册教师依赖）**——真配方出土自 gemini transcript（`--shapeTeachers` 十一形套件+groups=4000/lr 0.0007，"最早命令"≠"最终命令"），但教师件 BASE-U1-2L/DEF-s15-band6 零 git 历史、零台账、零盘 ⇒ **不在册教师 = 永久不可复产类**；UNIFIED-U1/U4+OBS6D3 阻断（上游 V3S2-MB/U2.snap0/OBS6A4.seg1000 盘上无源）。**qoder 定性**：segments 是生命周期遥测、projects/*.jsonl 是别项目对话——千问从未在本仓跑训练，0 命中是真答案。
+- **复产学新账**（照 RECIPE-BOOK 体例）：era 选取不能只看 lineage ts——KD-K2-l 的 ts 早于 `--teacher` 旗标存在 ⇒ era 按"旗标何时进工具"选；台账路径 ≠ 原始命令落盘路径（KD-K2 台账在 docs/artifacts/night-adapt/、原命令写 scratch/night-adapt2/）⇒ 恢复以台账路径为准。
 - **当晚已照单复产 4 枚（KD 链整链逐位命中）**：
   - **KD-V7** `61164b09cac44d2d`（era 4ea71a74，上游 scratch/ga-arms/L5-D4a-s13.js 在盘，一发即中）
   - **KDFULL2** `1529c10b509c9de8`（era 8ce59307，v1 步数变体未中、v2 steps=3000 命中——**留出 78.7% 与该 commit 自述互证**；两变体都在 recipe-index 里，取 earliest 不灵就试下一个）

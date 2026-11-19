@@ -53,7 +53,7 @@ node tools/anchor-recover.mjs --wids=ID=wid,... --sources=D:/x,D:/y --do   # 手
 node tools/recipe-index.mjs            # 四 harness 全量挖 --out= 命令 → scratch/session-mined/recipe-index.tsv
 ```
 
-把"哪些缺失包**已经有**原始命令"一次挖全（11-20 实战：64910 条 → 11 枚缺失包命中，dsh 4 / gemini 4 / zcode 5；qoder 日志非纯文本，0 命中探路保留）。产出 `id ⇥ harness ⇥ command`——同一包多 harness 命中全保留。下一步照 §5 复产。注意挖掘口径只认 `--out=<产物 basename>` 对台账 id：路径别名不影响，但产物改名过的（`--out=A --tag=B`）只命中 A。
+把"哪些缺失包**已经有**原始命令"一次挖全（11-20 实战：64959 条 → 11 枚缺失包命中，dsh 4 / gemini 4 / zcode 5；**qoder 已定性**：segments 是生命周期遥测、projects/*.jsonl 是别项目对话——千问从未在本仓跑训练，0 命中是真答案）。产出 `id ⇥ harness ⇥ command`——同一包多 harness 命中全保留。下一步照 §6 复产。注意挖掘口径只认 `--out=<产物 basename>` 对台账 id：路径别名不影响，但产物改名过的（`--out=A --tag=B`）只命中 A；**"最早命令"≠"最终命令"**（EQ-E9-A1 先例：首试被弃，真配方带 `--shapeTeachers` 十一形套件——按产物落盘时刻附近的输出行回找真命令）。**11 枚可试枚 11-20 夜已全部闭环**：KD 链 4 枚逐位复产，CB-combo（era 冒烟闸）、EQ×2（教师件 BASE-U1-2L/DEF-s15-band6 零 git 零台账=非在册教师永久阻断）、UNIFIED×2+OBS6D3（上游 V3S2-MB/U2.snap0/OBS6A4.seg1000 盘上无源）阻断有因。
 
 ## 5. `tools/pool-xray.mjs` —— 池 X 光（分带维护量具）
 

@@ -11,7 +11,7 @@
  *
  * 产出 TSV 列：id \t harness \t command（同一包多 harness 命中全保留；同 harness 内按前 120 字符去重）。
  * 已知边界：
- *   - qoder 日志不是纯文本（0 命中，探路模式保留——找到其会话格式后补解析器）。
+ *   - qoder 已定性（11-20）：segments/*.jsonl 是生命周期遥测、projects/*.jsonl 全是别项目对话——千问从未在本仓跑训练，0 命中是真答案，非解析缺口。
  *   - 命令里的产物名用 basename 匹配台账 id（.bak/.js 后缀剥掉）；路径别名（scratch/arms vs docs/artifacts）不影响。
  *   - 复产纪律照 docs/RECOVERY-TOOLKIT.md §5：era worktree + wid 试金，别拿重构命令硬试。
  */
