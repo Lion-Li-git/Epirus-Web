@@ -105,7 +105,7 @@ K4	docs/artifacts/e234-out/K4.js	missing
 K5	docs/artifacts/e68-out/V1-71.bak	sha-diff-wid-same	11b1fc4a5bc8630ee0b59f89efaae1662bd3ab6a9a2c97279ab6eb86981e5f16
 K6	docs/artifacts/e70-out/D05-71.bak	sha-diff-wid-same	df28597080bc9e4765865a16bb9b5f06231a0ee8e3922447a34c1bcc275ae59c
 L02-31	docs/artifacts/e71-out/L02-31.bak	ok	
-L02-71	docs/artifacts/e71-out/L02-71.bak	missing	
+L02-71	docs/artifacts/e71-out/L02-71.bak	ok	
 L05-71	docs/artifacts/e71-out/L05-71.bak	sha-diff-wid-same	1ede2c0b693f8fee5aaa4b4ae80f6dfb41548a002672c0dcd760cfacd2488efd
 L111	docs/artifacts/eval-out/win-L111.bak	missing	
 L151	docs/artifacts/eval-out/win-L151.bak	missing	
@@ -115,9 +115,9 @@ Lctl	docs/artifacts/eval-out/win-Lctl.bak	sha-diff-wid-same	48bf44c327937f777fa3
 Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	ok	
 long-33	docs/artifacts/long-33.bak	ok	
 Lspend	docs/artifacts/eval-out/win-Lspend.bak	ok	
-M05-111	docs/artifacts/e73-out/M05-111.bak	missing	
-M05-151	docs/artifacts/e73-out/M05-151.bak	missing	
-M05-191	docs/artifacts/e73-out/M05-191.bak	missing	
+M05-111	docs/artifacts/e73-out/M05-111.bak	ok	
+M05-151	docs/artifacts/e73-out/M05-151.bak	ok	
+M05-191	docs/artifacts/e73-out/M05-191.bak	ok	
 M05-231	docs/artifacts/e73-out/M05-231.bak	ok	
 M05C02-111	docs/artifacts/e73-out/M05C02-111.bak	sha-diff-wid-same	5e13b50f3ea5a940e068f393ffa7f722b74ee48bcafa84fee3e248ccf81c0a3d
 M05C02-151	docs/artifacts/e73-out/M05C02-151.bak	sha-diff-wid-same	82f425c2bb8329854a06887d268abee0ab471369335e34cfb372e36f5d1c79fb
@@ -174,7 +174,7 @@ r61fix-82	docs/artifacts/r61fix-82.bak	missing
 r61fix-91	docs/artifacts/r61fix-91.bak	missing	
 r61fix-92	docs/artifacts/r61fix-92.bak	ok	
 r61fix-93	docs/artifacts/r61fix-93.bak	missing	
-RG1-31	docs/artifacts/e127-out/RG1-31.bak	missing	
+RG1-31	docs/artifacts/e127-out/RG1-31.bak	ok	
 RG1-71	docs/artifacts/e127-out/RG1-71.bak	missing	
 rwd0-31	docs/artifacts/rwd0-31.bak	missing	
 rwd0-32	docs/artifacts/rwd0-32.bak	missing	
