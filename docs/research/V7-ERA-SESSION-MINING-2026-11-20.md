@@ -76,4 +76,15 @@
 
 **下一班打法**：① 每族先找**幸存兄弟**的 META（server 时代包也有 ecoEffective/fightEffective/opps 自录账）⇒ 得到该族**配置模板**；② 步进值序列从 era CHANGELOG（更早 commit）/服务器日志/RESEARCH-LOG 考古；③ CLI replay（ECON/FIGHT env 映射同 registry 16 列名）+ era worktree + wid 试金——**与 K2 批同一条管线，只差配方来源**。
 
-**本班挖矿脚本状态**：qoder projects + dsh Epirus 已榨完（404+970 条）；qoder logs/sessions 段 99 件已榨；dsh-self/claude_back 两项目未榨完（脚本被杀——12MB 级会话文件全量读取太慢，重启时改流式/限量）。
+**本班挖矿脚本状态**：qoder projects + dsh Epirus 已榨完（404+970 条）；qoder logs/sessions 段 99 件已榨；dsh-self/claude_back 已榨（98 条，无 B 家族正主线索）。
+
+## 八、server 系（C1/C2/C3/B1/B2/A + d13d3c85 家 492+380 枚）的**根阻断判定**（03:4x · 重要负结论）
+
+四路探查全部到顶：
+1. **幸存者 META 自带配置** ✓（ecoEffective/fightEffective/opps 全录）——配置模板可得，v7l2c-101/91 双幸存者逐字同配置证实「同变体=一套配置×多 seed」；
+2. **era checkpoint 不在 git**：33b963ff 的 `js/bundled-champion-3p.js` wid=`b561e0ee` ≠ v7l2c 父 `d13d3c85`——server 的 checkpoint 是**运行时状态**（16:40 时被载入过 SLOT-e379c62c），git 里没有；
+3. **祖先包本身缺失且不可再生**：SLOT-e379c62c（d13d3c85，09-12 06:15）= **pre-v1.5.18 未播种 server 时代产物**（era 代码自注「seed/fresh/hotstartFrom 都记进了 meta，产物却永远不可复现」）——删了就是没了；
+4. **GitHub Release v1.5.0 冠军档案**（epirus-champion-archive-20260912.zip，103 件 v1.3/1.4 时代冠军）wid 扫描对 605 缺失**零命中**。
+
+**结论**：server 时代（09-12~09-21）的 492+380 枚缺失包，其热启动根链全部指向已丢的未播种时代祖先 ⇒ **逐位复现在数学上不可达**（除非用户提供更早的盘上备份/云档）。C 系 492 枚的父权重在盘数 = **0**（链式复刻也不可行）。
+**判定依据已写死**：era train-server.mjs :246-251（v1.5.18 播种修复注记）+ SLOT-e379c62c 台账 missing + archive 零命中。下一班**不要**再往 server 回放路线上花算力——除非用户新提供 09-12~09-18 的盘上备份。

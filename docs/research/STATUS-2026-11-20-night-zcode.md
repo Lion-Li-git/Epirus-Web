@@ -42,7 +42,9 @@
 
 **用户令追加（01:2x）**：① 千问 v7 期训练会话重挖（此前"0 命中"结论错——v7 用 train-3p/EPIRUS_* 形态，不是重构后形态）② v7 图上配方直接复刻。**复刻路线实验定案**：主仓 `--mode=v7` 恢复版**不能**逐位复现 era 包——v7 训练沙箱消费**整树 js/***，era 包必须 **era 整树** ⇒ 方法论 §151 立账。**主仓管线修理落地（2b85f78c）**：train.mjs `--mode=v7 --era=<commit>` 委托层（自动建/复用 era worktree、母本同步、产物路径转主仓），烟测 Q-s47 一发命中。
 
-**v7 复刻日总账（02:3x）**：**48 枚逐位复现落仓**——Q-s33/38/51（era 树）‖ K2 家族 **44/44 批量全中**（P/T/U/V/plainAnchor 纯续训 21+G/S/H guardSpam 13+snipePool/SP/R snipeSpam+IMIT 8+snipeNoPool 2+K-s63 1；配方从幸存者 band META 的 recipe.env 出土，k2-batch.mjs 主仓委托并发 6，36 分钟）‖ Lspend（dsh 原文配方，era=94cfc7e7 econ 族 5 键接线 commit）‖ 外加 Q-s47 本尊委托验证。台账 **missing 662 → 605**。详见 [V7-ERA-SESSION-MINING-2026-11-20.md](V7-ERA-SESSION-MINING-2026-11-20.md)。**待挖**：B 家族正主会话（10-02 15:5x，不在 dsh Epirus 目录）‖ d13d3c85 家 380 枚（2P 线 train-best 形态）。
+**v7 复刻日总账（02:3x）**：**52 枚逐位复现落仓**——Q-s33/38/51（era 树）‖ K2 家族 **44/44 批量全中**（P/T/U/V/plainAnchor 纯续训 21+G/S/H guardSpam 13+snipePool/SP/R snipeSpam+IMIT 8+snipeNoPool 2+K-s63 1；配方从幸存者 band META 的 recipe.env 出土，k2-batch.mjs 主仓委托并发 6，36 分钟）‖ Lspend（dsh 原文配方，era=94cfc7e7 econ 族 5 键接线 commit）‖ 外加 Q-s47 本尊委托验证。台账 **missing 662 → 605**。**K2 家族 59 枚全清归位**。详见 [V7-ERA-SESSION-MINING-2026-11-20.md](V7-ERA-SESSION-MINING-2026-11-20.md)。
+
+**famLabel 索引（用户点名）**：registry fam_label=家族级配方账 ⇒ 剩余 605 枚的家族分布与考古工作清单已落 V7-ERA 文档 §七。**server 系根阻断判定（§八，重要负结论）**：C1/C2/C3/B1/B2/A+d13d3c85 家（492+380 枚）的热启动根链指向**已删的 pre-v1.5.18 未播种时代祖先**（SLOT-e379c62c，era 代码自注「产物永远不可复现」）⇒ 逐位复现数学上不可达（era checkpoint 不在 git、祖先四路寻获零命中、C 系父权重在盘数=0）——下一班别再往 server 回放花算力，除非用户提供更早备份。剩余可挖：B 家族正主会话（47 枚）‖ def/v7bead 等小族配方。
 
 **E 系终局判定**：E1（EQ-S4-E9 锚 + 0.30 份额）仍是 DS-P0 路线的入池代表——剂量曲线 0.25/0.30/0.35 两侧都塌且极差爆炸（10.6→28.4→53.2），0.30 是窄甜点；MX5-GD-T2STR 锚 = 更高上限更偏科（med −25.1 但固有极差 24.5，最坏格 −34.9 ≈ E1 的 −34.5），按"进图只收代表性包"留 scratch，池里若要"高上限偏科带"再提。E4/E6 同 wid 只算一枚。
 
