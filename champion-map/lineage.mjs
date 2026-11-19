@@ -20,7 +20,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { braceObj, parseMeta, widOf, packArr, widOfArr } from './pack-id.mjs';
 import { sandbox } from '../tools/audit-lib.mjs';   /* §E464 只为拿 embedLegacy：同一枚包的两个身份要按同一条嵌入规则算，不留第二份 */   // §E328：身份三件套搬进单一来源（函数体逐字搬，本文件行为不变）
-import { join, dirname, isAbsolute } from 'node:path';   /* §E591：`isAbsolute` 必须有 —— 绝对路径拼进仓根就是"文件在、读不到"（规矩 124） */
+import { join, dirname, isAbsolute, resolve } from 'node:path';   /* §E591：`isAbsolute` 必须有 —— 绝对路径拼进仓根就是"文件在、读不到"（规矩 124） */
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -935,6 +935,13 @@ for (const r of ROWS) {
     if (!g3Fams.has(d.n)) g3Fams.set(d.n, { n: d.n, label: lStr, count: 0 });
     g3Fams.get(d.n).count++;
   }
+  /* 2026-11-19: 家族号/标签的唯一真源是 registry -- 不止 2.0/G3 节点, 1.8 节点也以 registry 为准.
+   *   曾经只有 G3SET 走 registry, SOUP-* 这类 1.8 融合粒被聚类回旧族号(fam=6)
+   *   => viewer.mjs 烘图撞 家族 6 冲突 famLabel 并 exit 2, D234 10c 红.
+   *   这里在聚类结果之上做 registry 覆盖; registry 没有的(空 fam/famLabel)才保留聚类. */
+  if (regr && regr.fam !== '' && regr.famLabel) {
+    d = { n: Number(regr.fam), label: regr.famLabel };
+  }
   if (!d) continue;
   const c = r.cfg;
   const useG3 = !!(G3SET[r.id] && g3r);
@@ -948,6 +955,14 @@ for (const r of ROWS) {
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || '',
     r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t'));
 }
+/* 2026-11-19 落盘前守卫：registry 有 fam/famLabel 的行，落盘值必须与它逐字一致。 */
+for (let i = 1; i < out.length; i++) {
+  const c = out[i].split('\t'), reg = REGROW[c[0]];
+  if (reg && reg.fam !== '' && reg.famLabel && (c[1] !== String(reg.fam) || c[2] !== reg.famLabel)) {
+    console.error('lineage 落盘值与 registry 不一致: ' + c[0] + ' fam=' + c[1] + '/' + reg.fam + ' label vs ' + reg.famLabel);
+    process.exit(2);
+  }
+}
 /* v1.7.10：落盘行尾跟着**盘上那一份**走，不许写死 '\n'。
  * 为什么（DS 10-14 实测）：本仓工作树是 CRLF（`core.autocrlf=true`），而这里原先写死 `'\n'` ⇒
  *   跑一遍带 D233 ⑤ 腿的门之后，`lineage.tsv` 变成 795 行纯 LF（190413 → 189618 字节），
@@ -956,7 +971,8 @@ for (const r of ROWS) {
  *   而且"工作区干净 ⇒ 按 meta 跑一遍仓库纪律"这条路在整轮之后就不成立了。
  * 同款写法（不是我新发明的）：`champion-map/attach-sc.mjs` 的 `const eol = raw.indexOf('\r\n') >= 0 ? '\r\n' : '\n';`
  *   与 `champion-map/fold-coords.mjs` 的 `EOL`。**新写的落盘器请一律照这个来。** */
-const __linPath = join(HERE, 'data/page/lineage.tsv');
+const __outArg = (process.argv.find((a) => a.indexOf('--out=') === 0) || '').slice(6);
+const __linPath = __outArg ? resolve(__outArg) : join(HERE, 'data/page/lineage.tsv');
 const __linEol = (existsSync(__linPath) && readFileSync(__linPath, 'utf8').indexOf('\r\n') >= 0) ? '\r\n' : '\n';
 writeFileSync(__linPath, out.join(__linEol) + __linEol);
 console.log('已写 lineage.tsv（' + (out.length - 1) + ' 行 ‖ ' + defs.length + ' 个家族 ‖ 双父的融合粒 ' +

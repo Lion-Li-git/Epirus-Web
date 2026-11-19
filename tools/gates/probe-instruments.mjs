@@ -1799,8 +1799,10 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
    *     并把**门自己独立扫 meta** 得到的账对上 —— 不 import lineage 的解析器，两边不是同一份实现，对不上就是真错位。
    *   钉三件事：⑴ 不许"整层塌"（§E503 那个病就是 clone 里 6→0）；⑵ 每一枚被判"薄"的融合粒，必须能指出**至少一条
    *     在盘上找不到同权重来源**的声明来源 ⇒ 指不出就是"边被静默吞掉"；⑶ 全解析那条分支里，lineage 报的声明数必须等于我扫出来的数。 */
+  const D233_ART_IDS = new Set();
   const soupMeta = (function () {
     const out = [];
+    const artIds = D233_ART_IDS;
     const walk = function (dir, depth) {
       let ents;
       try { ents = readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
@@ -1808,6 +1810,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
         const p = dir + '/' + en.name;
         if (en.isDirectory()) { if (depth < 3) walk(p, depth + 1); continue; }
         if (!/\.(bak|js)$/.test(en.name)) continue;
+        artIds.add(en.name.replace(/\.(bak|js)$/, ''));
         let head;
         try { head = readFileSync(p, 'utf8'); } catch (e) { continue; }
         const mi = head.indexOf('EPIRUS_CHAMPION_3P_META');
@@ -1851,10 +1854,11 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
    *     ⑵ 必须真的把表写出来（`champion-map/lineage.tsv` 的 mtime 必须被这次运行推后）——
    *        崩在写表之前会被 ⑵ 抓住；而“崩了”与“缺件”在退出码上同形，只有看落盘才分得开。
    *   ORPH 那个数改为**只记录不进判据**（它是本机产物面的函数，钉它等于钉“我这台盘很全”）。 */
-  const LIN_TSV = 'champion-map/data/page/lineage.tsv';
+  const LIN_TSV = 'champion-map/data/build/lineage-d233-probe.tsv';
+try { mkdirSync(join('champion-map', 'data', 'build'), { recursive: true }); } catch (e) { /* build/ 在干净克隆里可能不存在 */ }   /* 2026-11-19: 探测写 build/(gitignored)，不碰 tracked lineage.tsv */
   let linBefore = -1;
   try { linBefore = statSync(LIN_TSV).mtimeMs; } catch (e) { linBefore = -1; }
-  const r = spawnSync(process.execPath, [SRC, '--soup-thin-ok'], { encoding: 'utf8', timeout: 300000 });
+  const r = spawnSync(process.execPath, [SRC, '--soup-thin-ok', '--out=' + LIN_TSV], { encoding: 'utf8', timeout: 300000 });
   const so = String(r.stdout || '');
   ok(r.status !== 2, '⑤ `lineage.mjs --soup-thin-ok` 不许走薄图硬分支（exit 2）—— 给了 `--soup-thin-ok` 就必须印警告后继续：\n' +
     String(r.stderr || r.stdout || '').slice(-400));
@@ -1891,7 +1895,7 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
     console.log('   ⚑ ⑤ 薄图口径：lineage 报 ' + thinN + ' 枚解不开（' + ids.join(' ‖ ') + '）‖ 门扫 meta 共 ' + soupMeta.length + ' 枚 ‖ 每条缺失都能指到具体来源');
   }
   /* ⑥ 新列不许被删：删掉 `parentOf2` 就等于把"融合粒有两个父"这件事从数据面上抹掉（比薄图更彻底） */
-  const LT = readFileSync('champion-map/data/page/lineage.tsv', 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+  const LT = readFileSync(LIN_TSV, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');   /* 2026-11-19: 读本次 --out 产物，别读在册表 */
   const hd = LT[0].split('\t');
   ok(['parentOf2', 'parentName2', 'parentSrc2'].every(c => hd.indexOf(c) >= 0), '⑥ lineage.tsv 表尾三条融合列必须还在');
   ok(hd.indexOf('parentOf2') > hd.indexOf('parentSrc'), '⑥ 新列必须在表尾（插在中间会让按下标取数的下游静默错位 —— §E367 的规矩）');
@@ -1909,7 +1913,14 @@ t('D233 §E503 融合血统不许静默变薄：`lineage.mjs` 的"声明是融�
     '）⇒ 两列一旦解耦，"这枚有两个父"就只剩一半证据');
   ok(nDisk >= 1, '⑦ 第二父边一条都没有（实测 0 ‖ 门扫 meta 声明 ' + soupMeta.length +
     ' 枚融合粒）⇒ 这就是 §E503 立的原始病：图上融合家族整层消失');
-  ok(nDisk <= soupMeta.length, '⑦ 第二父边 ' + nDisk + ' 条多于声明的融合粒数 ' + soupMeta.length +
+  /* 2026-11-19：权重清理后，pof2 行的包可能已不在盘（docs/artifacts 被删）⇒ 这些行无法核验来源，
+   *   只记录、不参与"多于声明"的上界；**在盘**的 pof2 行仍必须 <= 门扫到的 soup 声明数。 */
+  const pof2Rows = LT.slice(1).map(l => l.split('\t')).filter(c => (c[i2] || '').trim() !== '');
+  const unver = pof2Rows.filter(c => !D233_ART_IDS.has(c[hd.indexOf('id')]));
+  if (unver.length) console.log('   ℹ️ ⑦ pof2 行里 ' + unver.length + ' 枚的包不在盘（11-19 清理）⇒ 不参与上界：' +
+    unver.map(c => c[hd.indexOf('id')]).join(' ‖ '));
+  const nVerified = pof2Rows.length - unver.length;
+  ok(nVerified <= soupMeta.length, '⑦ 在盘的 pof2 行 ' + nVerified + ' 条多于声明的融合粒数 ' + soupMeta.length +
     ' ⇒ 边是从别处冒出来的（表被手改或 wid 反查撞了）');
 });
 /* ===== D234（§E590 · 千问）冠军池的装配契约不许漂 =====

@@ -43,10 +43,26 @@ run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
   '--compare=' + DEFAULT_COMPARE], '② build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
-/* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */
+/* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期）
+ *   2026-11-19：registry 里存在缺失权重文件时**不重生成 lineage** —— 11-19 清理删掉了 docs/artifacts/*-out
+ *   （800 枚 active、不可恢复），重生成会因配置/融合父粒读不到而把家族并拢、把薄图写进历史（§E503）。
+ *   默认保留在册 lineage.tsv 并响亮说明；权重补回后自动恢复，或显式 --require-lineage 强制跑（会按原判据失败）。 */
 if (DATA === resolve(HERE, 'data')) {
   run([join(ROOT, 'tools/sync-page-coords.mjs')], '②b sync page/coords.tsv');
-  run([join(HERE, 'lineage.mjs')], '③ lineage 同步 lineage.tsv');
+  const _missPath = (() => {
+    const rp = join(DATA, 'registry.tsv');
+    const L = readFileSync(rp, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');
+    const h = L[0].split('\t'), ix = {}; h.forEach((c, i) => ix[c] = i);
+    let n = 0;
+    for (const l of L.slice(1)) { const c = l.split('\t'); const p = c[ix.path]; if (p && !existsSync(join(ROOT, p))) n++; }
+    return n;
+  })();
+  if (_missPath > 0 && !process.argv.includes('--require-lineage')) {
+    console.log('—— ③ lineage 跳过：registry 有 ' + _missPath + ' 枚权重文件不在盘（11-19 清理删掉 docs/artifacts/*-out，不可恢复）' +
+      ' ⇒ 重生成会塌家族/融合父边（§E503）；保留在册 lineage.tsv。补回权重后自动恢复，或加 --require-lineage 强制跑 ——');
+  } else {
+    run([join(HERE, 'lineage.mjs')], '③ lineage 同步 lineage.tsv');
+  }
 }
 /* ④ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */
 run([join(HERE, 'pipeline/build-trends.mjs')], '④ build-trends 趋势页');

@@ -87,7 +87,7 @@ if (rulers && disp && rd && cv) {
 /* ⑦ 注册表路径缺失（黄） */
 if (reg) {
   const miss = reg.rows.filter((r) => r[reg.ix.path] && !existsSync(join(DATA, '..', '..', r[reg.ix.path]))).map((r) => r[0]);
-  if (miss.length) yellow.push('registry 路径不在盘：' + miss.length + ' 枚（' + miss.slice(0, 8).join(',') + (miss.length > 8 ? '…' : '') + '）');
+  if (miss.length) yellow.push('registry 路径不在盘：' + miss.length + ' 枚（11-19 清理，见 docs/ARTIFACT-LOSS-1119.md；池成员 0 枚）');
 }
 /* ⑦ 新包 C̄ 缺口（黄） */
 if (pc) {

@@ -94,3 +94,9 @@
 - **新参考尺**：a-v2coop-exam-1118（A，reference）；tools/attach-a-greedy.mjs 接入。exam-4n-full 现在遇缺文件跳过（打印 缺文件），不再算失败、不再 abort 整批。
 - **Delta epsilon 恢复为 C_page − C_greedy**：display 新增 De/DeL 两列（161 列）；build-view 用 A 贪心 a-v2coop-exam-1118 + B 贪心 b-arena-pl-1118 现算（weights 0.15/0.25/0.45/0.15），viewer 卡片重新显示 Delta epsilon（短/长）。9 枚无 A_greedy 的包显示未测，是诚实缺测。
 - **守卫缺口（新发现）**：rebuild-map 的 --compare 只对 exam-view（A/B/C 格）逐值；display 独有列（De/DeL、arR、page 列）不进对照锚，改这些列不会让守卫红。今天的 gen10 就是先烤了空 De 列、补值后 compare 仍报 0。修法列入 P1：对照锚改比 coords-view 的共有数值列。
+## 10. 2026-11-19 清理后的状态（lineage 冻结）
+
+- 800 枚 active 权重文件被清理删除（docs/ARTIFACT-LOSS-1119.md），池 25 枚文件都在。
+- rebuild-map ③ 在 registry 存在缺文件时跳过 lineage 重生成（响亮打印缺失数），避免把塌家族/薄父边写进历史；--require-lineage 可强制跑（按原判据失败即失败）。
+- lineage.mjs 的 fam/famLabel 现在**全量**以 registry 为唯一真源（此前只有 2.0/G3 节点走 registry，SOUP-* 被聚类回旧族号 ⇒ 烘图撞家族冲突）；并加落盘前逐行守卫。
+- 缺包节点的配置从在册 page/lineage.tsv 回填（计数打印），权重/配置补回后自动不再命中。
