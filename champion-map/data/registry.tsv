@@ -19,8 +19,8 @@ blk1t00-s71	docs/artifacts/kept/e124-out__blk1t00-s71.bak	1.8	9	现代基线（�
 blk1t40-s31	docs/artifacts/kept/e124-out__blk1t40-s31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:15:56	dd777694443b608c473bd6fa625abe74409612677ed5fa3df718c41d2b2bdb0a	active														1200		
 blk1t40-s71	docs/artifacts/kept/e124-out__blk1t40-s71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-28T08:13:55	cbc2eb420f5a0ec9adb1d8ed545959582d21b15f3c4370c316cfc443c4fef8ef	active														1200		
 cal-ctl	docs/artifacts/e59-out/cal-ctl.js	1.8	7	旧生产对照（09-25～09-27：e35/e39/seed80/seed81/cal-ctl/E51） ‖ 7 枚 ‖ 09-25→09-27		2026-09-27T06:19:34	eca8118dd036ba4c1982349e8a4e6660e41486983f9a01dce4efaa9273efadb2	active														50		
-D005-31	docs/artifacts/e70-out/D005-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:09	5a033065c0e8e2e275d55b3948c2df7c06653a8efa36af11eafe27703a1289cf	active														1200		
-D005-71	docs/artifacts/e70-out/D005-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:15	ce32b60b31e5f7b0ab9fc3da2de877ad5c772d7351f4a7ef621b7abc57e36148	active														1200		
+D005-31	docs/artifacts/e70-out/D005-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:09	99e0f0bc3c8ff38328fdc32ba7872f186abaee875bd92870001491636b2d4324	active														1200		
+D005-71	docs/artifacts/e70-out/D005-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:53:15	be918cc8867cfce8ead8d234c9e31165d40d2f3168b159eac5fa56dc00321bb1	active														1200		
 D02-71	docs/artifacts/e70-out/D02-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:52:37	a7d5430bf6553a1cb9ff0e78b1b8e5ace57e25f04a6f88f5d064a116cf3684e7	active														1200		
 D05-31	docs/artifacts/e70-out/D05-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:58:42	b514cffb1acc02c9e11ac5a05526bd9fb7c487c5ac2e69bcc38078aa7fa8d38e	active														1200		
 D1a	docs/artifacts/e68-out/V1-31.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:34:59	b7302721c819cb8cfe0e16de921d050b05a8b7c1cf2af45888e01e9bc66141fb	active														1200		
@@ -134,9 +134,9 @@ N5L-05	docs/artifacts/kept/e120-out__N5L-05.bak	1.8	9	现代基线（代数 400�
 N5L-15	docs/artifacts/e106-out/N5L-15.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:37:53	862db37cdcbde36b41f5215712a64210b555972814b1eed519cc4c826d2f21d7	active														1200		
 N5L-30	docs/artifacts/e106-out/N5L-30.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T22:42:39	c72f3dea34c49db55797aba983fa5e2c2e5f798a1bbb8223a5f32371ec29a287	active														1200		
 NC-191	docs/artifacts/e75-out/NC-191.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:49	c62e96a1f011b60197854a3c4bbe0e0bf202ca414b51eca52d86db93edd31d43	active														1200		
-NC-231	docs/artifacts/e75-out/NC-231.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:38	ceea1fa60ea236720439d139dc91aa65a2f53788c02881e56878b8607fa1fd37	active														1200		
-NC-301	docs/artifacts/e75-out/NC-301.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:02	f8e7e548a6fc5277d381518b5ed52b3a297abbb0565eba7eedc066e71bc92f93	active														1200		
-NC-341	docs/artifacts/e75-out/NC-341.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:05:15	8c326257a0bda561c20b064505c433d9bceae9c86e414bece753920d1f51e4f4	active														1200		
+NC-231	docs/artifacts/e75-out/NC-231.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:38	e3b0c08b0a8c91b61c6182837ba415a27ab4968f88a4afdf303505095c3875e0	active														1200		
+NC-301	docs/artifacts/e75-out/NC-301.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:02	76e467a958934af45b92d4a6a684373d7d1ff1038af439fd2b68d64745e8025a	active														1200		
+NC-341	docs/artifacts/e75-out/NC-341.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:05:15	471c3a5e568db05613526cbb8d7ead87a73ea5bccd686765fbfdcfe303d8c4be	active														1200		
 NCV-71	docs/artifacts/e75-out/NCV-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T19:04:44	d9b9ceba4b2d64cd6c6cba84070cbc03fd1f517889e26aeacec2600705848f20	active														1200		
 NOL24-71	docs/artifacts/kept/e68-out__V2-71.bak	1.8	9	现代基线（代数 400～1200） ‖ 110 枚 ‖ 09-27→10-17		2026-09-27T17:29:38	72e070c96a3ee3b05f57deb58ab34191062a649f888f99b63eb856c47135f8c0	active														1200		
 P-s22	docs/artifacts/e504-out/P-s22.js	1.8	11	臂线·env 实验（COUNTER_OPPS / 纯续训 + T8/snipe 小臂 + E1/E2 研究臂） ‖ 51 枚 ‖ 10-08→10-23		2026-10-08T16:15:59	20246e663015796821600b1a27047c2acb429b9846a0d59eb90f49283153a797	active														400		
