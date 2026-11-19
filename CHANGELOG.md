@@ -4,6 +4,13 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.9 — 11-19 晚（人席复测：day1119-cannon-pg 退役，RING-MINIT-CONT 点名保留 ‖ 池 25 → 24）
+
+**这一版是什么**：补测 7 枚 seatKill=-1 成员的人席读数后，按用户裁定执行 B 方案：day1119-cannon-pg（seatKill=4、arenaB -82pt）退役；RING-MINIT-CONT（hard 带 ring/miniT 唯一载体）点名保留并记录 seatKill=2（band provisional）。池 25 → **24 枚**（hard 11 / soft 13）。
+
+- 人席探针：7 枚 × 200 局 × multi/long × seed 90210/90211；报告 docs/research/SEAT-2026-11-19-refresh.md。
+- 图/包：rebuild-map 100 PASS；bundle 7318KB；版本 v2.1.9；?v= 刷 p1119b。
+- 说明：全池 refresh 会动 10 个 seatKill 值，本版只执行已裁定的两枚，其余保持旧值（provisional）。
 ## v2.1.8 — 11-19 午（`skill-report` 行内引爆率与电/爆珠使用率 ‖ 池 25 枚 `day1119-cannon-pg` 入 `soft` 带）
 
 **这一版是什么**：在 `skill-report` 去掉卡片顶部重复横幅，把**真实引爆率**与**蓄能电/爆珠使用率**内联进表格行；同时把全项 0 阻断通过体检的过载炮宽谱候选 `day1119-cannon-pg` 走完整管道入池 `soft` 带（池 24 → **25 枚**，hard 11 / soft 14）。
