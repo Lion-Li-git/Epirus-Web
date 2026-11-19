@@ -2,19 +2,19 @@
 
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）实现的网页版：2–8 人对局 + 可选的自训练冠军 AI。
 
-> **当前版本：v2.1.5** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
+> **当前版本：v2.1.6** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；版本历史与实验记录见 [`CHANGELOG.md`](CHANGELOG.md) 与 `docs/research/`。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。
-- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（发布白名单 `index.html ‖ css/ ‖ js/ ‖ champion-map/`；`docs/` `tools/` `training/` 不发布）。在线只能对局与看冠军演化图；**「训练」需要另起本机服务**。
-- **训练部分可选**：通过 `training/` 脚本或只用 Node 内置模块（`http` / `worker_threads` / `vm`）的本机服务训练冠军 AI。
+- **在线版**：<https://lion-li-git.github.io/Epirus-Web/>（发布白名单 `index.html ‖ css/ ‖ js/ ‖ champion-map/`；`docs/` `tools/` `training/` 不发布）。在线只能对局与看冠军演化图；**「训练」需要另起本机 2.0 服务**。
+- **训练部分可选**：通过统一 CLI 入口 `training/train.mjs` 或只用 Node 内置模块（`http` / `fs` / `child_process`）的本机 2.0 服务训练 `2.0 / obs6` 冠军 AI。
 - 规则的玩家向说明在对局页第三个 tab「📖 规则说明」，由 `js/ui/rules-panel.js` 现读引擎常量渲染。
 
 ## 快速开始
 
 1. 双击 `index.html`。默认「**3 人 · 3 血** + 普通难度」直接开打：点技能出招，所有席位同时行动，回合日志逐条结算；技能按钮按当前资源实时置灰（ジ/珠不足或条件不满足不可点）。
-2. 想自训 AI：走 `training/proto2/pg-train.mjs`（2.0 塑形后训练）或 `training/proto2/supfit-gd.mjs`（2.0 教师蒸馏）；GA 路要带 `EPIRUS_ARCH2`（详见 [`training/README.md`](training/README.md)）。页内「训练场」tab 连接的 `v7` 本机服务是冻结旧线。
-3. 冠军策略可「导出 JSON」分享，也可「导入」别人的冠军包。
+2. 想自训 2.0 AI：通过 `node training/train.mjs --mode=pg|supfit|fuse|selftest`（详见 [`training/README.md`](training/README.md)）；或在「🧪 训练场」tab 连接 `training/start-train-server.cmd` 发起本地 `2.0 / obs6` 训练并实时查看曲线。
+3. 冠军策略可「导出 JSON」分享，也可在对局区或训练场「导入」`.bak`/JSON 冠军包。
 
 > 本机包（`localStorage['epirus.champion.v3']` = 2P ‖ `['epirus.champion3p']` = 多人）**优先于冠军池**：当前桌对应的槽有手工载入的包时，池整桌不生效（2P 槽空但有多人本机包时也优先，标签会写「3P 槽回退」）。内置 2P/3P 包只作池失效时的回退；想打「每席随机抽一枚冠军」的桌子，先清空本机包。
 
@@ -31,9 +31,9 @@
 
 ### 训练场
 
-- 对抗自对战进化（无第三方 AI 框架）：候选策略群每代与「当前冠军 + 脚本基准群」对战打分，基准定义在 `js/train/evo.js` 的 `buildOpps` 与 `training/server/opp-pool.mjs` 的 `OPP_SPECS`。
-- 精英保留 + 段感知变异/交叉繁殖；结合胜负、换血、拖时长惩罚与出招多样性（熵）综合评估，并通过独立重测门限择优防回归。
-- 运行在 Node `worker_threads` 多核并行池，页内训练场支持 SSE 实时进度、多种子/多轮谱系展示及标准长表 CSV 导出。
+- **唯一产线 = 2.0 (`v:92 / obs6 / S1o`)**：统一由 `training/train.mjs` 调度 `proto2/pg-train.mjs`（REINFORCE + `--shapeKey` 行为塑形 + `--klW/--klTilt` 键频锚）、`proto2/supfit-gd.mjs`（DAgger 教师蒸馏与双教师键道轮替）及 `tools/pack-fuse.mjs`（同形状融合）。
+- 浏览器「🧪 训练场」tab 对接本地 `training/server/train-server.mjs`（HTTP + SSE 实时进度与曲线绘制，支持 `pg` 与 `supfit` 双模式），完训包自动写入本机多人槽即时试打。
+- 训练历史支持标准长表 CSV 导出、本机 2P 冠军基准快速评测与跨线导入/导出。
 
 ### 规则与结算机制
 
@@ -68,13 +68,13 @@ Epirus-Web/
 │   ├─ bundled-champion.js       2 人内置单包冠军（池失效时回退）
 │   ├─ bundled-champion-3p.js    多人内置单包冠军（池失效时回退）
 │   └─ bundled-champion-pool.js  全人数统一冠军池 bundle（真源 champion-map/data/page/pool-members.tsv）
-├─ training/                     训练侧独立子仓（入口 / 服务 / 旋钮真源；产品侧零依赖）
+├─ training/                     训练侧独立子仓（统一入口 / 本地服务 / 旋钮真源；产品侧零依赖）
+│   ├─ train.mjs                   2.0 统一 CLI 总入口（--mode=pg|supfit|fuse|selftest）
 │   ├─ knobs.mjs                   旋钮单一真源生成器（--check 拦截未登记/无注解键）
 │   ├─ TRAINING-KNOBS.md           旋钮唯一配置真源手册
-│   ├─ train-3p.mjs                多人 GA（2.0 需 ARCH2；缺它 exit 5 禁默认训老网络）‖ train-best / train-fast（v7 冻结线）‖ train-selftest
-│   ├─ start-train-server.cmd      一键启动页面本地训练服务
-│   ├─ server/                     训练服务 + 并行 worker + 对手池 + 旋钮来源表
-│   └─ proto2/                     2.0 网络与训练栈（arch2 与 js/train/policy2.js 为双胞胎实现）
+│   ├─ start-train-server.cmd      一键启动页面本地 2.0 训练服务
+│   ├─ server/                     2.0 SSE 训练服务（train-server.mjs）+ 对手池/暗键守护等共用仪器
+│   └─ proto2/                     2.0 网络与训练栈（pg-train / supfit-gd / arch2；arch2 与 js/train/policy2.js 为双胞胎）
 ├─ tools/                        量具与门禁
 │   ├─ gate-all.mjs                五道门禁总入口（--auto 按 git status 选组 ‖ --np 全量认证）
 │   ├─ np-test.mjs                 门禁 runner（门体按语义族位于 tools/gates/）
@@ -86,7 +86,9 @@ Epirus-Web/
 │   └─ score13.mjs / log-behavior.mjs               多维判语与真机对局统计
 ├─ champion-map/                 冠军演化图 / 谱系图（单页自包含可视化）
 │   ├─ index.html                  ★ 产物（双击打开；由 viewer.mjs 烘焙，不许手改）
-│   ├─ viewer.mjs                  ★ 生成器与 99 项页内自检（tree / 1d / 3db / 3d / map）
+│   ├─ trends.html                 ★ A/B/C 考卷趋势独立页
+│   ├─ skill-report.html           ★ 池成员两级技能覆盖普查页（build-skill-page.mjs 烘焙）
+│   ├─ viewer.mjs                  ★ 生成器与 100 项页内自检（tree / 1d / 3db / 3d / map）
 │   ├─ rebuild-map.mjs             一键重算编译并烘焙 index.html
 │   ├─ shot.mjs                    无头 Chrome 截图与自检跑手（--hash=... --dump）
 │   ├─ data/                       数据模型真源（registry / batches / rulers / readings / projections / page/pool-members.tsv）
@@ -116,7 +118,7 @@ node tools/np-test.mjs --list-parts --json   # 列出全部门禁分区
 node tools/np-test.mjs --only=D193           # 按名称子串复跑单条门
 node tools/spec-run.mjs                      # 核心规则用例与 fuzz
 node champion-map/shot.mjs "--hash=mode=map&check=1" --dump   # 演化页自检（可换 tree/1d/3db/3d/map）
-node training/train-selftest.mjs             # 训练侧凭据自检
+node training/train.mjs --selftest             # 训练侧 2.0 栈与浏览器对齐自检（selftest2 + selftest3 + browser-parity）
 ```
 
 ⚠ `--group=` / `--part=` / `--only=` 只作局部排查，不构成整轮认证；完整校验以 `gate-all.mjs --auto` 或 `--np` 为准。
@@ -127,45 +129,40 @@ node training/train-selftest.mjs             # 训练侧凭据自检
 
 ```bash
 # ① 2.0 包的强化/塑形后训练（现役主力：行为塑形 + 键频锚 + 多节点快照）
-node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --games=6000 --shapeKey=tank:0.25 --out=scratch/arms/<臂>.bak
+node training/train.mjs --mode=pg --up=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --games=6000 --shapeKey=tank:0.25 --out=scratch/arms/<臂>.bak
 
-# ② 2.0 教师蒸馏 / DAgger（toolkit 多技能教师；pack:<v7包> = 跨线蒸馏）
-node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --teacher=toolkit --objective=cand --dagger=1 --lr=0.0004 --steps=180 --groups=3300 --out=scratch/arms/<臂>.bak
+# ② 2.0 教师蒸馏 / DAgger（toolkit 多技能教师；pack:<v7/2.0包> = 跨线或跨代蒸馏）
+node training/train.mjs --mode=supfit --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak --teacher=toolkit --objective=cand --dagger=1 --lr=0.0004 --steps=180 --groups=3300 --out=scratch/arms/<臂>.bak
 
-# ③ GA + 教师三件套（2.0 形状必须带 ARCH2；缺它 exit 5——2026-11-19 起禁止默认训老网络）
-EPIRUS_ARCH2=S1o:input=obs6,gen=3,keySplit=1 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=<obs6包> node training/train-3p.mjs 100 5 24 8
-
-# 旧版 v7 线（冻结维护：train-fast / train-best / train-server；例外臂要 EPIRUS_ALLOW_V7=1）
-node training/train-fast.mjs 500
+# ③ 同形状包权重融合（产物只当教师或复测起点）
+node training/train.mjs --mode=fuse --a=<包A> --b=<包B> --t=0.5 --out=scratch/arms/<融合>.bak
 ```
 
+- **唯一产线**：训练侧仅保留 `2.0 / obs6 / S1o` 产线；训练参数通过 CLI `--flag` 传入，`promote-champion` 家族环境变量以 [`training/TRAINING-KNOBS.md`](training/TRAINING-KNOBS.md) 为单一真源（可用 `node training/knobs.mjs --check` 校验）。
 - **真实评测口径**：`js/core/play.js` 的 `autoGame` 中各方均基于行动前状态同时决策；任何非法或买不起的动作兜底为 ジ。
-- **全部旋钮定义与缺省值**：一律以 [`training/TRAINING-KNOBS.md`](training/TRAINING-KNOBS.md) 为单一真源，可用 `node training/knobs.mjs --check` 校验新鲜度。
 
 ### 2.0 网络家族（`v:92`）
 
 | 观测面 | 特征维 | 参数量 | 聚合方式 | 当前用途 |
 |---|---:|---:|---|---|
-| `v7` | 213 | 5689 | 4 槽 + 单标量头 | 旧线单包回退、`2–5` 人页内训练服务 |
+| `v7` | 213 | 5689 | 4 槽 + 单标量头 | 旧线单包回退（导入兼容 ≤5 人，已停训） |
 | `obs3b` | 415 | 7993 | `h_self ‖ mean(对手) ‖ max(对手)` | 旧池成员（兼容保留） |
 | `obs5` | 292 | 12393 | 1 层自注意力 + PMA 4 seed | 上一代训练产线与部分池成员（置换不变、跨 `2–8` 人） |
-| `obs6` | 287 | 16411 | 逐席 111（公开 104）+ 自状态 116（S=30）；3 席池化 + 交叉注意力 + 代 3 键层分组 | **2026-11-15 起训练/入池主力**（`OBS6E9` / `OBS6P9` / `OBS6P4` 等，hard 带新成员） |
+| `obs6` | 287 | 16411 | 逐席 111（公开 104）+ 自状态 116（S=30）；3 席池化 + 交叉注意力 + 代 3 键层分组 | **2026-11-15 起唯一现役训练/入池主力**（`OBS6E9` / `OBS6P9` / `night2` 等） |
 
-浏览器推理侧 `js/train/policy2.js` 与训练侧 `training/proto2/arch2.mjs` 保持双胞胎同步，结构按段名检索；可通过 `training/proto2/browser-parity.mjs` 验证逐位 logits 对齐。
+浏览器推理侧 `js/train/policy2.js` 与训练侧 `training/proto2/arch2.mjs` 保持双胞胎同步，结构按段名检索；可通过 `node training/train.mjs --selftest` 验证逐位 logits 对齐。
 
 ### 选拔主尺（A / B / C）
 
 - **A 轴**：脚本考卷，衡量对脚本组合的稳定压制能力；
-- **B 轴**：现役冠军夹具对局，衡量对会还手的真实冠军策略的强度；
+- **B 轴**：24 锚联盟 Arena PL 对局，衡量对会还手的真实冠军策略的强度；
 - **C 轴**：`C = (A + B) / 2`，覆盖 `2P / 3P / 5P / 8P` 与 `multi / long` 双桌形。
 
 ## 当前已知限制
 
-- **页内训练服务仍接旧 `v7`**：页面「训练场」与 `training/server/train-server.mjs` 仅支持 `2–5` 人 `v7` 训练，尚未接入 `2.0 / obs6`（`2–8` 人）产线。
 - **`v7` 导入旧包限 `2–5` 人**：旧版 `v7` 策略在 `6–8` 人桌被 `V7_MAX_PLAYERS = 5` 锁定禁用，`6–8` 人局只由 `2.0` 冠军池或 `2.0` 策略装配。
 - **蓄能兜底选珠仅用于脚本或旧包**：`v7` 与 `2.0`（`keySplit=1`）网络已直接对蓄电/蓄爆两个候选分别打分选珠，`js/ui/bead-choice.js` 仅作为脚本对手或未显式指定珠种旧包的兜底。
-- **新规则指纹（v2.0.9）下的冠军池复检待完成**：核心战斗规则重构后，[pool-members.tsv](champion-map/data/page/pool-members.tsv) 的 `seatKill` 统计、反单一脚本（如 `reflectspam`）抗性及 30 卡覆盖度待按 [`docs/research/TODO-2026-11-13-repo-audit.md`](docs/research/TODO-2026-11-13-repo-audit.md) 重测收口。
-- **启发式先验与旋钮债务**：推理层 `js/train/evo.js` 仍包含若干部署先验开关（如 `BIGT_PUSH` / `DRAIN_PUSH` / `SUPPORT_PRIOR`），训练环境变量总量亦尚在向 KPI `≤ 40` 压减中。
+- **训练暗键清理持续收口**：当前训练/工具全集共有 40 个 `EPIRUS_*` 键（在用 19 ‖ 待清理暗键 21），`pg-train` 与 `supfit-gd` 已统一改走 CLI `--flag`。
 - **多把评测尺不可混减**：按档位装配量、单枚镜像探测与 `results/` 真机日志三者分母与采样对象不同，只可并排对照。
 
 ## 免责声明

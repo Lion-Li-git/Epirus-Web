@@ -18,9 +18,9 @@ import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'upstream', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'snapEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-const UP = String(arg('up', 'scratch/arms/OB3CH-s7.bak'));
+const UP = String(arg('up', arg('upstream', 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak')));
 const OBS_SPEC = String(arg('obs', '')).trim();
 const GAMES = Math.max(1000, Number(arg('games', 24000)) || 24000);
 const BATCH = Math.max(8, Number(arg('batch', 48)) || 48);
@@ -58,7 +58,7 @@ const SEAT_L2 = Math.max(0, Number(arg('seatL2', 0)) || 0);
 /* `--segEvery=N`（11-14 晚 · ZCode · 用户令"强且宽"）：每 N 局存一档快照 `<out>.seg<k*N>.bak`
  *   —— FINDING-2026-11-14-obs6-coldstart §四 自己开的方子（"更早保存 2000–5000 局多节点筛选"）：
  *   PG 后段会漂移龟缩，单终点产物不可信，多节点拿去考卷+用卡筛。0=关（旧调用逐字不变）。 */
-const SEG_EVERY = Math.max(0, Number(arg('segEvery', 0)) || 0);
+const SEG_EVERY = Math.max(0, Number(arg('segEvery', arg('snapEvery', 0))) || 0);
 let segK = 0;
 let klL1 = 0, klN = 0;   /* 键频锚诊断：锚两侧键分布的平均 L1 距离（漂移指示器） */
 /* `--shapeKey=<SK键名> --shapeW=<w>`（11-14 晚 · ZCode）：任意键的塑形分量（λf/λc 同族泛化，

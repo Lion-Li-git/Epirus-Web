@@ -21,9 +21,9 @@ import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预�
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['upstream', 'obs', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'onlySeg', 'winOnly'], 'supfit-gd');
+rejectUnknownFlags(argv, ['upstream', 'up', 'obs', 'groups', 'lr', 'steps', 'seed', 'out', 'tag', 'objective', 'dagger', 'defWeight', 'oracleSubset', 'dagtemp', 'pool', 'shapeBal', 'classPow', 'classCap', 'keySplit', 'teacher', 'teacher2', 'teacher2frac', 'teacher2keys', 'teacher2Shapes', 'teacher2shapes', 'teacher3', 'teacher3frac', 'teacher3keys', 'teacher3Shapes', 'teacher4', 'teacher4frac', 'teacher4keys', 'teacher4Shapes', 'shapeTeachers', 'rolloutMode', 'arenaPool', 'arenaShapes', 'rareOnly', 'rareFrac', 'labelKindsMin', 'labelSupportMin', 'smoke', 'regen', 'detDose', 'seatDrop', 'seatL2', 'snapEvery', 'segEvery', 'onlySeg', 'winOnly', 'teacherGate', 'teacherGateT', 'teacherGateHp', 'selfTeacher'], 'supfit-gd');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
-const UP = String(arg('upstream', 'scratch/arms/OB3S-C2-s7.bak'));
+const UP = String(arg('upstream', arg('up', 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak')));
 const OBS_SPEC = String(arg('obs', '')).trim();
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
 const LR = Number(arg('lr', 0.02)) || 0.02;
@@ -34,7 +34,7 @@ const TAG = String(arg('tag', ''));
 /* `--snapEvery=N`（11-15 夜 · ZCode · Tier1 课表 T1-2 的快照对冲）：DAgger 每轮存一粒
  *   `<out>.snap<r>.bak`（META 全字段同终局产物 + snap=r）——链式蒸馏的洗损随轮数走，
  *   "转化出现且强度未塌"的那一粒要按轮选，不能只看终局。0=关（缺省，主路径逐字不变）。 */
-const SNAP_EVERY = Math.max(0, Number(arg('snapEvery', 0)) || 0);
+const SNAP_EVERY = Math.max(0, Number(arg('snapEvery', arg('segEvery', 0))) || 0);
 let HF = '';
 try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }
 /* ⚑ 目标层级（千问 · 10-31 午后补，A 臂读数的另一半）：
@@ -842,12 +842,13 @@ function buildTeacherPick(name) {
   : (state, pid, cs) => pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
 }
 const _pickRaw = buildTeacherPick(TEACHER);
-/* ⚑ DS · 11-03：`EPIRUS_TEACHER_GATE=<model.json>` —— 在教师输出上加"残血×高威胁才防"的门控
- *   （模型 = scratch/fit-gate.mjs 的 logistic；13 维公开特征；hp<=EPIRUS_TEACHER_GATE_HP 且 p>=EPIRUS_TEACHER_GATE_T）。
+/* ⚑ DS · 11-03：`--teacherGate=<model.json>` —— 在教师输出上加"残血×高威胁才防"的门控
+ *   （模型 = scratch/fit-gate.mjs 的 logistic；13 维公开特征；hp<=--teacherGateHp 且 p>=--teacherGateT）。
  *   默认关 ⇒ 教师逐字不变。 */
-const _GATE_MODEL = process.env.EPIRUS_TEACHER_GATE ? JSON.parse(readFileSync(process.env.EPIRUS_TEACHER_GATE, 'utf8')) : null;
-const _GATE_T = Number(process.env.EPIRUS_TEACHER_GATE_T || 0.2);
-const _GATE_HP = Number(process.env.EPIRUS_TEACHER_GATE_HP || 2);
+const _GATE_PATH = String(arg('teacherGate', '')).trim();
+const _GATE_MODEL = _GATE_PATH ? JSON.parse(readFileSync(_GATE_PATH, 'utf8')) : null;
+const _GATE_T = Number(arg('teacherGateT', 0.2)) || 0.2;
+const _GATE_HP = Number(arg('teacherGateHp', 2)) || 2;
 const _DEFK = new Set(['guard', 'reflect', 'bagua', 'shift', 'jinshield', 'armor', 'proto', 'holo']);
 function _gateFeat(state, pid) {
   const me = state.p[pid], ops = state.p.filter((q) => q.id !== pid && q.hp > 0);
@@ -862,9 +863,9 @@ function _gateP(state, pid) {
   for (let j = 0; j < f.length; j++) t += _GATE_MODEL.w[j] * (f[j] - _GATE_MODEL.mu[j]) / _GATE_MODEL.sd[j];
   return 1 / (1 + Math.exp(-t));
 }
-/* ⚑ DS · 11-03：`EPIRUS_SELF_TEACHER=<v:92 包>` —— 教师 = **这个包自己的策略**（+ 可选门控），
+/* ⚑ DS · 11-03：`--selfTeacher=<v:92 包>` —— 教师 = **这个包自己的策略**（+ 可选门控），
  *   这样蒸馏只改"门控触发的那几手"，不会把 D4a 整套策略混进来。默认关。 */
-const _SELF_PACK = process.env.EPIRUS_SELF_TEACHER || null;
+const _SELF_PACK = String(arg('selfTeacher', '')).trim() || null;
 let _selfPick = null;
 if (_SELF_PACK) {
   const _rawS = readPack2(_SELF_PACK);

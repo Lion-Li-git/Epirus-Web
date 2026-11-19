@@ -7187,7 +7187,10 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '#selftest{display:none;position:fixed;left:14px;top:40%;background:#101a2c;border:1px solid #6f83a8;color:#dce6f5;padding:8px 10px;border-radius:6px;font-size:11px;white-space:pre;z-index:30}\n' +
 '</style></head><body>\n' +
 '<div id="bar">' +
+'<span style="display:inline-flex;gap:4px;align-items:center">' +
 '<a href="trends.html" style="color:#9fc3ff;text-decoration:none;padding:0 4px" title="A/B/C 考卷趋势（30 枚滑动，按 ts）">A/B 趋势 ↗</a>' +
+'<a href="skill-report.html" style="color:#9fc3ff;text-decoration:none;padding:0 4px" title="池成员两级技能覆盖普查（Stage 1 观察层 ‖ Stage 2 强度消融层）">技能普查 ↗</a>' +
+'</span>' +
 '<label class="tbgrp" data-m="map" title="第一段：换的是「看哪张图」">视图 <select id="modeSel"><option value="1d">一维（F 排序带）</option><option value="map" selected>地图（缩放/平移）</option><option value="tree">谱系（时间 × 家族）</option><option value="3db">三维行为轴</option></select></label>' +
 '<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +

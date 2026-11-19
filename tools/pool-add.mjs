@@ -388,6 +388,11 @@ t.rows.push(row);
 t.rows.sort((a, b) => (TIERS.indexOf(a[3]) - TIERS.indexOf(b[3])) || a[0].localeCompare(b[0]));
 saveMap(t);
 console.log('✔ 已写 champion-map/pool-members.tsv（现 ' + t.rows.length + ' 枚）');
+if (has('run-promote')) {
+  const ps = spawnSync(process.execPath, [join(ROOT, 'champion-map', 'promscan.mjs')], { cwd: ROOT, encoding: 'utf8' });
+  if (ps.status === 0) console.log('   ✔ 已同步 champion-map/data/page/promote.tsv');
+  else console.error('   ⚠ promscan 同步失败：' + String(ps.stderr || '').slice(0, 160));
+}
 console.log('   下一步：node tools/build-pool-bundle.mjs（把表派生成浏览器读的 js/bundled-champion-pool.js）');
 /* 入池触发强度层（用户 11-18 裁定「要进池的时候再跑后面的强度层等东西」）：
  * 先 Stage 1 观察层（Stage 2 的技能选择门依赖它）再 Stage 2 强度层，产物 = data/skill-report/<id>.json。

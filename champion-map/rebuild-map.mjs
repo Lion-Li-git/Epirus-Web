@@ -45,6 +45,7 @@ const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期） */
 if (DATA === resolve(HERE, 'data')) {
+  run([join(ROOT, 'tools/sync-page-coords.mjs')], '②b sync page/coords.tsv');
   run([join(HERE, 'lineage.mjs')], '③ lineage 同步 lineage.tsv');
 }
 /* ④ 独立趋势页（A/B/C，30 枚滑动；数据仍只读 data/） */

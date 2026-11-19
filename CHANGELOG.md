@@ -4,6 +4,23 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.6 — 11-19 午（2.0 统一训练总入口与训练场恢复 ‖ 演化图颜色分尺与普查页导航 ‖ 池 24 枚两带与数据补齐）
+
+**这一版是什么**：收拾昨晚退役 `v7` 线后留下的训练接口与文档残账——新建统一的 2.0 训练 CLI 总入口与本地 2.0 SSE 训练服务，恢复主页「🧪 训练场」页签，把演化查看器底图/点颜色按短程/长程彻底拆列，并补齐新入池成员（`night2-S6`、`night2-X2b-fuse`、`RING-MINIT-CONT`）的地图读数与普查入口。
+
+- **2.0 统一训练总入口与本地训练场**：
+  - 新增 `training/train.mjs`（统一 `--mode=pg|supfit|distill|fuse|selftest`，自检默认基座对齐 `obs6` 包 `EQ-S4-E9.bak`）与本地 2.0 HTTP+SSE 服务 `training/server/train-server.mjs` + `training/start-train-server.cmd`（纯 Node 内置模块实现 `/status`、`/reset`、`/champion`、`/train`）。
+  - 恢复主页 [index.html](index.html) / [js/ui/ui.js](js/ui/ui.js)「🧪 训练场」tab（支持 2.0 `pg` 策略梯度与 `supfit` 蒸馏拟合实时波形和热插拔），修复 `#btn-import` 首次点击无效绑定与 `useBuiltinChampion()` 后冠军状态栏未刷新；同步更新 `tools/smoke.mjs` 与 `tools/battle-test.mjs`。
+  - 对齐 `pg-train.mjs` / `supfit-gd.mjs` 的 `--up`/`--upstream`、`--segEvery`/`--snapEvery` 别名并将默认基座改为 `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak`；收敛 `supfit-gd.mjs` / `arch2.mjs` / `rotation-obs5.mjs` / `_ctx.mjs` 残留的环境变量直读，重新生成 `training/TRAINING-KNOBS.md` 达标 `KPI ≤ 40`（全集 **40** ‖ 在用 **19** ‖ 暗键 **21**）。
+- **演化查看器与管道收口**：
+  - `champion-map/viewer.mjs` 的 `#color`（底图色）与 `#dot-color`（点颜色）下拉框按短程/长程分列、将无长程语义的 `b` 替换为短/长 `G(Geff / G2)`、移除无用的 `random`/`pass` 与已退役旧 B 轴，并在顶栏 `kids[0]` 内补挂 `skill-report.html`（「技能普查 ↗」）入口；重建 `champion-map/index.html`（100 PASS）。
+  - 修复 `champion-map/pipeline/measure-point.mjs`（补 `a-v2coop-exam-1118` 与长程 `G2` 提取）、`add-point.mjs`（写入 `feasibility.tsv` 的 `g2`）、`tools/pool-add.mjs`（`--run-promote` 联动 `promscan.mjs`）与 `champion-map/rebuild-map.mjs` / `tools/sync-page-coords.mjs`（幂等补行与增量同步）。
+  - 补齐 `night2-S6.bak`、`night2-X2b-fuse.bak`、`RING-MINIT-CONT` 的 `g2`、`a-v2coop-exam-1118`（`De`/`DeL`）、`exam4n-mixedfix-1116`（`MxC`/`MxCL`）与 `promote.tsv`；修正 `G5C-100`/`G5J-50` 夹具路径（`docs/artifacts/exam4-fixtures/`）。
+- **夜班 24h 产物点名（D82）与仓库清理**：
+  - 昨晚入池及方法论留档产物共 4 枚留在 `docs/artifacts/`：`night2-S6.bak`、`night2-X2b-fuse.bak`（pool 24 枚 soft 带，两带配置见 `D234`）、以及方法论/STATUS 引用的 v7 教师种子 `night1119-A1-tank-band3.bak`、`night1119-MS2c-band1.bak`（同时在 `scratch/arms/` 留存副本）；其余 124 枚夜班临时 `night1119*` 快照已删清。
+  - 更新 `README.md` 与 `training/README.md`，删除失效脚本与 `v7` 旧入口说明，保留最新 2.0 CLI 现状。
+- **版本**：`v2.1.5 → v2.1.6`。
+
 ## v2.1.5 — 11-18 晚（X 轴退役：B 轴照 A 轴，只留 page 一条）
 
 **这一版是什么**：按用户裁定，A 轴只有 page 一条，B 轴照办，不再单独维护 X 轴。

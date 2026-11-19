@@ -1,21 +1,34 @@
-/* 命名配方：rotation-obs5 —— obs5 轮换产线的基线配方（11-11 夜自 msbatch2 内联迁出，逐字同值）
+/* 命名配方：2.0 (obs6) 统一训练管线标准配方
  *
- * 消费者：scratch/night-adapt2/msbatch2.mjs（--recipe=rotation-obs5，缺省即本配方）。
- * 形状：桌形混合（MIX2/MIX8/MIXHP）+ 收割席 + 课程席（每代 1 席 pickFarmer，可被 MSB_COURSE_PACK 覆盖成真实包）
- *   + 反制对手桌 + triplet 台账 + 臂级中途节点（HOLDOUT_SEG=50，MSB_SEG 可覆盖）。
- * MSB_* 运行时覆盖（COURSE_PACK/FIT_CHAMP/FIT_EVERY/SEG）留在驱动器里——它们是"这次跑什么"不是"配方是什么"。
- *
- * ⚠ 改这份 = 改所有 --recipe=rotation-obs5 的臂的配方 ⇒ 改完必须重开 base（种子流语义变了就不是同一条实验线）。
+ * 原 obs5 / train-3p 的 EPIRUS_* env 配方已随 2026-11-19 v7 训练线退役；
+ * 本文件改为导出 2.0 统一管线（pg-train / supfit-gd）的 CLI 旗标标准配方。
  */
-export const RECIPE_ENV = {
-  EPIRUS_ARCH2: 'S1ob:input=obs5,gen=3,keySplit=1,seatH=24,actH=24,hid=32,hid2=24',
-  EPIRUS_MUT_MODE: 'seg',
-  EPIRUS_TRAIN_MODE: 'long',
-  EPIRUS_KILL_REWARD: '2', EPIRUS_KILL_FIELD: '1',
-  EPIRUS_MIX8: '4', EPIRUS_MIX2_EVERY: '4', EPIRUS_MIXHP_EVERY: '2',
-  EPIRUS_COURSE_EVERY: '1', EPIRUS_COURSE_BOT: 'pickFarmer',
-  EPIRUS_COUNTER_OPPS: 'gunFocus,gunSpam,guardSpam,targeter',
-  EPIRUS_SEL_COUNTER: '1',
-  EPIRUS_TRIPLET: '1',
-  EPIRUS_HOLDOUT_SEG: '50',
+export const RECIPES = {
+  pg_shape: {
+    mode: 'pg',
+    up: 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak',
+    games: 6000,
+    batch: 48,
+    lr: 3e-4,
+    segEvery: 1500,
+    klW: 0.05,
+    klTilt: 'tank,miniT,jinshield,taunt,rod,firestorm',
+    klTiltMul: 3,
+    shapeKey: 'tank:0.25,miniT:0.15',
+  },
+  supfit_dual: {
+    mode: 'supfit',
+    upstream: 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak',
+    teacher: 'toolkit',
+    teacher2: '',
+    teacher2frac: 0.5,
+    objective: 'cand',
+    dagger: 1,
+    lr: 4e-4,
+    steps: 180,
+    groups: 3300,
+    shapeBal: 1,
+    classPow: 0.35,
+  },
 };
+

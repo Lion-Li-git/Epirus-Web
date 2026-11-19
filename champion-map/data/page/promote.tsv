@@ -4,8 +4,19 @@ blk0t40-s31	pass	—
 D4a	pass	—			
 E3	pass	—			
 E59-land-902	pass	—			
+EQ-S4-GD6ATEACH	pass	—			
 G15-71	pass	—			
+MX3-GDEQ-GD	pass	—			
+MX6-GD-TF15	pass	—			
+MX6-GD-TF20	pass	—			
+MX7-T2-R	pass	—			
+MX8-CN-M	pass	—			
+MX8-R6B-KL	pass	—			
+MX8-R6C-KL	pass	—			
+MX8-TN25-KL	pass	—			
+MX8-TN35-KL3	pass	—			
 N5L-30	pass	—			
+night2-X2b-fuse	pass	—			
 R-s123	pass	—			
 R311	pass	—			
 S-s120	pass	—			
@@ -13,18 +24,25 @@ seed80	pass	—
 SP-s30	pass	—			
 T8-s114	pass	—			
 U-s216	pass	—			
+U2-77001	pass	—			
 v7beadseed-82	pass	—			5.42
 v7w3c-82	pass	—			0
 v7wall2-97	pass	—			0.15
 E00-31	block	G4/long 被一行脚本打穿 74% · G4/multi 被一行脚本打穿 73% · G5/long 清不了防席（它夺冠 79%） · G5/multi 清不了防席（它夺冠 73%）	74	79	
 G03-31	block	G5/long 清不了防席（它夺冠 36%） · G5/multi 清不了防席（它夺冠 38%）		38	
 G03-71	block	G4/long 被一行脚本打穿 80%	80		
+GD6a-TILT	block	F 被集火还手率 12.0% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 NC-191	block	G4/long 被一行脚本打穿 97% · G4/multi 被一行脚本打穿 90% · G5/long 清不了防席（它夺冠 95%） · G5/multi 清不了防席（它夺冠 92%）	97	95	
 NCV-71	block	G5/long 清不了防席（它夺冠 40%）		40	
+night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
+night2-S3	block	G5/long 清不了防席（它夺冠 28%） · G5/multi 清不了防席（它夺冠 61%）		61	
+night2-S6	block	G5/long 清不了防席（它夺冠 26%）		26	
+night2-X5-cannonT	block	F 被集火还手率 2.2% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕 · 行为门未过：G4[scratch/arms/night2-X5-cannonT/long] 无一行脚本能以 >60% 击 · G4/multi 被一行脚本打穿 94%	94		
 NOL24-31	block	G4/long 被一行脚本打穿 85% · G5/long 清不了防席（它夺冠 86%） · G5/multi 清不了防席（它夺冠 42%）	85	86	
 PL71	block	G5/long 清不了防席（它夺冠 27%）		27	
 r61fix-92	block	G4/long 被一行脚本打穿 94% · G4/multi 被一行脚本打穿 76% · G5/long 清不了防席（它夺冠 87%） · G5/multi 清不了防席（它夺冠 67%）	94	87	0
+SOUP-PILOT-AR2-67	block	G5/long 清不了防席（它夺冠 50%） · G5/multi 清不了防席（它夺冠 40%）		50	
 SQ2-15-31	block	G4/long 被一行脚本打穿 79% · G4/multi 被一行脚本打穿 75% · G5/long 清不了防席（它夺冠 74%） · G5/multi 清不了防席（它夺冠 53%）	79	74	
 U-s209	block	G4/long 被一行脚本打穿 78%	78		
 v7a-31	block	G(long) 有效技能数 2.03 < 3（长程打法坍缩到两三张卡）			5.15
@@ -158,7 +176,6 @@ v7ws1-31	block	G4/long 被一行脚本打穿 76% · G4/multi 被一行脚本打�
 v7ws1-82	block	G4/long 被一行脚本打穿 61% · G5/long 清不了防席（它夺冠 32%）	61	32	0.05
 v7ws1-91	block	G4/long 被一行脚本打穿 69% · G4/multi 被一行脚本打穿 63%	69		0.4
 v7ws2-31	block	F 被集火还手率 17% < 20%（被 4 席猛攻时不还手） · G4/long 被一行脚本打穿 100% · G4/multi 被一行脚本打穿 100% · G5/long 清不了防席（它夺冠 31%）	100	31	0
-U2-77001	pass	—			
 MSB11-R2S306293884	pass	—			
 MSB14-railgun-R1S175656469	pass	—			
 MSB11-R1S130778313	pass	—			
@@ -167,7 +184,6 @@ MSB15-SOUPB	block	behavior-gate
 MSB15R-GD4RAT	block	field-a,breadth-multi			
 GD4-RATION	block	no-meta			
 MSB15-LASER-R3	block	field-a,behavior-gate,behavior-gate,behavior-gate			
-GD6a-TILT	block	F 被集火还手率 12.0% < 20%（被 4 席猛攻时不还手）——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕（2026-11-13 promote --dry，原文 docs/artifacts/promote-GD6a-TILT.txt）			
 OBS6-GA25	block	reflect-wall,field-a			
 OBS6-GA200	block	reflect-wall,breadth-multi,breadth-long,behavior-gate,behavior-gate			
 OBS6-GA100M	block	breadth-multi,breadth-long,behavior-gate,behavior-gate,behavior-gate,behavior-gate			
@@ -194,7 +210,6 @@ KD-G2	block	—
 OBS6P4-S4000	block	—			
 OBS6E9	pass	—			
 OBS6P9-S4000	pass	—			
-EQ-S4-GD6ATEACH	pass	—			
 OBS6-SHAPEDIST	block	1			
 OBS6-SHAPEDIST-V2	block	2			
 OBS6-SHAPEDIST-V2S0	block	2			
@@ -241,27 +256,18 @@ MX5-GD-T3M2	pass	—
 MX5-GD-T4STR	pass	—			
 MX5-SOUP4	block	1			
 MX5-SOUP4b	pass	—			
-MX3-GDEQ-GD	pass	—			
 MX5-GD-R6	block	1			
 MX5-GD-R6B	pass	—			
 MX5-GD-R6C	block	1			
 MX6-GD-TF05	block	1			
 MX7-GD-R6B	block	2			
-MX7-T2-R	pass	—			
 MX7-T4-R	block	1			
 MX4-GD-T2	pass	—			
-MX8-R6B-KL	pass	—			
-MX8-CN-M	pass	—			
 MX8-LE15	pass	—			
 MX8-LE20	block	1			
 MX8-LE25	block	1			
 MX8-T3L-KL	block	2			
 MX8-T4R-KL	block	1			
-MX8-R6C-KL	pass	—			
-MX6-GD-TF15	pass	—			
-MX6-GD-TF20	pass	—			
-MX8-TN25-KL	pass	—			
-MX8-TN35-KL3	pass	—			
 RINGB9	pass	—	0		
 TZ2C	fail	2		31	
 RINGB11	pass	—			
@@ -271,4 +277,4 @@ DIV-V3-PRESSURE-S2	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate
 DIV-V3-ANTIDEF	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate			
 DIV-LH6-HEAVY-S2	block	field-a,breadth-multi,behavior-gate			
 RING-MINIT-CONT	pass	—			
-P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate			
+P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate

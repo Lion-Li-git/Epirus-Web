@@ -641,6 +641,7 @@
     /* v1.5.131：2P 侧也要重开一局（原先只判 `B.multi`）。2P 的 chooser **每次决策都重读**
      * `Champ.store.load()`（`chooseAI:574`）⇒ 清键下次决策即生效；重开只是让这一局从干净状态开始。 */
     if (tierIsChamp(B.diff)) newGame();   // v1.6.6：2 人/多人同一条路 ⇒ 不再分"只有 hard 槽才重开"
+    renderChampState();
     hint(had3 || had2
       ? ('已清除本机冠军（' + [(had3 ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
          '），改回内置冠军（' + (loaded ? '多人包已加载' : '⚠ 多人内置包缺失/不兼容') + '）')
@@ -1187,7 +1188,6 @@
   }
   /* 上局记录：从 localStorage 读（即使已点过“再来一局”也还在） */
   function showLastBattle() {
-    $('btn-import').onclick = function () { $('file-import').click(); };
     let txt = '';
     try { txt = localStorage.getItem('epirus.lastBattle') || ''; } catch (e) { txt = ''; }
     if (!txt) { hint('暂无上局记录'); return; }
@@ -1377,9 +1377,12 @@
   /* ---------- Tab ---------- */
   function showTab(which) {
     $('tab-battle').classList.toggle('on', which === 'battle');
+    if ($('tab-train')) $('tab-train').classList.toggle('on', which === 'train');
     $('tab-rules').classList.toggle('on', which === 'rules');
     $('page-battle').classList.toggle('hidden', which !== 'battle');
+    if ($('page-train')) $('page-train').classList.toggle('hidden', which !== 'train');
     $('page-rules').classList.toggle('hidden', which !== 'rules');
+    if (which === 'train') { drawChart(); renderChampState(); }
     if (which === 'rules' && window.EpirusRulesPanel) window.EpirusRulesPanel.render();
   }
 
@@ -1428,9 +1431,231 @@
     }
   }
 
-  /* 2026-11-19：训练场 tab 已删（v7 训练线退役）。renderChampState 的调用方（导入/清空/换包流程）保留，
-   *  兼容壳只保留它真正需要的副作用：applyPackTypeLock（人数下拉按包代锁 6/7/8 人）。 */
-  function renderChampState() { applyPackTypeLock(); }
+  /* ---------- 训练场（2.0 obs6 统一训练） ---------- */
+  let lastTrainer = null;
+  let remoteES = null;
+  let remoteHistory = [];
+  let remoteTotal = 1000;
+  let remoteRetry = null;
+
+  function renderChampState() {
+    applyPackTypeLock();
+    Champ.store.load();
+    const from = Champ.store.lastSource;
+    let has3pLocal = false;
+    try { has3pLocal = !!localStorage.getItem('epirus.champion3p'); } catch (e) { has3pLocal = false; }
+    const el = $('tr-has');
+    if (!el) return;
+    if (from === 'local' || has3pLocal) {
+      const slots = [from === 'local' ? '2 人' : '', has3pLocal ? '多人' : ''].filter(Boolean).join(' + ');
+      el.textContent = '已保存本地冠军（本机自训/导入 · ' + slots + '）';
+      return;
+    }
+    const poolOn = typeof window !== 'undefined' && Array.isArray(window.EPIRUS_CHAMPION_POOL) && window.EPIRUS_CHAMPION_POOL.length > 0;
+    if (poolOn || from === 'builtin') {
+      const m = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) || null;
+      const tail = poolOn ? ('2.0 冠军池(' + window.EPIRUS_CHAMPION_POOL.length + ' 枚)')
+        : (m ? ((m.source || '?') + (m.ts ? ' · ' + m.ts : '')) : '默认');
+      el.textContent = '内置冠军（' + tail + '）';
+      return;
+    }
+    el.textContent = '无（困难难度将回退脚本逻辑）';
+  }
+  function exportTrainCsv() {
+    const trainer = (remoteHistory && remoteHistory.length)
+      ? { history: remoteHistory, gen: remoteHistory[remoteHistory.length - 1].gen }
+      : lastTrainer;
+    if (!trainer || !trainer.history || !trainer.history.length) { alert('还没有训练历史可导出（先训练）。'); return; }
+    Champ.saveTrainLogCSV(trainer);
+  }
+  function stopRemote() {
+    if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
+    if (remoteES) { remoteES.close(); remoteES = null; }
+    if ($('btn-stop')) $('btn-stop').disabled = true;
+    if ($('tr-state')) $('tr-state').textContent = '已断开显示（若服务仍在运行可点「重置训练服务」中止）';
+  }
+  function remoteBase() {
+    const port = ($('tr-port') && $('tr-port').value) || '8787';
+    return 'http://127.0.0.1:' + port;
+  }
+  function resetServerTrain() {
+    stopRemote();
+    fetch(remoteBase() + '/reset').then(function (r) { return r.json(); }).then(function () {
+      remoteHistory = [];
+      if ($('tr-state')) $('tr-state').textContent = '服务端已重置（2.0 服务就绪）';
+      if ($('tr-progress')) $('tr-progress').style.width = '0%';
+      if ($('tr-seeds-status')) $('tr-seeds-status').textContent = '';
+      drawChart();
+    }).catch(function () { if ($('tr-remote')) $('tr-remote').textContent = '重置失败：服务未启动？'; });
+  }
+  const EVAL_GAMES = 30;
+  if ($('btn-eval')) $('btn-eval').textContent = '评测冠军(' + EVAL_GAMES + '局/基线)';
+  function doEval() {
+    const rows = Champ.quickEval(EVAL_GAMES, Date.now() % 100000);
+    if (!rows) { if ($('tr-evalbox')) $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有 2P 冠军可评测。</p>'; return; }
+    let h = '<h4 style="margin:12px 0 2px">评测：冠军 vs ' + rows.length + ' 脚本基准（各 ' + EVAL_GAMES + ' 局）</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';
+    for (const r of rows) {
+      h += '<tr><td>' + r.name + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td><td>' + (r.wr * 100).toFixed(0) + '%</td></tr>';
+    }
+    h += '</table>';
+    if ($('tr-evalbox')) $('tr-evalbox').innerHTML = h;
+  }
+  function fetchProbe(base) {
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const tid = setTimeout(function () { if (ctl) ctl.abort(); }, 1500);
+    return fetch(base + '/', ctl ? { signal: ctl.signal } : undefined).then(function (r) {
+      clearTimeout(tid); return { ok: r.ok };
+    }).catch(function () { clearTimeout(tid); return { ok: false }; });
+  }
+  function trainParams() {
+    const mode = ($('tr-mode') && $('tr-mode').value) || 'pg';
+    const up = ($('tr-up') && $('tr-up').value) || 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak';
+    const gens = Math.max(10, Number(($('tr-remote-gens') && $('tr-remote-gens').value) || (mode === 'pg' ? 1000 : 60)));
+    const batch = Math.max(8, Number(($('tr-batch') && $('tr-batch').value) || (mode === 'pg' ? 48 : 600)));
+    const lr = Number(($('tr-lr') && $('tr-lr').value) || (mode === 'pg' ? 0.0003 : 0.0004)) || (mode === 'pg' ? 0.0003 : 0.0004);
+    const seed = Number(($('tr-seed') && $('tr-seed').value) || 7) || 7;
+    const teacher = ($('tr-teacher') && $('tr-teacher').value) || 'toolkit';
+    const shapeKey = ($('tr-shape') && $('tr-shape').value || '').trim();
+    const winOnly = ($('tr-winonly') && $('tr-winonly').value) || '0';
+    return { mode, up, gens, batch, lr, seed, teacher, shapeKey, winOnly };
+  }
+  function connectRemoteTrain() {
+    const base = remoteBase();
+    const cfg = trainParams();
+    if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
+    if (remoteES) { remoteES.close(); remoteES = null; }
+    remoteHistory = [];
+    if ($('tr-seeds-status')) $('tr-seeds-status').textContent = '';
+    if ($('tr-progress')) $('tr-progress').style.width = '0%';
+    if ($('tr-remote')) $('tr-remote').textContent = '正在探测 2.0 训练服务…';
+    fetchProbe(base).then(function (res) {
+      if (res.ok) openRemote(base, cfg);
+      else waitForServer(base, cfg);
+    });
+  }
+  function waitForServer(base, cfg) {
+    if ($('tr-remote')) {
+      $('tr-remote').textContent = '服务未启动。请双击 training/start-train-server.cmd 启动（或 node training/server/train-server.mjs）——检测到后自动连接…';
+    }
+    if (remoteRetry) clearInterval(remoteRetry);
+    remoteRetry = setInterval(function () {
+      fetchProbe(base).then(function (res) {
+        if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, cfg); }
+      });
+    }, 2000);
+  }
+  function openRemote(base, cfg) {
+    if (remoteES) { remoteES.close(); remoteES = null; }
+    const qs = new URLSearchParams({
+      mode: cfg.mode,
+      up: cfg.up,
+      lr: String(cfg.lr),
+      seed: String(cfg.seed),
+    });
+    if (cfg.mode === 'pg') {
+      qs.set('games', String(cfg.gens));
+      qs.set('batch', String(cfg.batch));
+      if (cfg.shapeKey) qs.set('shapeKey', cfg.shapeKey);
+    } else {
+      qs.set('steps', String(cfg.gens));
+      qs.set('groups', String(cfg.batch));
+      qs.set('teacher', cfg.teacher);
+      if (cfg.winOnly !== '0') qs.set('winOnly', cfg.winOnly);
+    }
+    remoteTotal = cfg.gens;
+    if ($('tr-remote')) $('tr-remote').textContent = '连接中…';
+    if ($('btn-stop')) $('btn-stop').disabled = false;
+    const es = new EventSource(base + '/train?' + qs.toString());
+    remoteES = es;
+    es.onopen = function () { if ($('tr-remote')) $('tr-remote').textContent = '已连接 2.0 服务，训练中（可切回对局页）'; };
+    es.onmessage = function (ev) {
+      let d = {};
+      try { d = JSON.parse(ev.data); } catch (e) { return; }
+      if (d.type === 'start') {
+        remoteTotal = d.total || cfg.gens;
+        if ($('tr-state')) $('tr-state').textContent = '已启动 ' + d.mode + ' 2.0 训练（总计 ' + remoteTotal + (d.mode === 'pg' ? ' 局' : ' 步') + '）';
+        if ($('tr-seeds-status')) $('tr-seeds-status').textContent = d.cmd || '';
+      } else if (d.type === 'step') {
+        const gen = Number(d.step || 0);
+        const tot = Math.max(1, Number(d.total || remoteTotal));
+        const val = Number(d.best);
+        remoteHistory.push({ round: 0, seed: cfg.seed, gen: gen, best: Number.isFinite(val) ? val : 0 });
+        if ($('tr-progress')) $('tr-progress').style.width = Math.min(100, (gen / tot) * 100).toFixed(1) + '%';
+        if ($('tr-state')) $('tr-state').textContent = '训练中 · ' + gen + ' / ' + tot + ' · 指标 ' + (Number.isFinite(val) ? val.toFixed(3) : '--');
+        if ($('tr-seeds-status')) $('tr-seeds-status').textContent = d.line || '';
+        drawChart();
+      } else if (d.type === 'log') {
+        if ($('tr-seeds-status') && d.line) $('tr-seeds-status').textContent = d.line;
+      } else if (d.type === 'done') {
+        if ($('tr-progress')) $('tr-progress').style.width = '100%';
+        if ($('btn-stop')) $('btn-stop').disabled = true;
+        es.close(); remoteES = null;
+        if (d.champ) {
+          window.EPIRUS_CHAMPION_3P = d.champ;
+          try { localStorage.setItem('epirus.champion3p', JSON.stringify(d.champ)); } catch (e) { /* ignore */ }
+          resetMultiChampCache();
+          renderChampState();
+        }
+        if ($('tr-state')) $('tr-state').textContent = '2.0 训练完成（耗时 ' + d.secs + 's）';
+        if ($('tr-remote')) $('tr-remote').textContent = '已写入 ' + (d.out || 'scratch/arms/ui-train-latest.bak') + ' 并存入本机（困难档即时生效；可用「用内置冠军」还原）';
+      } else if (d.type === 'error') {
+        if ($('btn-stop')) $('btn-stop').disabled = true;
+        if ($('tr-remote')) $('tr-remote').textContent = '服务错误：' + (d.msg || 'unknown');
+        es.close(); remoteES = null;
+      }
+    };
+    es.onerror = function () {
+      if ($('btn-stop')) $('btn-stop').disabled = true;
+      if ($('tr-remote')) $('tr-remote').textContent = '连接中断。请确认 2.0 训练服务仍在运行（training/start-train-server.cmd）。';
+      es.close(); remoteES = null;
+    };
+  }
+  function drawChart() {
+    const cv = $('chart');
+    if (!cv || ($('page-train') && $('page-train').classList.contains('hidden'))) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth || 600, h = 220;
+    cv.width = w * dpr; cv.height = h * dpr;
+    const g = cv.getContext('2d');
+    if (!g) return;
+    g.save();
+    g.scale(dpr, dpr);
+    g.fillStyle = '#0e1424';
+    g.fillRect(0, 0, w, h);
+    const pad = 42;
+    g.strokeStyle = '#2c3560';
+    g.strokeRect(pad, 14, w - pad * 2, h - 34);
+    if (!remoteHistory.length) {
+      g.fillStyle = '#6f7aa8';
+      g.font = '12px sans-serif';
+      g.fillText('暂无训练曲线 —— 启动本地 2.0 服务并点击「开始训练」后实时绘制', pad + 12, h / 2);
+      g.restore();
+      return;
+    }
+    let minY = remoteHistory[0].best, maxY = remoteHistory[0].best;
+    for (const r of remoteHistory) {
+      if (r.best < minY) minY = r.best;
+      if (r.best > maxY) maxY = r.best;
+    }
+    if (Math.abs(maxY - minY) < 1e-6) { minY -= 0.5; maxY += 0.5; }
+    const x0 = remoteHistory[0].gen;
+    const xSpan = Math.max(1, remoteHistory[remoteHistory.length - 1].gen - x0);
+    const X = function (gen) { return pad + ((gen - x0) / xSpan) * (w - pad * 2); };
+    const Y = function (v) { return (h - 20) - ((v - minY) / (maxY - minY)) * (h - 34); };
+    g.strokeStyle = '#5ad0ff';
+    g.lineWidth = 2;
+    g.beginPath();
+    for (let i = 0; i < remoteHistory.length; i++) {
+      const x = X(remoteHistory[i].gen), y = Y(remoteHistory[i].best);
+      if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+    g.fillStyle = '#8b93c4';
+    g.font = '11px sans-serif';
+    g.fillText(maxY.toFixed(3), 4, 22);
+    g.fillText(minY.toFixed(3), 4, h - 22);
+    g.restore();
+  }
   function exportChamp() {
     /* v2.0.9：导出按**当前桌面**的 AI 槽走。旧实现永远读 2P 槽（Champ.store.load）⇒
      * 3P/多人桌上点「导出冠军 JSON」拿到的是 2P 包（或内置 2P），与 README「冠军策略可导出分享」不符。 */
@@ -1559,7 +1784,8 @@
   /* ---------- 事件绑定 ---------- */
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
-  $('tab-rules').onclick = function () { showTab('rules'); };
+    if ($('tab-train')) $('tab-train').onclick = function () { showTab('train'); };
+    $('tab-rules').onclick = function () { showTab('rules'); };
     applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
     /* v1.6.5：两根轴各自的重开逻辑一样（换局），差别只在 `newGame` 里查出来的 modeKey 不同。 */
@@ -1596,7 +1822,29 @@
     if ($('inp-sd-dmg')) $('inp-sd-dmg').addEventListener('change', saveSd);
     $('btn-undo').onclick = undo;
     $('btn-exportlog').onclick = exportLog;
+    if ($('btn-import')) $('btn-import').onclick = function () { $('file-import').click(); };
+    if ($('btn-import-train')) $('btn-import-train').onclick = function () { $('file-import').click(); };
+    if ($('btn-train')) $('btn-train').onclick = connectRemoteTrain;
+    if ($('btn-stop')) $('btn-stop').onclick = stopRemote;
+    if ($('btn-eval')) $('btn-eval').onclick = doEval;
+    if ($('btn-export')) $('btn-export').onclick = exportChamp;
+    if ($('btn-reset')) $('btn-reset').onclick = resetChamp;
+    if ($('btn-train-csv')) $('btn-train-csv').onclick = exportTrainCsv;
+    if ($('btn-remote')) $('btn-remote').onclick = resetServerTrain;
+    if ($('tr-mode')) $('tr-mode').onchange = function () {
+      const m = $('tr-mode').value;
+      if (m === 'supfit') {
+        if ($('tr-remote-gens')) $('tr-remote-gens').value = '60';
+        if ($('tr-batch')) $('tr-batch').value = '600';
+        if ($('tr-lr')) $('tr-lr').value = '0.0004';
+      } else {
+        if ($('tr-remote-gens')) $('tr-remote-gens').value = '1000';
+        if ($('tr-batch')) $('tr-batch').value = '48';
+        if ($('tr-lr')) $('tr-lr').value = '0.0003';
+      }
+    };
     $('file-import').onchange = function (ev) { importChamp(ev.target.files && ev.target.files[0]); ev.target.value = ''; };
+    window.addEventListener('resize', function () { drawChart(); });
   }
 
   /* logbox 注入到 DOM（index.html 中 .logbox 属于电脑侧栏） */

@@ -11,6 +11,7 @@
  */
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { resolve, join, basename, dirname, relative, isAbsolute } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
@@ -35,6 +36,8 @@ const BATCH = String(arg('batch', '')).trim();
 const FIXTURE = String(arg('fixture', '-')).trim();
 const SOURCE = String(arg('source', 'manual')).trim();
 const PARENT_ARG = String(arg('parent', '')).trim();
+const G2_ARG = String(arg('g2', '')).trim();
+if (G2_ARG !== '' && !Number.isFinite(Number(G2_ARG))) { console.error('⛔ --g2 非数值：' + G2_ARG); process.exit(2); }
 if (!PACK || !ID) { console.error('⛔ 需要 --pack= 和 --id='); process.exit(2); }
 if (!existsSync(PACK)) { console.error('⛔ pack 不在：' + PACK); process.exit(2); }
 if (!RD) { console.error('⛔ 需要 --readings=<长表>'); process.exit(2); }
@@ -344,7 +347,7 @@ if (dispRow) {
 /* 过线：新点从 display 的 okLong/okShort 建一行 feasibility（混合桌 ok 暂空；绿环读纯桌 ok）。 */
 if (dispRow) {
   const ft = readTable(join(DATA, 'feasibility.tsv'));
-  const row = [ID, '', '', '', '', display.ix.okLong !== undefined ? dispRow[display.ix.okLong] : '',
+  const row = [ID, '', '', G2_ARG, '', display.ix.okLong !== undefined ? dispRow[display.ix.okLong] : '',
     display.ix.failsLong !== undefined ? dispRow[display.ix.failsLong] : '',
     display.ix.okShort !== undefined ? dispRow[display.ix.okShort] : '',
     display.ix.failsShort !== undefined ? dispRow[display.ix.failsShort] : '', 'add-point'];
@@ -364,6 +367,9 @@ try {
   const v = buildView({ data: DATA, compare: join(DATA, '.no-compare') });
   const cv = buildCoordsView({ data: DATA });
   console.log('build: exam-view ' + v.rows.length + ' 行 ‖ coords-view ' + cv.rows.length + ' 行，无 display ' + cv.missingDisplay.length);
+  if (DATA === resolve(DATA, '..', 'data') && resolve(DATA, '..') === resolve(fileURLToPath(import.meta.url), '..', '..')) {
+    execFileSync('node', [resolve(DATA, '..', '..', 'tools/sync-page-coords.mjs')], { cwd: resolve(DATA, '..', '..'), encoding: 'utf8', maxBuffer: 1 << 26 });
+  }
   if (BAKE) {
     const out = execFileSync('node', [join(DATA, '..', 'rebuild-map.mjs'), '--data=' + DATA], { cwd: resolve(DATA, '..', '..'), encoding: 'utf8', maxBuffer: 1 << 26 });
     console.log(out.trim().split('\n').slice(-4).join('\n'));

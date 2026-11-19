@@ -8,8 +8,10 @@
 
 | 你要做什么 | 用哪个 | 别用哪个 |
 |---|---|---|
+| **统一 2.0 训练总入口**（一键分发下述各路 / 自检） | `node training/train.mjs --mode=pg\|supfit\|fuse\|selftest` | 直接传 env 旋钮给 2.0 产线（改走 `--flag`） |
 | **2.0 (obs6) 包的强化/塑形后训练**（现役主力） | `proto2/pg-train.mjs`（REINFORCE + `--shapeKey` 事件塑形 + `--klW/--klTilt` 键频锚 + `--segEvery` 多节点） | ❌ klTilt 抬不起**零覆盖键**（放大起点分布，3×0=0）——零覆盖键走蒸馏 |
 | **2.0 包的教师蒸馏 / DAgger / 多教师** | `proto2/supfit-gd.mjs`（`--teacher=toolkit\|chain\|v7mix\|pack:<任意包>` + `--teacher2/3/4` 键道轮替 + `--winOnly` 胜局语境；EQ-S4/TZ2C/DIV/night2 系全出自它） | ❌ 从融合/插值产物出发时教师必须 ⊇ 两父系键道（METHODOLOGY §148.6） |
+| 浏览器页面本地 SSE 训练服务 | `node training/server/train-server.mjs`（或双击 `training/start-train-server.cmd`） | — |
 | 融合两枚同形状包 | `tools/pack-fuse.mjs`（--a --b --t --out；产物只当教师/候选） | ❌ 融合产物不能当自由巩固起点（单教师巩固 = 洗掉融合） |
 | 旋钮改了/加了 | `node training/knobs.mjs` 重生成册（**--check 供 CI**） | — |
 | 判断产物血统（30 秒） | 本页 §五 验尸脚本 | — |
@@ -25,18 +27,19 @@
 | `proto2/pg-lib.mjs` / `arena2.mjs` / `roster-lib.mjs` / `chain-lib.mjs` / `skill-mastery.mjs` | 上两台的共用库（tape 反传 / 对手表 / 桌形 / 链教师 / 预示式代理）——单一来源，不许抄第二份 | — |
 | `tools/pack-fuse.mjs` | 同形状包权重线性融合（产物 META 记 fusedFrom/ratio）；**只当教师/候选**，当起点要双父系教师（§148.6） | fuse-S3S1 系 |
 
-### 共用仪器（`server/` 五件——产线/考卷/门禁都消费，不是训练线）
+### 本地服务与共用仪器（`server/`）
 
-| 文件 | 消费方 |
+| 文件 | 消费方 / 用途 |
 |---|---|
+| `server/train-server.mjs` + `start-train-server.cmd` | 2.0 (obs6) 本地 HTTP/SSE 训练服务，供页面「🧪 训练场」tab 调度 `train.mjs --mode=pg\|supfit` |
 | `server/opp-pool.mjs` | 对手池单一来源（tools/exam-4n、eval-5p、analyze-regime-scan…） |
 | `server/opp-champs.mjs` | 名字→包唯一入口（probe-diff-ladder、style-exam、gates） |
 | `server/knob-guard.mjs` | 暗键检测（knobs.mjs、gates、table-census） |
 | `server/shape-scorer.mjs` / `server/wall-cap.mjs` | 打分/墙帽（js/train/evo.js、np-parallel、gates） |
 
-### 本班已删（2026-11-19，破坏性替换授权内，用户裁定「旧的全删了」）
+### 已退役删除（2026-11-19，v7 线整体退役；页面训练场与本地服务已重写接入 2.0）
 
-`train-3p.mjs`（248KB v7 GA 主力，含 ARCH2 覆盖实现与 embedLegacy 事故点）‖ `train-best.mjs` / `train-fast.mjs`（2P v7 产线）‖ `train-selftest.mjs` ‖ `start-train-server.cmd` + `server/{train-server,train-worker,paralleltrain,train-env,econ-env,fight-env}.mjs`（页内训练场 SSE 线——**产品侧训练场 tab 同步摘除**，导入控件回归对局区）‖ `proto2/{obs2-from-v7,grow-modebias-nmode,chain-supfit,supfit-full}.mjs` ‖ `tools/probe-econ-reset-audit.mjs`。
+已删除旧 v7 训练器（`train-3p.mjs`、`train-best.mjs`、`train-fast.mjs`、`train-selftest.mjs`）、旧 v7 `server/*`（`train-worker` / `paralleltrain` / `train-env` / `econ-env` / `fight-env`）、`proto2/{obs2-from-v7,grow-modebias-nmode,chain-supfit,supfit-full}.mjs` 与 `tools/probe-econ-reset-audit.mjs`。原导入控件及 2.0「🧪 训练场」tab（`pg` / `supfit` 双模式 + SSE 进度与本机多人槽回写）现已在 `index.html` 与 `js/ui/ui.js` 就位。
 
 ### 归档候选清单（下一批批量处理，本班不动）
 
@@ -57,13 +60,14 @@
 | `js/train/policy.js / policy2.js` | `js/train/` | 包格式与前向——产品要读包出招，训练沙箱装载同一份（policy2 与 `training/proto2/arch2.mjs` 构成孪生账，不许合并） |
 | `js/train/bots.js` | `js/train/` | 脚本 AI：产品对战对手 + 训练对手，同一份 |
 | `js/train/evo.js` | `js/train/` | **混合体**：产品面（pickChampion 等，浏览器 bundle 加载）+ 训练引擎核（fitness/奖励 setter，Node 沙箱按文本装载）。物理拆分是已研究未执行的提案（共享闭包太深） |
-| `js/train/trainer.js` | `js/train/` | 冠军存取 + quickEval（产品接线）；导入/导出控件在对局区（训练场 tab 已随 v7 线退役） |
+| `js/train/trainer.js` | `js/train/` | 冠军存取 + quickEval + 训练 CSV 导出（产品接线；供对局区及 2.0「🧪 训练场」tab 调用） |
+| `training/train.mjs` + `server/train-server.mjs` | `training/` | 2.0 统一 CLI 总入口与本地 SSE 训练服务（支持页面「🧪 训练场」在线启动 `pg` / `supfit`） |
 
 ## 四、门禁与 CI
 
 - 产品门禁每 push 跑全量 np + spec + 旋钮册 `--check`；训练侧 np 部件的**分家（paths 过滤 + 手动档）是下一批**（11-13 用户裁定：训练的门禁只随训练开）。
-- 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**重生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40）。
-- 训练侧自查：2.0 冒烟 `proto2/selftest2.mjs` / `selftest3.mjs` ‖ 浏览器逐位对齐 `proto2/browser-parity.mjs`。
+- 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**重生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40；当前全集 40 / 在用 19 / 暗键 21）。
+- 训练侧自查：统一执行 `node training/train.mjs --selftest`（涵盖 `selftest2` + `selftest3` + `browser-parity`）。
 
 ## 五、常用验尸（30 秒判断产物血统）
 
@@ -77,13 +81,13 @@ node -e "const vm=require('vm'),fs=require('fs');const sb={window:{}};sb.globalT
 
 ```bash
 # ① 行为塑形后训练（多技能包的主力路）：键频锚抬稀缺卡 + 事件塑形锁目标卡 + 多节点防漂
-node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak \
+node training/train.mjs --mode=pg --up=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak \
   --games=6000 --batch=48 --lr=3e-4 --segEvery=1500 \
   --klW=0.05 --klTilt=tank,miniT,jinshield,taunt,rod,firestorm --klTiltMul=3 \
   --shapeKey=tank:0.25,miniT:0.15 --out=scratch/arms/<臂>.bak --tag=<臂>
 
 # ② 教师蒸馏 / DAgger（跨线蒸馏：v7 包也能当教师；零覆盖键的正解）
-node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak \
+node training/train.mjs --mode=supfit --upstream=docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak \
   --teacher=toolkit --objective=cand --dagger=1 --lr=0.0004 --steps=180 --groups=3300 \
   --shapeBal=1 --classPow=0.35 --out=scratch/arms/<臂>.bak --tag=<臂>
 #   窄化时换双教师轮替：--teacher=pack:<载体> --teacher2=toolkit --teacher2frac=0.5

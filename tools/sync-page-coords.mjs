@@ -55,7 +55,7 @@ const seen = new Set();
 for (const r of addRows) { const id = r[cix.id]; if (seen.has(id)) { console.error('⛔ 追加集内重复 ' + id); process.exit(2); } seen.add(id); }
 
 console.log('将追加 ' + addRows.length + ' 行' + (addRows.length ? '（fam 抽样：' + addRows.slice(0, 3).map((r) => r[cix.id]).join(', ') + ' … ' + addRows.slice(-1)[0][cix.id] + '）' : '（名册已齐）'));
-if (DRY) { console.log('--dry：未写'); process.exit(0); }
+if (DRY || addRows.length === 0) { if (DRY) console.log('--dry：未写'); process.exit(0); }
 const nl = CRLF ? '\r\n' : '\n';
 const out = raw.replace(/\r?\n$/, '') + nl + addRows.map((r) => r.join('\t')).join(nl) + nl;
 writeFileSync(CO, out, 'utf8');

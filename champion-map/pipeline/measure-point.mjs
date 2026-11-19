@@ -83,7 +83,11 @@ const ex = (tag, mode, axis, dose, extraArgs) => {
     '--dose=' + dose, '--mode=' + mode, '--exam=' + axis].concat(extraArgs || []));
 };
 ex('a-multi', 'multi', 'A', 'page', ['--coop=v3']);
-if (!SKIP_LONG) ex('a-long', 'long', 'A', 'page', ['--coop=v3']);
+ex('ax-multi', 'multi', 'A', 'exam', ['--coop=v3']);
+if (!SKIP_LONG) {
+  ex('a-long', 'long', 'A', 'page', ['--coop=v3']);
+  ex('ax-long', 'long', 'A', 'exam', ['--coop=v3']);
+}
 if (!SKIP_B) {
   if (!ARENA_B) {
     ex('b-multi', 'multi', 'B', 'page', ['--champ=' + F2ARG, '--champn=1']);
@@ -271,7 +275,7 @@ if (EXT_READINGS) {
     if (axis) vals[axis + c + (hor === 'short' ? '' : 'L')] = v;
   }
 } else {
-  for (const tag of ['a-multi', 'a-long', 'b-multi', 'b-long', 'x-multi', 'x-long']) {
+  for (const tag of ['a-multi', 'a-long', 'ax-multi', 'ax-long', 'b-multi', 'b-long', 'x-multi', 'x-long']) {
     const f = join(ST, ID + '-' + tag + '.tsv');
     if (!existsSync(f)) continue;
     const t = readTable(f); const row = t.rows[0]; if (!row) continue;
@@ -279,11 +283,11 @@ if (EXT_READINGS) {
     for (const c of cell) {
       const x = row[t.ix['x' + c]], n = row[t.ix['n' + c]];
       if (x === undefined || x === '') continue;
-      const rid = axis === 'a' ? RID_A : axis === 'b' ? RID_B : (ARENA_B ? 'b-arena-pl-1118' : RID_X);
+      const rid = axis === 'a' ? RID_A : axis === 'ax' ? 'a-v2coop-exam-1118' : axis === 'b' ? RID_B : (ARENA_B ? 'b-arena-pl-1118' : RID_X);
       if (!rid) continue;
       const hor = horizon === 'multi' ? 'short' : 'long';
       rd.push([rid, String(c), hor, x, n]);
-      if (axis !== 'x') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
+      if (axis !== 'x' && axis !== 'ax') vals[axis + c + (horizon === 'multi' ? '' : 'L')] = x;
     }
   }
   writeFileSync(rdFile, rd.map((r) => r.join('\t')).join('\n') + '\n', 'utf8');
@@ -291,6 +295,7 @@ if (EXT_READINGS) {
 const dispHead = readTable(join(HERE, 'data/display.tsv')).header;
 let D;
 const setD = (c, v) => { const i = dispHead.indexOf(c); if (i >= 0 && v !== undefined && v !== null) D[i] = String(v); };
+let g2Meas = '';
 if (EXT_DISPLAY) {
   const DT = readTable(EXT_DISPLAY);
   if (DT.header.join('\t') !== dispHead.join('\t')) { console.error('⛔ --display 表头与 data/display.tsv 不一致'); process.exit(2); }
@@ -320,11 +325,14 @@ if (EXT_DISPLAY) {
   }
   /* 新点不写 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账；
    *   当前页面名次由 viewer 按 C·R 重算，新点没有“旧尺出厂名次”。旧 926 行保留历史值。 */
-  /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort */
+  /* feas：新点临时表 + allLong/allMulti 两次；拿 okLong/okShort 及长程 g2 */
   if (!SKIP_FEAS) {
     for (const [flag, okCol, failCol, out] of [['--allLong=1', 'okLong', 'failsLong', feasLongOut], ['--allMulti=1', 'okShort', 'failsShort', feasShortOut]]) {
       const FT = readTable(out); const rr = FT.rows.find((x) => x[FT.ix.id] === ID);
-      if (rr) { setD(okCol, rr[FT.ix.ok]); setD(failCol, rr[FT.ix.fails]); }
+      if (rr) {
+        setD(okCol, rr[FT.ix.ok]); setD(failCol, rr[FT.ix.fails]);
+        if (flag === '--allLong=1' && FT.ix.G !== undefined && rr[FT.ix.G] !== '') g2Meas = String(rr[FT.ix.G]);
+      }
     }
   }
 }
@@ -376,6 +384,7 @@ if (projFile) addArgs.push('--projections=' + projFile);
 if (FAM) addArgs.push('--fam=' + FAM);
 if (FAMLAB) addArgs.push('--fam-label=' + FAMLAB);
 if (PARENT) addArgs.push('--parent=' + PARENT);
+if (g2Meas) addArgs.push('--g2=' + g2Meas);
 if (BAKE) addArgs.push('--bake');
 const out = execFileSync('node', addArgs, { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
 console.log(out.trim().split('\n').slice(-6).join('\n'));
