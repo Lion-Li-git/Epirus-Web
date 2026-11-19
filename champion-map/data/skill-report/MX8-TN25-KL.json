@@ -7061,7 +7061,6 @@
    "purify"
   ],
   "selected": [
-   "ji",
    "charge",
    "ring",
    "gun",
@@ -7087,7 +7086,6 @@
    "purify"
   ],
   "inUse": [
-   "ji",
    "charge",
    "gun",
    "sword",
@@ -7258,18 +7256,18 @@
      {
       "kind": "forced",
       "econ": "rich",
-      "games": 12,
-      "delta": 0,
-      "se": 0,
-      "forceHit": 0
+      "games": 48,
+      "delta": -0.10416666666666667,
+      "se": 0.08011285995999186,
+      "forceHit": 1
      },
      {
       "kind": "forced",
       "econ": "native",
-      "games": 12,
-      "delta": 0,
-      "se": 0,
-      "forceHit": 0
+      "games": 48,
+      "delta": -0.10416666666666667,
+      "se": 0.07437436055707794,
+      "forceHit": 1
      }
     ]
    },
@@ -7490,22 +7488,6 @@
     ]
    },
    {
-    "key": "ji",
-    "name": "ジ",
-    "stratum": "econ",
-    "inUse": true,
-    "arms": [
-     {
-      "kind": "ban",
-      "econ": "native",
-      "games": 12,
-      "deltaLost": -0.08333333333333333,
-      "se": 0.2599047999758855,
-      "forceHit": null
-     }
-    ]
-   },
-   {
     "key": "charge",
     "name": "蓄能",
     "stratum": "econ",
@@ -7542,22 +7524,6 @@
       "delta": -0.16666666666666666,
       "se": 0.11236664374387367,
       "forceHit": 0.9248554913294798
-     }
-    ]
-   },
-   {
-    "key": "ji",
-    "name": "ジ",
-    "stratum": "econLong",
-    "inUse": true,
-    "arms": [
-     {
-      "kind": "ban",
-      "econ": "native",
-      "games": 12,
-      "deltaLost": 0.08333333333333333,
-      "se": 0.1486470975026408,
-      "forceHit": null
      }
     ]
    },

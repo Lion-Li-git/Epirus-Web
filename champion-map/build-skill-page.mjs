@@ -33,6 +33,7 @@ const QUOTAS = [
   { name: '过载炮', keys: ['cannon'], min: 0.25 },
   { name: '贴贴', keys: ['curse'], min: 0, atLeast1: true },
   { name: '天火', keys: ['firestorm'], min: 0, atLeast1: true },
+  { name: '贴爆闭环', keys: ['curse', 'firestorm'], min: 0, atLeast1: true },
   { name: '小雷', keys: ['miniT'], min: 0, atLeast1: true },
   { name: '转移伤害', keys: ['transfer'], min: 0, atLeast1: true },
   { name: '原型制御', keys: ['proto'], min: 0, atLeast1: true },
@@ -102,6 +103,9 @@ export function bake(opts = {}) {
 
   function strengthRows(d) {
     if (!d.stage2) return '<div class="none">强度层未测（入池时跑 Stage 2）</div>';
+    const curseU = (d.stage1 && d.stage1.totalUses && d.stage1.totalUses.curse) || 0;
+    const fireU = (d.stage1 && d.stage1.totalUses && d.stage1.totalUses.firestorm) || 0;
+    const curseWaste = curseU >= 3 && fireU * 4 < curseU;
     const rows = [...d.stage2.results].sort((a, b) => a.key.localeCompare(b.key));
     let h = '<table class="stab"><tr><th>技能</th><th>层</th><th>口径</th><th>Δ_rich</th><th>Δ_nat/Δ_lost</th><th>判语</th></tr>';
     for (const r of rows) {
@@ -129,7 +133,7 @@ export function bake(opts = {}) {
       h += '<tr><td>' + esc(r.name) + '</td><td>' + esc(r.stratum) + '</td><td>' + (r.inUse ? '<b class="ban">消融</b>' : '强制') + '</td>'
         + '<td class="' + (rich && rich.delta > 0 ? 'pos' : 'neg') + '">' + deltaFmt(rich && rich.delta, rich && rich.se) + '</td>'
         + '<td class="' + ((nat ? nat.delta : (ban ? ban.deltaLost : 0)) > 0 ? 'pos' : 'neg') + '">' + deltaFmt(nat ? nat.delta : (ban ? ban.deltaLost : null), nat ? nat.se : (ban ? ban.se : 0)) + '</td>'
-        + '<td><span class="tag ' + vcls + '">' + verdict + '</span></td></tr>';
+        + '<td><span class="tag ' + vcls + '">' + verdict + '</span>' + (r.key === 'curse' && curseWaste ? ' <span class="tag vpit" title="贴贴手数=' + curseU + ' / 天火手数=' + fireU + '">只贴不爆</span>' : '') + '</td></tr>';
     }
     return h + '</table>';
   }
@@ -150,6 +154,11 @@ export function bake(opts = {}) {
       + '<span class="m"><b>' + fmtPct(s1.winRate) + '</b>胜率</span>'
       + '</div>';
     if (s1.envOnlySkills.length) h += '<div class="envonly">镜像看不见但环境会：' + s1.envOnlySkills.map(k => '<i title="' + esc(keyName[k] || k) + '">' + esc(keyName[k] || k) + '</i>').join('') + '</div>';
+    const curseU = (s1.totalUses && s1.totalUses.curse) || 0;
+    const fireU = (s1.totalUses && s1.totalUses.firestorm) || 0;
+    if (curseU >= 3 && fireU * 4 < curseU) {
+      h += '<div class="wastewarn">⚠ 贴而不引：贴贴 <b>' + curseU + '</b> 手（' + (s1.coverage.curse || 0) + ' 格）→ 天火 <b>' + fireU + '</b> 手（' + (s1.coverage.firestorm || 0) + ' 格）· 符咒空过期纯浪费</div>';
+    }
     h += '<div class="heat">';
     for (const s of SK30) {
       const cov = s1.coverage[s.key] || 0;
@@ -165,7 +174,9 @@ export function bake(opts = {}) {
 
   function bandSection(name, label, list, a) {
     const quotaRows = QUOTAS.map(q => {
-      const cnt = a.covCount[q.keys[0]] || 0;
+      const cnt = q.keys.length > 1
+        ? list.filter(d => d.stage1 && q.keys.every(k => (d.stage1.coverage[k] || 0) > 0)).length
+        : (a.covCount[q.keys[0]] || 0);
       const ok = q.atLeast1 ? cnt >= 1 : (cnt / Math.max(1, a.n)) >= q.min;
       return '<span class="q ' + (ok ? 'qok' : 'qbad') + '" title="' + esc(q.name) + ' ' + cnt + '/' + a.n + ' 包有跨环境使用（观察层口径）">' + esc(q.name) + ' ' + cnt + '/' + a.n + '</span>';
     }).join('');
@@ -188,6 +199,7 @@ export function bake(opts = {}) {
   html += '.fresh{font-size:10px;padding:1px 7px;border-radius:9px}.fok{background:#122b24;color:#4fd6a2}.fexp{background:#3a1515;color:#f08c8c}.when{margin-left:auto;font-size:10px;color:#69718a}';
   html += '.mrow{display:flex;gap:14px;margin:6px 0 8px}.m{font-size:11px;color:#7f879b}.m b{font-size:15px;color:#e8ecf5;margin-right:3px;font-weight:700}';
   html += '.envonly{font-size:11px;color:#8fb7ff;margin:2px 0 6px}.envonly i{font-style:normal;background:#152036;border-radius:4px;padding:1px 5px;margin-right:4px}';
+  html += '.wastewarn{font-size:11px;color:#f5b95e;background:#2b1f0e;border:1px solid #5c3d16;border-radius:6px;padding:4px 8px;margin:6px 0}';
   html += '.heat{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0 10px}.cell{font-size:9px;padding:2px 4px;border-radius:4px;letter-spacing:.2px}.cell.dead{outline:1px dashed #7d3b3b}';
   html += '.none{color:#69718a;font-size:12px;padding:6px 0}';
   html += '.stab{width:100%;border-collapse:collapse;margin-top:6px}.stab th,.stab td{font-size:11px;padding:3px 6px;text-align:left;border-bottom:1px solid #182030;color:#aeb6c8}.stab th{color:#69718a;font-weight:600}';

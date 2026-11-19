@@ -772,16 +772,32 @@ function buildTeacherPick(name) {
     }
     return null;
   };
+  const CURSE_KEEP_MAJOR = new Set([R.SK.BIG_T, R.SK.RAILGUN, R.SK.LASER_EYE, R.SK.FIRESTORM]);
+  const closeCurseStorm = (state, pid, cs, picked) => {
+    /* 贴爆闭环纠偏：有自己贴出的存活符咒时趁早天火引爆；禁止 ep<2 时贴孤儿符 */
+    const me = state.p[pid] || {};
+    if (picked && !CURSE_KEEP_MAJOR.has(picked.key) && myStickersOn(state, pid) >= 1 && castCount(state, pid, R.SK.FIRESTORM) < 2) {
+      const fs = pickKey(cs, R.SK.FIRESTORM);
+      if (fs) return fs;
+    }
+    if (picked && picked.key === R.SK.CURSE) {
+      if ((me.ep || 0) < 2 || castCount(state, pid, R.SK.CURSE) >= 2) {
+        return pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0];
+      }
+      return highestHpEnemy(state, pid, cs, R.SK.CURSE) || picked;
+    }
+    return picked;
+  };
   return isPack
-  ? (state, pid, cs, legal) => packPick(state, pid, cs, legal) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  ? (state, pid, cs, legal) => closeCurseStorm(state, pid, cs, packPick(state, pid, cs, legal) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0])
   : name === 'v7mix'
   ? (state, pid, cs) => pickChain(state, pid, cs, R) || v7Pick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'toolkit'
-    ? (state, pid, cs, legal) => keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+    ? (state, pid, cs, legal) => closeCurseStorm(state, pid, cs, keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0])
     : name === 'minit'
     ? (state, pid, cs) => miniTPick(state, pid, cs) || pickChain(state, pid, cs, R) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'chainmix'
-    ? (state, pid, cs, legal) => pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+    ? (state, pid, cs, legal) => closeCurseStorm(state, pid, cs, pickChain(state, pid, cs, R) || keyToCand(cs, W.EpirusBots.pickToolKit(state, pid, legal)) || cs.find((c) => c.key === R.SK.JI) || cs[0])
   : name === 'allround'
     ? (state, pid, cs) => allRoundPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'ration'

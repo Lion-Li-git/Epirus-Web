@@ -40,9 +40,15 @@ function makeSelCore(ctx, forceKey, rich, seat, acc, banKey) {
       base = keep.length ? keep : [{ key: R.SK.JI, affordable: true }];
     }
     if (forceKey) {
-      if (acc) acc.tries++;
       const can = base.filter(function (l) { return l.key === forceKey; });
-      if (can.length) base = can;
+      if (!can.length && forceKey === R.SK.FIRESTORM) {
+        /* R64 天火需先有自己贴出的存活符咒：场上无符时先强制贴贴上膛，不计入天火未命中 */
+        const pre = base.filter(function (l) { return l.key === R.SK.CURSE; });
+        if (pre.length) base = pre;
+      } else {
+        if (acc) acc.tries++;
+        if (can.length) base = can;
+      }
     }
     const pickC = T.pickChampion(state, pid, base, champ, temp);
     const k = pickC.key;

@@ -108,6 +108,7 @@ const SHAPE_ITEMS = SHAPE_KEY
     })
   : [];
 for (const tk of KL_TILT) resolveSk(tk, 'klTilt');
+const NEG_SHAPE_KEYS = new Set(SHAPE_ITEMS.filter((x) => x.w < 0).map((x) => x.key));
 const SHAPE_MODES_RAW = String(arg('shapeModes', '') || '').trim();
 const SHAPE_MODES = new Set(SHAPE_MODES_RAW ? SHAPE_MODES_RAW.split(',').map((s) => s.trim()).filter(Boolean) : []);
 for (const md of SHAPE_MODES) {
@@ -413,14 +414,23 @@ while (games < GAMES) {
     /* 塑形：逐决策对账事件结果（只认 ok），G_t = 终局 + 未折扣塑形回报（return-to-go） */
     const shape = new Float64Array(ds.length);
     const allowPosShape = !SHAPE_MODES.size || SHAPE_MODES.has(slot.mode);
+    let lastFireIdx = -1;
+    if (NEG_SHAPE_KEYS.has(R.SK.CURSE)) {
+      for (let i = ds.length - 1; i >= 0; i--) {
+        if (!ds[i].push && ds[i].key === R.SK.FIRESTORM && evs[i].outcome === 'ok') { lastFireIdx = i; break; }
+      }
+    }
     for (let i = 0; i < ds.length; i++) {
       const d = ds[i], e = evs[i];
       if (!d.push && e.outcome === 'ok') {
         if (allowPosShape && d.key === R.SK.RAILGUN) { shape[i] += LAMF; stat.fire++; }
         else if (allowPosShape && d.key === R.SK.CHARGE && d.ep >= 3 && d.elec === 0 && (!PEN_DEAD_ELEC || (d.bead || 'elec') === 'elec')) { shape[i] += LAMC; stat.charge++; }
         else if (PEN_DEAD_ELEC > 0 && d.key === R.SK.CHARGE && (d.bead || 'elec') === 'elec' && d.ep < 3) { shape[i] -= PEN_DEAD_ELEC; stat.deadElec++; }
-        /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：支持单键或 key:w 多键列表 */
-        for (const it of SHAPE_ITEMS) if (d.key === it.key && (it.w < 0 || allowPosShape)) { shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1; }
+        /* --shapeKey（11-14 晚 · ZCode · 用户令"试试开训练"= 强且宽第二轮）：支持单键或 key:w 多键列表；负权 curse 仅罚"之后无天火引爆"的孤儿贴符 */
+        for (const it of SHAPE_ITEMS) if (d.key === it.key && (it.w < 0 || allowPosShape)) {
+          if (it.key === R.SK.CURSE && it.w < 0 && i < lastFireIdx) continue;
+          shape[i] += it.w; stat.shapeHits[it.key] = (stat.shapeHits[it.key] || 0) + 1;
+        }
         if (DEF_TAX > 0 && allowPosShape && (d.key === R.SK.GUARD || d.key === R.SK.REFLECT || d.key === R.SK.BAGUA)) { shape[i] -= DEF_TAX; }
       }
       if (!d.push) { stat.ent += d.H; stat.decs++; }
@@ -499,10 +509,14 @@ while (games < GAMES) {
        *   （第二轮 --shapeKey 的死因就是采样塌缩）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
       const act0 = tapeForward(d.tape, pv0, ly);
       const t0 = tailOf(act0.logits, d.tape.keys, TEMP);
-      /* 倾斜：tilt 表里的键 ×m，全键归一（锚目标 = 抬弱键的拉力分布） */
+      /* 倾斜：tilt 表里的键 ×m，负塑形键在 KL 目标中置 0（防把已知废招/孤儿贴符锚回来） */
       const q0 = {};
       let q0sum = 0;
-      for (const k of new Set(d.tape.keys)) { q0[k] = (t0.kProb[k] || 0) * (KL_TILT.indexOf(k) >= 0 ? KL_TILT_MUL : 1); q0sum += q0[k]; }
+      for (const k of new Set(d.tape.keys)) {
+        const mul = NEG_SHAPE_KEYS.has(k) ? 0 : (KL_TILT.indexOf(k) >= 0 ? KL_TILT_MUL : 1);
+        q0[k] = (t0.kProb[k] || 0) * mul;
+        q0sum += q0[k];
+      }
       if (q0sum > 0) for (const k of Object.keys(q0)) q0[k] /= q0sum;
       const acc = new Float64Array(act.logits.length);
       for (const k of new Set(d.tape.keys)) {

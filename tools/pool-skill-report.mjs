@@ -224,8 +224,8 @@ function stage2(W, pack, st1, opts) {
     if (!fn || typeof B[fn] !== 'function') throw new Error('分层格脚本对手无效：' + stName + ' ' + nm);
     return fn;
   }));
-  /* 技能选择门（PLAN §1.3）：覆盖>0 ∪ 短名单；dualGun/mirror 裁定不设线 */
-  const SKIP = new Set(['dualGun', 'mirror']);
+  /* 技能选择门（PLAN §1.3）：覆盖>0 ∪ 短名单；ji（0 费回资源，且重复落在 econ/econLong 两格）/dualGun/mirror 不进强度消融 */
+  const SKIP = new Set(['ji', 'dualGun', 'mirror']);
   const sel = [];
   for (const key of (R.skills || []).map(d => d.key)) {
     if (SKIP.has(key)) continue;

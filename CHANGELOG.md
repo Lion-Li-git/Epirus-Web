@@ -4,6 +4,21 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.7 — 11-19 午（移除 skill-report `ji` 消融 · 补齐天火贴符前置与废贴告警 · 训练侧治「只贴不爆」）
+
+**这一版是什么**：修复 `skill-report` 把 0 费基础回资源动作 `ji` 纳入消融以及天火无贴符前置恒报“实验未生效”的两处测量缺陷，并在可视化页与训练管线里同时显形和治理「只贴不爆（贴贴而不接天火）」纯浪费。
+
+- **池级与单包 `skill-report` 修复**：
+  - [pool-skill-report.mjs](tools/pool-skill-report.mjs) 与 [skill-report.mjs](tools/skill-report.mjs)：把 `ji`（ジ）移出 Stage 2 消融选择集与 `--ban` 循环，消除禁 `ji` 导致整局 0 资源的失真消融（且此前因 `cat === 'energy'` 在 `econ`/`econLong` 重复出现两次）。
+  - [strength-lib.mjs](tools/strength-lib.mjs)：`makeSelCore` 为 `forceKey === R.SK.FIRESTORM` 自动补上 R64 贴符前置（场上无己方存活符咒时先强制 `curse` 上膛），全池 24 枚包的天火强制命中率从 0%（实验未生效）全部恢复至 **`100%`**。
+  - [build-skill-page.mjs](champion-map/build-skill-page.mjs)：在 `QUOTAS` 新增「贴爆闭环」配额并支持多键联合计数；在卡片区与强度表对 `curse >= 3 && firestorm * 4 < curse` 的包打出「⚠ 贴而不引 / 只贴不爆」告警；重刷全池 24 枚 `champion-map/data/skill-report/*.json`（剔除 `ji` 并重跑 `firestorm`）后重烘 [champion-map/skill-report.html](champion-map/skill-report.html)，实测揪出 **15 枚** 在池包存在「只贴不爆」纯浪费。
+- **训练管线根治「只贴不爆」与两路实验验证**：
+  - [supfit-gd.mjs](training/proto2/supfit-gd.mjs)：`buildTeacherPick`（`pack:`/`toolkit`/`chainmix` 分支）接入 `closeCurseStorm` 闭环守卫——场上存在己方存活符咒且非关键终结拍时优先引爆天火，同时禁止 `ep < 2` 穷贴孤儿符并优先选最高血量活敌。同 seed 双跑 `--teacher=chain` 默认路径 `wid` 逐位一致（`d58efca69c0b6bbd`）。
+  - [pg-train.mjs](training/proto2/pg-train.mjs)：负权 `curse`（`--shapeKey=...,curse:-0.08`）改为仅惩罚“之后本局再无 `firestorm` 引爆”的孤儿贴符，并在 `--klW` 冻结锚分布 `q0` 中自动清零负塑形键避免锚回旧废招。同 seed 双跑无负塑形路径 `wid` 逐位一致（`13ed6123e3c5fa90`）。
+  - 实测臂 A（`day1119-X2b-cf` → `day1119-X2b-pg.seg1500`）清零孤儿贴符后，`arenaB` 从 `night2-X2b-fuse` 的 `-87.25pt` 升至 **`-57.97pt`（`+29.28pt`）**；臂 B 产出过载炮宽谱候选 `day1119-cannon-pg.seg1500`（`promote --dry --support=2` **0 阻断**，`G4 19%/23%`、`G5 3%`、`场A 21.0%`、`花珠率 98.8%`、`用卡 9`、`cannon 1%`、`arenaB -82.28pt`）。
+- **24h 产物点名（D82）**：在册留档产物 `night2-S6.bak`、`night2-X2b-fuse.bak`、`night1119-A1-tank-band3.bak`、`night1119-MS2c-band1.bak` 均在盘上且已入上一版账（详见 `D137` 与 `D234` 门禁验收）。
+- **版本**：`v2.1.6 → v2.1.7`。
+
 ## v2.1.6 — 11-19 午（2.0 统一训练总入口与训练场恢复 ‖ 演化图颜色分尺与普查页导航 ‖ 池 24 枚两带与数据补齐）
 
 **这一版是什么**：收拾昨晚退役 `v7` 线后留下的训练接口与文档残账——新建统一的 2.0 训练 CLI 总入口与本地 2.0 SSE 训练服务，恢复主页「🧪 训练场」页签，把演化查看器底图/点颜色按短程/长程彻底拆列，并补齐新入池成员（`night2-S6`、`night2-X2b-fuse`、`RING-MINIT-CONT`）的地图读数与普查入口。

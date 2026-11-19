@@ -231,13 +231,13 @@ for (const r of rows) {
    * 那不是“坑”而是评测口径的必然结果。只有费用>0 的技能才适合读“常用却亏”。 */
   const d = R.byKey[r.key] || {};
   const isUtil = !(d.dmg && d.dmg.amt > 0);       // 无伤害 = 辅助/防御/架势
-  /* 该用哪个口径（放在 continues 之前，保证每行都有） */
-  r.tool = (r.use >= USE_BAN) ? ('--ban=' + r.key) : (INSTR[r.key] || '—');
+  /* 该用哪个口径（放在 continues 之前，保证每行都有；ji 是 0 费基础回资源动作，不参与消融） */
+  r.tool = (r.key === R.SK.JI) ? '—（基础回ジ动作，不消融）' : (r.use >= USE_BAN) ? ('--ban=' + r.key) : (INSTR[r.key] || '—');
   /* v1.4.11：**反制卡**必须额外标注 —— 它们的价值取决于场上有没有目标。
    * 注意这里用**追加**而不是替换：雷击之枪用量 1.6% ≥ 阈值，会被"已在用 ⇒ --ban"规则覆盖，
    * 我第一版把标注写进 INSTR 就被它吃掉了（生成出来的 HTML 里根本找不到）。 */
   if (NOTE[r.key]) r.tool += '　⚠ ' + NOTE[r.key];
-  r.inUse = r.use >= USE_BAN;
+  r.inUse = r.use >= USE_BAN && r.key !== R.SK.JI;
   /* v1.3.59：**三件事分开**，否则"死技能"这一栏会把测量失败也算进去：
    *  1) 强制没命中（技能压根进不了 legal 或被抽不到）⇒ 这个 Δ 不能读，只能报"实验未生效"；
    *  2) 辅助/防御类：mono-spam 一个不造成伤害的技能必然不如混合策略 ⇒ Δ 结构性为负；
@@ -265,7 +265,7 @@ const esc = function (s) { return String(s).replace(/[&<>]/g, function (c) { ret
 /* ===== v1.4.10 消融臂：对"冠军已经在用"的技能再跑一次"拿掉它"的原生经济考卷（同 seed）=====
  * Δ_lost = 原生基线 − 拿掉后 ⇒ **正数 = 承重**（拿掉会掉），**负数 = 陷阱**（拿掉反而变好）。 */
 console.log('  消融臂（拿掉冠军已在用的技能）…');
-const inUsePre = rows.filter(function (r) { return r.use >= USE_BAN; });
+const inUsePre = rows.filter(function (r) { return r.use >= USE_BAN && r.key !== R.SK.JI; });
 for (const r of inUsePre) {
   const ban = runCondition(null, false, 555001, null, r.key);
   const pdb = pairedDiff(baseNative, ban);          // 拿掉后 − 原生（配对）
