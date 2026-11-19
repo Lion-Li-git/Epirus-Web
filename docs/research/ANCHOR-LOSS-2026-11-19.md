@@ -29,3 +29,10 @@
 1. 逐枚按旧日志/父本复现（v7blk1-92 可走 v7 线；6 枚 obs6 需父本+配方）。
 2. 用户提供旧备份（`e507-out`、`obs6-coldstart`、`night-adapt`）。
 3. 用现存 17 锚组新联赛 ⇒ 换尺，全库 B/C 重测。
+
+---
+
+## 恢复进度更新（2026-11-19 23:20 +08:00）
+
+- 已按 `widOf` 逐位复现并写回 **4 / 7** 枚（在盘 **`21 / 24`**）：`v7blk1-92`（`6b749817f5cfc725`）、`MSB13-R1S791820660`（`5625693e5e54f30a`）、`P9-CN-MINI-CONT`（`70a2a6bc27cc64c7`）、`TZ2C`（`f5776ccecb333168`）。
+- 余下 **3 / 7** 锚（`OBS6-LH6P` / `DIV-V3-ANTIDEF` / `DIV-LH6-HEAVY-S2`）阻塞诊断、已排除配方清单、下游精确命令与 worktree 现场详记见：[HANDOFF-2026-11-19-anchor-recovery.md](file:///d:/code/Epirus-Web/docs/research/HANDOFF-2026-11-19-anchor-recovery.md)。
