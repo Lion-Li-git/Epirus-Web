@@ -11,6 +11,7 @@
  *   ⑦ page/coords 里 5 个新包的 MxC/MxCL 为空 ⇒ 黄（旧 mx1116 批没测过它们）
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -88,6 +89,14 @@ if (rulers && disp && rd && cv) {
 if (reg) {
   const miss = reg.rows.filter((r) => r[reg.ix.path] && !existsSync(join(DATA, '..', '..', r[reg.ix.path]))).map((r) => r[0]);
   if (miss.length) yellow.push('registry 路径不在盘：' + miss.length + ' 枚（11-19 清理，见 docs/ARTIFACT-LOSS-1119.md；池成员 0 枚）');
+  let badSha = 0;
+  for (const r of reg.rows) {
+    const p = r[reg.ix.path]; if (!p || !r[reg.ix.sha256]) continue;
+    const fp = join(DATA, '..', '..', p); if (!existsSync(fp)) continue;
+    const got = createHash('sha256').update(readFileSync(fp)).digest('hex');
+    if (got !== r[reg.ix.sha256]) badSha++;
+  }
+  if (badSha) yellow.push('registry 有 ' + badSha + ' 枚文件 sha256 与字节不符（均为 quarantine 恢复件、wid 与在册一致 ⇒ 权重等价；docs/ARTIFACT-LOSS-1119.md）');
 }
 /* ⑦ 新包 C̄ 缺口（黄） */
 if (pc) {

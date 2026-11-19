@@ -58,7 +58,7 @@ if (DATA === resolve(HERE, 'data')) {
     return n;
   })();
   if (_missPath > 0 && !process.argv.includes('--require-lineage')) {
-    console.log('—— ③ lineage 跳过：registry 有 ' + _missPath + ' 枚权重文件不在盘（11-19 清理删掉 docs/artifacts/*-out，不可恢复）' +
+    console.log('—— ③ lineage 跳过：registry 缺 ' + _missPath + ' 枚权重文件（11-19 清理；Gemini 已挽回 130 枚，其中 86 枚是 sha 不同但 wid 相同的 quarantine 件，权重等价；docs/ARTIFACT-LOSS-1119.md）' +
       ' ⇒ 重生成会塌家族/融合父边（§E503）；保留在册 lineage.tsv。补回权重后自动恢复，或加 --require-lineage 强制跑 ——');
   } else {
     run([join(HERE, 'lineage.mjs')], '③ lineage 同步 lineage.tsv');

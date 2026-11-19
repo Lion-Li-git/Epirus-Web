@@ -657,3 +657,10 @@ B-s63, B-s64, B0-111, B0L-31, B0L-71, B1, B2, B5-05-71, BIG0, cal-ctl, D005-31, 
 1. 短期：rebuild-map 在 registry 有缺失权重时跳过 lineage 重生成（保留在册 page/lineage.tsv），并打印缺失数。
 2. 中期（建议）：把配置列（divW/divK/.../oppsN/gens/mode）补进 registry，让 lineage 不依赖权重文件；融合父粒需要找回 .bak 或补父边声明。
 3. 长期：docs/artifacts/ 若要当存档，必须移出 .gitignore 或定期打包含校验的归档；否则每次清理都会再发生一次。
+
+## 2026-11-19 20:0x Gemini 恢复后复核
+
+- 仍缺：**670 枚**；已存在：**227 枚 sha256 与 registry 逐字节一致** + **86 枚 sha256 不同但 wid 与 lineage 在册一致**（quarantine 恢复件，权重等价；registry sha256 是字节哈希，恢复时重序列化/meta 变化会让它不同，**不能拿 sha 不等当"旧版本"**）。
+- 池成员 25 枚 sha256 全对；SOUP-s9-82XD4a / SOUP-stock1XK2-l35 的父粒 D4a / K2 已在盘且 sha 对，E20-71 仍缺 ⇒ lineage 仍不能完整重生成。
+- 全量对账表：docs/ARTIFACT-LOSS-1119.tsv（state = ok / missing / sha-diff-wid-same）。
+- 处置：86 枚 sha 不同但 wid 相同的恢复件按"可用"对待，不再计入不可信；rebuild-map 的 lineage 预检只按**缺文件数**跳过（670 枚）。

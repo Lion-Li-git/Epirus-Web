@@ -1,0 +1,1003 @@
+id	path	state	sha256
+B-s63	docs/artifacts/e513-out/B-s63.js	sha-diff-wid-same	c504d5d193242a791ff6d15d743d355538d15e7a4f1aa825afb58393e7e46127
+B-s64	docs/artifacts/e513-out/B-s64.js	sha-diff-wid-same	1e79ae98ad131a16cbce5958d65f11e4bdbc923c998897f58e867133098b0ced
+B0-111	docs/artifacts/e66-out/B0-111.bak	sha-diff-wid-same	8a77c067a507a87999686bf47eb01f869ad652bd14eb24342fedd84c3a2d5b12
+B0-31	docs/artifacts/e66-out/B0-31.bak	ok	
+B0L-31	docs/artifacts/e66-out/B0L-31.bak	sha-diff-wid-same	9d5bcdde1aed4b7afd216ec99ba61583396465c896f8501c4529ff54e7b7c7b7
+B0L-71	docs/artifacts/e66-out/B0L-71.bak	missing	
+B1	docs/artifacts/e234-out/B1.js	missing	
+B2	docs/artifacts/e234-out/B2.js	missing	
+B5-05-31	docs/artifacts/kept/e100-out__B5-05-31.bak	ok	
+B5-05-71	docs/artifacts/e100-out/B5-05-71.bak	missing	
+B5-10-31	docs/artifacts/e100-out/B5-10-31.bak	ok	
+B5-10-71	docs/artifacts/kept/e100-out__B5-10-71.bak	ok	
+BIG0	docs/artifacts/e234-out/BIG0.js	sha-diff-wid-same	875f7156a377628b24b338d8e851dacd1fa4a7f02aff0923b27ac4c2a08436f3
+blk0t40-s31	docs/artifacts/kept/e124-out__blk0t40-s31.bak	ok	
+blk0t40-s71	docs/artifacts/kept/e124-out__blk0t40-s71.bak	ok	
+blk1t00-s31	docs/artifacts/kept/e124-out__blk1t00-s31.bak	ok	
+blk1t00-s71	docs/artifacts/kept/e124-out__blk1t00-s71.bak	ok	
+blk1t40-s31	docs/artifacts/kept/e124-out__blk1t40-s31.bak	ok	
+blk1t40-s71	docs/artifacts/kept/e124-out__blk1t40-s71.bak	ok	
+cal-ctl	docs/artifacts/e59-out/cal-ctl.js	sha-diff-wid-same	594b0b5fdfc326592bba14b0df650ae2c9ab4724fa5c587f85a669d422fc20e2
+D005-31	docs/artifacts/e70-out/D005-31.bak	missing	
+D005-71	docs/artifacts/e70-out/D005-71.bak	missing	
+D02-71	docs/artifacts/e70-out/D02-71.bak	sha-diff-wid-same	80ada17d9a6f5c72ff36274b0f46b330093b65d7e3ec5634be5aa7db58705890
+D05-31	docs/artifacts/e70-out/D05-31.bak	sha-diff-wid-same	4df28c84224635aa59e1a959bcabc22b44e685d1cf775f38a3aa8487a61ccf31
+D1a	docs/artifacts/e68-out/V1-31.bak	sha-diff-wid-same	1abe9c480436bb673480770565708ebf6cd4796b693160feda919a8b76ffd274
+D2a	docs/artifacts/e234-out/D2a.js	missing	
+D3a	docs/artifacts/e234-out/D3a.js	missing	
+D4a	docs/artifacts/e234-out/D4a.js	ok	
+D6a	docs/artifacts/e234-out/D6a.js	missing	
+D7a	docs/artifacts/e234-out/D7a.js	missing	
+D8a	docs/artifacts/e234-out/D8a.js	missing	
+def-31	docs/artifacts/def-31.bak	missing	
+def-32	docs/artifacts/def-32.bak	missing	
+def-33	docs/artifacts/def-33.bak	missing	
+def-34	docs/artifacts/def-34.bak	missing	
+def-35	docs/artifacts/def-35.bak	missing	
+def-36	docs/artifacts/def-36.bak	missing	
+E00-31	docs/artifacts/e85-out/E00-31.bak	missing	
+E00-71	docs/artifacts/e85-out/E00-71.bak	missing	
+E1	docs/artifacts/e234-out/E1.js	missing	
+E10-31	docs/artifacts/kept/e85-out__E10-31.bak	ok	
+E2	docs/artifacts/e234-out/E2.js	missing	
+E20-31	docs/artifacts/e85-out/E20-31.bak	missing	
+E20-71	docs/artifacts/e85-out/E20-71.bak	missing	
+E3	docs/artifacts/e234-out/E3.js	ok	
+e35prod807	docs/artifacts/E35-prod-807.bak	missing	
+e35prod814	docs/artifacts/E35-prod-814.bak	ok	
+e39ctl911	docs/artifacts/E39-ctl-911.bak	ok	
+E51-t8-713	docs/artifacts/kept/artifacts__E51-t8-713.bak	ok	
+E59-ctl-901	docs/artifacts/e59-out/E59-ctl-901.bak	sha-diff-wid-same	fc20839aeed43a66ffde504916d5a428e4797813bd8787bbdd0ff18837fa2919
+E59-land-902	docs/artifacts/E59-land-902.bak	ok	
+E59-land-903	docs/artifacts/e59-out/E59-land-903.bak	sha-diff-wid-same	10eecb4e6adf432275419b60dfd226fad70325eb35f67196119d39d25c00a683
+E59-seq-902	docs/artifacts/e59-out/E59-seq-902.bak	sha-diff-wid-same	5c778b932efac96a2a6a86f188b030db00780c3571fdcbd8bd96c4fb8de23e82
+eco-31	docs/artifacts/eco-31.bak	missing	
+eco-32	docs/artifacts/eco-32.bak	missing	
+eco-33	docs/artifacts/eco-33.bak	missing	
+eco-34	docs/artifacts/eco-34.bak	ok	
+eco-34-v7	docs/artifacts/eco-34-v7.bak	sha-diff-wid-same	f91af5f6193b6a815ed8ae6812c12609256346ab4b0b531ff651f7c2926194a5
+eco-35	docs/artifacts/eco-35.bak	missing	
+eco-36	docs/artifacts/eco-36.bak	missing	
+eco2-31	docs/artifacts/eco2-31.bak	missing	
+eco2-32	docs/artifacts/eco2-32.bak	missing	
+eco2-33	docs/artifacts/eco2-33.bak	missing	
+eco2-34	docs/artifacts/eco2-34.bak	missing	
+eco2-35	docs/artifacts/eco2-35.bak	missing	
+eco2-36	docs/artifacts/eco2-36.bak	missing	
+EL0	docs/artifacts/eval-out/win-EL0.bak	sha-diff-wid-same	6519cabb10222ca2f0da3809c20cebe63e6dc0d8325a622fbbbb4893b20f2fdc
+fgtA-31	docs/artifacts/fgtA-31.bak	missing	
+fgtA-32	docs/artifacts/fgtA-32.bak	missing	
+fgtA-33	docs/artifacts/fgtA-33.bak	missing	
+fgtA-34	docs/artifacts/fgtA-34.bak	missing	
+fgtA-35	docs/artifacts/fgtA-35.bak	missing	
+fgtA-36	docs/artifacts/fgtA-36.bak	missing	
+fgtB-31	docs/artifacts/fgtB-31.bak	missing	
+fgtB-32	docs/artifacts/fgtB-32.bak	missing	
+fgtB-33	docs/artifacts/fgtB-33.bak	missing	
+fgtB-34	docs/artifacts/fgtB-34.bak	missing	
+fgtB-35	docs/artifacts/fgtB-35.bak	missing	
+fgtB-36	docs/artifacts/fgtB-36.bak	missing	
+fstA-31	docs/artifacts/fstA-31.bak	missing	
+fstA-32	docs/artifacts/fstA-32.bak	missing	
+fstA-33	docs/artifacts/fstA-33.bak	missing	
+fstA-34	docs/artifacts/fstA-34.bak	missing	
+fstA-35	docs/artifacts/fstA-35.bak	missing	
+fstA-36	docs/artifacts/fstA-36.bak	missing	
+G-s72	docs/artifacts/e514-out/G-s72.js	missing	
+G-s75	docs/artifacts/e514-out/G-s75.js	missing	
+G-s76	docs/artifacts/e514-out/G-s76.js	missing	
+G-s78	docs/artifacts/e514-out/G-s78.js	missing	
+G-s82	docs/artifacts/e514-out/G-s82.js	missing	
+G03-31	docs/artifacts/e78-out/G03-31.bak	ok	
+G03-71	docs/artifacts/e78-out/G03-71.bak	missing	
+G08-31	docs/artifacts/kept/e78-out__G08-31.bak	ok	
+G08-71	docs/artifacts/kept/e78-out__G08-71.bak	ok	
+H-s103	docs/artifacts/e518-out/H-s103.js	missing	
+H-s84	docs/artifacts/e518-out/H-s84.js	missing	
+H-s85	docs/artifacts/e518-out/H-s85.js	missing	
+H-s95	docs/artifacts/e518-out/H-s95.js	missing	
+HF-191	docs/artifacts/e116-out/HF-191.bak	missing	
+K-s63	docs/artifacts/e513-out/K-s63.js	missing	
+K1	docs/artifacts/e234-out/K1.js	missing	
+K2	docs/artifacts/kept/e70-out__D02-31.bak	ok	
+K4	docs/artifacts/e234-out/K4.js	missing	
+K5	docs/artifacts/e68-out/V1-71.bak	sha-diff-wid-same	11b1fc4a5bc8630ee0b59f89efaae1662bd3ab6a9a2c97279ab6eb86981e5f16
+K6	docs/artifacts/e70-out/D05-71.bak	sha-diff-wid-same	df28597080bc9e4765865a16bb9b5f06231a0ee8e3922447a34c1bcc275ae59c
+L02-31	docs/artifacts/e71-out/L02-31.bak	missing	
+L02-71	docs/artifacts/e71-out/L02-71.bak	missing	
+L05-71	docs/artifacts/e71-out/L05-71.bak	sha-diff-wid-same	1ede2c0b693f8fee5aaa4b4ae80f6dfb41548a002672c0dcd760cfacd2488efd
+L111	docs/artifacts/eval-out/win-L111.bak	missing	
+L151	docs/artifacts/eval-out/win-L151.bak	missing	
+L191	docs/artifacts/eval-out/win-L191.bak	missing	
+L71	docs/artifacts/eval-out/win-L71.bak	sha-diff-wid-same	e5b92f1f0aa107b81c18b098eb1056e1d47e4f8460b034be7232189a61e4caa1
+Lctl	docs/artifacts/eval-out/win-Lctl.bak	sha-diff-wid-same	48bf44c327937f777fa3ca0149d73e88a2705866b13ac573b83e19f50001ee69
+Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	ok	
+long-33	docs/artifacts/long-33.bak	missing	
+Lspend	docs/artifacts/eval-out/win-Lspend.bak	missing	
+M05-111	docs/artifacts/e73-out/M05-111.bak	missing	
+M05-151	docs/artifacts/e73-out/M05-151.bak	missing	
+M05-191	docs/artifacts/e73-out/M05-191.bak	missing	
+M05-231	docs/artifacts/e73-out/M05-231.bak	missing	
+M05C02-111	docs/artifacts/e73-out/M05C02-111.bak	sha-diff-wid-same	5e13b50f3ea5a940e068f393ffa7f722b74ee48bcafa84fee3e248ccf81c0a3d
+M05C02-151	docs/artifacts/e73-out/M05C02-151.bak	sha-diff-wid-same	82f425c2bb8329854a06887d268abee0ab471369335e34cfb372e36f5d1c79fb
+M05C02-31	docs/artifacts/e73-out/M05C02-31.bak	sha-diff-wid-same	c19c748af489c5fa3bd888d3df9cf14ebd743d39aa1ede83c6773e49a7a8f5ef
+M05C02-71	docs/artifacts/e73-out/M05C02-71.bak	sha-diff-wid-same	da5a88228fdc5a5daa136cfe3d00eb37651f2bd8c7793702a61e97d435b689c7
+mix-31	docs/artifacts/mix-31.bak	missing	
+mix-32	docs/artifacts/mix-32.bak	missing	
+mix-33	docs/artifacts/mix-33.bak	missing	
+mix-34	docs/artifacts/mix-34.bak	missing	
+mix-35	docs/artifacts/mix-35.bak	missing	
+mix-36	docs/artifacts/mix-36.bak	missing	
+N5-0	docs/artifacts/e95-out/N5-0.bak	missing	
+N5L-05	docs/artifacts/kept/e120-out__N5L-05.bak	ok	
+N5L-15	docs/artifacts/e106-out/N5L-15.bak	missing	
+N5L-30	docs/artifacts/e106-out/N5L-30.bak	ok	
+NC-191	docs/artifacts/e75-out/NC-191.bak	ok	
+NC-231	docs/artifacts/e75-out/NC-231.bak	missing	
+NC-301	docs/artifacts/e75-out/NC-301.bak	missing	
+NC-341	docs/artifacts/e75-out/NC-341.bak	missing	
+NCV-71	docs/artifacts/e75-out/NCV-71.bak	sha-diff-wid-same	2185e8fa7625a2618977629ac2525209769765bf4900d8835893c3e6cad22304
+NOL24-71	docs/artifacts/kept/e68-out__V2-71.bak	ok	
+P-s22	docs/artifacts/e504-out/P-s22.js	missing	
+P-s25	docs/artifacts/e504-out/P-s25.js	missing	
+P-s28	docs/artifacts/e504-out/P-s28.js	missing	
+P-s30	docs/artifacts/e504-out/P-s30.js	missing	
+P111	docs/artifacts/e234-out/P111.js	sha-diff-wid-same	1b10a275cff777f37a0cbbbf94cc138c59de6b0fab26133fb34dbadb79fb5c12
+P151	docs/artifacts/e234-out/P151.js	sha-diff-wid-same	7956cce366ab0d7097bc7e8143dd0ae0a86c5dfa519c3e17b26e22b388dec36d
+P191	docs/artifacts/e234-out/P191.js	sha-diff-wid-same	a2bb014f9eae7eef48f2501cb7adf4b8dbf49197a089ef9806b5b2a75f6ae79a
+P231	docs/artifacts/e234-out/P231.js	sha-diff-wid-same	c4ead7dc3094dbdbd7412196f698a153c9f01c70e11b3aef9b278eb2e49eae59
+PL71	docs/artifacts/e77-out/PL71.bak	ok	
+plainAnchor-s12	docs/artifacts/e502-out/plainAnchor-s12.js	missing	
+plainAnchor-s13	docs/artifacts/e502-out/plainAnchor-s13.js	missing	
+Q-s33	docs/artifacts/e507-out/Q-s33.js	missing	
+Q-s38	docs/artifacts/e507-out/Q-s38.js	missing	
+Q-s47	docs/artifacts/e507-out/Q-s47.js	missing	
+Q-s51	docs/artifacts/e507-out/Q-s51.js	missing	
+Q151	docs/artifacts/e234-out/Q151.js	sha-diff-wid-same	4d07666593044736b37dfeabeffc0eb0767bde6fc9362e369d1610bd37464438
+Q191	docs/artifacts/e234-out/Q191.js	sha-diff-wid-same	a403e22555f5c1c63e30695969eea9267607b0faa8ae185599d74f5a20c8d2c8
+Q231	docs/artifacts/e234-out/Q231.js	sha-diff-wid-same	83acb7e37cf1e30d8348ba1251decef5068f6610c65586dad941baa0a8354c53
+R-s107	docs/artifacts/e521-out/R-s107.js	missing	
+R-s120	docs/artifacts/e521-out/R-s120.js	missing	
+R-s123	docs/artifacts/e521-out/R-s123.js	ok	
+R-s129	docs/artifacts/e521-out/R-s129.js	missing	
+R1	docs/artifacts/e234-out/R1.js	missing	
+R231	docs/artifacts/eval-out/win-R231.bak	missing	
+R271	docs/artifacts/eval-out/win-R271.bak	missing	
+R311	docs/artifacts/eval-out/win-R311.bak	ok	
+R351	docs/artifacts/eval-out/win-R351.bak	missing	
+R391	docs/artifacts/eval-out/win-R391.bak	missing	
+R431	docs/artifacts/eval-out/win-R431.bak	missing	
+r61fix-31	docs/artifacts/r61fix-31.bak	missing	
+r61fix-81	docs/artifacts/r61fix-81.bak	missing	
+r61fix-82	docs/artifacts/r61fix-82.bak	missing	
+r61fix-91	docs/artifacts/r61fix-91.bak	missing	
+r61fix-92	docs/artifacts/r61fix-92.bak	ok	
+r61fix-93	docs/artifacts/r61fix-93.bak	missing	
+RG1-31	docs/artifacts/e127-out/RG1-31.bak	missing	
+RG1-71	docs/artifacts/e127-out/RG1-71.bak	missing	
+rwd0-31	docs/artifacts/rwd0-31.bak	missing	
+rwd0-32	docs/artifacts/rwd0-32.bak	missing	
+rwd0-33	docs/artifacts/rwd0-33.bak	missing	
+rwd0-34	docs/artifacts/rwd0-34.bak	missing	
+rwd0-35	docs/artifacts/rwd0-35.bak	missing	
+rwd0-36	docs/artifacts/rwd0-36.bak	missing	
+S-s110	docs/artifacts/e521-out/S-s110.js	missing	
+S-s113	docs/artifacts/e521-out/S-s113.js	missing	
+S-s114	docs/artifacts/e521-out/S-s114.js	missing	
+S-s120	docs/artifacts/e521-out/S-s120.js	ok	
+S71	docs/artifacts/e234-out/S71.js	missing	
+seed80	docs/artifacts/eval-out/sel80.bak	ok	
+seed81	docs/artifacts/eval-out/sel81.bak	missing	
+seedtest2-41	docs/artifacts/seedtest2-41.bak	ok	
+SLOT-033c7601	docs/artifacts/e370-out/033c7601-v7.js	missing	
+SLOT-03749abc	docs/artifacts/e370-out/03749abc-v7.js	missing	
+SLOT-037b2f71	docs/artifacts/e370-out/037b2f71-v7.js	missing	
+SLOT-18eafc3f	docs/artifacts/e370-out/18eafc3f-v7.js	missing	
+SLOT-255f008a	docs/artifacts/e370-out/255f008a-v7.js	missing	
+SLOT-4afeed5f	docs/artifacts/e370-out/4afeed5f-v7.js	missing	
+SLOT-5d6fd40e	docs/artifacts/e370-out/5d6fd40e-v7.js	missing	
+SLOT-6ed47e18	docs/artifacts/e370-out/6ed47e18-v7.js	missing	
+SLOT-9ada5161	docs/artifacts/e370-out/9ada5161-v7.js	missing	
+SLOT-9e83020d	docs/artifacts/e370-out/9e83020d-v7.js	missing	
+SLOT-bb5c0e8e	docs/artifacts/e370-out/bb5c0e8e-v7.js	missing	
+SLOT-cc573172	docs/artifacts/e370-out/cc573172-v7.js	missing	
+SLOT-cd32f240	docs/artifacts/e370-out/cd32f240-v7.js	missing	
+SLOT-e379c62c	docs/artifacts/e370-out/e379c62c-v7.js	missing	
+SLOT-f5735e56	docs/artifacts/e370-out/f5735e56-v7.js	missing	
+SLOT-f970452c	docs/artifacts/e370-out/f970452c-v7.js	missing	
+snipeNoPool-s11	docs/artifacts/e502-out/snipeNoPool-s11.js	missing	
+snipeNoPool-s13	docs/artifacts/e502-out/snipeNoPool-s13.js	missing	
+snipePool-s11	docs/artifacts/e502-out/snipePool-s11.js	missing	
+snipePool-s12	docs/artifacts/e502-out/snipePool-s12.js	missing	
+SOUP-KE-l60	docs/artifacts/SOUP-KE-l60.bak	ok	
+SOUP-s9-82XD4a	docs/artifacts/SOUP-s9-82XD4a.bak	ok	
+SOUP-stock1XK2-l35	docs/artifacts/SOUP-stock1XK2-l35.bak	ok	
+SOUP-sub1-92XD4a	docs/artifacts/SOUP-sub1-92XD4a.bak	ok	
+SOUP-Y-KE6k2	docs/artifacts/SOUP-Y-KE6k2.bak	ok	
+SOUP-Y-l65	docs/artifacts/SOUP-Y-l65.bak	ok	
+SP-s25	docs/artifacts/e504-out/SP-s25.js	missing	
+SP-s29	docs/artifacts/e504-out/SP-s29.js	missing	
+SP-s30	docs/artifacts/e504-out/SP-s30.js	ok	
+SP-s32	docs/artifacts/e504-out/SP-s32.js	missing	
+SQ2-15-71	docs/artifacts/kept/e120-out__SQ2-15-71.bak	ok	
+sty-31	docs/artifacts/sty-31.bak	missing	
+sty-32	docs/artifacts/sty-32.bak	missing	
+sty-33	docs/artifacts/sty-33.bak	missing	
+sty-34	docs/artifacts/sty-34.bak	missing	
+sty-35	docs/artifacts/sty-35.bak	missing	
+sty-36	docs/artifacts/sty-36.bak	missing	
+T-s111	docs/artifacts/e521-out/T-s111.js	sha-diff-wid-same	647e2a99cfb69c69e6d9621dc28eeda885cb45307f1447bdfd42fd94b49a2850
+T-s124	docs/artifacts/e521-out/T-s124.js	missing	
+T-s127	docs/artifacts/e521-out/T-s127.js	missing	
+T-s136	docs/artifacts/e521-out/T-s136.js	missing	
+T111	docs/artifacts/e234-out/T111.js	missing	
+T8-s110	docs/artifacts/e521-out/T-s110.js	sha-diff-wid-same	e336bb59c414192e3188ba79109f56a5d465ce835be2c9095bc9edb42ee13be6
+T8-s113	docs/artifacts/e521-out/T-s113.js	sha-diff-wid-same	66f7d9e13c57408b1d7243f2c6556fb21cba92cfb3778f185a409eff0a14bbce
+T8-s114	docs/artifacts/e528-out/T8-s114.js	ok	
+T8-s120	docs/artifacts/e521-out/T-s120.js	sha-diff-wid-same	b77d28c0f61372bb607d8eed56568cd407e8578a33e85e158ff82e349473a066
+U-s202	docs/artifacts/e539-out/U-s202.js	missing	
+U-s203	docs/artifacts/e539-out/U-s203.js	missing	
+U-s205	docs/artifacts/e539-out/U-s205.js	missing	
+U-s209	docs/artifacts/e539-out/U-s209.js	missing	
+U-s212	docs/artifacts/e539-out/U-s212.js	missing	
+U-s216	docs/artifacts/e539-out/U-s216.js	ok	
+U1	docs/artifacts/e234-out/U1.js	missing	
+U2	docs/artifacts/e234-out/U2.js	missing	
+V-s302	docs/artifacts/e551-out/V-s302.js	missing	
+V-s306	docs/artifacts/e551-out/V-s306.js	missing	
+V-s310	docs/artifacts/e551-out/V-s310.js	missing	
+V-s312	docs/artifacts/e551-out/V-s312.js	missing	
+V-s328	docs/artifacts/e551-out/V-s328.js	missing	
+V-s347	docs/artifacts/e551-out/V-s347.js	missing	
+V-s350	docs/artifacts/e551-out/V-s350.js	missing	
+v11-61	docs/artifacts/v11-61.bak	missing	
+v11-62	docs/artifacts/v11-62.bak	missing	
+v11-63	docs/artifacts/v11-63.bak	missing	
+v11-64	docs/artifacts/v11-64.bak	missing	
+v11-65	docs/artifacts/v11-65.bak	missing	
+v11-66	docs/artifacts/v11-66.bak	missing	
+v11-71	docs/artifacts/v11-71.bak	missing	
+v11-72	docs/artifacts/v11-72.bak	missing	
+v11-73	docs/artifacts/v11-73.bak	missing	
+v11-74	docs/artifacts/v11-74.bak	missing	
+v11-75	docs/artifacts/v11-75.bak	missing	
+v11-76	docs/artifacts/v11-76.bak	missing	
+V111	docs/artifacts/e234-out/V111.js	missing	
+v12-81	docs/artifacts/v12-81.bak	missing	
+v12-82	docs/artifacts/v12-82.bak	missing	
+v12-83	docs/artifacts/v12-83.bak	missing	
+v12-84	docs/artifacts/v12-84.bak	missing	
+v12-85	docs/artifacts/v12-85.bak	missing	
+v12-86	docs/artifacts/v12-86.bak	missing	
+v12-91	docs/artifacts/v12-91.bak	missing	
+v12-92	docs/artifacts/v12-92.bak	missing	
+v12-93	docs/artifacts/v12-93.bak	missing	
+v12-94	docs/artifacts/v12-94.bak	missing	
+v12-95	docs/artifacts/v12-95.bak	missing	
+v12-96	docs/artifacts/v12-96.bak	missing	
+v13-101	docs/artifacts/v13-101.bak	missing	
+v13-102	docs/artifacts/v13-102.bak	missing	
+v13-103	docs/artifacts/v13-103.bak	missing	
+v13-104	docs/artifacts/v13-104.bak	missing	
+v13-105	docs/artifacts/v13-105.bak	missing	
+v13-106	docs/artifacts/v13-106.bak	missing	
+v13-31	docs/artifacts/v13-31.bak	missing	
+v14-111	docs/artifacts/v14-111.bak	missing	
+v14-112	docs/artifacts/v14-112.bak	missing	
+v14-113	docs/artifacts/v14-113.bak	missing	
+v14-114	docs/artifacts/v14-114.bak	missing	
+v14-115	docs/artifacts/v14-115.bak	missing	
+v14-116	docs/artifacts/v14-116.bak	missing	
+v14-31	docs/artifacts/v14-31.bak	sha-diff-wid-same	c06f65f4db683530f41efa31d23e1488b4d742284d426397a2c0fd989915a8ac
+v15-121	docs/artifacts/v15-121.bak	missing	
+v15-122	docs/artifacts/v15-122.bak	missing	
+v15-123	docs/artifacts/v15-123.bak	missing	
+v15-124	docs/artifacts/v15-124.bak	missing	
+v15-125	docs/artifacts/v15-125.bak	missing	
+v15-126	docs/artifacts/v15-126.bak	missing	
+V151	docs/artifacts/e234-out/V151.js	missing	
+v16-131	docs/artifacts/v16-131.bak	missing	
+v16-132	docs/artifacts/v16-132.bak	missing	
+v16-133	docs/artifacts/v16-133.bak	missing	
+v16-134	docs/artifacts/v16-134.bak	missing	
+v16-135	docs/artifacts/v16-135.bak	missing	
+v16-136	docs/artifacts/v16-136.bak	missing	
+v17-141	docs/artifacts/v17-141.bak	missing	
+v17-142	docs/artifacts/v17-142.bak	missing	
+v17-143	docs/artifacts/v17-143.bak	missing	
+v17-144	docs/artifacts/v17-144.bak	missing	
+v17-145	docs/artifacts/v17-145.bak	missing	
+v17-146	docs/artifacts/v17-146.bak	missing	
+v17-31	docs/artifacts/v17-31.bak	missing	
+V191	docs/artifacts/e234-out/V191.js	missing	
+V2-31	docs/artifacts/e68-out/V2-31.bak	missing	
+V71	docs/artifacts/e234-out/V71.js	missing	
+v7a-31	docs/artifacts/v7a-31.bak	ok	
+v7a-32	docs/artifacts/v7a-32.bak	sha-diff-wid-same	c84cdc1924a1d1857290b5cbb975045c8e9111a09efea0cf9f95870e675a9631
+v7a-33	docs/artifacts/v7a-33.bak	sha-diff-wid-same	1be9e3bf044917ca0b74fe836f527352b0f3d91653c5900a4d52906c8bfc9677
+v7a-34	docs/artifacts/v7a-34.bak	sha-diff-wid-same	61cd338bc2abf51b62cb120d1e90b7483777df7d225d0dd3d6125accd80568bf
+v7a-35	docs/artifacts/v7a-35.bak	sha-diff-wid-same	c9fcfb504322e95aa4ba3cd6c8884439323f17528113fddd3908d039ff0e7ac6
+v7a-36	docs/artifacts/v7a-36.bak	sha-diff-wid-same	3a6a29fe56cb22a1312f457b62e8c17e2a1812114b269f3c6ed7b7cdb6ced4b5
+v7aim1-31	docs/artifacts/v7aim1-31.bak	missing	
+v7aim1-81	docs/artifacts/v7aim1-81.bak	missing	
+v7aim1-82	docs/artifacts/v7aim1-82.bak	missing	
+v7aim1-91	docs/artifacts/v7aim1-91.bak	missing	
+v7aim1-92	docs/artifacts/v7aim1-92.bak	missing	
+v7aim1-93	docs/artifacts/v7aim1-93.bak	missing	
+v7aim1f-31	docs/artifacts/v7aim1f-31.bak	missing	
+v7aim1f-82	docs/artifacts/v7aim1f-82.bak	missing	
+v7aim1f-93	docs/artifacts/v7aim1f-93.bak	missing	
+v7aim2-31	docs/artifacts/v7aim2-31.bak	missing	
+v7aim2-82	docs/artifacts/v7aim2-82.bak	missing	
+v7aim2-93	docs/artifacts/v7aim2-93.bak	missing	
+v7aim3-31	docs/artifacts/v7aim3-31.bak	missing	
+v7aim3-82	docs/artifacts/v7aim3-82.bak	missing	
+v7aim3-93	docs/artifacts/v7aim3-93.bak	ok	
+v7anneal-34	docs/artifacts/v7anneal-34.bak	missing	
+v7attr-31	docs/artifacts/v7attr-31.bak	missing	
+v7attr-33	docs/artifacts/v7attr-33.bak	missing	
+v7b-37	docs/artifacts/v7b-37.bak	sha-diff-wid-same	39c972629535189409b5f47a73459466c39bb64594bbf1d4aa08e857d317faf1
+v7b-38	docs/artifacts/v7b-38.bak	sha-diff-wid-same	95e6609551eb87f7a0cd533965c27ce5b63c1a6c6a70d94bf7e7644ac1fd4445
+v7b-39	docs/artifacts/v7b-39.bak	sha-diff-wid-same	58f4b8d32806a47394bfc2090d864147eb04fe4fb5b0156376c5cd1b1a92c426
+v7b-40	docs/artifacts/v7b-40.bak	sha-diff-wid-same	b3b73c3826fc6b3b7a42837d86bdaba9519ab68f98277e9e59470ce8d593369d
+v7b-41	docs/artifacts/v7b-41.bak	sha-diff-wid-same	27cd359db6a885a423977d0aa956de9221a577e3b4cd404a0d125999cfbbda5c
+v7b-42	docs/artifacts/v7b-42.bak	sha-diff-wid-same	3455d879921c000199b29f1165e960e881849a9682bdc729c77740a5875aa4eb
+v7b-43	docs/artifacts/v7b-43.bak	missing	
+v7b-44	docs/artifacts/v7b-44.bak	missing	
+v7b-45	docs/artifacts/v7b-45.bak	missing	
+v7b-46	docs/artifacts/v7b-46.bak	missing	
+v7b-47	docs/artifacts/v7b-47.bak	missing	
+v7b-48	docs/artifacts/v7b-48.bak	missing	
+v7bead1-31	docs/artifacts/v7bead1-31.bak	missing	
+v7bead1-93	docs/artifacts/v7bead1-93.bak	ok	
+v7bead100-31	docs/artifacts/v7bead100-31.bak	missing	
+v7bead100-82	docs/artifacts/v7bead100-82.bak	missing	
+v7bead100-93	docs/artifacts/v7bead100-93.bak	missing	
+v7bead15-31	docs/artifacts/v7bead15-31.bak	missing	
+v7bead15-82	docs/artifacts/v7bead15-82.bak	missing	
+v7bead15-93	docs/artifacts/v7bead15-93.bak	missing	
+v7bead2-31	docs/artifacts/v7bead2-31.bak	missing	
+v7bead2-82	docs/artifacts/v7bead2-82.bak	missing	
+v7bead2-93	docs/artifacts/v7bead2-93.bak	missing	
+v7bead25-31	docs/artifacts/v7bead25-31.bak	missing	
+v7bead25-82	docs/artifacts/v7bead25-82.bak	missing	
+v7bead25-93	docs/artifacts/v7bead25-93.bak	missing	
+v7bead3-31	docs/artifacts/v7bead3-31.bak	missing	
+v7bead3-82	docs/artifacts/v7bead3-82.bak	ok	
+v7bead3-93	docs/artifacts/v7bead3-93.bak	missing	
+v7beadseed-31	docs/artifacts/v7beadseed-31.bak	missing	
+v7beadseed-82	docs/artifacts/v7beadseed-82.bak	ok	
+v7beadseed-93	docs/artifacts/v7beadseed-93.bak	missing	
+v7big1-31	docs/artifacts/v7big1-31.bak	missing	
+v7big1-81	docs/artifacts/v7big1-81.bak	missing	
+v7big1-82	docs/artifacts/v7big1-82.bak	missing	
+v7big1-91	docs/artifacts/v7big1-91.bak	missing	
+v7big1-92	docs/artifacts/v7big1-92.bak	missing	
+v7big1-93	docs/artifacts/v7big1-93.bak	missing	
+v7blk1-31	docs/artifacts/v7blk1-31.bak	missing	
+v7blk1-81	docs/artifacts/v7blk1-81.bak	missing	
+v7blk1-82	docs/artifacts/v7blk1-82.bak	missing	
+v7blk1-91	docs/artifacts/v7blk1-91.bak	ok	
+v7blk1-92	docs/artifacts/v7blk1-92.bak	missing	
+v7blk1-93	docs/artifacts/v7blk1-93.bak	missing	
+v7catE1-31	docs/artifacts/v7catE1-31.bak	missing	
+v7catE1-81	docs/artifacts/v7catE1-81.bak	missing	
+v7catE1-82	docs/artifacts/v7catE1-82.bak	missing	
+v7catE5-31	docs/artifacts/v7catE5-31.bak	missing	
+v7catE5-81	docs/artifacts/v7catE5-81.bak	missing	
+v7catE5-82	docs/artifacts/v7catE5-82.bak	missing	
+v7clear2-31	docs/artifacts/v7clear2-31.bak	missing	
+v7clear2-81	docs/artifacts/v7clear2-81.bak	missing	
+v7clear2-82	docs/artifacts/v7clear2-82.bak	missing	
+v7cmin3-31	docs/artifacts/v7cmin3-31.bak	ok	
+v7cmin3-82	docs/artifacts/v7cmin3-82.bak	ok	
+v7cmin3-93	docs/artifacts/v7cmin3-93.bak	ok	
+v7cmin4-31	docs/artifacts/incumbent-forpromote.bak	sha-diff-wid-same	062e923b5fe2f3d896123e8dcd78f4e7bf5f933b122edc1eadb7d106ee2f2231
+v7cmin4-82	docs/artifacts/v7cmin4-82.bak	ok	
+v7cmin4-93	docs/artifacts/v7cmin4-93.bak	missing	
+v7ctrlE-31	docs/artifacts/v7ctrlE-31.bak	sha-diff-wid-same	8bc2622d040e87a68afd65a47522fd53f374d4dc9cdd6ef876a1777cedfddd25
+v7ctrlE-81	docs/artifacts/v7ctrlE-81.bak	sha-diff-wid-same	dc88e64c98c630c1f2c18b539c82bfbb7deaf2cd308b34cead1e05db5f106a53
+v7ctrlE-82	docs/artifacts/v7ctrlE-82.bak	sha-diff-wid-same	40fa7ec1cde51bcd5c5fd54669e24a4ca9be44486d32bee05a06a921753fee7f
+v7cur-31	docs/artifacts/v7cur-31.bak	missing	
+v7cur-82	docs/artifacts/v7cur-82.bak	missing	
+v7cur-93	docs/artifacts/v7cur-93.bak	missing	
+v7cur2-31	docs/artifacts/v7cur2-31.bak	missing	
+v7cur2-82	docs/artifacts/v7cur2-82.bak	missing	
+v7cur2-93	docs/artifacts/v7cur2-93.bak	missing	
+v7cur3-31	docs/artifacts/v7cur3-31.bak	missing	
+v7cur3-82	docs/artifacts/v7cur3-82.bak	missing	
+v7cur3-93	docs/artifacts/v7cur3-93.bak	missing	
+v7curri1-31	docs/artifacts/v7curri1-31.bak	missing	
+v7curri1-81	docs/artifacts/v7curri1-81.bak	missing	
+v7curri1-82	docs/artifacts/v7curri1-82.bak	missing	
+v7curri1-91	docs/artifacts/v7curri1-91.bak	missing	
+v7curri1-92	docs/artifacts/v7curri1-92.bak	missing	
+v7curri1-93	docs/artifacts/v7curri1-93.bak	missing	
+v7curri2-31	docs/artifacts/v7curri2-31.bak	missing	
+v7curri2-81	docs/artifacts/v7curri2-81.bak	missing	
+v7curri2-82	docs/artifacts/v7curri2-82.bak	missing	
+v7curri2-91	docs/artifacts/v7curri2-91.bak	missing	
+v7curri2-92	docs/artifacts/v7curri2-92.bak	missing	
+v7curri2-93	docs/artifacts/v7curri2-93.bak	missing	
+v7densE-31	docs/artifacts/v7densE-31.bak	missing	
+v7densE-81	docs/artifacts/v7densE-81.bak	missing	
+v7densE-82	docs/artifacts/v7densE-82.bak	missing	
+v7divK-31	docs/artifacts/v7divK-31.bak	ok	
+v7divK-81	docs/artifacts/v7divK-81.bak	missing	
+v7divK-82	docs/artifacts/v7divK-82.bak	missing	
+v7divK2-81	docs/artifacts/v7divK2-81.bak	missing	
+v7divK2-82	docs/artifacts/v7divK2-82.bak	missing	
+v7divK2b-82	docs/artifacts/v7divK2b-82.bak	ok	
+v7expo-32	docs/artifacts/v7expo-32.bak	missing	
+v7expo-33	docs/artifacts/v7expo-33.bak	missing	
+v7expo-34	docs/artifacts/v7expo-34.bak	missing	
+v7f2-31	docs/artifacts/v7f2-31.bak	missing	
+v7f2b-31	docs/artifacts/v7f2b-31.bak	missing	
+v7f2b-81	docs/artifacts/v7f2b-81.bak	missing	
+v7f2b-82	docs/artifacts/v7f2b-82.bak	missing	
+v7f2t-31	docs/artifacts/v7f2t-31.bak	missing	
+v7f2t-81	docs/artifacts/v7f2t-81.bak	missing	
+v7f2t-82	docs/artifacts/v7f2t-82.bak	ok	
+v7f2t-91	docs/artifacts/v7f2t-91.bak	missing	
+v7f2t-92	docs/artifacts/v7f2t-92.bak	missing	
+v7f2t-93	docs/artifacts/v7f2t-93.bak	missing	
+v7f3-91	docs/artifacts/v7f3-91.bak	missing	
+v7f3-93	docs/artifacts/v7f3-93.bak	missing	
+v7f3-94	docs/artifacts/v7f3-94.bak	missing	
+v7f35b-94	docs/artifacts/v7f35b-94.bak	ok	
+v7f35b-95	docs/artifacts/v7f35b-95.bak	ok	
+v7f35b-96	docs/artifacts/v7f35b-96.bak	ok	
+v7f35b-97	docs/artifacts/v7f35b-97.bak	ok	
+v7f35b-98	docs/artifacts/v7f35b-98.bak	ok	
+v7f35b-99	docs/artifacts/v7f35b-99.bak	ok	
+v7f35t-82	docs/artifacts/v7f35t-82.bak	ok	
+v7f5b-94	docs/artifacts/v7f5b-94.bak	ok	
+v7f5b-95	docs/artifacts/v7f5b-95.bak	ok	
+v7f5b-96	docs/artifacts/v7f5b-96.bak	ok	
+v7f5b-97	docs/artifacts/v7f5b-97.bak	ok	
+v7f5b-98	docs/artifacts/v7f5b-98.bak	ok	
+v7f5b-99	docs/artifacts/v7f5b-99.bak	ok	
+v7f5div3-31	docs/artifacts/v7f5div3-31.bak	missing	
+v7f5div3-81	docs/artifacts/v7f5div3-81.bak	missing	
+v7f5div3-82	docs/artifacts/v7f5div3-82.bak	missing	
+v7f5div3-91	docs/artifacts/v7f5div3-91.bak	missing	
+v7f5div3-92	docs/artifacts/v7f5div3-92.bak	missing	
+v7f5div3-93	docs/artifacts/v7f5div3-93.bak	ok	
+v7f5t-31	docs/artifacts/v7f5t-31.bak	ok	
+v7f5t-81	docs/artifacts/v7f5t-81.bak	missing	
+v7f5t-82	docs/artifacts/v7f5t-82.bak	missing	
+v7f5t-91	docs/artifacts/v7f5t-91.bak	missing	
+v7f5t-92	docs/artifacts/v7f5t-92.bak	ok	
+v7f5t-93	docs/artifacts/v7f5t-93.bak	missing	
+v7f80-35	docs/artifacts/v7f80-35.bak	missing	
+v7fix1-31	docs/artifacts/v7fix1-31.bak	missing	
+v7fix1-81	docs/artifacts/v7fix1-81.bak	missing	
+v7fix1-82	docs/artifacts/v7fix1-82.bak	missing	
+v7fix1-91	docs/artifacts/v7fix1-91.bak	missing	
+v7fix1-92	docs/artifacts/v7fix1-92.bak	missing	
+v7fix1-93	docs/artifacts/v7fix1-93.bak	missing	
+v7force-32	docs/artifacts/v7force-32.bak	missing	
+v7force-34	docs/artifacts/v7force-34.bak	ok	
+v7g-35	docs/artifacts/v7g-35.bak	missing	
+v7gf1-31	docs/artifacts/v7gf1-31.bak	missing	
+v7gf1-82	docs/artifacts/v7gf1-82.bak	missing	
+v7gf1-91	docs/artifacts/v7gf1-91.bak	missing	
+v7gf1-92	docs/artifacts/v7gf1-92.bak	missing	
+v7gf1-93	docs/artifacts/v7gf1-93.bak	missing	
+v7iso1-31	docs/artifacts/v7iso1-31.bak	missing	
+v7iso1-81	docs/artifacts/v7iso1-81.bak	missing	
+v7iso1-82	docs/artifacts/v7iso1-82.bak	missing	
+v7iso1-91	docs/artifacts/v7iso1-91.bak	missing	
+v7iso1-92	docs/artifacts/v7iso1-92.bak	missing	
+v7iso1-93	docs/artifacts/v7iso1-93.bak	missing	
+v7l2a-81	docs/artifacts/v7l2a-81.bak	missing	
+v7l2c-101	docs/artifacts/v7l2c-101.bak	ok	
+v7l2c-102	docs/artifacts/v7l2c-102.bak	missing	
+v7l2c-103	docs/artifacts/v7l2c-103.bak	missing	
+v7l2c-111	docs/artifacts/v7l2c-111.bak	missing	
+v7l2c-114	docs/artifacts/v7l2c-114.bak	missing	
+v7l2c-124	docs/artifacts/v7l2c-124.bak	missing	
+v7l2c-141	docs/artifacts/v7l2c-141.bak	missing	
+v7l2c-142	docs/artifacts/v7l2c-142.bak	missing	
+v7l2c-143	docs/artifacts/v7l2c-143.bak	missing	
+v7l2c-144	docs/artifacts/v7l2c-144.bak	missing	
+v7l2c-145	docs/artifacts/v7l2c-145.bak	missing	
+v7l2c-146	docs/artifacts/v7l2c-146.bak	missing	
+v7l2c-147	docs/artifacts/v7l2c-147.bak	missing	
+v7l2c-148	docs/artifacts/v7l2c-148.bak	missing	
+v7l2c-149	docs/artifacts/v7l2c-149.bak	missing	
+v7l2c-150	docs/artifacts/v7l2c-150.bak	missing	
+v7l2c-151	docs/artifacts/v7l2c-151.bak	missing	
+v7l2c-152	docs/artifacts/v7l2c-152.bak	missing	
+v7l2c-31	docs/artifacts/v7l2c-31.bak	missing	
+v7l2c-82	docs/artifacts/v7l2c-82.bak	missing	
+v7l2c-91	docs/artifacts/v7l2c-91.bak	sha-diff-wid-same	abba5dc9d00d2ce2d66d9169910f4e6ca1e7216da3d2bb33b5da511afdcdf145
+v7l2c-93	docs/artifacts/v7l2c-93.bak	missing	
+v7l2f-101	docs/artifacts/v7l2f-101.bak	missing	
+v7l2f-102	docs/artifacts/v7l2f-102.bak	missing	
+v7l2f-106	docs/artifacts/v7l2f-106.bak	missing	
+v7l2f-141	docs/artifacts/v7l2f-141.bak	missing	
+v7l2f-142	docs/artifacts/v7l2f-142.bak	missing	
+v7l2f-143	docs/artifacts/v7l2f-143.bak	missing	
+v7l2f-144	docs/artifacts/v7l2f-144.bak	missing	
+v7l2f-145	docs/artifacts/v7l2f-145.bak	missing	
+v7l2f-146	docs/artifacts/v7l2f-146.bak	missing	
+v7l2f-147	docs/artifacts/v7l2f-147.bak	missing	
+v7l2f-148	docs/artifacts/v7l2f-148.bak	missing	
+v7l2f-149	docs/artifacts/v7l2f-149.bak	missing	
+v7l2f-150	docs/artifacts/v7l2f-150.bak	missing	
+v7l2f-151	docs/artifacts/v7l2f-151.bak	missing	
+v7l2f-152	docs/artifacts/v7l2f-152.bak	missing	
+v7l2f-31	docs/artifacts/v7l2f-31.bak	missing	
+v7l2f-81	docs/artifacts/v7l2f-81.bak	missing	
+v7l2f-82	docs/artifacts/v7l2f-82.bak	missing	
+v7l2h-106	docs/artifacts/v7l2h-106.bak	missing	
+v7l2h-81	docs/artifacts/v7l2h-81.bak	missing	
+v7l2h-93	docs/artifacts/v7l2h-93.bak	missing	
+v7l2o-91	docs/artifacts/v7l2o-91.bak	missing	
+v7l2o-92	docs/artifacts/v7l2o-92.bak	missing	
+v7l2o-93	docs/artifacts/v7l2o-93.bak	missing	
+v7l2s-111	docs/artifacts/v7l2s-111.bak	missing	
+v7l2s-115	docs/artifacts/v7l2s-115.bak	missing	
+v7l2s-82	docs/artifacts/v7l2s-82.bak	missing	
+v7l2s-91	docs/artifacts/v7l2s-91.bak	missing	
+v7l2s-93	docs/artifacts/v7l2s-93.bak	missing	
+v7l7-31	docs/artifacts/v7l7-31.bak	ok	
+v7m_noBead-31	docs/artifacts/v7m_noBead-31.bak	sha-diff-wid-same	fa88781167c803b71241f895a196e2cc45794eed26da9e3508a4e530be3eba4c
+v7m_noBead-32	docs/artifacts/v7m_noBead-32.bak	ok	
+v7m2_noEffects-31	docs/artifacts/v7m2_noEffects-31.bak	ok	
+v7m2_noEffects-33	docs/artifacts/v7m2_noEffects-33.bak	ok	
+v7m2_noTarget-35	docs/artifacts/v7m2_noTarget-35.bak	missing	
+v7n1-31	docs/artifacts/v7n1-31.bak	missing	
+v7n1-82	docs/artifacts/v7n1-82.bak	missing	
+v7n1-93	docs/artifacts/v7n1-93.bak	ok	
+v7new1-31	docs/artifacts/v7new1-31.bak	missing	
+v7new1-81	docs/artifacts/v7new1-81.bak	missing	
+v7new1-82	docs/artifacts/v7new1-82.bak	missing	
+v7new1-91	docs/artifacts/v7new1-91.bak	missing	
+v7new1-92	docs/artifacts/v7new1-92.bak	missing	
+v7new1-93	docs/artifacts/v7new1-93.bak	missing	
+v7new2-31	docs/artifacts/v7new2-31.bak	missing	
+v7new2-81	docs/artifacts/v7new2-81.bak	sha-diff-wid-same	f099ddf3f04fffa9cda0d6395e5b2b722c37fd83850525c9de81f941813afe56
+v7new2-82	docs/artifacts/v7new2-82.bak	sha-diff-wid-same	e2b8b51c6e4a4ddec67060bb00053a428cdff8a48d7c48d053430f1437726434
+v7new2-91	docs/artifacts/v7new2-91.bak	sha-diff-wid-same	27bdb0e3b9901225e28584db35ee1e20939e0989ccf804b35b6ada74eee5b583
+v7new2-92	docs/artifacts/v7new2-92.bak	sha-diff-wid-same	2c78eca6cb56bff4bed6a906fb5ce835a8f2147292fb80ffc0521215af0e2652
+v7new2-93	docs/artifacts/v7new2-93.bak	sha-diff-wid-same	c4aee585ed4cd7e25a9c0c76338431d6f95f1abbfb2cdc6a2cc343b9c650642d
+v7new3-31	docs/artifacts/v7new3-31.bak	missing	
+v7new4-31	docs/artifacts/v7new4-31.bak	missing	
+v7new4-81	docs/artifacts/v7new4-81.bak	missing	
+v7new4-82	docs/artifacts/v7new4-82.bak	missing	
+v7new4-91	docs/artifacts/v7new4-91.bak	missing	
+v7new4-92	docs/artifacts/v7new4-92.bak	missing	
+v7new4-93	docs/artifacts/v7new4-93.bak	missing	
+v7new5_005-31	docs/artifacts/v7new5_005-31.bak	sha-diff-wid-same	e50f180971b21975e57bfd4338278b1eb6c7a6e681bde82bc04a3e4a14bbabe3
+v7new5_005-81	docs/artifacts/v7new5_005-81.bak	ok	
+v7new5_005-82	docs/artifacts/v7new5_005-82.bak	missing	
+v7new5_005-91	docs/artifacts/v7new5_005-91.bak	missing	
+v7new5_005-92	docs/artifacts/v7new5_005-92.bak	missing	
+v7new5_005-93	docs/artifacts/v7new5_005-93.bak	missing	
+v7new5_01-31	docs/artifacts/v7new5_01-31.bak	missing	
+v7new5_01-81	docs/artifacts/v7new5_01-81.bak	missing	
+v7new5_01-82	docs/artifacts/v7new5_01-82.bak	missing	
+v7new5_01-91	docs/artifacts/v7new5_01-91.bak	missing	
+v7new5_01-92	docs/artifacts/v7new5_01-92.bak	missing	
+v7new5_01-93	docs/artifacts/v7new5_01-93.bak	missing	
+v7new6-94	docs/artifacts/v7new6-94.bak	missing	
+v7new6-95	docs/artifacts/v7new6-95.bak	missing	
+v7new6-96	docs/artifacts/v7new6-96.bak	missing	
+v7new6-97	docs/artifacts/v7new6-97.bak	missing	
+v7new6-98	docs/artifacts/v7new6-98.bak	missing	
+v7new6-99	docs/artifacts/v7new6-99.bak	missing	
+v7noteach1-31	docs/artifacts/v7noteach1-31.bak	missing	
+v7noteach1-81	docs/artifacts/v7noteach1-81.bak	missing	
+v7noteach1-82	docs/artifacts/v7noteach1-82.bak	missing	
+v7noteach1-91	docs/artifacts/v7noteach1-91.bak	missing	
+v7noteach1-92	docs/artifacts/v7noteach1-92.bak	missing	
+v7noteach1-93	docs/artifacts/v7noteach1-93.bak	missing	
+v7phase-31	docs/artifacts/v7phase-31.bak	ok	
+v7press-36	docs/artifacts/v7press-36.bak	missing	
+v7press1-31	docs/artifacts/v7press1-31.bak	missing	
+v7press1-81	docs/artifacts/v7press1-81.bak	missing	
+v7press1-82	docs/artifacts/v7press1-82.bak	missing	
+v7press1-91	docs/artifacts/v7press1-91.bak	missing	
+v7press1-92	docs/artifacts/v7press1-92.bak	missing	
+v7press1-93	docs/artifacts/v7press1-93.bak	missing	
+v7press2-31	docs/artifacts/v7press2-31.bak	missing	
+v7press2-81	docs/artifacts/v7press2-81.bak	missing	
+v7press2-82	docs/artifacts/v7press2-82.bak	missing	
+v7press2-91	docs/artifacts/v7press2-91.bak	missing	
+v7press2-92	docs/artifacts/v7press2-92.bak	missing	
+v7press2-93	docs/artifacts/v7press2-93.bak	missing	
+v7press3-81	docs/artifacts/v7press3-81.bak	sha-diff-wid-same	04a0842b6a007896704c811119db172475d1b67ecfe5589312f31387e04bca2c
+v7press3-82	docs/artifacts/v7press3-82.bak	sha-diff-wid-same	e60dd4a1f1e2d2da13e5debe8bea3f1badb8b4e68d20b1d094ce75d9be500b0d
+v7press3-91	docs/artifacts/v7press3-91.bak	ok	
+v7press3-92	docs/artifacts/v7press3-92.bak	sha-diff-wid-same	f2d7fb8262590dc8a665bc79f619deda913d2f349e075c84e98d5059697fd578
+v7press3-93	docs/artifacts/v7press3-93.bak	sha-diff-wid-same	06d141345f2ae482df64dbe393cc25525b9ee56654be29fe60728b1949e9a0cd
+v7protoE-31	docs/artifacts/v7protoE-31.bak	missing	
+v7protoE-81	docs/artifacts/v7protoE-81.bak	missing	
+v7protoE-82	docs/artifacts/v7protoE-82.bak	missing	
+v7r2-35	docs/artifacts/v7force2-35.bak	sha-diff-wid-same	26ad558b77bec3f669c932b95611b0d06e441b94a4e8e45fd758b775d40330a9
+v7r3-45	docs/artifacts/v7r3-45.bak	missing	
+v7r3-46	docs/artifacts/v7r3-46.bak	missing	
+v7r3-52	docs/artifacts/v7r3-52.bak	missing	
+v7rand-32	docs/artifacts/v7rand-32.bak	missing	
+v7rand-33	docs/artifacts/v7rand-33.bak	ok	
+v7rb1-31	docs/artifacts/v7rb1-31.bak	missing	
+v7rb1-82	docs/artifacts/v7rb1-82.bak	missing	
+v7rb1-92	docs/artifacts/v7rb1-92.bak	missing	
+v7rb2-31	docs/artifacts/v7rb2-31.bak	missing	
+v7rb2-82	docs/artifacts/v7rb2-82.bak	missing	
+v7rb2-92	docs/artifacts/v7rb2-92.bak	missing	
+v7ring-34	docs/artifacts/v7ring-34.bak	missing	
+v7ringA1-31	docs/artifacts/v7ringA1-31.bak	missing	
+v7ringA1-81	docs/artifacts/v7ringA1-81.bak	missing	
+v7ringA1-82	docs/artifacts/v7ringA1-82.bak	missing	
+v7ringA1-91	docs/artifacts/v7ringA1-91.bak	missing	
+v7ringA1-92	docs/artifacts/v7ringA1-92.bak	missing	
+v7ringA1-93	docs/artifacts/v7ringA1-93.bak	missing	
+v7ringB1-31	docs/artifacts/v7ringB1-31.bak	missing	
+v7ringB1-81	docs/artifacts/v7ringB1-81.bak	ok	
+v7ringB1-82	docs/artifacts/v7ringB1-82.bak	missing	
+v7ringB1-91	docs/artifacts/v7ringB1-91.bak	missing	
+v7ringB1-92	docs/artifacts/v7ringB1-92.bak	missing	
+v7ringB1-93	docs/artifacts/v7ringB1-93.bak	ok	
+v7ringT3-31	docs/artifacts/v7ringT3-31.bak	missing	
+v7ringT3-81	docs/artifacts/v7ringT3-81.bak	missing	
+v7ringT3-82	docs/artifacts/v7ringT3-82.bak	missing	
+v7ringT3-91	docs/artifacts/v7ringT3-91.bak	missing	
+v7ringT3-92	docs/artifacts/v7ringT3-92.bak	missing	
+v7ringT3-93	docs/artifacts/v7ringT3-93.bak	missing	
+v7role1-31	docs/artifacts/v7role1-31.bak	ok	
+v7role1-81	docs/artifacts/v7role1-81.bak	missing	
+v7role1-82	docs/artifacts/v7role1-82.bak	ok	
+v7role1-91	docs/artifacts/v7role1-91.bak	ok	
+v7role1-92	docs/artifacts/v7role1-92.bak	missing	
+v7role1-93	docs/artifacts/v7role1-93.bak	missing	
+v7role12-94	docs/artifacts/v7role12-94.bak	missing	
+v7role12-95	docs/artifacts/v7role12-95.bak	missing	
+v7role12-96	docs/artifacts/v7role12-96.bak	missing	
+v7role1w-31	docs/artifacts/v7role1w-31.bak	missing	
+v7role1w-81	docs/artifacts/v7role1w-81.bak	missing	
+v7role1w-82	docs/artifacts/v7role1w-82.bak	missing	
+v7role1w-91	docs/artifacts/v7role1w-91.bak	missing	
+v7role1w-92	docs/artifacts/v7role1w-92.bak	missing	
+v7role1w-93	docs/artifacts/v7role1w-93.bak	missing	
+v7role5-31	docs/artifacts/v7role5-31.bak	missing	
+v7role5-81	docs/artifacts/v7role5-81.bak	missing	
+v7role5-82	docs/artifacts/v7role5-82.bak	missing	
+v7role5-91	docs/artifacts/v7role5-91.bak	missing	
+v7role5-92	docs/artifacts/v7role5-92.bak	missing	
+v7role5-93	docs/artifacts/v7role5-93.bak	missing	
+v7roleC-91	docs/artifacts/v7roleC-91.bak	sha-diff-wid-same	799fbcb512e146a1b8c27ded161b8d7f5d62567db31be31285698310d69f3541
+v7roleC-92	docs/artifacts/v7roleC-92.bak	sha-diff-wid-same	6a3ee933113367dfb4c890ad464c30a8be6394babffbf656aa6b9ba00761abca
+v7roleC-93	docs/artifacts/v7roleC-93.bak	sha-diff-wid-same	ee810bdebc08ae6a52620b1ed07949330844832276d12ad77fa02ffb6ada5766
+v7roleC2-94	docs/artifacts/v7roleC2-94.bak	missing	
+v7roleC2-95	docs/artifacts/v7roleC2-95.bak	missing	
+v7roleC2-96	docs/artifacts/v7roleC2-96.bak	missing	
+v7s4-31	docs/artifacts/v7s4-31.bak	missing	
+v7s4-82	docs/artifacts/v7s4-82.bak	missing	
+v7s4-93	docs/artifacts/v7s4-93.bak	missing	
+v7s5-31	docs/artifacts/v7s5-31.bak	missing	
+v7s5-82	docs/artifacts/v7s5-82.bak	missing	
+v7s5-93	docs/artifacts/v7s5-93.bak	missing	
+v7s6-31	docs/artifacts/v7s6-31.bak	missing	
+v7s6-82	docs/artifacts/v7s6-82.bak	missing	
+v7s6-93	docs/artifacts/v7s6-93.bak	missing	
+v7s7-31	docs/artifacts/v7s7-31.bak	missing	
+v7s7-82	docs/artifacts/v7s7-82.bak	missing	
+v7s7-93	docs/artifacts/v7s7-93.bak	missing	
+v7s8-31	docs/artifacts/v7s8-31.bak	missing	
+v7s8-82	docs/artifacts/v7s8-82.bak	missing	
+v7s8-93	docs/artifacts/v7s8-93.bak	missing	
+v7s9-31	docs/artifacts/v7s9-31.bak	missing	
+v7s9-82	docs/artifacts/v7s9-82.bak	missing	
+v7s9-93	docs/artifacts/v7s9-93.bak	missing	
+v7salt-31	docs/artifacts/v7salt-31.bak	missing	
+v7seat-34	docs/artifacts/v7seat-34.bak	missing	
+v7seat2-45	docs/artifacts/v7seat2-45.bak	missing	
+v7seat2-46	docs/artifacts/v7seat2-46.bak	missing	
+v7seat2-48	docs/artifacts/v7seat2-48.bak	missing	
+v7seat2-49	docs/artifacts/v7seat2-49.bak	missing	
+v7seat2-51	docs/artifacts/v7seat2-51.bak	missing	
+v7seat24-31	docs/artifacts/v7seat24-31.bak	ok	
+v7seat24-81	docs/artifacts/v7seat24-81.bak	missing	
+v7seat24-82	docs/artifacts/v7seat24-82.bak	missing	
+v7seat24b-91	docs/artifacts/v7seat24b-91.bak	missing	
+v7seat24b-92	docs/artifacts/v7seat24b-92.bak	missing	
+v7seat24b-93	docs/artifacts/v7seat24b-93.bak	missing	
+v7smoke-31	docs/artifacts/v7smoke-31.bak	missing	
+v7stock1-31	docs/artifacts/v7stock1-31.bak	missing	
+v7stock1-81	docs/artifacts/v7stock1-81.bak	missing	
+v7stock1-82	docs/artifacts/v7stock1-82.bak	missing	
+v7stock1-91	docs/artifacts/v7stock1-91.bak	missing	
+v7stock1-92	docs/artifacts/v7stock1-92.bak	missing	
+v7stock1-93	docs/artifacts/v7stock1-93.bak	missing	
+v7stock2-31	docs/artifacts/v7stock2-31.bak	ok	
+v7stock2-81	docs/artifacts/v7stock2-81.bak	sha-diff-wid-same	aff52bb15886d95a09f06b0e220f23e0ad7d2c78dd5f161909d2c224a05b498a
+v7stock2-91	docs/artifacts/v7stock2-91.bak	sha-diff-wid-same	c55e1ee3299ea6577f3ee58ef8e56a7361bf4ff99f4b92b2e378bf0ad58d7adf
+v7stock2-92	docs/artifacts/v7stock2-92.bak	sha-diff-wid-same	915304a79d3b70f517c61b0be5917ed710f3f5576461dc5728af5cb4bed3ce28
+v7stock2-93	docs/artifacts/v7stock2-93.bak	ok	
+v7sub1-31	docs/artifacts/v7sub1-31.bak	missing	
+v7sub1-81	docs/artifacts/v7sub1-81.bak	missing	
+v7sub1-82	docs/artifacts/v7sub1-82.bak	missing	
+v7sub1-91	docs/artifacts/v7sub1-91.bak	missing	
+v7sub1-92	docs/artifacts/v7sub1-92.bak	missing	
+v7sub1-93	docs/artifacts/v7sub1-93.bak	missing	
+v7t1-31	docs/artifacts/v7t1-31.bak	ok	
+v7t1-82	docs/artifacts/v7t1-82.bak	missing	
+v7t1-93	docs/artifacts/v7t1-93.bak	missing	
+v7t2-31	docs/artifacts/v7t2-31.bak	ok	
+v7t2-82	docs/artifacts/v7t2-82.bak	missing	
+v7t2-93	docs/artifacts/v7t2-93.bak	ok	
+v7teach-32	docs/artifacts/v7teach-32.bak	missing	
+v7teach2-32	docs/artifacts/v7teach2-32.bak	missing	
+v7tgt-44	docs/artifacts/v7tgt-44.bak	missing	
+v7tgt2-31	docs/artifacts/v7tgt2-31.bak	sha-diff-wid-same	e29c489344101543a5e999da87b81be459651ca883e32d60d3656896742ab605
+v7tgt2-52	docs/artifacts/v7tgt2-52.bak	missing	
+v7tgt4-62	docs/artifacts/v7tgt4-62.bak	missing	
+v7tgt4-63	docs/artifacts/v7tgt4-63.bak	missing	
+v7tgt4-64	docs/artifacts/v7tgt4-64.bak	missing	
+v7tgt4-66	docs/artifacts/v7tgt4-66.bak	missing	
+v7tgt5-31	docs/artifacts/v7tgt5-31.bak	missing	
+v7tgt5-62	docs/artifacts/v7tgt5-62.bak	missing	
+v7tgt5-64	docs/artifacts/v7tgt5-64.bak	missing	
+v7u1-31	docs/artifacts/v7u1-31.bak	missing	
+v7u1-82	docs/artifacts/v7u1-82.bak	ok	
+v7u1-93	docs/artifacts/v7u1-93.bak	ok	
+v7w3c-31	docs/artifacts/v7w3c-31.bak	missing	
+v7w3c-81	docs/artifacts/v7w3c-81.bak	missing	
+v7w3c-91	docs/artifacts/v7w3c-91.bak	missing	
+v7w3c-92	docs/artifacts/v7w3c-92.bak	missing	
+v7w3c-93	docs/artifacts/v7w3c-93.bak	ok	
+v7w3r1-31	docs/artifacts/v7w3r1-31.bak	missing	
+v7w3r1-81	docs/artifacts/v7w3r1-81.bak	missing	
+v7w3r1-82	docs/artifacts/v7w3r1-82.bak	missing	
+v7w3r1-91	docs/artifacts/v7w3r1-91.bak	missing	
+v7w3r1-92	docs/artifacts/v7w3r1-92.bak	missing	
+v7w3r1-93	docs/artifacts/v7w3r1-93.bak	missing	
+v7wall-31	docs/artifacts/v7teach2-31.bak	ok	
+v7wall-33	docs/artifacts/v7wall-33.bak	sha-diff-wid-same	c6fe133d5b9415089368cc92a21706e60ff2cfcdbe936ecc0594cfb176fad492
+v7wall-34	docs/artifacts/v7wall-34.bak	missing	
+v7wall-35	docs/artifacts/v7wall-35.bak	sha-diff-wid-same	e993f0407378a2442dd6dd318705b7aa657c1f28e37db5a8830b27162c7694cf
+v7wall1-31	docs/artifacts/v7wall1-31.bak	sha-diff-wid-same	a0b27561c27ecd126f7661dc7c0cfe73fa85bd0917b198b94ec8570bb0cd77af
+v7wall1-81	docs/artifacts/v7wall1-81.bak	missing	
+v7wall1-82	docs/artifacts/v7wall1-82.bak	missing	
+v7wall1-91	docs/artifacts/v7wall1-91.bak	missing	
+v7wall1-92	docs/artifacts/v7wall1-92.bak	missing	
+v7wall1-93	docs/artifacts/v7wall1-93.bak	missing	
+v7wall2-94	docs/artifacts/v7wall2-94.bak	missing	
+v7wall2-95	docs/artifacts/v7wall2-95.bak	missing	
+v7wall2-96	docs/artifacts/v7wall2-96.bak	missing	
+v7wall2-97	docs/artifacts/v7wall2-97.bak	ok	
+v7wall2-98	docs/artifacts/v7wall2-98.bak	missing	
+v7wall2-99	docs/artifacts/v7wall2-99.bak	missing	
+v7ws1-31	docs/artifacts/v7press3-31.bak	sha-diff-wid-same	9d5587446332410c0d74dbeac3eaa60c475d1052c290fff0fa44ee20931ea3cb
+v7ws2-31	docs/artifacts/v7ws2-31.bak	missing	
+v7ws2-81	docs/artifacts/v7ws2-81.bak	sha-diff-wid-same	734a6e22ef1effda0d70d38cb52ab949abfda8bd001412b9252679dbcc81c030
+v7ws2-82	docs/artifacts/v7ws2-82.bak	missing	
+v7ws2-91	docs/artifacts/v7ws2-91.bak	missing	
+v7ws2-92	docs/artifacts/v7ws2-92.bak	missing	
+v7ws2-93	docs/artifacts/v7ws2-93.bak	missing	
+v9-31	docs/artifacts/v9-31.bak	sha-diff-wid-same	a8db9d2e9370cb20c61fd177f09418885f883a63215b0843475af869d65e9aa3
+v9-32	docs/artifacts/v9-32.bak	ok	
+v9-33	docs/artifacts/v9-33.bak	missing	
+v9-34	docs/artifacts/v9-34.bak	missing	
+v9-36	docs/artifacts/v9-36.bak	missing	
+v9-41	docs/artifacts/v9-41.bak	missing	
+v9-42	docs/artifacts/v9-42.bak	missing	
+v9-43	docs/artifacts/v9-43.bak	missing	
+v9-44	docs/artifacts/v9-44.bak	missing	
+v9-45	docs/artifacts/v9-45.bak	missing	
+v9-46	docs/artifacts/v9-46.bak	missing	
+W31	docs/artifacts/e234-out/W31.js	missing	
+W71	docs/artifacts/e234-out/W71.js	missing	
+X1	docs/artifacts/e234-out/X1.js	missing	
+e1-teach-77003		no-path	
+e1-ctl-77000		no-path	
+e2-grad-77002		no-path	
+e2-teach-77000		no-path	
+g12-keep-77000		no-path	
+g14-h2-77001		no-path	
+g15-long-77001		no-path	
+g16-77001		no-path	
+g17-77000		no-path	
+g18-77001		no-path	
+t5-151-ringon	docs/artifacts/kept/e641-out__t5-151-ringon.bak	ok	
+t5-151-ringoff	docs/artifacts/kept/e641-out__t5-151-ringoff.bak	ok	
+t5-G12H1-ringon	docs/artifacts/kept/e641-out__t5-G12H1-ringon.bak	ok	
+t5-G12H1-ringoff	docs/artifacts/kept/e641-out__t5-G12H1-ringoff.bak	ok	
+t5-T8-ringon	docs/artifacts/kept/e641-out__t5-T8-ringon.bak	ok	
+G12H1	docs/artifacts/e608-out/G12H1.js	ok	
+clone-79101	docs/artifacts/e608-out/clone-79101.js	ok	
+Z1	docs/artifacts/e608-out/Z1.js	ok	
+Z2	docs/artifacts/e608-out/Z2.js	ok	
+night-T1-77002	docs/artifacts/night-T1-77002.bak	ok	
+night-A0-77001	docs/artifacts/night-A0-77001.bak	ok	
+night-T3-77002	docs/artifacts/night-T3-77002.bak	ok	
+night-T3-77000	docs/artifacts/night-T3-77000.bak	ok	
+D1-77000		no-path	
+C2-77000		no-path	
+N2-77000		no-path	
+Q4-77000		no-path	
+U2-77001		no-path	
+RC1-77001		no-path	
+V9-77001		no-path	
+RW2-77001		no-path	
+BAS-s41	scratch/ga-arms/BAS-s41.js	ok	
+CBG-s13	scratch/ga-arms/CBG-s13.js	ok	
+G3C-s13	scratch/ga-arms/G3C-s13.js	ok	
+V7C-s13	scratch/ga-arms/V7C-s13.js	ok	
+V7M-s13	scratch/ga-arms/V7M-s13.js	ok	
+BREAD-W05-s13	scratch/ga-arms/BREAD-W05-s13.js	ok	
+CBG-s41	scratch/ga-arms/CBG-s41.js	ok	
+G3C-s41	scratch/ga-arms/G3C-s41.js	ok	
+V7C-s41	scratch/ga-arms/V7C-s41.js	ok	
+V7M-s41	scratch/ga-arms/V7M-s41.js	ok	
+BREAD-W05-s41	scratch/ga-arms/BREAD-W05-s41.js	ok	
+CBG-s7	scratch/ga-arms/CBG-s7.js	ok	
+G3M-s13	scratch/ga-arms/G3M-s13.js	ok	
+V7L-s13	scratch/ga-arms/V7L-s13.js	ok	
+BAS-s13	scratch/ga-arms/BAS-s13.js	ok	
+BREAD-W05-s7	scratch/ga-arms/BREAD-W05-s7.js	ok	
+CBGG-s13	scratch/ga-arms/CBGG-s13.js	ok	
+G3M-s41	scratch/ga-arms/G3M-s41.js	ok	
+V7L-s41	scratch/ga-arms/V7L-s41.js	ok	
+GD3-RATION	scratch/arms/GD3-RATION.bak	missing	
+L5-D4a-s13	scratch/ga-arms/L5-D4a-s13.js	ok	
+GD3ALL-PLAIN-s13	scratch/night3/GD3ALL-PLAIN-s13.js	ok	
+GD3ALL-PUSHON-s41	scratch/night3/GD3ALL-PUSHON-s41.js	ok	
+G5DEF-s41	scratch/night5/G5DEF-s41.js	ok	
+CLONE-D4a	scratch/arms/CLONE-D4a.bak	missing	
+D-a底座	scratch/night4/D-a-s41-base.bak	missing	
+D-a-s13	scratch/night4/D-a-s13.js	ok	
+GD3ALL-G5-8p-s41	scratch/night3/GD3ALL-G5-8p-s41.js	ok	
+TPG-s41	scratch/night6/TPG-s41.js	ok	
+EFFG-s41	docs/artifacts/2p0-pool/EFFG-s41.bak	ok	
+D1200-s13	scratch/night5/D1200-s13.js	ok	
+HPG-s7	scratch/night6/HPG-s7.js	ok	
+GD3-SWORD	scratch/arms/GD3-SWORD.bak	missing	
+CB-combo-v2	scratch/night4/CB-combo-v2.bak	missing	
+GD3ALL-POPP-s17	scratch/night3/GD3ALL-POPP-s17.js	ok	
+GD3ALL-NGA2R-s41	scratch/night3/GD3ALL-NGA2R-s41.js	ok	
+L5-1200-s13	scratch/night5/L5-1200-s13.js	ok	
+CB3-s13	scratch/night6/CB3-s13.js	ok	
+KDFULL400-s13	scratch/ga-arms/KDFULL400-s13.js	ok	
+KDFULLGA-s13	scratch/ga-arms/KDFULLGA-s13.js	ok	
+GA-ration-s41	scratch/ga-arms/GA-ration-s41.js	ok	
+WIDEFIX-s7	scratch/ga-arms/WIDEFIX-s7.js	ok	
+KDFULL2	scratch/arms/KDFULL2.bak	missing	
+KD-V7	scratch/arms/KD-V7.bak	missing	
+DSTR4-s13	docs/artifacts/2p0-pool/DSTR4-s13.bak	ok	
+EFFG-s5	docs/artifacts/2p0-pool/EFFG-s5.bak	ok	
+EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	ok	
+GD3ALL-POPP-s41	docs/artifacts/2p0-pool/GD3ALL-POPP-s41.bak	ok	
+GD3ALL-PUSHON-s13	docs/artifacts/2p0-pool/GD3ALL-PUSHON-s13.bak	ok	
+D-b-hpseed-s13	docs/artifacts/2p0-pool/D-b-hpseed-s13.bak	ok	
+DDEF-s13	docs/artifacts/2p0-pool/DDEF-s13.bak	ok	
+DSTR-s13	docs/artifacts/2p0-pool/DSTR-s13.bak	ok	
+LE-s13	docs/artifacts/2p0-pool/LE-s13.bak	ok	
+GD3ALL-G5-s13	docs/artifacts/2p0-pool/GD3ALL-G5-s13.bak	ok	
+DEF-s13	docs/artifacts/2p0-pool/DEF-s13.bak	ok	
+DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	ok	
+DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	ok	
+COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	ok	
+COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak	ok	
+CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	missing	
+CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	missing	
+ADAPT2-Q-s7	docs/artifacts/night-adapt/ADAPT2-Q-s7.js	ok	
+KD-K2	docs/artifacts/night-adapt/KD-K2.bak	missing	
+KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	missing	
+KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	missing	
+PASS2-Q-s13	docs/artifacts/night-adapt/PASS2-Q-s13.js	ok	
+STR-B-Q-s13	docs/artifacts/night-adapt/STR-B-Q-s13.js	ok	
+STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	ok	
+KDG-B-Q-s13	docs/artifacts/night-adapt/KDG-B-Q-s13.js	ok	
+KD-Qg-l	docs/artifacts/night-adapt/KD-Qg-l.bak	ok	
+KD-G2	docs/artifacts/night-adapt/KD-G2.bak	ok	
+FOCUS-Q-s13	scratch/ds-1108/FOCUS-Q-s13.js	sha-diff-wid-same	94c167f895100c48fe1a54e607b4435d0fdc23b7c7d4848e7390a2c4e3a26e2e
+CLEAR-Q-s13	scratch/ds-1108/CLEAR-Q-s13.js	sha-diff-wid-same	3fc74fb5fa1699aab296cff13d4e1cceb9a32d884075c5fa14cb452b0d5848d0
+WIDE-Q-s13	scratch/ds-1108/WIDE-Q-s13.js	sha-diff-wid-same	54c5ebc5980d0a2485681bc7093575d9dcb139d4e95014e440a87d10580da8c2
+WIDE2-Q-s13	scratch/ds-1108/WIDE2-Q-s13.js	sha-diff-wid-same	92d6b818a5b73231982309b50bf651953adfb907777e30626792dc8c716012dc
+WIDE2-200	scratch/ds-1109/WIDE2-200.js	sha-diff-wid-same	4d4ba770aef4998ddb5d1486a01f7bb23eb6b1189642df142c1a05fa267af4ef
+WIDE2-300	scratch/ds-1109/WIDE2-300.js	sha-diff-wid-same	a9d750c87bb5e03cef88f96bcb5bb83db15543f8e8d8c9da9eb138a10faffe80
+WSEL9-200	scratch/ds-1109/WSEL9-200.js	sha-diff-wid-same	144b5aeebf93ca2302e07d93f7e3af2f42ed216d4510024a0fd935461f8d16c1
+G5C-100	docs/artifacts/exam4-fixtures/G5C-100.js	ok	
+G5I-50	scratch/ds-1109/G5I-50.js	sha-diff-wid-same	80ad2c2c2dd4c43354ca3ae6fb44aa4de1ed3471c751a98807f6c44e379d2f43
+G5G-50	scratch/ds-1109/G5G-50.js	sha-diff-wid-same	9f5dc31ffc6d2cf5e1f269a067e54582a93b25e7a50ec7522df28ceab9652671
+G5J-50	docs/artifacts/exam4-fixtures/G5J-50.js	ok	
+MSB11-R2S306293884	docs/artifacts/night-adapt/MSB11-R2S306293884.js	ok	
+MSB10-R1S1149480262	docs/artifacts/night-adapt/MSB10-R1S1149480262.js	missing	
+MSB8-charge-R1S1861674281	docs/artifacts/night-adapt/MSB8-charge-R1S1861674281.js	missing	
+MSB8-bagua-R1S88974978	docs/artifacts/night-adapt/MSB8-bagua-R1S88974978.js	missing	
+MSB6-R2S501866988	docs/artifacts/night-adapt/MSB6-R2S501866988.js	missing	
+MSB6-R2S297540638	docs/artifacts/night-adapt/MSB6-R2S297540638.js	missing	
+MSB9-R2S443656264	docs/artifacts/night-adapt/MSB9-R2S443656264.js	missing	
+MSB12-beadplan-R1S666728707	docs/artifacts/night-adapt/MSB12-beadplan-R1S666728707.js	missing	
+MSB12-seqboom-R1S1308870894		no-path	
+S916R2B-R1S685223462	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	missing	
+MSB2-R1S1494663071	docs/artifacts/night-adapt/MSB2-R1S1494663071.js	missing	
+MSB13-R1S791820660	docs/artifacts/night-adapt/MSB13-R1S791820660.js	missing	
+MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	ok	
+MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	ok	
+MSB6-R1S1628871127	docs/artifacts/night-adapt/MSB6-R1S1628871127.js	missing	
+S916-R1S1704335642	docs/artifacts/night-adapt/S916-R1S1704335642.js	missing	
+MSB2-R2S103437527	docs/artifacts/night-adapt/MSB2-R2S103437527.js	missing	
+ADAPT-DEF-O5-s916	docs/artifacts/night-adapt/ADAPT-DEF-O5-s916.js	missing	
+MSB2-R1S773345716	docs/artifacts/night-adapt/MSB2-R1S773345716.js	missing	
+MSB15R-HITMIX	docs/artifacts/night-adapt/MSB15R-hit-mix-R1S2057836694.js	ok	
+MSB15-SOUPB	docs/artifacts/night-adapt/MSB15-soupb-R2S74063325.js	ok	
+MSB15-LASER-R3	docs/artifacts/night-adapt/MSB15-laser-R3S1859130085.js	ok	
+MSB15R-GD4RAT	docs/artifacts/night-adapt/MSB15R-gd4rat-R1S1155875730.js	ok	
+GD4-RATION	scratch/arms/GD4-RATION.bak	ok	
+GD6a-TILT	docs/artifacts/exam4-fixtures/GD6a-TILT-3p.bak	ok	
+GD6b-TILT	scratch/arms/GD6b-TILT-3p.bak	missing	
+MSB18-R1S826788378-seg2	docs/artifacts/MSB18-R1S826788378-seg2.bak	missing	
+GD16m	scratch/arms/GD16m-D1.bak	missing	
+OBS6-GA25	docs/artifacts/obs6-coldstart/OBS6-GA25.js	ok	
+OBS6-GA200	docs/artifacts/obs6-coldstart/OBS6-GA200.js	ok	
+OBS6-GA100M	docs/artifacts/obs6-coldstart/OBS6-GA100M.js	ok	
+OBS6-GA2PG-8K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-8K.bak	ok	
+OBS6-GA2PG-12K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-12K.bak	ok	
+OBS6A4-S1000	scratch/arms/OBS6A4.seg1000.bak	missing	
+OBS6W2-S1500	scratch/arms/OBS6W2.seg1500.bak	missing	
+OBS6A5-S1500	scratch/arms/OBS6A5.seg1500.bak	missing	
+OBS6E5c	docs/artifacts/obs6-coldstart/OBS6E5c.bak	ok	
+OBS6E4c	docs/artifacts/obs6-coldstart/OBS6E4c.bak	ok	
+OBS6D3	scratch/arms/OBS6D3.bak	missing	
+OBS6P4-S4000	docs/artifacts/obs6-coldstart/OBS6P4-S4000.bak	ok	
+OBS6E9	docs/artifacts/obs6-coldstart/OBS6E9.bak	ok	
+OBS6P9-S4000	docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak	ok	
+OBS6-LH6	docs/artifacts/obs6-coldstart/OBS6-LH6.bak	missing	
+OBS6-LH6P	docs/artifacts/obs6-coldstart/OBS6-LH6P.bak	missing	
+OBS6-SHAPEDIST	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST.bak	ok	
+OBS6-SHAPEDIST-V2	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V2.bak	ok	
+OBS6-SHAPEDIST-V2S0	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V2.snap0.bak	ok	
+OBS6-SHAPEDIST-V3a	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3a.bak	ok	
+OBS6-SHAPEDIST-V3b	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3b.bak	ok	
+OBS6B2	docs/artifacts/obs6-coldstart/OBS6B2.bak	ok	
+OBS6-SHAPEDIST-V3S2	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3S2.bak	missing	
+OBS6-SHAPEDIST-V3H3	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3H3.bak	missing	
+OBS6-UNIFIED-U1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U1.bak	missing	
+OBS6-UNIFIED-U2S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U2.snap0.bak	missing	
+OBS6-UNIFIED-U4S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.snap0.bak	missing	
+OBS6-UNIFIED-U4	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak	missing	
+OBS6-UNIFIED-US1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US1.bak	missing	
+OBS6-UNIFIED-US5	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US5.bak	missing	
+EQ-E9-A1	docs/artifacts/obs6-coldstart/EQ-E9-A1.bak	missing	
+EQ-S4-E9	docs/artifacts/obs6-coldstart/EQ-S4-E9.bak	ok	
+EQ-SPL-75_S6m1	docs/artifacts/obs6-coldstart/EQ-SPL-75_S6m1.bak	missing	
+EQ-G-75S6	docs/artifacts/obs6-coldstart/EQ-G-75S6.bak	missing	
+EQ-S5-P9	docs/artifacts/obs6-coldstart/EQ-S5-P9.bak	missing	
+EQ-S4-GD6ATEACH	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	ok	
+EQ-S3-E9	docs/artifacts/obs6-coldstart/EQ-S3-E9.bak	ok	
+BASE-E9-MB5	docs/artifacts/obs6-coldstart/BASE-E9-MB5.bak	ok	
+BASE-P9-MB5	docs/artifacts/obs6-coldstart/BASE-P9-MB5.bak	ok	
+MX1-E9-GD	docs/artifacts/obs6-coldstart/MX1-E9-GD.bak	ok	
+MX1-GD-EQ	docs/artifacts/obs6-coldstart/MX1-GD-EQ.bak	ok	
+MX2-U4-EQ	docs/artifacts/obs6-coldstart/MX2-U4-EQ.bak	ok	
+MX3-GDEQ-GD	docs/artifacts/obs6-coldstart/MX3-GDEQ-GD.bak	ok	
+MX4-GD-T4	docs/artifacts/obs6-coldstart/MX4-GD-T4.bak	ok	
+MX5-GD-T2STR	docs/artifacts/obs6-coldstart/MX5-GD-T2STR.bak	ok	
+MX5-GD-LE40	docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak	ok	
+MX7-T2-R	docs/artifacts/obs6-coldstart/MX7-T2-R.bak	ok	
+MX8-R6B-KL	docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak	ok	
+MX8-CN-M	docs/artifacts/obs6-coldstart/MX8-CN-M.bak	ok	
+MX8-R6C-KL	docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak	ok	
+MX6-GD-TF15	docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak	ok	
+MX6-GD-TF20	docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak	ok	
+MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	ok	
+MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	ok	
+RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	ok	
+TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	missing	
+TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	missing	
+TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	ok	
+RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	ok	
+DIV-V3-PRESSURE-S2	docs/artifacts/obs6-coldstart/DIV-V3-PRESSURE-S2.bak	missing	
+DIV-V3-ANTIDEF	docs/artifacts/obs6-coldstart/DIV-V3-ANTIDEF.bak	missing	
+DIV-LH6-HEAVY-S2	docs/artifacts/obs6-coldstart/DIV-LH6-HEAVY-S2.bak	missing	
+RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	ok	
+P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	missing	
+night2-S6	docs/artifacts/night2-S6.bak	ok	
+night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	ok	
+day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok	
