@@ -13,4 +13,5 @@ docs/artifacts/kept/*.js binary
 *.bak binary
 docs/artifacts/eval-out/win-Ldemo.bak binary
 docs/artifacts/e129-out/matrix.json -text
+docs/artifacts/**/*.js binary
 scratch/**/*.js binary

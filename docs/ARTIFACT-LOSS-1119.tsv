@@ -84,21 +84,21 @@ fstA-33	docs/artifacts/fstA-33.bak	missing
 fstA-34	docs/artifacts/fstA-34.bak	missing	
 fstA-35	docs/artifacts/fstA-35.bak	missing	
 fstA-36	docs/artifacts/fstA-36.bak	missing	
-G-s72	docs/artifacts/e514-out/G-s72.js	missing	
-G-s75	docs/artifacts/e514-out/G-s75.js	missing	
-G-s76	docs/artifacts/e514-out/G-s76.js	missing	
-G-s78	docs/artifacts/e514-out/G-s78.js	missing	
-G-s82	docs/artifacts/e514-out/G-s82.js	missing	
+G-s72	docs/artifacts/e514-out/G-s72.js	ok	
+G-s75	docs/artifacts/e514-out/G-s75.js	ok	
+G-s76	docs/artifacts/e514-out/G-s76.js	ok	
+G-s78	docs/artifacts/e514-out/G-s78.js	ok	
+G-s82	docs/artifacts/e514-out/G-s82.js	ok	
 G03-31	docs/artifacts/e78-out/G03-31.bak	ok	
 G03-71	docs/artifacts/e78-out/G03-71.bak	missing	
 G08-31	docs/artifacts/kept/e78-out__G08-31.bak	ok	
 G08-71	docs/artifacts/kept/e78-out__G08-71.bak	ok	
-H-s103	docs/artifacts/e518-out/H-s103.js	missing	
-H-s84	docs/artifacts/e518-out/H-s84.js	missing	
-H-s85	docs/artifacts/e518-out/H-s85.js	missing	
-H-s95	docs/artifacts/e518-out/H-s95.js	missing	
+H-s103	docs/artifacts/e518-out/H-s103.js	ok	
+H-s84	docs/artifacts/e518-out/H-s84.js	ok	
+H-s85	docs/artifacts/e518-out/H-s85.js	ok	
+H-s95	docs/artifacts/e518-out/H-s95.js	ok	
 HF-191	docs/artifacts/e116-out/HF-191.bak	missing	
-K-s63	docs/artifacts/e513-out/K-s63.js	missing	
+K-s63	docs/artifacts/e513-out/K-s63.js	ok	
 K1	docs/artifacts/e234-out/K1.js	missing	
 K2	docs/artifacts/kept/e70-out__D02-31.bak	ok	
 K4	docs/artifacts/e234-out/K4.js	missing	
@@ -114,7 +114,7 @@ L71	docs/artifacts/eval-out/win-L71.bak	sha-diff-wid-same	e5b92f1f0aa107b81c18b0
 Lctl	docs/artifacts/eval-out/win-Lctl.bak	sha-diff-wid-same	48bf44c327937f777fa3ca0149d73e88a2705866b13ac573b83e19f50001ee69
 Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	ok	
 long-33	docs/artifacts/long-33.bak	ok	
-Lspend	docs/artifacts/eval-out/win-Lspend.bak	missing	
+Lspend	docs/artifacts/eval-out/win-Lspend.bak	ok	
 M05-111	docs/artifacts/e73-out/M05-111.bak	missing	
 M05-151	docs/artifacts/e73-out/M05-151.bak	missing	
 M05-191	docs/artifacts/e73-out/M05-191.bak	missing	
@@ -139,28 +139,28 @@ NC-301	docs/artifacts/e75-out/NC-301.bak	missing
 NC-341	docs/artifacts/e75-out/NC-341.bak	missing	
 NCV-71	docs/artifacts/e75-out/NCV-71.bak	sha-diff-wid-same	2185e8fa7625a2618977629ac2525209769765bf4900d8835893c3e6cad22304
 NOL24-71	docs/artifacts/kept/e68-out__V2-71.bak	ok	
-P-s22	docs/artifacts/e504-out/P-s22.js	missing	
-P-s25	docs/artifacts/e504-out/P-s25.js	missing	
-P-s28	docs/artifacts/e504-out/P-s28.js	missing	
-P-s30	docs/artifacts/e504-out/P-s30.js	missing	
+P-s22	docs/artifacts/e504-out/P-s22.js	ok	
+P-s25	docs/artifacts/e504-out/P-s25.js	ok	
+P-s28	docs/artifacts/e504-out/P-s28.js	ok	
+P-s30	docs/artifacts/e504-out/P-s30.js	ok	
 P111	docs/artifacts/e234-out/P111.js	sha-diff-wid-same	1b10a275cff777f37a0cbbbf94cc138c59de6b0fab26133fb34dbadb79fb5c12
 P151	docs/artifacts/e234-out/P151.js	sha-diff-wid-same	7956cce366ab0d7097bc7e8143dd0ae0a86c5dfa519c3e17b26e22b388dec36d
 P191	docs/artifacts/e234-out/P191.js	sha-diff-wid-same	a2bb014f9eae7eef48f2501cb7adf4b8dbf49197a089ef9806b5b2a75f6ae79a
 P231	docs/artifacts/e234-out/P231.js	sha-diff-wid-same	c4ead7dc3094dbdbd7412196f698a153c9f01c70e11b3aef9b278eb2e49eae59
 PL71	docs/artifacts/e77-out/PL71.bak	ok	
-plainAnchor-s12	docs/artifacts/e502-out/plainAnchor-s12.js	missing	
-plainAnchor-s13	docs/artifacts/e502-out/plainAnchor-s13.js	missing	
+plainAnchor-s12	docs/artifacts/e502-out/plainAnchor-s12.js	ok	
+plainAnchor-s13	docs/artifacts/e502-out/plainAnchor-s13.js	ok	
 Q-s33	docs/artifacts/e507-out/Q-s33.js	ok	
-Q-s38	docs/artifacts/e507-out/Q-s38.js	missing	
+Q-s38	docs/artifacts/e507-out/Q-s38.js	ok	
 Q-s47	docs/artifacts/e507-out/Q-s47.js	ok	
-Q-s51	docs/artifacts/e507-out/Q-s51.js	missing	
+Q-s51	docs/artifacts/e507-out/Q-s51.js	ok	
 Q151	docs/artifacts/e234-out/Q151.js	sha-diff-wid-same	4d07666593044736b37dfeabeffc0eb0767bde6fc9362e369d1610bd37464438
 Q191	docs/artifacts/e234-out/Q191.js	sha-diff-wid-same	a403e22555f5c1c63e30695969eea9267607b0faa8ae185599d74f5a20c8d2c8
 Q231	docs/artifacts/e234-out/Q231.js	sha-diff-wid-same	83acb7e37cf1e30d8348ba1251decef5068f6610c65586dad941baa0a8354c53
-R-s107	docs/artifacts/e521-out/R-s107.js	missing	
-R-s120	docs/artifacts/e521-out/R-s120.js	missing	
+R-s107	docs/artifacts/e521-out/R-s107.js	ok	
+R-s120	docs/artifacts/e521-out/R-s120.js	ok	
 R-s123	docs/artifacts/e521-out/R-s123.js	ok	
-R-s129	docs/artifacts/e521-out/R-s129.js	missing	
+R-s129	docs/artifacts/e521-out/R-s129.js	ok	
 R1	docs/artifacts/e234-out/R1.js	missing	
 R231	docs/artifacts/eval-out/win-R231.bak	missing	
 R271	docs/artifacts/eval-out/win-R271.bak	missing	
@@ -182,9 +182,9 @@ rwd0-33	docs/artifacts/rwd0-33.bak	missing
 rwd0-34	docs/artifacts/rwd0-34.bak	missing	
 rwd0-35	docs/artifacts/rwd0-35.bak	missing	
 rwd0-36	docs/artifacts/rwd0-36.bak	missing	
-S-s110	docs/artifacts/e521-out/S-s110.js	missing	
-S-s113	docs/artifacts/e521-out/S-s113.js	missing	
-S-s114	docs/artifacts/e521-out/S-s114.js	missing	
+S-s110	docs/artifacts/e521-out/S-s110.js	ok	
+S-s113	docs/artifacts/e521-out/S-s113.js	ok	
+S-s114	docs/artifacts/e521-out/S-s114.js	ok	
 S-s120	docs/artifacts/e521-out/S-s120.js	ok	
 S71	docs/artifacts/e234-out/S71.js	missing	
 seed80	docs/artifacts/eval-out/sel80.bak	ok	
@@ -206,20 +206,20 @@ SLOT-cd32f240	docs/artifacts/e370-out/cd32f240-v7.js	missing
 SLOT-e379c62c	docs/artifacts/e370-out/e379c62c-v7.js	missing	
 SLOT-f5735e56	docs/artifacts/e370-out/f5735e56-v7.js	missing	
 SLOT-f970452c	docs/artifacts/e370-out/f970452c-v7.js	missing	
-snipeNoPool-s11	docs/artifacts/e502-out/snipeNoPool-s11.js	missing	
-snipeNoPool-s13	docs/artifacts/e502-out/snipeNoPool-s13.js	missing	
-snipePool-s11	docs/artifacts/e502-out/snipePool-s11.js	missing	
-snipePool-s12	docs/artifacts/e502-out/snipePool-s12.js	missing	
+snipeNoPool-s11	docs/artifacts/e502-out/snipeNoPool-s11.js	ok	
+snipeNoPool-s13	docs/artifacts/e502-out/snipeNoPool-s13.js	ok	
+snipePool-s11	docs/artifacts/e502-out/snipePool-s11.js	ok	
+snipePool-s12	docs/artifacts/e502-out/snipePool-s12.js	ok	
 SOUP-KE-l60	docs/artifacts/SOUP-KE-l60.bak	ok	
 SOUP-s9-82XD4a	docs/artifacts/SOUP-s9-82XD4a.bak	ok	
 SOUP-stock1XK2-l35	docs/artifacts/SOUP-stock1XK2-l35.bak	ok	
 SOUP-sub1-92XD4a	docs/artifacts/SOUP-sub1-92XD4a.bak	ok	
 SOUP-Y-KE6k2	docs/artifacts/SOUP-Y-KE6k2.bak	ok	
 SOUP-Y-l65	docs/artifacts/SOUP-Y-l65.bak	ok	
-SP-s25	docs/artifacts/e504-out/SP-s25.js	missing	
-SP-s29	docs/artifacts/e504-out/SP-s29.js	missing	
+SP-s25	docs/artifacts/e504-out/SP-s25.js	ok	
+SP-s29	docs/artifacts/e504-out/SP-s29.js	ok	
 SP-s30	docs/artifacts/e504-out/SP-s30.js	ok	
-SP-s32	docs/artifacts/e504-out/SP-s32.js	missing	
+SP-s32	docs/artifacts/e504-out/SP-s32.js	ok	
 SQ2-15-71	docs/artifacts/kept/e120-out__SQ2-15-71.bak	ok	
 sty-31	docs/artifacts/sty-31.bak	missing	
 sty-32	docs/artifacts/sty-32.bak	missing	
@@ -228,29 +228,29 @@ sty-34	docs/artifacts/sty-34.bak	missing
 sty-35	docs/artifacts/sty-35.bak	missing	
 sty-36	docs/artifacts/sty-36.bak	missing	
 T-s111	docs/artifacts/e521-out/T-s111.js	sha-diff-wid-same	647e2a99cfb69c69e6d9621dc28eeda885cb45307f1447bdfd42fd94b49a2850
-T-s124	docs/artifacts/e521-out/T-s124.js	missing	
-T-s127	docs/artifacts/e521-out/T-s127.js	missing	
-T-s136	docs/artifacts/e521-out/T-s136.js	missing	
+T-s124	docs/artifacts/e521-out/T-s124.js	ok	
+T-s127	docs/artifacts/e521-out/T-s127.js	ok	
+T-s136	docs/artifacts/e521-out/T-s136.js	ok	
 T111	docs/artifacts/e234-out/T111.js	missing	
 T8-s110	docs/artifacts/e521-out/T-s110.js	sha-diff-wid-same	e336bb59c414192e3188ba79109f56a5d465ce835be2c9095bc9edb42ee13be6
 T8-s113	docs/artifacts/e521-out/T-s113.js	sha-diff-wid-same	66f7d9e13c57408b1d7243f2c6556fb21cba92cfb3778f185a409eff0a14bbce
 T8-s114	docs/artifacts/e528-out/T8-s114.js	ok	
 T8-s120	docs/artifacts/e521-out/T-s120.js	sha-diff-wid-same	b77d28c0f61372bb607d8eed56568cd407e8578a33e85e158ff82e349473a066
-U-s202	docs/artifacts/e539-out/U-s202.js	missing	
-U-s203	docs/artifacts/e539-out/U-s203.js	missing	
-U-s205	docs/artifacts/e539-out/U-s205.js	missing	
-U-s209	docs/artifacts/e539-out/U-s209.js	missing	
-U-s212	docs/artifacts/e539-out/U-s212.js	missing	
+U-s202	docs/artifacts/e539-out/U-s202.js	ok	
+U-s203	docs/artifacts/e539-out/U-s203.js	ok	
+U-s205	docs/artifacts/e539-out/U-s205.js	ok	
+U-s209	docs/artifacts/e539-out/U-s209.js	ok	
+U-s212	docs/artifacts/e539-out/U-s212.js	ok	
 U-s216	docs/artifacts/e539-out/U-s216.js	ok	
 U1	docs/artifacts/e234-out/U1.js	missing	
 U2	docs/artifacts/e234-out/U2.js	missing	
-V-s302	docs/artifacts/e551-out/V-s302.js	missing	
-V-s306	docs/artifacts/e551-out/V-s306.js	missing	
-V-s310	docs/artifacts/e551-out/V-s310.js	missing	
-V-s312	docs/artifacts/e551-out/V-s312.js	missing	
-V-s328	docs/artifacts/e551-out/V-s328.js	missing	
-V-s347	docs/artifacts/e551-out/V-s347.js	missing	
-V-s350	docs/artifacts/e551-out/V-s350.js	missing	
+V-s302	docs/artifacts/e551-out/V-s302.js	ok	
+V-s306	docs/artifacts/e551-out/V-s306.js	ok	
+V-s310	docs/artifacts/e551-out/V-s310.js	ok	
+V-s312	docs/artifacts/e551-out/V-s312.js	ok	
+V-s328	docs/artifacts/e551-out/V-s328.js	ok	
+V-s347	docs/artifacts/e551-out/V-s347.js	ok	
+V-s350	docs/artifacts/e551-out/V-s350.js	ok	
 v11-61	docs/artifacts/v11-61.bak	missing	
 v11-62	docs/artifacts/v11-62.bak	missing	
 v11-63	docs/artifacts/v11-63.bak	missing	

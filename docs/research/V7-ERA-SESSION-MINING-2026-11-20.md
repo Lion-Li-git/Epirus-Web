@@ -50,10 +50,10 @@
 
 | 包 | 配方 | era 树 | 结果 |
 |---|---|---|---|
-| **Q-s33**（seed 33，400 3 8 8，K2 母本） | ANCHOR-LOSS 反推式 | epirus-v7-1009 | **✅ `937d3a2d` 逐位命中，已落 `docs/artifacts/e507-out/Q-s33.js`** |
-| Q-s38（seed 38） | 同上 | epirus-v7-1009 | （跑批中） |
-| Q-s51（seed 51） | 同上 | epirus-v7-1009 | （跑批中） |
-| B1（seed 31，1200 3 8 8，win-Lctl 母本+CONV_RATIO=1+HOARD_LEFTOVER=1） | **dsh 会话原文**（session-7134b299） | wt-repro-1120b @ `a793edde`（10-02 15:48） | （跑批中；主仓试跑已证未中，符合上表） |
-| B2（seed 71） | dsh 原文 | wt-repro-1120b | （跑批中） |
+| **Q-s33/38/51**（seed 33/38/51，400 3 8 8，K2 母本） | ANCHOR-LOSS 反推式 | epirus-v7-1009 | **✅✅✅ 三枚逐位命中**（e507-out/） |
+| **Q-s47 本尊** | 同上 | **主仓 `--era=15c568b2` 委托** | **✅ `596b8fad` 一发命中 ⇒ 主仓 v7 管线修理成功**（train.mjs --era 委托层，2b85f78c） |
+| **K2 家族批量 44 枚**（P/T/U/V/plainAnchor 纯续训 21 ‖ G/S/H guardSpam 13 ‖ snipePool/SP/R snipeSpam+IMIT 8 ‖ snipeNoPool 2 ‖ K-s63 SEL_KEEP 1） | **幸存者 band META 的 recipe.env 出土**（e504-out/SP-s30、e521-out/R-s123、S-s120、T-s111） | 主仓 `--era=15c568b2` 批量（并发 6，36 分钟） | **✅ 44/44 全部逐位命中**——k2-batch.mjs 驱动，产物落 e502/e504/e513/e514/e518/e521/e539/e551-out 原台账路径，registry sha256 已同步 |
+| Lspend（E51-t8-713 母本+seed 31+CONV_RATIO/HOARD_LEFTOVER+1200 代） | **dsh 会话原文**（session-7134b299） | wt-v7-e96ae97a → **94cfc7e7**（09-27 16:34 econ 族 5 键接 CLI——e96ae97a/a793edde/d9dfb267 均未中，**旋钮接线的 era 也得对**） | **✅ `78e57d8b` 逐位命中**（win-Lspend.bak） |
+| B1/B2（win-Lctl 母本+seed 31/71） | dsh 会话原文 | a793edde / d9dfb267 | ✗ 均未中——挖到的批是 **10-01 前身批**，B1 台账 ts=10-02 15:55 的正主会话不在 dsh Epirus 目录（下一班挖 dsh-self/zcode） |
 
-**Q 三枚主仓未中的含义**：不是配方错，是**树错**。方法论归档：era 选取判据从"代码文件对不对"升格为"**沙箱消费的整树对不对**"（与 §二.2 代码漂移同族，但粒度是整树而非单文件）。
+**总账（v7 复刻日）**：Q×3 + Q-s47 验证 + K2 家 44 + Lspend = **48 枚逐位复现落仓**，台账 missing 662 → **605**。配方来源三种：幸存者 META 的 recipe.env（**最可靠——配方账就刻在包里**）、dsh 会话原文、OVERNIGHT 仓内日志。
