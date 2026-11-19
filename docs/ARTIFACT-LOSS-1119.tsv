@@ -379,7 +379,7 @@ v7blk1-31	docs/artifacts/v7blk1-31.bak	missing
 v7blk1-81	docs/artifacts/v7blk1-81.bak	missing	
 v7blk1-82	docs/artifacts/v7blk1-82.bak	missing	
 v7blk1-91	docs/artifacts/v7blk1-91.bak	ok	
-v7blk1-92	docs/artifacts/v7blk1-92.bak	missing	
+v7blk1-92	docs/artifacts/v7blk1-92.bak	ok	
 v7blk1-93	docs/artifacts/v7blk1-93.bak	missing	
 v7catE1-31	docs/artifacts/v7catE1-31.bak	missing	
 v7catE1-81	docs/artifacts/v7catE1-81.bak	missing	
@@ -866,8 +866,8 @@ KDFULL400-s13	scratch/ga-arms/KDFULL400-s13.js	ok
 KDFULLGA-s13	scratch/ga-arms/KDFULLGA-s13.js	ok	
 GA-ration-s41	scratch/ga-arms/GA-ration-s41.js	ok	
 WIDEFIX-s7	scratch/ga-arms/WIDEFIX-s7.js	ok	
-KDFULL2	scratch/arms/KDFULL2.bak	missing	
-KD-V7	scratch/arms/KD-V7.bak	missing	
+KDFULL2	scratch/arms/KDFULL2.bak	ok	
+KD-V7	scratch/arms/KD-V7.bak	ok	
 DSTR4-s13	docs/artifacts/2p0-pool/DSTR4-s13.bak	ok	
 EFFG-s5	docs/artifacts/2p0-pool/EFFG-s5.bak	ok	
 EFFG-s7	docs/artifacts/2p0-pool/EFFG-s7.bak	ok	
@@ -886,9 +886,9 @@ COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak	ok
 CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	missing	
 CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	missing	
 ADAPT2-Q-s7	docs/artifacts/night-adapt/ADAPT2-Q-s7.js	ok	
-KD-K2	docs/artifacts/night-adapt/KD-K2.bak	missing	
+KD-K2	docs/artifacts/night-adapt/KD-K2.bak	ok	
 KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	missing	
-KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	missing	
+KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	ok	
 PASS2-Q-s13	docs/artifacts/night-adapt/PASS2-Q-s13.js	ok	
 STR-B-Q-s13	docs/artifacts/night-adapt/STR-B-Q-s13.js	ok	
 STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	ok	
@@ -917,7 +917,7 @@ MSB12-beadplan-R1S666728707	docs/artifacts/night-adapt/MSB12-beadplan-R1S6667287
 MSB12-seqboom-R1S1308870894		no-path	
 S916R2B-R1S685223462	docs/artifacts/night-adapt/S916R2B-R1S685223462.js	missing	
 MSB2-R1S1494663071	docs/artifacts/night-adapt/MSB2-R1S1494663071.js	missing	
-MSB13-R1S791820660	docs/artifacts/night-adapt/MSB13-R1S791820660.js	missing	
+MSB13-R1S791820660	docs/artifacts/night-adapt/MSB13-R1S791820660.js	ok	
 MSB14-railgun-R1S175656469	docs/artifacts/night-adapt/MSB14-railgun-R1S175656469.js	ok	
 MSB11-R1S130778313	docs/artifacts/night-adapt/MSB11-R1S130778313.js	ok	
 MSB6-R1S1628871127	docs/artifacts/night-adapt/MSB6-R1S1628871127.js	missing	
@@ -933,7 +933,7 @@ GD4-RATION	scratch/arms/GD4-RATION.bak	ok
 GD6a-TILT	docs/artifacts/exam4-fixtures/GD6a-TILT-3p.bak	ok	
 GD6b-TILT	scratch/arms/GD6b-TILT-3p.bak	missing	
 MSB18-R1S826788378-seg2	docs/artifacts/MSB18-R1S826788378-seg2.bak	missing	
-GD16m	scratch/arms/GD16m-D1.bak	missing	
+GD16m	scratch/arms/GD16m-D1.bak	ok	
 OBS6-GA25	docs/artifacts/obs6-coldstart/OBS6-GA25.js	ok	
 OBS6-GA200	docs/artifacts/obs6-coldstart/OBS6-GA200.js	ok	
 OBS6-GA100M	docs/artifacts/obs6-coldstart/OBS6-GA100M.js	ok	
@@ -989,7 +989,7 @@ MX6-GD-TF20	docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak	ok
 MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	ok	
 MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	ok	
 RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	ok	
-TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	missing	
+TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	ok	
 TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	missing	
 TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	ok	
 RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	ok	
@@ -997,7 +997,7 @@ DIV-V3-PRESSURE-S2	docs/artifacts/obs6-coldstart/DIV-V3-PRESSURE-S2.bak	ok
 DIV-V3-ANTIDEF	docs/artifacts/obs6-coldstart/DIV-V3-ANTIDEF.bak	ok	
 DIV-LH6-HEAVY-S2	docs/artifacts/obs6-coldstart/DIV-LH6-HEAVY-S2.bak	ok	
 RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	ok	
-P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	missing	
+P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	ok	
 night2-S6	docs/artifacts/night2-S6.bak	ok	
 night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	ok	
 day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok	

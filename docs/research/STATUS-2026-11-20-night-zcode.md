@@ -17,11 +17,12 @@
 
 （前三枚 v7blk1-92/MSB13/P9-CN-MINI-CONT/TZ2C 由白班恢复，本班补 git 登记。）**收尾验真**：arena-eval 静默通过 ‖ V3a 整臂闭环（snap0+终粒 `94f1343c` 双双逐位）‖ 门禁 np/meta+spec+smoke+battle+map 全绿。
 
-## 二、三件根因诊断（复现学）
+## 二、三件根因诊断（复现学）→ 立法
 
 1. **教师栈错=全错**：LH6 真栈里有白班不知道的两个角色（t1=LH2 干净底座、t4=lasereye 脚本教师）+ t2 带键过滤。**挖原文，别重构。**
 2. **代码漂移是隐形变量**：生成时刻的 working tree ≠ 之后任何 commit。a0feae0f（21:53 提交）≠ 20:42 的树 ⇒ 复现要 worktree 到生成时刻**之前最近的 commit**，并且接受「未提交改动不可复原」的残余风险（本例 a0feae0f 恰好命中）。
 3. **舍入模式是身份的一部分**：V3S2 融合 ×1e6 舍入命中、无舍入不命中。
+4. **seed 不进权重路径的旗标不是随机变量**（→ METHODOLOGY §150）：supfit-gd `--seed` 只进 META；"种子对照"臂设计前先反查 RNG。
 
 ## 三、工具升格（用户令「好东西不留 scratch」→ docs/RECOVERY-TOOLKIT.md）
 
@@ -31,13 +32,27 @@
 
 | 臂 | 配方 | arenaB | 判定 |
 |---|---|---|---|
-| **night2-E1-det-strong** | **DS-P0**：EQ-S4-E9（+14.3）做基座+主教师 0.70 + detonate 专科 0.30 | **−30.36pt（极差 10.6）** | ✅ **promote 0 阻断全过，已入池 soft**（25 枚）——比同系蒸馏产物（S6 −104.8/X2b −87.2/det-gd −88.9）好一个数量级；强包锚定防洗塌成立。没到 DS 乐观带 −15~+10（E9 self-teacher 份额里 ji 74% 仍高、firestorm 实战 1%）——下一杠杆=专科份额 0.35~0.40 或 t2 强包换 MX5-GD-T2STR（+20.5） |
+| **night2-E1-det-strong** | **DS-P0**：EQ-S4-E9（+14.3）做基座+主教师 0.70 + detonate 专科 0.30 | **−30.36pt（极差 10.6）** | ✅ **promote 0 阻断全过，已入池 soft**（25 枚）——比同系蒸馏产物（S6 −104.8/X2b −87.2/det-gd −88.9）好一个数量级；强包锚定防洗塌成立 |
 | night2-E2-det-pg | det-realpg.seg1500 续训（真包×5+aggro/wall/ringspam+ridge） | **−104.67pt** | ✗ 负结果：白班成果被洗掉（−81→−105）——续训方向/参数错，det 系续训的 lr/kl 需单变量重校 |
+| night2-E3-det-share35 | E1 单变量：专科份额 0.30→0.35（seed 2026112002，wid a6c4605f610c424b） | **−39.51pt（极差 53.2，−17~−71）** | ✗ 负结果：**「专科份额加码到 0.35~0.40」方向被否**——中位差 9.2pt 且抖炸；0.30 靠近剂量甜点 |
+| night2-E4-t2str-det | E1 单变量：锚换 MX5-GD-T2STR（+20.5，t1/t2=4540/2060，seed 2026112003，wid aeae5686ca04a5a3） | **−25.09pt（极差 24.5，双峰 −10.5×3 / −31~−35×3）** | ⚠ 中位好 5.3pt 但稳定性降级（E1 极差 10.6）——**强锚换装方向值得跟**，下一臂=同配方换 seed 对跑验证双峰是不是种子噪声，或 0.65/0.35 份额下压 |
+| night2-E5-det-share25 | E1 镜像：专科份额 0.25（AGENTS 18 镜像对照，seed 2026112004） | **−25.10pt（极差 28.4）** | 剂量曲线闭合：**0.25→−25.1 / 0.30→−30.4 / 0.35→−39.5，两侧都塌且极差 10.6→28.4→53.2 爆炸**——E1 的 0.30 是窄甜点；"份额加码"与"减码"两方向同时被否。新经验：teacher2 份额的剂量扫描必须带极差轴，偏离甜点 = 中位掉 + 稳定性双杀（是否跨专科教师普适待复证，暂不进方法论） |
+| night2-E6-t2str-det-s2 | E4 同配方换 seed 2026112005（双峰归因设计） | **与 E4 wid 逐位相同（aeae5686ca04a5a3），arena 读数逐字节同** | 臂作废但换来方法论 §150：**supfit-gd 的 `--seed` 是 META 记录字段不是训练变量**（训练 RNG 硬编码 LCG 20261030）——"种子对照"在这条管线里天然无效；E4 的 arenaB 双峰是**权重的固有环境方差**（3 环境 −10~−19 / 3 环境 −31~−35），换 seed 平抑不了 |
+
+**E 系终局判定**：E1（EQ-S4-E9 锚 + 0.30 份额）仍是 DS-P0 路线的入池代表——剂量曲线 0.25/0.30/0.35 两侧都塌且极差爆炸（10.6→28.4→53.2），0.30 是窄甜点；MX5-GD-T2STR 锚 = 更高上限更偏科（med −25.1 但固有极差 24.5，最坏格 −34.9 ≈ E1 的 −34.5），按"进图只收代表性包"留 scratch，池里若要"高上限偏科带"再提。E4/E6 同 wid 只算一枚。
 
 ## 五、P2 · 批量重产：wid 目标账已全齐，剩下的是源盘
 
 - **wid 目标账不用考古了**：1.8 全集的 wid 本来就在 `page/lineage.tsv`（1002 行）——`tools/anchor-recover.mjs` 之前只读 lineage-g3.tsv 才显得缺 614 枚。两表并读后 **wid 目标 1004 条，缺失 662 枚全部有 wid 身份判据（无 wid 目标 = 0）**。
-- 真正的瓶颈变成 **无源**：盘上（隔离区+4 个 worktree，3525 文件 / 869 唯一 wid）只能直接对回 **3 枚**，其余 659 枚要靠会话挖掘配方 + era worktree 批量重产（RECIPE-BOOK 已有部分配方）。
+- **批量重产工作清单已建**：`tools/recipe-index.mjs` 四 harness 全量挖 `--out=` 命令（64959 条）对缺失台账 → **11 枚缺失包已有原始命令**（UNIFIED-U1/U4、EQ-E9-A1/EQ-S5-P9、GD3-SWORD、KD 线等；dsh 4 / gemini 4 / zcode 5；qoder 非纯文本 0 命中探路保留）。下一班照 RECOVERY-TOOLKIT §6 复产。
+- **当晚已照单复产 4 枚（KD 链整链逐位命中）**：
+  - **KD-V7** `61164b09cac44d2d`（era 4ea71a74，上游 scratch/ga-arms/L5-D4a-s13.js 在盘，一发即中）
+  - **KDFULL2** `1529c10b509c9de8`（era 8ce59307，v1 步数变体未中、v2 steps=3000 命中——**留出 78.7% 与该 commit 自述互证**；两变体都在 recipe-index 里，取 earliest 不灵就试下一个）
+  - **KD-K2-l** `9ed57f4e9a3d98e1` + **KD-K2** `e2306c670a4c1a3f`（era 90150d1b——**lineage ts 11-07 23:35 早于 `--teacher` 旗标存在（11-08 01:09）⇒ ts 不可靠，era 按"旗标何时进工具"选**；`$T=kept/e70-out__D02-31.bak` 从 zcode 会话原文出土）
+  - **CB-combo-v2 未中**（era 348728e1 冒烟闸把产物拦了：过期 34.7 颗/局 > 5——原跑在闸更松的未提交代码上；11-03 老 GA 品，不追）
+  - **新坑两件**：① `--out=` 产物在台账的路径可能 ≠ 原始命令的落盘路径（KD-K2 台账=docs/artifacts/night-adapt/、原命令写 scratch/night-adapt2/）⇒ **恢复以台账路径为准**；② `.gitattributes` 的 .bak binary 护罩原只盖 `docs/artifacts/*.bak`（* 不跨目录，night-adapt 等子目录全裸）⇒ 已全局化 `*.bak binary`。
+- 台账对账顺手清账 5 枚：MSB13/TZ2C/v7blk1-92/P9-CN-MINI-CONT 其实白班已恢复入仓（wid 四枚逐位验证），只是台账没翻 ⇒ missing→ok；GD16m（LH6/LH2 链的关键教师）从 wt-repro-1114 落回 `scratch/arms/GD16m-D1.bak`（--do 逐位复验）。
+- 真正的瓶颈变成 **无源**：盘上（隔离区+4 个 worktree+主仓 scratch/docs，3955 文件 / 947 唯一 wid）只能直接对回 **1 枚**，其余 657 枚要靠会话挖掘配方 + era worktree 批量重产（RECIPE-BOOK 已有部分配方）。
 - dsh（.zstd，已解压挖掘：7 会话 1406 条命令）与 662 缺失清单**零交集**（9-10 月 claude 导入时代错位）；qoder 尚无命中案例，探路模式。
 - 会话挖掘已就绪：`tools/session-mine.mjs --harness=dsh/qoder`。
 

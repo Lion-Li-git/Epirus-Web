@@ -866,7 +866,7 @@ KDFULL400-s13	scratch/ga-arms/KDFULL400-s13.js	2.0	16	KD 蒸馏链（种子与�
 KDFULLGA-s13	scratch/ga-arms/KDFULLGA-s13.js	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:13:19.312Z	2aa1200d0277ad38bf166bc346bb5f82d462438a6b7560b4835f77df7fe8712b	active														150		
 GA-ration-s41	scratch/ga-arms/GA-ration-s41.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-01T05:05:12.648Z	c7b6dacdf58108c0f7af84bcddac02e87178566a9b0a47b260474be0c482a2f3	active														400		
 WIDEFIX-s7	scratch/ga-arms/WIDEFIX-s7.js	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-03T13:18:55.752Z	db9ccebf2da15b03356087ec80ae783bbddbca8ef71e4d4f9e43ba982bd40e48	active														50		
-KDFULL2	scratch/arms/KDFULL2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:01:38.394Z	9a9fa92f7341123c95f055239f0dafb2a29d5db9053363659b42867e7eb68f01	active																
+KDFULL2	scratch/arms/KDFULL2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T12:01:38.394Z	1a997046c82ee5bb57e0f4a906e3c423777cdc380055c13cb6dd5a9a584499bd	active																
 KD-V7	scratch/arms/KD-V7.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-04T11:16:40.504Z	7f39e7494bcbd33ae33eaff1b047c2796edbf8a4d38611b43075ae72a19c45d7	active																
 DSTR4-s13	docs/artifacts/2p0-pool/DSTR4-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-02T17:46:57.183Z	0eaba2eb0f9b177fe90254d95319775f1338b72c667b77b06beb03bdff54a019	active														400		
 EFFG-s5	docs/artifacts/2p0-pool/EFFG-s5.bak	2.0	15	gen-3 实验臂（11-01 era）∪ v7 面 GA 对照臂（11-03 · 自 T8-s114 热启动 · v:7 架构）		2026-11-03T16:06:31.396Z	22e15809aa00f3686cef3b45182cc15d773f9a45f69f3510ddbfabf316bd7e33	active														150		
@@ -886,9 +886,9 @@ COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 
 CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:02.829Z	4e744b0848ea57b0f56d5c24ad808b542799152a19f8e4cea82d8033dfc3664c	active														150		
 CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:25:35.822Z	c94b6dd767a2d055630cad06b6b53eda24de8b8ac73307b2feef573f06664671	active														150		
 ADAPT2-Q-s7	docs/artifacts/night-adapt/ADAPT2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:53.171Z	f1758a0863ed6f7b8171d4c5088df07be1666b349a035a875dc6d36d204e7f1a	active														150		
-KD-K2	docs/artifacts/night-adapt/KD-K2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:20.681Z	a19451d1ddcc66cb0fc1a6b0547bc93d35aa2e9572c0b27a0b052e8a865b3376	active															multi	
+KD-K2	docs/artifacts/night-adapt/KD-K2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:20.681Z	d0837aa5c6e44d26692ec2f0505e36a4f5a143cde4fdcd177b0265c326020e41	active															multi	
 KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T17:20:00.000Z	a21a7cf2d70fb0be7bbcace5b4f751f2fb1fab23d75e0b5b018dccec4fd11045	active															multi	
-KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:19.453Z	e70eb14808be4c04785620e37f8cf3bfc995c724eac6d5f1f8e3a5ab9680f4a7	active															long	
+KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:19.453Z	22966840386d59f2759437943ad0da77e5f2137ec6b182d4c338e664df8c229b	active															long	
 PASS2-Q-s13	docs/artifacts/night-adapt/PASS2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T00:44:35.803Z	59240a4970f081d3531182efede7282ed0800e7a6dd09c1e63bde8dc9ea5bfb3	active														150		
 STR-B-Q-s13	docs/artifacts/night-adapt/STR-B-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T07:44:12.287Z	12de3a6b3f6e72a02a0084571f00d8fe6e80a1696eaec4b89318d3127912c672	active														150		
 STR-B-Q-s41	docs/artifacts/night-adapt/STR-B-Q-s41.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T08:01:18.508Z	b5fead765f44c293aeb9a194052a34b8b6e9b986cbd54bca1af889ca5f3bbc36	active														150		
