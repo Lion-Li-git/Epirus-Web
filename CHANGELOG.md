@@ -10,7 +10,7 @@
 
 - 人席探针：7 枚 × 200 局 × multi/long × seed 90210/90211；报告 docs/research/SEAT-2026-11-19-refresh.md。
 - 图/包：rebuild-map 100 PASS；bundle 7318KB；版本 v2.1.9；?v= 刷 p1119b。
-- 说明：全池 refresh 会动 10 个 seatKill 值，本版只执行已裁定的两枚，其余保持旧值（provisional）。
+- 说明：本轮补齐 7 枚补测值（RING-MINIT-CONT=2、S6=8、X2b=0、RINGB11=0、RINGB9=2、TZT2D=2）；RINGB9/TZT2D 以点名保留；其余旧成员保持旧值（band refresh 的 10 个变动未全量应用）。
 ## v2.1.8 — 11-19 午（`skill-report` 行内引爆率与电/爆珠使用率 ‖ 池 25 枚 `day1119-cannon-pg` 入 `soft` 带）
 
 **这一版是什么**：在 `skill-report` 去掉卡片顶部重复横幅，把**真实引爆率**与**蓄能电/爆珠使用率**内联进表格行；同时把全项 0 阻断通过体检的过载炮宽谱候选 `day1119-cannon-pg` 走完整管道入池 `soft` 带（池 24 → **25 枚**，hard 11 / soft 14）。

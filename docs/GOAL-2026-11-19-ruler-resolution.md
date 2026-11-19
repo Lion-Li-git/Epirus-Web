@@ -31,7 +31,7 @@
 - 池：**24 枚（hard 11 / soft 13）**；bundle 7318KB；图 1002 点；v2.1.9（11-19 晚：cannon-pg 退役、RING-MINIT-CONT 点名保留 seatKill=2）。
 - 覆盖：全池 `rod/taunt/purify/mirror` 0/25；`firestorm/miniT/dualGun` 1/25；`mine/cannon` 2/25。
 - 负资产：`night2-S6`、`night2-X2b-fuse` 仍在 soft。
-- 人席：**5 枚仍 `seatKill=-1`**（night2-S6 / night2-X2b-fuse / RINGB11 / RINGB9 / TZT2D）；RING-MINIT-CONT 已点名保留（seatKill=2），day1119-cannon-pg 已退役。
+- 人席：**24 枚全部量过（0 枚 -1）**；RINGB9/TZT2D 点名保留（seatKill=2），night2-S6=8（invited），night2-X2b-fuse/RINGB11=0；RING-MINIT-CONT=2（invited）。
 - 权重重：800 枚清理丢失；Gemini 挽回 130，仍缺 670；lineage 冻结（`rebuild-map` ③ 跳过）。
 - 尺：A/B/C 均为页面剂量；换尺会破坏可重算性。
 
