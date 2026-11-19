@@ -132,11 +132,17 @@ if (mode === 'v7' && era) {
   } else {
     console.log('[train] era worktree 复用：' + wt + ' @ ' + era);
   }
-  /* era 脚本路径自适应 */
+  /* era 脚本路径自适应（并发批的建树竞态防线：另一路正在 add 时目录已存在但检出未完 ⇒ 等它检出完再复用） */
   const eraScriptCands = ['tools/train-3p.mjs', 'training/train-3p.mjs'];
-  const eraScript = eraScriptCands.find((p) => existsSync(resolve(wt, p)));
+  let eraScript = '';
+  for (let i = 0; i < 30; i++) {
+    eraScript = eraScriptCands.find((p) => existsSync(resolve(wt, p)));
+    if (eraScript) break;
+    if (!existsSync(wt)) break;   /* 真没有这棵树 ⇒ 走下面的报错，不等 */
+    spawnSync('cmd', ['/c', 'timeout', '/t', '2', '/nobreak'], { stdio: 'ignore' });
+  }
   if (!eraScript) {
-    console.error('⛔ [train] era 树里找不到 train-3p.mjs（试过 ' + eraScriptCands.join(' / ') + '）⇒ 该 commit 可能早于 v7 线');
+    console.error('⛔ [train] era 树里找不到 train-3p.mjs（试过 ' + eraScriptCands.join(' / ') + '）⇒ 该 commit 可能早于 v7 线，或 worktree 检出未完成');
     process.exit(2);
   }
   /* 母本同步：EPIRUS_SEEDPACK 相对路径 ⇒ 主仓有、worktree 没有 ⇒ 拷进去（保持同相对路径，recipe.env 才忠实） */

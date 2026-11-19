@@ -134,7 +134,7 @@ N5L-05	docs/artifacts/kept/e120-out__N5L-05.bak	ok
 N5L-15	docs/artifacts/e106-out/N5L-15.bak	missing	
 N5L-30	docs/artifacts/e106-out/N5L-30.bak	ok	
 NC-191	docs/artifacts/e75-out/NC-191.bak	ok	
-NC-231	docs/artifacts/e75-out/NC-231.bak	missing	
+NC-231	docs/artifacts/e75-out/NC-231.bak	ok	
 NC-301	docs/artifacts/e75-out/NC-301.bak	missing	
 NC-341	docs/artifacts/e75-out/NC-341.bak	missing	
 NCV-71	docs/artifacts/e75-out/NCV-71.bak	sha-diff-wid-same	2185e8fa7625a2618977629ac2525209769765bf4900d8835893c3e6cad22304

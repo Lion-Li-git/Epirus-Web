@@ -728,3 +728,22 @@ da58e843d231f0eb	move	docs/artifacts/STR-B3-Q-s13-band4.bak	docs/artifacts/STR-B
 1c5ae5d209697878	move	docs/artifacts/WSEL10-200-band5.bak	docs/artifacts/WSEL9-200-band5.bak	2026-11-09T05:24:31.690Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WSEL10-200-band5.bak
 79b420e13288e1cf	canonical	docs/artifacts/WSEL9-200-band6.bak	docs/artifacts/WSEL9-200-band6.bak	2026-11-09T04:57:52.022Z	0	disk	
 79b420e13288e1cf	move	docs/artifacts/WSEL10-200-band6.bak	docs/artifacts/WSEL9-200-band6.bak	2026-11-09T05:24:31.694Z	0	disk	D:/code/Epirus-Web-artifacts-quarantine/docs/artifacts/WSEL10-200-band6.bak
+e379c62ccd2648fa	move	docs/artifacts/e370-out/e379c62c.js	docs/artifacts/e370-out/e379c62c.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/e379c62c.js
+03b35fcab7de018a	move	docs/artifacts/e370-out/03b35fca.js	docs/artifacts/e370-out/03b35fca.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/03b35fca.js
+24d8fa30bb0c3414	move	docs/artifacts/e370-out/24d8fa30.js	docs/artifacts/e370-out/24d8fa30.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/24d8fa30.js
+d960dd589dad97e4	move	docs/artifacts/e370-out/d960dd58.js	docs/artifacts/eco-34-v7.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/d960dd58.js
+3220ef505142f2cd	move	docs/artifacts/e370-out/3220ef50.js	docs/artifacts/e370-out/3220ef50.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/3220ef50.js
+8358c7b72b4d9dc8	move	docs/artifacts/e370-out/8358c7b7.js	docs/artifacts/e370-out/8358c7b7.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/8358c7b7.js
+b561e0ee2538c5a9	move	docs/artifacts/e370-out/b561e0ee.js	docs/artifacts/e370-out/b561e0ee.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/b561e0ee.js
+d490dc136293cfc4	move	docs/artifacts/e370-out/d490dc13.js	docs/artifacts/e370-out/d490dc13.js		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/d490dc13.js
+1cd7c4776cd3b0bf	move	docs/artifacts/e370-out/0d61340a.js	docs/artifacts/v7force2-35.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/0d61340a.js
+006243e19ba07a51	move	docs/artifacts/e370-out/213e6f32.js	docs/artifacts/v7teach2-31.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/213e6f32.js
+1286d167767ad8e7	move	docs/artifacts/e370-out/30724115.js	docs/artifacts/incumbent-forpromote.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/30724115.js
+6601829354d75fa0	move	docs/artifacts/e370-out/3dedd628.js	docs/artifacts/v7n1-31.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/3dedd628.js
+9a827fa9956293ec	move	docs/artifacts/e370-out/65207cc7.js	docs/artifacts/v7tgt2-52.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/65207cc7.js
+03a8061c52efd39e	move	docs/artifacts/e370-out/81057cb2.js	docs/artifacts/v7press-36.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/81057cb2.js
+c84dbdbcdd95048e	move	docs/artifacts/e370-out/c7a69570.js	docs/artifacts/v7new5_005-31.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/c7a69570.js
+dc30f4335faabeb3	move	docs/artifacts/e370-out/cab48220.js	docs/artifacts/v7wall-33.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/cab48220.js
+e34773b4a741bd01	move	docs/artifacts/e370-out/de80959d.js	docs/artifacts/long-33.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/de80959d.js
+7c57ce49fff18006	move	docs/artifacts/e370-out/f020ce0e.js	docs/artifacts/v7a-35.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/f020ce0e.js
+d960dd589dad97e4	move	docs/artifacts/e370-out/3220ef50-v7.js	docs/artifacts/eco-34-v7.bak		0	disk	D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-20/docs/artifacts/e370-out/3220ef50-v7.js
