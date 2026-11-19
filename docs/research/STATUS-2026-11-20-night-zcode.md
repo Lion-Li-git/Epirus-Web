@@ -74,3 +74,39 @@
 池 **25 枚**（hard 11 / soft 14）+ night2-E1-det-strong（soft，promote 0 阻断，Stage1 16/30 ‖ Stage2 23 技）——bundle/图/skill-report 全部重烘同步；**E1 图节点补全走完完整链**（首枚产物落账发现 measure-point 链上次在 add-point 中途断掉：lineage 落了而 registry/display/features/readings/projections 全缺 ⇒ `--reuse` 重放补完，map 池层自检 100/0）。
 
 **遗留建议（等用户裁）**：DS §五-P2 提议退役软带负资产 night2-S6（−104.8，0/315 废贴）与 night2-X2b-fuse（−87.2，0/671）——但这两枚是用户 11-19 深夜点名入池的，本班不擅动。
+
+## 七、11-20 清晨续班（06:30→08:5x · 用户点名三线）
+
+用户三问：①「最早一大批包都是 1.3.58 冠军训练出来的，旧槽位冠军应该都写死在当时的槽位 js 里面，能不能找到」②「你搞半天还是只跑了 k2 家族，ldemo 家族和 t8-s114 家族也有一堆包才对」③「obs3 和 obs5 时代的包有没有可复现的」。
+
+### 7.1 槽位考古（87f2c849）：**16 枚 SLOT 全清 + server 系根回盘，台账 605→586**
+
+`slot-timeline.tsv` 40 段逐段 `git show <引入提交>:js/bundled-champion-3p.js` → widOf 守卫 **40/40 全过** → v<7 嵌 v7 → **19 枚缺失行逐位命中**（16 SLOT + v7press-36/v7tgt2-52/v7n1-31）。**SLOT-e379c62c=d13d3c85（584 枚 server 系的热启动根）回盘** —— V7-ERA §八判定第 3 条（"祖先包缺失不可再生"）作废；§八其余三条（server checkpoint 不在 git / pre-v1.5.18 未播种时代 / archive 零命中）不变 ⇒ server 系可复现面变成"根有了，但 server 训练本身的回放器还没建"（train-server.mjs 时代是 HTTP 驱动 + 逐时刻 checkpoint，与 train-3p CLI 不是一条管线——下一班先立 server 回放可行性小案，别直接烧算力）。
+
+### 7.2 Ldemo/B 家族（fam 9）：幸存者 recipe.env 破译 + 三轮批量，台账 586→571→56x
+
+**配方语义表**（幸存者实证；字母=旋钮、数字=seed 或剂量×100）：
+- e66 B0=`COSTLY_W=0`；B0L=B0+SEL_KEEP（推）‖ e70 D= COSTLY_W 剂量（D02-31=K2 根实证 0.02）‖ e71 L=ANCHOR（L02=0.02）‖ e73 M05=纯 ANCHOR=0.05×seed 扫描 ‖ e75 NC=ANCHOR 0.05+COSTLY_W 0.02 **活性版** ‖ e78 G=ANCHOR（G03=0.03/G08=0.08/G15=0.15）‖ e85 E=ANCHOR 0.08+BEAD_W（E00=0/E10=0.10/E20=0.20）‖ e95 N5 未知 ‖ e100 B5=ANCHOR 0.08+BEAD_W 0.05/0.10（0.05 在 eb6fc3b7 树不生效，待 bd20cde2 试）‖ e106 N5L=ANCHOR×100（05/15/30）‖ e127 RG0=RING_OPPS=0+ANCHOR 0.08、RG1=RING_OPPS=1 ‖ e234（10-02）=母本 js/bundled-champion-3p.js×字母系（S=C05+SEL_BIGT6、T=C02、K=剂量、M=纯×seed、D0a/D1a/D4a/D5a=纯/C0.2/IMIT/long）。
+
+**era 奢注判例三证成立**（旋钮接线提交晚于批跑 ⇒ 批在未提交树上 ⇒ era 取接线提交，wid 试金定生死）：S71@ab5c13df ✅ ‖ RG1-31/RG1-71@b1809983 ✅ ‖ NC-231@42d7c86e ✅。反例也入账：COSTLY_W 在 6e032309（v1.5.260 接线当日树）**行为惰性**（CALIB-D02-31 跑出 plain B0-31 的 wid）⇒ D 系真 era 也押 42d7c86e（计数门修复）。
+
+**战果**：第一轮 15/20（G03-71/S71/T111/L02-31/L02-71/M05-111/151/191/231/RG1-31/RG1-71/E00-31/E00-71/E20-31/E20-71）+ 跟进 NC-231。**意外收获**：错配方跑出别的缺失包 wid 两枚（NC-231 臂跑出 M05-231、D005-71 臂跑出 NOL24-71——都已对号入账/验真）。**恢复件 META.ts 一律重写回 lineage 原值**（父边时间倒挂会红 probe-instruments——SOUP-KE-l60 那条边抓的）。
+
+**余下阻断（fam 9 内 ~26 枚）**：e234 单字母臂 21 枚（驱动脚本四 harness+gemini steps 全失传——唯一残档=kr3 骨架的臂名单）‖ B0L-71（SK 语义未破）‖ N5L-15（A15 在 eb6fc3b7 呈 0.08 行为，剂量表未明）‖ V2-31（V 系无幸存者）‖ HF-191（e116 臂名 b<seed>，HF 语义未知）‖ N5-0（N5 语义未知）‖ NC-301/341/D005-31/71 在 42d7c86e 跑批中。
+
+### 7.3 t8-s114 家族（fam 15）：**缺失清零**
+
+51 枚 gen-3/GA 臂全在前波复产/在册——用户点名的这族其实已经整族归位，本晨对账复核确认 missing=0。
+
+### 7.4 obs3/obs5 时代（2.0 小族 ~32 枚）复现性
+
+- **CLONE-D4a 解封一半**：教师 D4a 本晨回盘（e234-out/D4a.js），上游 GD3-SWORD.bak 仍无源 ⇒ fam 14 五枚仍阻断。
+- fam 19 obs5 课程链 14 枚（MSB*）：11-09~11 夜 supfit 臂，配方未进 RECIPE-BOOK，教师链（ration2 等）无源 ⇒ 需 11-09~11 夜班日志考古（下一班）。
+- fam 23 obs6.5 统一 10 枚：上游 V3S2-MB/U2.snap0/V3H3-MB 无源（前判不变）。fam 21/22/24/25/16/17/20 单枚级待逐枚验。fam 7（e35prod807/seed81）配方未出土。
+- **obs3/obs5 时代没有"一挖就中"的整族**——能立即复产的只有 fam 14/19 里上游教师恰好齐装的那几枚，逐枚验前置。
+
+### 7.5 工具与管线增量
+
+- `scratch/slot-recover.mjs`（timeline 逐段取件+守卫+嵌入，可重跑）‖ `scratch/bfam-batch{,2,3}.mjs`（并发批+wid 试金+台账落账）‖ `scratch/survivor-env.mjs`（全库幸存者 recipe.env 出土，165 枚）‖ `scratch/read-env.mjs`。
+- `training/train.mjs` era 委托层补**建树竞态防线**（并发批多路同 era 时复用未检出完的树会 exit 2——本轮 D005/NC-301/L05K 三臂栽过，重试即愈）。
+- **冗余副本纪律**：e370-out 取件产物里 19 件与在册包同 wid ⇒ 挪隔离+dupes-manifest 登记 move 行（D191 归零）；v7 时代原件一律不落仓（rank 会被它抢走，把既有在册文件挤成"多余"）。
