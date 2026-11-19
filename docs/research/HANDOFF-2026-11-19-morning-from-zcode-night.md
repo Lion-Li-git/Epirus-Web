@@ -13,7 +13,7 @@
 
 ## 白班下一步（按优先级）
 
-1. **过载炮载体（全池最缺 1/24）**：夜班 X4 臂已跑 = **负结果**——toolkit 教师的过载炮 phase 只触发 2/6600，rareOnly 稀有期 11 桌形全部缺货回退（§45② 空枪的稀有期实例，STATUS §十二）。下一杠杆：**先造/找 cannon 专职教师**（或 §44 式单规则强制 phase），再谈稀有期采集。
+1. **过载炮载体（全池最缺 1/24）——已有种子**：X4（toolkit+rareOnly）负（教师 phase 2/6600 空枪，§45② 稀有期实例）⇒ X5（**专职 `--teacher=cannon`**，`cannonPick` 一直在 `buildTeacherPick` 注册表里）= **载体成立：cannon multi 41% / long 29%**，但 promote 3 阻断（G4 双格被只枪 94/98.3% 打穿 + G[long] 1.63 坍缩）⇒ **定位 = 教师级产物，别直接入池**。白班路：X5 当 `pack:scratch/arms/night2-X5-cannonT.bak` 教师成分蒸回宽基座（cannon 5% 级 + 保 G4）。
 2. **载体强度爬坡**：night2 系 carrier B 全在 −87~−105，对 24 锚联盟差距巨大。方法论空白方向 = **强度尺进训练环**（Stage2 Δ 当选择压）或事件奖励族——发散优先，别重证蒸馏/教师轮替（AGENTS 15/21）。
 3. **暗键 46 清理**：旋钮 KPI ≤40 还差 25（`node training/knobs.mjs` 看账；暗键=有人读但入口读不到，删前对真实边）。
 4. **proto2 归档候选 ~27 件**批量删：逐个对谱系（流程在 training/README「归档候选清单」；删法先例 a30f1098）。

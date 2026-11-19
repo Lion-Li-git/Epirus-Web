@@ -3,7 +3,7 @@
 > 2026-11-19 起本册大幅缩水：v7 线（train-3p/best/fast/server）已删除，其 EPIRUS_* 旋钮宇宙随之消失；
 > 2.0 产线（pg-train / supfit-gd）是 **--flag** 接口（见 training/README.md §〇），不走 env 旋钮。
 > 真源：server/knob-guard.mjs 解析现存入口的 env 读取。历史台账（REMOVED_TRAIN_KEYS 等）在被删文件里，随 git 史可考。
-> 数据账：全集 65 ‖ 在用 19 ‖ 暗键 46
+> 数据账：全集 58 ‖ 在用 19 ‖ 暗键 39
 
 ## 全量（按名排序）
 
@@ -14,8 +14,6 @@
 | `EPIRUS_ALLOW_DARK` | promote-champion | 在用 |
 | `EPIRUS_ALLOW_V7` | — | 暗键（被提及无人读） |
 | `EPIRUS_ARCH2` | — | 暗键（被提及无人读） |
-| `EPIRUS_ARM` | — | 暗键（被提及无人读） |
-| `EPIRUS_BAND_DIR` | — | 暗键（被提及无人读） |
 | `EPIRUS_BATCH_MAX` | — | 暗键（被提及无人读） |
 | `EPIRUS_BREADTH_GAMES` | promote-champion | 在用 |
 | `EPIRUS_BUNDLE_IN` | — | 暗键（被提及无人读） |
@@ -60,9 +58,7 @@
 | `EPIRUS_SEL_EVAL_SEEDS` | — | 暗键（被提及无人读） |
 | `EPIRUS_SHAPE_GAMES` | promote-champion | 在用 |
 | `EPIRUS_SNIPER_GAMES` | promote-champion | 在用 |
-| `EPIRUS_SUPPORT_PRIOR` | — | 暗键（被提及无人读） |
 | `EPIRUS_T3P_BASELINE` | — | 暗键（被提及无人读） |
-| `EPIRUS_T3P_OUT` | — | 暗键（被提及无人读） |
 | `EPIRUS_TEACHER_GATE` | — | 暗键（被提及无人读） |
 | `EPIRUS_TEACHER_GATE_HP` | — | 暗键（被提及无人读） |
 | `EPIRUS_TEACHER_GATE_T` | — | 暗键（被提及无人读） |
@@ -71,17 +67,12 @@
 | `EPIRUS_WALL_MS` | — | 暗键（被提及无人读） |
 | `EPIRUS_WORKERS` | — | 暗键（被提及无人读） |
 | `EPIRUS_WR_TOL` | — | 暗键（被提及无人读） |
-| `EPIRUS_XN2G` | — | 暗键（被提及无人读） |
-| `EPIRUS_XN2REF` | — | 暗键（被提及无人读） |
-| `EPIRUS_XN2W` | — | 暗键（被提及无人读） |
 
 ## 暗键（删除候选：源码有字面量、现役入口不读）
 
 - `EPIRUS_ALIAS_TSV`
 - `EPIRUS_ALLOW_V7`
 - `EPIRUS_ARCH2`
-- `EPIRUS_ARM`
-- `EPIRUS_BAND_DIR`
 - `EPIRUS_BATCH_MAX`
 - `EPIRUS_BUNDLE_IN`
 - `EPIRUS_BUNDLE_OUT`
@@ -109,9 +100,7 @@
 - `EPIRUS_SELF_TEACHER`
 - `EPIRUS_SEL_COUNTER`
 - `EPIRUS_SEL_EVAL_SEEDS`
-- `EPIRUS_SUPPORT_PRIOR`
 - `EPIRUS_T3P_BASELINE`
-- `EPIRUS_T3P_OUT`
 - `EPIRUS_TEACHER_GATE`
 - `EPIRUS_TEACHER_GATE_HP`
 - `EPIRUS_TEACHER_GATE_T`
@@ -120,7 +109,4 @@
 - `EPIRUS_WALL_MS`
 - `EPIRUS_WORKERS`
 - `EPIRUS_WR_TOL`
-- `EPIRUS_XN2G`
-- `EPIRUS_XN2REF`
-- `EPIRUS_XN2W`
 

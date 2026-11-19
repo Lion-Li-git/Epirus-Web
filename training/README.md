@@ -21,7 +21,7 @@
 | 入口 | 机制 | 产物作证 |
 |---|---|---|
 | `proto2/pg-train.mjs` | REINFORCE + 行为塑形常驻（λc 充能链 / λf 电磁炮 / `--shapeKey=key:weight` 任意卡塑形）+ `--klW/--klTilt/--klTiltMul` 批级键频锚（mode-covering，不依赖键被采样）+ `--segEvery` 多节点快照防漂移 | 11-14 obs6-coldstart 系、DIV 系的 PG 腿 |
-| `proto2/supfit-gd.mjs` | 教师蒸馏精确梯度版（Adam+反传）；教师 = `toolkit`（杂货铺本体：聚能环 3 珠链/避雷针/大雷三层选靶/贴贴渐进/过载炮 phase/断环）｜`chain`｜`v7mix`｜`pack:<任意 2.0/v7 包>`（**v7 包当教师 = 跨线蒸馏，v7 退役后知识平移的唯一通道**）｜`--teacher2/3/4` 键道轮替（双教师轮替治蒸馏窄化：S3 五阻断 → S6 一阻断）；`--objective=key\|cand`（珠种/目标要 cand）；`--dagger` DAgger 轮；`--winOnly=1|2` 胜局/败局语境蒸馏（**语境集中器：两向都锐化**——镜像对照已否方向性假说，机制与规矩见 METHODOLOGY §149） | EQ-S4 系（recipe：lr 4e-4/steps 180/groups 3300/objective=cand/dagger=1/classPow=0.35/shapeBal=1）、TZ2C 链、night2-S 系 |
+| `proto2/supfit-gd.mjs` | 教师蒸馏精确梯度版（Adam+反传）；教师 = `toolkit`（杂货铺本体：聚能环 3 珠链/避雷针/大雷三层选靶/贴贴渐进/过载炮 phase/断环）｜`chain`｜`v7mix`｜`pack:<任意 2.0/v7 包>`（**v7 包当教师 = 跨线蒸馏，v7 退役后知识平移的唯一通道**）｜内部键道教师全表见 `buildTeacherPick`：`cannon`（过载炮专职，toolkit 的 cannon phase 只 2/6600 ⇒ 专职教师才是正解）/`transfer`/`antiReflect`/`breakAll`/`ration6(t)`/`oracleDef`｜`--teacher2/3/4` 键道轮替（双教师轮替治蒸馏窄化：S3 五阻断 → S6 一阻断）；`--objective=key\|cand`（珠种/目标要 cand）；`--dagger` DAgger 轮；`--winOnly=1|2` 胜局/败局语境蒸馏（**语境集中器：两向都锐化**——镜像对照已否方向性假说，机制与规矩见 METHODOLOGY §149） | EQ-S4 系（recipe：lr 4e-4/steps 180/groups 3300/objective=cand/dagger=1/classPow=0.35/shapeBal=1）、TZ2C 链、night2-S 系 |
 | `proto2/pg-lib.mjs` / `arena2.mjs` / `roster-lib.mjs` / `chain-lib.mjs` / `skill-mastery.mjs` | 上两台的共用库（tape 反传 / 对手表 / 桌形 / 链教师 / 预示式代理）——单一来源，不许抄第二份 | — |
 | `tools/pack-fuse.mjs` | 同形状包权重线性融合（产物 META 记 fusedFrom/ratio）；**只当教师/候选**，当起点要双父系教师（§148.6） | fuse-S3S1 系 |
 
