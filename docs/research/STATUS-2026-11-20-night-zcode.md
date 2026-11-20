@@ -132,3 +132,13 @@
 - **回放器**：官方 `tools/ring2-run.mjs`（本就是通用 seed-sweep：RING2_POOL 任传名单/ARM/SEEDS/MODE/HOT）在 era worktree 内驱动 era train-server。**两处坑入档**：① era 树槽文件≠批时代根——原工作流每次跑前 cp 根包到槽（def-31 META hotstartFrom 实证）⇒ 驱动按 slotAt(ts) 找时代槽冠军包（e370-out/隔离区/registry 三处查找）拷入 worktree；② 老 era 的 runner（<09-20）不认 RING2_HOT ⇒ 驱动对 era runner 打一行补丁（copyFileSync(BASE→env.RING2_HOT||BASE)）——只改驱动层，era server/js 一字不动。
 - 校准：def-31 @ e227d222 seed31 **wid 3406d277 + firstRate 0.33904761904761904 与原件逐位**（09ce558d 同参数不中 ⇒ era 一格之差全盘皆错， Wid 试金是唯一裁判）。
 - 双 shard（RING2_PORT 8906/8921 错峰）过夜扫 112 批 434 枚；命中即拷台账路径+翻账+git add。
+
+### 8.4 夜班 3 战况（04:0x 时点）与 era 规则修订
+
+- **v12 批 12 枚全中**（fam 1，09-15 珠价/代数批：era 689516cd + BASE 根 + POOL_C 阶梯）——阶梯推断打法首次整批复现。台账 505→492（cf57ba02）。
+- **era 规则修订（server 系）**：era=**首个含批时特征的提交**（v9 的 EPIRUS_ALLOW_HEALTH_FAIL 09-14 未提交、09-15 00:00 入库 ⇒ era=16b3854e 实证）；closest-before/after 都只是候选。驱动支持 era 候选逗号串，批 0 命中自动换候选重跑（RING2_FORCE=1）。
+- **EPIRUS_ALLOW_HEALTH_FAIL=1** 常开（透明；health gate 拦落盘 = "产物未落"主因，v9 批 11/12 种子当年被拦）。
+- **RNG 结构实证**：era server 的 `__seedIdxN` 从未参与播种（RNG=mulberry32(seed×7919+13) 只依赖种子自身）⇒ 批内种子顺序/集合不影响单粒权重，回放无需复刻原批种子清单。
+- **校准优先设计**：有幸存者的批先单跑幸存者 seed 验 era/配置（1-2 分钟），全候选 miss ⇒ 跳过整批记档；无校准批整批扫。**v7l2c 三候选全 miss**（配置逐字同、唯权重异 ⇒ 批时树=会话编辑中态，夹在 33b963ff 与 828b9100 之间不可达）——**会话树重构**（把会话里 13:24→16:40 的 Write/Edit 按时序回放到 worktree）= 下一班的能力项，能救 v7l2c/v7l2f/l2 系列 ~40 枚。
+- **mix/sty 批（09-12 白天）**：早于 ring2-run.mjs 诞生（09-13）⇒ 需 pre-runner 回放流（裸 server+/train 循环）；mix 的 16 对手=12+4 席 champ: 座位（champion-5p-hA9/armB12f/armA9 三包在盘 ✓）。
+- 20 对手名单（v7big1/v7press1/2）仍未出土（e68ffc09 只有 16/17/18；22 名单在 7134b299）。
