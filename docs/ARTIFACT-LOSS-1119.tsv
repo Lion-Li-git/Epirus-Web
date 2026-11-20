@@ -52,12 +52,12 @@ E59-ctl-901	docs/artifacts/e59-out/E59-ctl-901.bak	sha-diff-wid-same	fc20839aeed
 E59-land-902	docs/artifacts/E59-land-902.bak	ok	
 E59-land-903	docs/artifacts/e59-out/E59-land-903.bak	sha-diff-wid-same	10eecb4e6adf432275419b60dfd226fad70325eb35f67196119d39d25c00a683
 E59-seq-902	docs/artifacts/e59-out/E59-seq-902.bak	sha-diff-wid-same	5c778b932efac96a2a6a86f188b030db00780c3571fdcbd8bd96c4fb8de23e82
-eco-31	docs/artifacts/eco-31.bak	missing	
+eco-31	docs/artifacts/eco-31.bak	ok	
 eco-32	docs/artifacts/eco-32.bak	missing	
-eco-33	docs/artifacts/eco-33.bak	missing	
+eco-33	docs/artifacts/eco-33.bak	ok	
 eco-34	docs/artifacts/eco-34.bak	ok	
 eco-34-v7	docs/artifacts/eco-34-v7.bak	sha-diff-wid-same	f91af5f6193b6a815ed8ae6812c12609256346ab4b0b531ff651f7c2926194a5
-eco-35	docs/artifacts/eco-35.bak	missing	
+eco-35	docs/artifacts/eco-35.bak	ok	
 eco-36	docs/artifacts/eco-36.bak	missing	
 eco2-31	docs/artifacts/eco2-31.bak	missing	
 eco2-32	docs/artifacts/eco2-32.bak	missing	
@@ -176,12 +176,12 @@ r61fix-92	docs/artifacts/r61fix-92.bak	ok
 r61fix-93	docs/artifacts/r61fix-93.bak	missing	
 RG1-31	docs/artifacts/e127-out/RG1-31.bak	ok	
 RG1-71	docs/artifacts/e127-out/RG1-71.bak	ok	
-rwd0-31	docs/artifacts/rwd0-31.bak	missing	
+rwd0-31	docs/artifacts/rwd0-31.bak	ok	
 rwd0-32	docs/artifacts/rwd0-32.bak	missing	
-rwd0-33	docs/artifacts/rwd0-33.bak	missing	
-rwd0-34	docs/artifacts/rwd0-34.bak	missing	
-rwd0-35	docs/artifacts/rwd0-35.bak	missing	
-rwd0-36	docs/artifacts/rwd0-36.bak	missing	
+rwd0-33	docs/artifacts/rwd0-33.bak	ok	
+rwd0-34	docs/artifacts/rwd0-34.bak	ok	
+rwd0-35	docs/artifacts/rwd0-35.bak	ok	
+rwd0-36	docs/artifacts/rwd0-36.bak	ok	
 S-s110	docs/artifacts/e521-out/S-s110.js	ok	
 S-s113	docs/artifacts/e521-out/S-s113.js	ok	
 S-s114	docs/artifacts/e521-out/S-s114.js	ok	
@@ -1000,4 +1000,4 @@ RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	ok
 P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	ok	
 night2-S6	docs/artifacts/night2-S6.bak	ok	
 night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	ok	
-day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok	
+day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok
