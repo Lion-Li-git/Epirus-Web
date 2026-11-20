@@ -883,11 +883,11 @@ DEF-s15	docs/artifacts/2p0-pool/DEF-s15.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产�
 DEF-s16	docs/artifacts/2p0-pool/DEF-s16.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T17:27:31.832Z	093ce1b302875e82791c1a5c02729035d1c2fef98ebc4a420143986f4f427ffb	active														60		
 COMBO-s13	docs/artifacts/2p0-pool/COMBO-s13.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T16:30:29.912Z	3dd23503a880f576bcdb57e149f2e79bb39c34705e2e9a0a1bb76dd9b89db50b	active														60		
 COMBO-s16	docs/artifacts/2p0-pool/COMBO-s16.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-06T17:32:46.317Z	7479dc9a23e4b6201650387558b8ad4283fa7fffa562012db0fe04ca4f3b143f	active														60		
-CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:02.829Z	4e744b0848ea57b0f56d5c24ad808b542799152a19f8e4cea82d8033dfc3664c	active														150		
-CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:25:35.822Z	c94b6dd767a2d055630cad06b6b53eda24de8b8ac73307b2feef573f06664671	active														150		
+CTRL2-Q-s7	docs/artifacts/night-adapt/CTRL2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:02.829Z	495e1910db7c4161ba36272305f43d8dca2738ee9148c8a4b1105d9c9069b2cc	active														150		
+CTRL2-Q-s13	docs/artifacts/night-adapt/CTRL2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:25:35.822Z	0c625fbe5a98d0afdc0291f249d443f103d13cf32f1f44a6a3822fa84d9c36c0	active														150		
 ADAPT2-Q-s7	docs/artifacts/night-adapt/ADAPT2-Q-s7.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-07T17:45:53.171Z	f1758a0863ed6f7b8171d4c5088df07be1666b349a035a875dc6d36d204e7f1a	active														150		
 KD-K2	docs/artifacts/night-adapt/KD-K2.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:20.681Z	d0837aa5c6e44d26692ec2f0505e36a4f5a143cde4fdcd177b0265c326020e41	active															multi	
-KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T17:20:00.000Z	a21a7cf2d70fb0be7bbcace5b4f751f2fb1fab23d75e0b5b018dccec4fd11045	active															multi	
+KD-Qg	docs/artifacts/night-adapt/KD-Qg.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T17:20:00.000Z	c5c347b182a5424457bfb54712cf875017b63ebd06dbe2fa35d64304d496714b	active															multi	
 KD-K2-l	docs/artifacts/night-adapt/KD-K2-l.bak	2.0	16	KD 蒸馏链（种子与克隆 · v7 教师全模型）		2026-11-07T23:35:19.453Z	22966840386d59f2759437943ad0da77e5f2137ec6b182d4c338e664df8c229b	active															long	
 PASS2-Q-s13	docs/artifacts/night-adapt/PASS2-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T00:44:35.803Z	59240a4970f081d3531182efede7282ed0800e7a6dd09c1e63bde8dc9ea5bfb3	active														150		
 STR-B-Q-s13	docs/artifacts/night-adapt/STR-B-Q-s13.js	2.0	17	2.0 GA 强化线（11-08~09 · 集火/清场/宽包/SEL_CARDS）		2026-11-08T07:44:12.287Z	12de3a6b3f6e72a02a0084571f00d8fe6e80a1696eaec4b89318d3127912c672	active														150		
@@ -939,12 +939,12 @@ OBS6-GA200	docs/artifacts/obs6-coldstart/OBS6-GA200.js	2.0	21	2.0 obs6 无教师
 OBS6-GA100M	docs/artifacts/obs6-coldstart/OBS6-GA100M.js	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:13.856Z	14e07670a9d871972b3644e0cd4229858d82c5c686ee64d41973e8489121e5bd	active														100		
 OBS6-GA2PG-8K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-8K.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:29.284Z	73d4f9e21657ecb4748c9d404d8bb76d657a26a2a85b583c0c0b30dfcee5c279	active																
 OBS6-GA2PG-12K	docs/artifacts/obs6-coldstart/OBS6-GA2PG-12K.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T09:34:44.563Z	d46984a915bbde4a008ac304592ff8b2d27ab0fa6fd19bfaf1150e3d14ff3687	active																
-OBS6A4-S1000	scratch/arms/OBS6A4.seg1000.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:35:09.216Z	c7b4aa0ab244bdac83ff7291d8040e88ee4ed34fd2c63d391931bac15d51beed	active																
-OBS6W2-S1500	scratch/arms/OBS6W2.seg1500.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:36:50.631Z	e9434156ad7106314d996406af99538fc2317c4081046bf9024676facb589e4d	active																
-OBS6A5-S1500	scratch/arms/OBS6A5.seg1500.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:41:14.748Z	403266ed86abc5f09ec9cc95c3325c3f4c621f58d3fe6e4cdb2190ab70e77f64	active																
+OBS6A4-S1000	scratch/arms/OBS6A4.seg1000.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:35:09.216Z	f35090934d0d6ba5617e36e15bc36813713c21571204708b5a8f262b86c7ab8d	active																
+OBS6W2-S1500	scratch/arms/OBS6W2.seg1500.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:36:50.631Z	2460e4517ff5f068cd730c7442d8ef2b61c08655e2fac1cb6cca338b4b8c62ea	active																
+OBS6A5-S1500	scratch/arms/OBS6A5.seg1500.bak	2.0	21	2.0 obs6 无教师冷启动（11-14）		2026-11-14T12:41:14.748Z	af725d89ce0a8d3f03f7f8cfa776b687d732c282ccea22ac7ac7c1972dadfc2e	active																
 OBS6E5c	docs/artifacts/obs6-coldstart/OBS6E5c.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:25:00.527Z	113d9fd4b68f8a03550eb7fb7f1814586cde14434c2b1ffd3fe4aafd8861dc52	active																
 OBS6E4c	docs/artifacts/obs6-coldstart/OBS6E4c.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T15:29:42.491Z	749ee225e31cdb8a33d1a122b16c2767614f40693e7875dadaf9be2e17307ad5	active																
-OBS6D3	scratch/arms/OBS6D3.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T16:20:29.291Z	1446ca10c9cb13f4ad7e01599972495ca25d1abbecd5537ad082d3b5330bee10	active																
+OBS6D3	scratch/arms/OBS6D3.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T16:20:29.291Z	dd7eeec272accd2398845a2cc6a5be6b1ea6cb95a1cc2063bc4a39f2beb8cd85	active																
 OBS6P4-S4000	docs/artifacts/obs6-coldstart/OBS6P4-S4000.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:42:55.246Z	8ced170c1648c08e02554b8815d039718948ad51f2b93cbd5670a0689c533688	active																
 OBS6E9	docs/artifacts/obs6-coldstart/OBS6E9.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T18:44:23.309Z	180fc9c52b6b6cff28c4b126bd68501fa88af317c09b0986df40ad0badd9c2c0	active																
 OBS6P9-S4000	docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-14T19:04:03.314Z	52d306c08a387f11f14760e5c1b13c282d66153a3ec914df8ac8fdd9e5cce307	active																
@@ -957,18 +957,18 @@ OBS6-SHAPEDIST-V3a	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3a.bak	2.0	24	2
 OBS6-SHAPEDIST-V3b	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3b.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-15T16:27:57.962Z	1ece3523a357a8d860eac7f4aa369c76efc5ffb3c36b83e256c12ae90a154f64	active																
 OBS6B2	docs/artifacts/obs6-coldstart/OBS6B2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-15T16:29:31.084Z	b5f46c1abee632a765198945e79ae5ee39ac951298aea3353d5ebd3c25ff33c9	active																
 OBS6-SHAPEDIST-V3S2	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3S2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-15T12:47:43.513Z	9defcf86c9d77e129c3c4a006f621b379bec3b7756e526e8ecead66065b313a3	active																
-OBS6-SHAPEDIST-V3H3	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3H3.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-16T03:26:30.397Z	a223e38c80d08dd5524137099181fa522225ef8a3c18e8967c09fadefe48d115	active																
-OBS6-UNIFIED-U1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:26:46.170Z	411b2d9e766898daea354a7607441236666b451256820b411a77574d70b6caab	active																
-OBS6-UNIFIED-U2S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U2.snap0.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:01.731Z	3f29a3584b50a0f598aaa1d7e47fcfab9d018729b3716ca29d4ab8eb8ac44dff	active																
-OBS6-UNIFIED-U4S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.snap0.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:17.363Z	179428a8740722b2b00596642ca31cf66687d8e74a45d806b9a8ba27bcf5007b	active																
-OBS6-UNIFIED-U4	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:32.994Z	d1cb54c39e5bace88c10c33be775c7f679a4c93370215b5b90d742bedeb7f4a9	active																
-OBS6-UNIFIED-US1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:48.707Z	8fc881b1e25dafd048754426dba71aae5d8d53bd2b3a7a2488b21bbf8a406c42	active																
-OBS6-UNIFIED-US5	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US5.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:28:04.389Z	f5abc3b932aee4f6fcf3ddecb6505e2786ecdc69336d9a1407de4e2a53694050	active																
-EQ-E9-A1	docs/artifacts/obs6-coldstart/EQ-E9-A1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:27:04.766Z	9bbe83337cd7884759d2798b011d129fb14fbbae477a31dc5a063cc189d743a5	active																
+OBS6-SHAPEDIST-V3H3	docs/artifacts/obs6-coldstart/OBS6-SHAPEDIST-V3H3.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-16T03:26:30.397Z	13245cd50de95cde1052106cdb47c40f4ec08cad79a024f6fd23b53231f19f65	active																
+OBS6-UNIFIED-U1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:26:46.170Z	218dc22af5b0ce42eca458b830c082f920d8202463cb8b89f6e9fd029b0a811b	active																
+OBS6-UNIFIED-U2S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U2.snap0.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:01.731Z	68ba3036fac06ddcf7f821034f006da87694317657e2905293aa0ef7b4e3c65d	active																
+OBS6-UNIFIED-U4S0	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.snap0.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:17.363Z	926b0de9ca12205cfff8ae23d21872088d0ae6e7ab6a78af55acb829bada75c4	active																
+OBS6-UNIFIED-U4	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:32.994Z	410a8c15d24fcd6f9b7e7e7ab58a147c11a0d5bbf2f34f7fe8bc8612c4f3df55	active																
+OBS6-UNIFIED-US1	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:27:48.707Z	fef4f7c90cf597bda2b7818685b0e61204f9b103307c597481d0a93724b3dd3f	active																
+OBS6-UNIFIED-US5	docs/artifacts/obs6-coldstart/OBS6-UNIFIED-US5.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T03:28:04.389Z	cc4c626c1a4b216bf5c70defec07a25deee33690594f0241bceab4ae59a9ef44	active																
+EQ-E9-A1	docs/artifacts/obs6-coldstart/EQ-E9-A1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:27:04.766Z	2dac6f87cb152e192be51dc93a50948c0475af350b938a3b1442e9a8a813ee5e	active																
 EQ-S4-E9	docs/artifacts/obs6-coldstart/EQ-S4-E9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:30:52.237Z	983deeecb6ac5dbd12f790f84117504d931bfd89869a4c31e99892887078c036	active																
-EQ-SPL-75_S6m1	docs/artifacts/obs6-coldstart/EQ-SPL-75_S6m1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:35:07.622Z	e1e000c1559223c2634420d49661792636e83dc246d9cff965c2373a01227697	active																
-EQ-G-75S6	docs/artifacts/obs6-coldstart/EQ-G-75S6.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:39:17.102Z	7899cd2d821a60662d4e70a43afeb48467f2ab7e8c83bc2cd08f12e4d279d5aa	active																
-EQ-S5-P9	docs/artifacts/obs6-coldstart/EQ-S5-P9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:44:07.245Z	78cbff9fb80b68b097d989186ce984bffbde4cba149dee5558cc217ee5a4c72a	active																
+EQ-SPL-75_S6m1	docs/artifacts/obs6-coldstart/EQ-SPL-75_S6m1.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:35:07.622Z	12c5f1c4ad226d0b3cd574af76a01de79fa4d0ab5f8522867cc2b2d888e149ff	active																
+EQ-G-75S6	docs/artifacts/obs6-coldstart/EQ-G-75S6.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:39:17.102Z	26553f38418fb0937a4e621e90234251904e22489acc15db6f3fdae267277e67	active																
+EQ-S5-P9	docs/artifacts/obs6-coldstart/EQ-S5-P9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T09:44:07.245Z	85a5bdfde680c50a4c9668eb96d0aead8279b2f5f9263fa462df85f1337af0e7	active																
 EQ-S4-GD6ATEACH	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T14:30:21.387Z	10d52c605949367f8dd540b3a4a63f4f44d02bce03000ec877759d376e9d21cd	active																
 EQ-S3-E9	docs/artifacts/obs6-coldstart/EQ-S3-E9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T16:09:56.918Z	41ed353c85fee6cb3c46f02bc6e9cff1826f80f7e51cde4f1b34c8de03f06524	active																
 BASE-E9-MB5	docs/artifacts/obs6-coldstart/BASE-E9-MB5.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T16:11:46.510Z	3224d5ab523cbd1526d36331f27e39ccd44369ed670badff54ed89e5ed79788f	active																
@@ -990,7 +990,7 @@ MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	2.0	25	2.0 obs6.5 键�
 MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T04:03:24.216Z	f2e46cc2737b2490feb468f6d8d24e26981e13029468f578f0a6ab7da5ca15ee	active																
 RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:21:40.047Z	af676b7b054672066f1d75e31cfdebbcfcb1e3d13f4ddcc5451f521f30b6d596	active																
 TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:23:15.709Z	4469090549c918e6b8b07db2b300fa4513b158a0ca44c0170e7562dd4d5ad261	active																
-TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:24:44.651Z	662ed5464d25bb04e7631b36b1fe418ae9478c247896f7c4be897419f53294a5	active																
+TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:24:44.651Z	a3460a08381ca02f51ea15355f429a242c483ee95d48754f674aa83bc4d47a35	active																
 TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active																
 RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-17T23:42:26.400Z	7fab176c216212d7ab1e60bf91346a76e6066a62c2a9e2845a3b36a2bb7b6a34	active																
 DIV-V3-PRESSURE-S2	docs/artifacts/obs6-coldstart/DIV-V3-PRESSURE-S2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-18T08:20:58.429Z	6677b22f0c3e5fa9c8e094496ceb9638daef1430cb8306d1c2ab4d900688821d	active																
