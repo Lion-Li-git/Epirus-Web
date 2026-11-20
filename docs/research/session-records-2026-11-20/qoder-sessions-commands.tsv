@@ -1,0 +1,405 @@
+date	file	command
+2026-10-23	2026-10-23T23-07-23-167+08-00-5d8ina-p36464.jsonl	node tools/train-3p.mjs 300 5 24 24` + `EPIRUS_TRAIN_MODE=long EPIRUS_COUNTER_OPPS=guardSpam,gunFocus EPIRUS_SEL_COUNTER=1 EPIRUS_POOL_OPPS=2 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_SEL_POOL=1 EPIRUS_SEL_G45=1 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/g16-77001.bak EPIRUS_LASER_W=0.1`，seed 77000 / 77001。
+2026-10-23	2026-10-23T23-07-23-167+08-00-5d8ina-p36464.jsonl	EPIRUS_ARM=g18-smoke EPIRUS_SEED=77000 EPIRUS_TRAIN_MODE=long EPIRUS_COUNTER_OPPS=guardSpam,gunFocus EPIRUS_SEL_COUNTER=1 EPIRUS_POOL_OPPS=2 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_SEL_POOL=1 EPIRUS_SEL_G45=1 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/g16-77001.bak EPIRUS_LASER_W=0.1 EPIRUS_T3P_OUT=/c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/g18/out/smoke.js EPIRUS_BAND_DIR=/c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/g18/band/smoke node tools/train-3p.mjs 2 5 24 24 > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/g18/smoke.log 2>&1; echo $? > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/g18/smoke.exit) & sleep 45; grep -nE
+2026-10-23	2026-10-23T23-07-23-167+08-00-5d8ina-p36464.jsonl	node tools/train-3p.mjs 300 5 24 24 >
+2026-10-23	2026-10-23T23-07-23-167+08-00-5d8ina-p36464.jsonl	node tools/eval-5p.mjs 120 5 77000 .g18-77001.bak 2>&1 | grep -E
+2026-10-23	2026-10-23T23-07-23-167+08-00-5d8ina-p36464.jsonl	node tools/eval-5p.mjs 120 5 77000 .g18-77000.bak 2>&1 | grep -E
+2026-10-24	2026-10-24T19-51-06-692+08-00-sv5oah-p31716.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-24	2026-10-24T19-51-06-692+08-00-sv5oah-p31716.jsonl	EPIRUS_COUNTER_OPPS=reflectWall,gunFocus EPIRUS_SEL_COUNTER=1 EPIRUS_SEL_POOL=0 EPIRUS_SEL_G45=1 EPIRUS_SEL_G4LONG=1 EPIRUS_SEED=77000 EPIRUS_T3P_OUT="C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/post-merge/smoke.js" EPIRUS_BAND_DIR="C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/post-merge/band" node tools/train-3p.mjs 2 3 6 4 > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/post-merge/smoke.log 2>&1; echo
+2026-10-24	2026-10-24T19-51-06-692+08-00-sv5oah-p31716.jsonl	node tools/train-3p.mjs` 加 env 就能重跑那批 ⇒
+2026-10-24	2026-10-24T19-51-06-692+08-00-sv5oah-p31716.jsonl	node --check tools/train-3p.mjs` 两次合并后各过一遍。
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node --check tools/eval-5p.mjs && echo
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 12 5 77000 docs/artifacts/v7beadseed-82.bak --locknarrow=2 2>&1 | tail -2; echo
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 12 5 77000 docs/artifacts/v7beadseed-82.bak --cursepush=1 2>&1 | tail -3
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 60 5 77000 docs/artifacts/v7beadseed-82.bak --eps-tier=lv:regular > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/night/c0.txt 2>&1; echo
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 60 5 77000 docs/artifacts/v7beadseed-82.bak --eps-tier=lv:regular --locknarrow=1 --cursepush=1 > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/night/c3.txt 2>&1; echo
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node --check tools/eval-5p.mjs && node tools/eval-5p.mjs 60 5 77000 docs/artifacts/v7beadseed-82.bak --eps-tier=lv:regular > /c/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/night/c0b.txt 2>&1; echo
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 300 5 77000
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 300 5 77001
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	EPIRUS_BEAD_SEED=0.5 EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/on.js" EPIRUS_BAND_DIR="$S/bandon" node tools/train-3p.mjs 3 3 6 4 >
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/off-branch.js" EPIRUS_BAND_DIR="$S/bandoffb" node tools/train-3p.mjs 3 3 6 4 >
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/off-main.js" EPIRUS_BAND_DIR="$S/bandoffm" node tools/train-3p.mjs 3 3 6 4 >
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 60 5 77000 docs/artifacts/v7beadseed-82.bak --eps-tier=lv:regular --topcards=40 2>&1 | grep -E
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node --check tools/gates/train-evo.mjs && node --check tools/eval-5p.mjs && node tools/np-test.mjs --only=
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/train-3p.mjs 300 5 24 24 >
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 300 5 77000 js/bundled-champion-3p.js --eps-tier=lv:regular --locknarrow=1 --cursepush=1 --topcards=60 2>&1 | grep -nE
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 60 5 77000 js/bundled-champion-3p.js --eps-tier=lv:regular --locknarrow=1 --cursepush=1 --topcards=60 2>&1 | grep -E
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 300 5 77000 js/bundled-champion-3p.js --eps-tier=lv:regular --locknarrow=1 --cursepush=1 --topcards=60`
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	node tools/eval-5p.mjs 300 5 77000 js/bundled-champion-3p.js --eps-tier=lv:regular --locknarrow=1 --cursepush=1 --topcards=60 2>&1 | grep -E
+2026-10-24	2026-10-24T22-49-01-387+08-00-f0019i-p15072.jsonl	EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7beadseed-82.bak EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/smoke.js" EPIRUS_BAND_DIR="$S/band" EPIRUS_IMIT_TEACHER=pickLaserBank EPIRUS_IMIT_ONLY=laserEye EPIRUS_IMIT_FRAC=0.6 EPIRUS_IMIT_OVERRIDE=1 node tools/train-3p.mjs 12 5 24 24 2>&1 | grep -iE
+2026-10-25	2026-10-25T15-13-53-630+08-00-27jujf-p6396.jsonl	node tools/train-3p.mjs 300 5 24 24 >
+2026-10-25	2026-10-25T15-13-53-630+08-00-27jujf-p6396.jsonl	node tools/eval-5p.mjs 300 5 77000
+2026-10-25	2026-10-25T15-13-53-630+08-00-27jujf-p6396.jsonl	node tools/eval-5p.mjs 30 5 77000 docs/artifacts/night-T1-77002.bak --grant=boom --inject=laserEye --eps-tier=lv:regular 2>&1 | tail -18
+2026-10-25	2026-10-25T15-13-53-630+08-00-27jujf-p6396.jsonl	node tools/eval-5p.mjs 300 5
+2026-10-25	2026-10-25T15-13-53-630+08-00-27jujf-p6396.jsonl	node --check tools/promote-champion.mjs && node --check tools/gates/ship-promote.mjs && echo
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/smoke.js" EPIRUS_BAND_DIR="$S/band-smoke" EPIRUS_BEAD_SEED=0.5 EPIRUS_BEAD_SEED_KIND=boom EPIRUS_COUNTER_OPPS=laserBank EPIRUS_IMIT_FRAC=0.6 EPIRUS_IMIT_ONLY="laserEye,charge" EPIRUS_IMIT_OVERRIDE=1 EPIRUS_IMIT_TEACHER=pickLaserBank EPIRUS_SEL_COUNTER=1 EPIRUS_SUB_BEAD=1 EPIRUS_SUB_BEAD_KIND=boom EPIRUS_BEAD_BOOM_W=0.5 node tools/train-3p.mjs 5 5 24 24 >
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	node tools/eval-5p.mjs 300 5 77000
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	EPIRUS_SEED=77000 EPIRUS_T3P_OUT="$S/smoke-sb.js" EPIRUS_BAND_DIR="$S/band-smoke-sb" EPIRUS_SUB_BEAD=1 EPIRUS_SUB_BEAD_KIND=boom node tools/train-3p.mjs 4 5 8 8 > $S/smoke-sb.txt 2>&1; echo
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	node tools/train-3p.mjs $GENS 5 24 24 $flags >
+2026-10-25	2026-10-25T23-08-30-181+08-00-k3b90m-p25912.jsonl	node tools/train-3p.mjs $GENS 5 24 24 >
+2026-10-26	2026-10-26T09-54-56-360+08-00-whwp47-p29784.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-26	2026-10-26T09-54-56-360+08-00-whwp47-p29784.jsonl	EPIRUS_SEED=77001 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="$S/N2.js" EPIRUS_T3P_OUT="$T/smoke.js" EPIRUS_BAND_DIR="$T/band-smoke" EPIRUS_SEL_KEEP=0.5 EPIRUS_SEL_KEEP_CAST_KEYS=laserEye EPIRUS_SEL_KEEP_PLAIN_GAMES=60 EPIRUS_SEL_CLEAR=0.3 EPIRUS_SEL_CLEAR_GAMES=12 EPIRUS_BEAD_BOOM_W=0.5 EPIRUS_BEAD_SEED=0.5 EPIRUS_BEAD_SEED_KIND=boom node tools/train-3p.mjs 3 5 8 8 >
+2026-10-26	2026-10-26T19-37-28-297+08-00-ac3mur-p32912.jsonl	node --check tools/pool-add.mjs && node --check tools/train-3p.mjs && echo
+2026-10-26	2026-10-26T19-37-28-297+08-00-ac3mur-p32912.jsonl	EPIRUS_SEED=77009 EPIRUS_BEAD_SEED=0.5 EPIRUS_BEAD_BOOM_W=0.5 EPIRUS_T3P_OUT="C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/night/e788/smoke-print.js" EPIRUS_BAND_DIR="C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/night/e788/band" node tools/train-3p.mjs 2 5 12 12 >
+2026-10-26	2026-10-26T19-37-28-297+08-00-ac3mur-p32912.jsonl	node tools/eval-5p.mjs 300 5 77000
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	node tools/eval-5p.mjs 300 5 77000
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	node tools/train-3p.mjs 60 5 24 24 >
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_TRAIN_MODE=long EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="C:/Users/14765/AppData/Local/Temp/epi-e797/T3.js" EPIRUS_SEED=77001 EPIRUS_ARM=e797smoke EPIRUS_BLOCK_W=0.15 EPIRUS_T3P_OUT="C:/Users/14765/AppData/Local/Temp/epi-e797/smoke.js" EPIRUS_BAND_DIR="C:/Users/14765/AppData/Local/Temp/epi-e797/band-smoke" node tools/train-3p.mjs 1 5 4 4 2>&1 | head -12
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_TRAIN_MODE=long EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="C:/Users/14765/AppData/Local/Temp/epi-e797/T3.js" EPIRUS_SEED=77001 EPIRUS_ARM=e797smoke2 EPIRUS_BEAD_BOOM_W=0.5 EPIRUS_T3P_OUT="C:/Users/14765/AppData/Local/Temp/epi-e797/smoke2.js" EPIRUS_BAND_DIR="C:/Users/14765/AppData/Local/Temp/epi-e797/band-smoke2" node tools/train-3p.mjs 1 5 4 4 2>&1 | head -6; echo
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_TRAIN_MODE=long EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="C:/Users/14765/AppData/Local/Temp/epi-e797/T3.js" EPIRUS_SEED=77001 EPIRUS_ARM=e797smoke3 EPIRUS_VOID_W=0.05 EPIRUS_T3P_OUT="C:/Users/14765/AppData/Local/Temp/epi-e797/smoke3.js" EPIRUS_BAND_DIR="C:/Users/14765/AppData/Local/Temp/epi-e797/band-smoke3" node tools/train-3p.mjs 1 5 4 4 2>&1 | head -3; echo
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	node --check js/train/evo.js && node --check tools/train-3p.mjs && echo
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_T3P_OUT="$D/$name.js" EPIRUS_BAND_DIR="$D/band-$name" node tools/train-3p.mjs 3 5 8 8 2>&1 | grep -E
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	node --check tools/train-3p.mjs && node -e
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_T3P_OUT="$D/knob.js" EPIRUS_BAND_DIR="$D/band-knob" node tools/train-3p.mjs 1 5 4 4 2>&1 | head -2 | cut -c1-150; echo
+2026-10-26	2026-10-26T21-53-23-991+08-00-nqomka-p30372.jsonl	EPIRUS_TRAIN_MODE=long EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK="$D/band5.js" EPIRUS_SEED=77001 EPIRUS_ARM=knobdark EPIRUS_ALLOW_DARK=1 EPIRUS_FAMILY_FIELD=3 EPIRUS_BLOCK_W=0.15 EPIRUS_T3P_OUT="$D/knobdark.js" EPIRUS_BAND_DIR="$D/band-knobdark" node tools/train-3p.mjs 1 5 4 4 2>&1 | grep -E
+2026-10-27	2026-10-27T09-36-31-615+08-00-yopuac-p32552.jsonl	node tools/train-3p.mjs 60 5 24 24 >
+2026-10-27	2026-10-27T09-36-31-615+08-00-yopuac-p32552.jsonl	node tools/train-3p.mjs 30 5 24 24 >
+2026-10-27	2026-10-27T09-36-31-615+08-00-yopuac-p32552.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-27	2026-10-27T09-36-31-615+08-00-yopuac-p32552.jsonl	EPIRUS_SEED=77001 EPIRUS_ARM=mg2s RF=1 EPIRUS_T3P_OUT="$D/smoke/S.js" EPIRUS_BAND_DIR="$D/smoke/band" EPIRUS_ALLOW_DARK=1 EPIRUS_FAMILY_FIELD=1 EPIRUS_COUNTER_OPPS=gunFocus EPIRUS_FIT_G_W=1.0 EPIRUS_WALL_BREAK_W=0.3 EPIRUS_BEAD_W=0.6 EPIRUS_REFLECT_W=0.3 node tools/train-3p.mjs 1 5 24 24 >
+2026-10-27	2026-10-27T09-36-31-615+08-00-yopuac-p32552.jsonl	EPIRUS_ALLOW_DARK=1 EPIRUS_FAMILY_FIELD=1 EPIRUS_COUNTER_OPPS=gunFocus EPIRUS_FIT_G_W=1.0 EPIRUS_WALL_BREAK_W=0.3 EPIRUS_REFLECT_W=0.3 EPIRUS_BEAD_W=0.6 EPIRUS_BEAD_WASTE_W=0.3 node tools/train-3p.mjs 1 5 24 24 >
+2026-10-27	2026-10-27T14-20-23-875+08-00-aermxv-p29352.jsonl	node tools/train-3p.mjs 30 5 24 24 >
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	EPIRUS_ARM=e817smoke EPIRUS_T3P_OUT=/tmp/smoke817.js EPIRUS_BAND_DIR=/tmp/band817 EPIRUS_GUARD_HIT_W=0.1 node /d/code/Epirus-Web/tools/train-3p.mjs 1 5 2 2 2>&1 | head -12
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	EPIRUS_ARM=e817smoke EPIRUS_T3P_OUT=/c/Users/14765/AppData/Local/Temp/smoke817.js EPIRUS_BAND_DIR=/c/Users/14765/AppData/Local/Temp/band817 EPIRUS_GUARD_HIT_W=0.1 node tools/train-3p.mjs 1 5 2 2 2>&1 | head -12
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	node tools/train-3p.mjs 30 5 24 24 >
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	EPIRUS_ALLOW_DARK=1 EPIRUS_VOID_W=0.05 EPIRUS_VOID_IDEAL_W=0.10 EPIRUS_COUNTER_OPPS=gunFocus EPIRUS_BEAD_BOOM_W=0.20 EPIRUS_BEAD_WASTE_W=0.20 EPIRUS_REFLECT_W=0.30 node tools/train-3p.mjs 30 5 24 24 >
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	EPIRUS_ALLOW_DARK=1 EPIRUS_VOID_W=0.05 EPIRUS_VOID_IDEAL_W=0.10 EPIRUS_COUNTER_OPPS=gunFocus EPIRUS_BEAD_BOOM_W=0.10 EPIRUS_BEAD_WASTE_W=0.10 node tools/train-3p.mjs 30 5 24 24 >
+2026-10-27	2026-10-27T17-38-33-759+08-00-8lypgp-p9084.jsonl	node tools/train-selftest.mjs && node tools/score13.mjs --selftest
+2026-10-28	2026-10-28T09-58-17-949+08-00-rspbp1-p26664.jsonl	node tools/score13.mjs --selftest && node tools/train-selftest.mjs
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node tools/train-3p.mjs 30 5 8 12 > scratch/preflight.txt 2>&1; head -14 scratch/preflight.txt
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	EPIRUS_ARCH2=S1 EPIRUS_SEED=7001 EPIRUS_TRAIN_MODE=long EPIRUS_T3P_OUT=scratch/a2-smoke.bak EPIRUS_BAND_DIR=scratch/a2bands node tools/train-3p.mjs 1 5 1 2 2>&1 | tail -18; date +%H:%M
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	EPIRUS_ARCH2=S1 EPIRUS_XN2REF=exam EPIRUS_SEED=7001 EPIRUS_TRAIN_MODE=long EPIRUS_T3P_OUT=scratch/a2-smoke.bak EPIRUS_BAND_DIR=scratch/a2bands node tools/train-3p.mjs 2 5 1 2 2>&1 | tail -12; date +%H:%M
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node tools/train-3p.mjs 2 5 1 2` 在 arch2 下 92.9 秒走完 4 局训练 + **5760 局 playoff** ⇒ ≈72 局/秒 ⇒ 5760 评估/臂 ≈ **80 秒**，六臂 ≈ 8 分钟（并发会失真 ⇒ 本波不引秒数）。
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	EPIRUS_ARCH2=S1 node tools/train-3p.mjs 2 5 1 2` 走完 **2 代训练 + 5760 局 playoff + band 落盘 + 写产物**（`scratch/a2-smoke.bak`）⇒ 新结构在真训练环里跑得通；⚠ 必须 `EPIRUS_XN2REF=exam`（默认值要读现役 2P 包，2.0 的 `unpack` 读不进 ⇒ 按
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	EPIRUS_ARCH2=S1 node tools/train-3p.mjs 2 5 1 2` 走完 **2 代训练 + 5760 局 playoff + band 落盘 + 写产物** ⇒ 新结构在真训练环里跑得通。⚠ 必须 `EPIRUS_XN2REF=exam`：默认值要读现役 2P 包，2.0 的 `unpack` 读不进 ⇒ 按
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node --check tools/proto2/selftest2.mjs && node --check tools/train-3p.mjs && node --check tools/proto2/arch2.mjs && node tools/proto2/selftest2.mjs 2>&1 | tail -6; date +%H:%M
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node tools/train-selftest.mjs 2>&1 | tail -8
+2026-10-28	2026-10-28T12-02-18-519+08-00-01gk2j-p29264.jsonl	node tools/train-selftest.mjs 2>&1 | grep -c PASS
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 30 4 77000 js/bundled-champion-3p.js --mode=multi4 2>&1 | head -25
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 30 4 77000 js/bundled-champion-3p.js --mode=multi 2>&1 | grep -E
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 30 2 77000 js/bundled-champion-3p.js --mode=long 2>&1 | grep -E
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 60 2 77000 js/bundled-champion-3p.js --mode=multi4 2>&1 | tail -6
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 $n 77000 js/bundled-champion-3p.js --mode=$m 2>&1; done; done > /tmp/table-matrix.log 2>&1) &
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 8 2 77000 js/bundled-champion-3p.js --mode=multi4 2>&1 | grep -E
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 4 $s js/bundled-champion-3p.js --mode=multi 2>&1 | grep -E
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 5 $s js/bundled-champion-3p.js --mode=multi 2>&1 | grep -E
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 <n> <seed> <包> --mode=<multi|multi4|long>` 每格 ≈ 8~30 秒 ⇒ 12 格一趟约 4 分钟；`probe-cross-mode --games=40` 五格一组约 1 分钟。这两条都便宜到可以进
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 $n 77000 js/bundled-champion-3p.js --mode=$m
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 4 $s js/bundled-champion-3p.js --mode=multi; done
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 5 $s js/bundled-champion-3p.js --mode=multi; done
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 4 77000 js/bundled-champion-3p.js --pool=all --every=$e 2>&1 | grep
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 4 77000 js/bundled-champion-3p.js --pool=all --every=$e 2>&1 | grep -A1
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 20 4 77000 js/bundled-champion-3p.js --mode=multi 2>&1 | head -30
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 800 4 77000 $p --mode=multi > $out 2>&1; echo
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node --check tools/gates/ship-promote.mjs && node tools/np-test.mjs --only=
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 800 4 77000 $p --mode=multi; done
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	EPIRUS_ARM=wlsmoke EPIRUS_T3P_OUT="$TEMP/wl-smoke.js" EPIRUS_SEED=7 node tools/train-3p.mjs 10 3 4 4 2>&1 | tail -5
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	EPIRUS_ARM=wl-off-s7 EPIRUS_SEED=7 EPIRUS_T3P_OUT="$TEMP/wl-off.js" node tools/train-3p.mjs 30 3 6 8 >
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	EPIRUS_ARM=wl-on02-s7 EPIRUS_SEED=7 EPIRUS_WIDTH_LAND_W=0.2 EPIRUS_T3P_OUT="$TEMP/wl-on.js" node tools/train-3p.mjs 30 3 6 8 >
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 200 5 77000
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node --check tools/train-3p.mjs && env EPIRUS_ARM=wlprint EPIRUS_SEED=7 EPIRUS_WIDTH_LAND_W=0.2 EPIRUS_T3P_OUT=
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/train-3p.mjs 6 3 4 4 2>&1 | grep
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/np-test.mjs --group=meta 2>&1 | tail -2 && git add tools/train-3p.mjs CHANGELOG.md README.md index.html docs/research/logs/2026-10-18-beadseed82-qoder.md docs/research/OVERNIGHT-2026-10-23-qoder.md docs/GATE-SHIFTS.md && git commit -q -m
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 120 5 77000 docs/artifacts/v7beadseed-82.bak > /tmp/e704-beadseed.txt 2>&1; echo
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 120 5 77000 js/bundled-champion-3p.js > /tmp/e704-shipped.txt 2>&1; echo
+2026-10-22	2026-10-22T18-44-52-261+08-00-aeo5ws-p10160.jsonl	node tools/eval-5p.mjs 120 5 77000 <包>`（35 组合 × 120 局 = 4,200 局/枚，同一颗 seed0，两枚包同面板），读 `[冠军] 1st/严胜` 与那张**出手谱**（`蓄能/电磁炮/激光眼` 各占出手百分之几）。
+2026-10-23	2026-10-23T12-00-20-514+08-00-n0ryd2-p20360.jsonl	node tools/eval-5p.mjs 120 5 77000 docs/artifacts/e2-grad-77002.bak > /tmp/ev-grad.log 2>&1; echo
+2026-10-23	2026-10-23T12-00-20-514+08-00-n0ryd2-p20360.jsonl	node tools/eval-5p.mjs 120 5 77000
+2026-10-23	2026-10-23T12-00-20-514+08-00-n0ryd2-p20360.jsonl	EPIRUS_T3P_OUT='C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/laser-xfer/out/smoke.js' EPIRUS_BAND_DIR='C:/Users/14765/Documents/Qoder/2026-10-21/f352937a/scratch/laser-xfer/band' EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK='js/bundled-champion-3p.js' EPIRUS_LASER_W=0.3 EPIRUS_ARM='smoke-laser-warm' EPIRUS_SEED=77000 node tools/train-3p.mjs 20 > /tmp/smoke.log 2>&1; E=$?; T=$(( $(date +%s) - S )); echo
+2026-10-23	2026-10-23T12-00-20-514+08-00-n0ryd2-p20360.jsonl	node tools/eval-5p.mjs 120 5 77000 <包>` ‖ 不带 `--dump-per` ⇒ 不落文件）：`e2-grad` 1st=**53.9%** ‖ 种类 **7** ‖ 蓄能 3.0% ‖ 激光眼 **1.0%**；`js/bundled-champion-3p.js` 1st=**56.0%** ‖ 种类 **13** ‖ 蓄能 5.3% ‖ 电磁炮 3.2% ‖ 激光眼 **0** ⇒ **
+2026-10-23	2026-10-23T12-00-20-514+08-00-n0ryd2-p20360.jsonl	node tools/train-3p.mjs 300 >
+2026-10-23	2026-10-23T15-40-46-360+08-00-qwcg8x-p33464.jsonl	EPIRUS_ARM=smoke-void EPIRUS_SEED=77000 EPIRUS_T3P_OUT=$S/out/smoke.js EPIRUS_BAND_DIR=$S/band/smoke EPIRUS_VOID_W=0.05 EPIRUS_VOID_IDEAL_W=0.10 node tools/train-3p.mjs 1 5 2 6 2>&1 | grep -i
+2026-10-23	2026-10-23T15-40-46-360+08-00-qwcg8x-p33464.jsonl	node tools/train-3p.mjs 300 5 24 24 >
+2026-10-23	2026-10-23T18-16-23-593+08-00-ta191k-p28908.jsonl	node tools/eval-5p.mjs 40 5 77000 js/bundled-champion-3p.js 2>&1 | grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --out=scratch/arms/AC-MEAN.bak > scratch/ac-mean.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --probe=40 --out=scratch/arms/AC-Q.bak > scratch/ac-q.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --probe=40 --out=scratch/arms/AC-Q-smoke4k.bak > scratch/ac-q4k.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-ac2.py && node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --out=scratch/arms/AC-MEAN2.bak > scratch/ac-mean2.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --criticLr=$CL --probe=40 --out=scratch/arms/AC-Q-cl$CL.bak > scratch/ac-q-cl$CL.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-ac3.py && for MODE in
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --criticLr=0.01 --probe=40 $MODE --out=scratch/arms/AC-Q-w.bak > scratch/ac-q-w$(echo $MODE|tr -dc 0-9).log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-ac3.py && echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --criticLr=0.01 --probe=40 --out=scratch/arms/AC-Q-warm.bak > scratch/ac-q-warm.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --criticLr=0.01 --criticWarm=0 --probe=40 --out=scratch/arms/AC-Q-nowarm.bak > scratch/ac-q-nowarm.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-cap.py && echo ok
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --out=scratch/arms/AC-MEAN3.bak > scratch/ac-mean3.log 2>&1; echo rc=$?; md5sum scratch/arms/AC-LEGACY.bak scratch/arms/AC-MEAN3.bak
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --out=scratch/arms/AC-MEAN4.bak > scratch/ac-mean4.log 2>&1; echo rc=$?; md5sum scratch/arms/AC-LEGACY.bak scratch/arms/AC-MEAN4.bak; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=600 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=qhead --criticProbe=1 --out=scratch/arms/AC-CAP.bak > scratch/ac-cap.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=1200 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --out=scratch/arms/AC-MEAN5.bak > scratch/ac-mean5.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=4000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=7 --baseline=ridge --probe=40 --out=scratch/arms/AC-RIDGE-smoke.bak > scratch/ac-ridge-smoke.log 2>&1; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-cap2.py && echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=600 --batch=48 --temp=0.15 --seed=7 --baseline=ridge --criticProbe=1 --out=scratch/arms/AC-CAP2.bak > scratch/ac-cap2.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && echo check-ok
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && rm -f scratch/patch-cap4.py && echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=600 --batch=48 --temp=0.15 --seed=7 --baseline=ridge --criticProbe=1 --out=scratch/arms/AC-CAP3.bak > scratch/ac-cap3.log 2>&1; echo rc=$?; grep -E
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=24000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=$S --probe=40 --out=scratch/arms/AC-$TAGN-s$S.bak > scratch/ac-$TAGN-s$S.log 2>&1; else node tools/proto2/pg-train.mjs --up=scratch/arms/supfit-gdc1.bak --games=24000 --batch=48 --lamC=0 --lamF=0 --temp=0.15 --seed=$S --baseline=$MODE --ridgeFeat=$F --probe=40 --out=scratch/arms/AC-$TAGN-s$S.bak > scratch/ac-$TAGN-s$S.log 2>&1; fi; echo
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node --check tools/proto2/pg-train.mjs && grep -n
+2026-10-31	2026-10-31T10-33-49-926+08-00-ycewhr-p24492.jsonl	node tools/proto2/pg-train.mjs --up=scratch/arms/gd3b-ks-sb.bak --games=1200 --batch=48 --out=scratch/arms/PG3-smoke.bak --tag=stageB-smoke 2>&1 | tail -6
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node --check tools/eval-5p.mjs && echo CHECK_OK && node tools/eval-5p.mjs 3 scratch/arms/gd3b-ks-sb.bak 77000 60 2>&1 | grep -E
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node tools/eval-5p.mjs 8 3 77000 scratch/arms/gd3b-ks-sb.bak 2>&1 | grep -E
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node tools/eval-5p.mjs 8 5 77000 scratch/arms/gd3b-ks-sb.bak 2>&1 | grep -E
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node tools/eval-5p.mjs [每组合局数=12] [人数=5] [seed=77000] [冠军文件] [--pool=core|all]
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node --check tools/eval-5p.mjs && echo
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node tools/eval-5p.mjs 6 2 77000 scratch/arms/gd3b-ks-sb.bak 2>&1 | grep -E
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node --check tools/eval-5p.mjs && for n in 2 3 5; do echo
+2026-10-31	2026-10-31T20-42-20-322+08-00-vzy9vo-p19160.jsonl	node tools/eval-5p.mjs 6 $n 77000 scratch/arms/gd3b-ks-sb.bak 2>&1 | grep -E
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77111 scratch/arms/RB2P-s13.bak 2>&1 | grep -E
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 $s $p 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 $s $p 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 <N> <seed> <pack> ‖ N=5 与 N=3 各一轮 ‖ seed 77000（在册）+ 77111/77222/77333
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 $p --field=$f 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=$f 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 $p 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 77000 $p 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=$fld 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-RING.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/GD3-RING.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/$p.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 scratch/arms/$p.bak --field=targeter 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-BIGT3.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/GD3-BIGT3.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-RCHAIN2.bak 2>/dev/null | grep '^
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs [每组合局数=12] [人数=5] [seed=77000] [冠军文件] [--pool=core|all]
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node --check tools/eval-5p.mjs && for f in gunwall snipegun focusfire sniperwall; do printf
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=$f 2>/dev/null); r=$(echo
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=gunwall 2>/dev/null); echo
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=$f 2>/dev/null); printf
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $p --field=gunwall 2>/dev/null | grep -oE '1st=[0-9.]+%'|head -1)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 $s $p --field=gunwall 2>/dev/null | grep -oE '1st=[0-9.]+%'|head -1)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $P $f 2>/dev/null); echo
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 77000 $P 2>/dev/null); echo
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 $f 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 3 77000 $f 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $f --field=gunwall 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $f --field=targeter 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 40 5 77000 $f --field=sniperwall 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2)
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-RING.bak 2>/dev/null | sed -n '/决策次数=/,/^$/p' | head -16
+2026-10-31	2026-10-31T23-21-08-387+08-00-gf1bpu-p22292.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/KILL-broad-s7.bak 2>/dev/null | grep -oE '1st=[0-9.]+'|head -1|cut -d= -f2) 种类=$(node tools/eval-5p.mjs 12 5 77000 scratch/arms/KILL-broad-s7.bak 2>/dev/null | grep -oE '出手种类=[0-9]+'|head -1|cut -d= -f2)
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77000
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77111
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77111
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/proto2/supfit-gd.mjs && node --check tools/train-3p.mjs && echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s scratch/arms/$p.bak > scratch/e5p-ECON-$p-$s.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/$p.bak > scratch/e5p-ECON-$p-3p.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/$tag.bak > scratch/e5p-$tag.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s scratch/arms/$tag.bak > scratch/e5p-$tag-$s.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s scratch/arms/GD3-BEAD.bak > scratch/e5p-ECON-GD3-BEAD-$s.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/GD3-BEAD.bak > scratch/e5p-ECON-GD3-BEAD-3p.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s scratch/arms/GD3-HOLD.bak > scratch/e5p-ECON-GD3-HOLD-$s.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/GD3-HOLD.bak > scratch/e5p-ECON-GD3-HOLD-3p.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && echo CHECK-OK
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && echo CHECK-OK && sed -n '1733,1742p' tools/train-3p.mjs
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 60 4 2 > scratch/stall-ga.log 2>&1; echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s scratch/arms/GD3-$t.bak > scratch/e5p-CUR-$t-$s.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77000 scratch/arms/GD3-$t.bak > scratch/e5p-CUR-$t-3p.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-$t.bak --field=gunwall > scratch/e5p-CUR-$t-gunwall.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $s
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 3 77000
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-SWORD.bak --field=gunwall > scratch/e5p-2x2-B-gunwall.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/arms/GD3-CURC.bak --field=gunwall > scratch/e5p-2x2-A-gunwall.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && echo CHECK-OK && export EPIRUS_T3P_OUT=scratch/ga-arms/TEETH-off.js EPIRUS_BAND_DIR=scratch/ga-bands/TEETH-off && node tools/train-3p.mjs 3 3 8 8 > scratch/ga-teeth-off.log 2>&1; echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 4 3 8 8 > scratch/ga-teeth-gate99.log 2>&1; echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	EPIRUS_SEED=$s node tools/train-3p.mjs 400 3 8 8 > $R/scratch/gate-s$s.log 2>&1;
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/eval-5p.mjs 12 5 $d
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && echo CHECK-OK && grep -n
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 4 3 8 8 > $R/scratch/v2-refoff.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 4 3 8 8 > $R/scratch/v2-starve.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 40 3 8 8 > $R/scratch/v2-40-$mode.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 6 3 8 8 > $R/scratch/v2-refoff.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 400 3 8 8 > $R/scratch/gate2-s$s.log 2>&1;
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node --check tools/train-3p.mjs && node --check tools/proto2/supfit-gd.mjs && echo
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 6 3 8 8 > scratch/v3-refoff.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 6 3 8 8 > scratch/v3-starve.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 40 3 8 8 > scratch/v3-40-$mode.log 2>&1
+2026-11-01	2026-11-01T14-32-27-927+08-00-cygcsa-p13540.jsonl	node tools/train-3p.mjs 400 3 8 8 > scratch/gate3-s$s.log 2>&1;
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 12 5 $d scratch/night3/GD3ALL-POPP-s17.js --shipbigt=0 --shipdrain=0 > scratch/verify-popp17-$d.log 2>&1; echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	EPIRUS_ARM=KH-new EPIRUS_SEED=7 EPIRUS_T3P_OUT=scratch/ga-arms/KH-new.js EPIRUS_BAND_DIR=scratch/ga-bands/KH-new node tools/train-3p.mjs 4 3 8 8 > scratch/kh-new.log 2>&1; echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	EPIRUS_ARM=KH-off EPIRUS_SEED=7 EPIRUS_BIGT_PUSH=0 EPIRUS_DRAIN_PUSH=0 EPIRUS_T3P_OUT=scratch/ga-arms/KH-off.js EPIRUS_BAND_DIR=scratch/ga-bands/KH-off node tools/train-3p.mjs 4 3 8 8 > scratch/kh-off.log 2>&1; echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs 400 3 8 8 > scratch/gate6-$mode-s13.log 2>&1;
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 12 5 $d $P --shipbigt=0 --shipdrain=0 > scratch/e5p-gate6-$f-$d.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 12 3 77000 $P --shipbigt=0 --shipdrain=0 > scratch/e3p-gate6-$f.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 10 8 81000 $P --shipbigt=0 --shipdrain=0 > scratch/e8p-gate6-$f.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node --check tools/train-3p.mjs && node --check tools/pick-best.mjs && echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs 6 3 8 8 > scratch/sd-refoff.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs 6 3 8 8 > scratch/sd-starve.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs 40 3 8 8 > scratch/sd-40-$mode.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/train-3p.mjs 400 3 8 8 > scratch/def2-$mode-s$seed.log 2>&1;
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 12 5 $d $f --shipbigt=0 --shipdrain=0 > scratch/e5p-def2-$mode-$seed-$d.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 12 3 77000 $f --shipbigt=0 --shipdrain=0 > scratch/e3p-def2-$mode-$seed.log 2>&1
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node tools/eval-5p.mjs 10 8 81000 $f --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	EPIRUS_ARCH2="S1ob:input=obs3b,gen=3,keySplit=1" EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/arms/GD3-SWORD.bak EPIRUS_SEL_DEF=1 EPIRUS_SEL_DEF_MIN=999 EPIRUS_SEL_DEF_GAMES=10 EPIRUS_BIGT_PUSH=0 EPIRUS_ARM=SDFIX EPIRUS_SEED=7 EPIRUS_T3P_OUT=scratch/ga-arms/SDFIX.js EPIRUS_BAND_DIR=scratch/ga-bands/SDFIX node tools/train-3p.mjs 2 3 8 8 > scratch/sdfix.log 2>&1'; echo
+2026-11-02	2026-11-02T09-58-31-145+08-00-m595zi-p3424.jsonl	node --check tools/train-3p.mjs && node -e
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARM=KZ-$tag EPIRUS_SEED=13 EPIRUS_T3P_OUT=scratch/ga-arms/KZ-$tag.js EPIRUS_BAND_DIR=scratch/ga-bands/KZ-$tag node tools/train-3p.mjs 3 3 8 8 > scratch/kz-$tag.log 2>&1; echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARM=KZ-rep$i EPIRUS_SEED=13 EPIRUS_T3P_OUT=scratch/ga-arms/KZ-rep$i.js EPIRUS_BAND_DIR=scratch/ga-bands/KZ-rep$i node tools/train-3p.mjs 3 3 8 8 > scratch/kz-rep$i.log 2>&1; echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARM=KZ-c0 EPIRUS_SEED=13 EPIRUS_T3P_OUT=scratch/ga-arms/KZ-c0.js EPIRUS_BAND_DIR=scratch/ga-bands/KZ-c0 node tools/train-3p.mjs 3 3 8 8 > scratch/kz-c0.log 2>&1; else env $base $kv EPIRUS_ARM=KZ-c1 EPIRUS_SEED=13 EPIRUS_T3P_OUT=scratch/ga-arms/KZ-c1.js EPIRUS_BAND_DIR=scratch/ga-bands/KZ-c1 node tools/train-3p.mjs 3 3 8 8 > scratch/kz-c1.log 2>&1; fi; echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node --check tools/train-3p.mjs && node --check tools/pick-best.mjs && node --input-type=module -e
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARCH2='S1ob:input=obs3b,gen=3,keySplit=1' EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/arms/GD3-SWORD.bak EPIRUS_COUNTER_OPPS=targeter,gunSpam,ringspam,protomine,deadlineburst,earlypressure,heavyfire,deepsaver EPIRUS_GA_GATE=3 EPIRUS_GA_GATE_GAMES=6 EPIRUS_GA_BAND=0.13 EPIRUS_WIDE_FINAL=1 EPIRUS_BIGT_PUSH=12 EPIRUS_SEED=13 EPIRUS_T3P_OUT=scratch/reg-before-off.js node tools/train-3p.mjs 6 3 8 8 > scratch/reg-before-off.log 2>&1; echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node --check js/train/evo.js && node --check tools/train-3p.mjs && echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/train-selftest.mjs 2>&1 | tail -12
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/train-selftest.mjs → PASS ① 35 键往返 ‖ PASS ③a env 34 全部映射（defIdleW 自动进名单）
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/train-selftest.mjs && node tools/np-test.mjs --group=meta # 35 键往返 + 按改动面的分组门（不是整轮认证）
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARCH2='S1ob:input=obs3b,gen=3,keySplit=1' EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/arms/GD3-SWORD.bak EPIRUS_GA_GATE=3 EPIRUS_GA_GATE_GAMES=6 EPIRUS_GA_BAND=0.13 EPIRUS_WIDE_FINAL=1 EPIRUS_BIGT_PUSH=12 EPIRUS_SEED=13 EPIRUS_IMIT_OVERRIDE=1 EPIRUS_IMIT_TEACHER=aggro EPIRUS_IMIT_ONLY=drain EPIRUS_IMIT_FRAC=1 EPIRUS_ARM=DDA-smoke-dra EPIRUS_T3P_OUT=scratch/ga-arms/DDA-smoke-dra.js node tools/train-3p.mjs 2 3 8 8 > scratch/DDA-smoke-dra.log 2>&1; echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs 12 5 $s
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs 10 8 81000
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs 12 3 77000
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/ga-arms/DDA-150-ctrl-s13.js --shipbigt=0 --shipdrain=0 2>&1 | tail -12
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs 12 5 77000 scratch/ga-arms/DDA-150-ctrl-s13.js --shipbigt=0 --shipdrain=0 2>&1 | grep -nE
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/eval-5p.mjs $1 $2 $3
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	EPIRUS_ARCH2='S1ob:input=obs3b,gen=3,keySplit=1' EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/arms/GD3-SWORD.bak EPIRUS_COUNTER_OPPS=targeter,gunSpam,ringspam,protomine,deadlineburst,earlypressure,heavyfire,deepsaver,gunFocus,gunFocus,gunFocus,gunFocus,gunFocus EPIRUS_GA_GATE=3 EPIRUS_GA_GATE_GAMES=6 EPIRUS_GA_BAND=0.13 EPIRUS_WIDE_FINAL=1 EPIRUS_HALL_TRACE=1 EPIRUS_BIGT_PUSH=12 EPIRUS_SEED=13 EPIRUS_ARM=DDA-150-gun2-s13 EPIRUS_T3P_OUT=scratch/ga-arms/DDA-150-gun2-s13.js node tools/train-3p.mjs 150 3 8 8 > scratch/DDA-150-gun2-s13.log 2>&1 & echo
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node --check tools/train-3p.mjs && node /c/Users/14765/.qoder-cn/skills/doc-structure-guard/scripts/insert.cjs --file docs/research/RESULTS-2026-11-02-DAY-qoder.md --end --body-file scratch/sec12-body.md 2>&1 | tail -1 && node /c/Users/14765/.qoder-cn/skills/doc-structure-guard/scripts/check.cjs --file docs/research/RESULTS-2026-11-02-DAY-qoder.md 2>&1 | tail -2 && node /c/Users/14765/.qoder-cn/skills/doc-structure-guard/scripts/insert.cjs --file docs/research/LIVE-LINES.md --end --body-file scratch/ll2-body.md 2>&1 | tail -1
+2026-11-02	2026-11-02T11-47-58-542+08-00-1nnwez-p28796.jsonl	node tools/np-test.mjs --group=meta 2>&1 | tail -3 && node tools/train-selftest.mjs 2>&1 | tail -2 | cut -c1-90
+2026-11-02	2026-11-02T17-31-42-380+08-00-xp04e6-p10720.jsonl	EPIRUS_ARCH2='S1ob:input=obs3b,gen=3,keySplit=1' EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/arms/GD3-SWORD.bak EPIRUS_GA_GATE=3 EPIRUS_GA_GATE_GAMES=6 EPIRUS_GA_BAND=0.13 EPIRUS_WIDE_FINAL=1 EPIRUS_BIGT_PUSH=12 EPIRUS_SEED=13 EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_ARM=POOL-smoke node tools/train-3p.mjs 2 3 8 8 > scratch/POOL-smoke.log 2>&1; echo
+2026-11-03	2026-11-03T10-17-27-449+08-00-30w7kt-p22640.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-03	2026-11-03T10-17-27-449+08-00-30w7kt-p22640.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-03	2026-11-03T10-17-27-449+08-00-30w7kt-p22640.jsonl	node --check tools/train-3p.mjs && echo '语法OK（原 bug 也是语法合法才混过）'; node tools/np-test.mjs --group=ship --only=
+2026-11-03	2026-11-03T10-17-27-449+08-00-30w7kt-p22640.jsonl	EPIRUS_ARM=smoke-degen EPIRUS_SEED=13 EPIRUS_SEL_EVAL_SEEDS=1 EPIRUS_T3P_OUT="C:/Users/14765/AppData/Local/Temp/smoke-degen.js" EPIRUS_BAND_DIR="C:/Users/14765/AppData/Local/Temp/smoke-degen-band" node tools/train-3p.mjs 2 5 2 4 >
+2026-11-03	2026-11-03T10-17-27-449+08-00-30w7kt-p22640.jsonl	node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node --check tools/train-3p.mjs && echo '语法OK' && node scratch/test-seg-survives-kill.cjs 2>&1 | tail -14; echo
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	EPIRUS_ARM=OFFSMOKE EPIRUS_SEED=13 EPIRUS_SEL_EVAL_SEEDS=1 EPIRUS_T3P_OUT="$TEMP/epi-off-smoke/OFFSMOKE.js" EPIRUS_BAND_DIR="$TEMP/epi-off-smoke" node tools/train-3p.mjs 2 5 2 4 >
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/train-3p.mjs 150 5 8 8 >
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	EPIRUS_ARCH2='S1ob:input=obs3b,gen=3,keySplit=1' EPIRUS_MUT_MODE=seg EPIRUS_TRAIN_MODE=long EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=scratch/ga-arms/L5-D4a-s13.js EPIRUS_SEED=13 EPIRUS_ARM=CANARY EPIRUS_HOLDOUT_SEG=1 EPIRUS_WIDTH_W=0.5 EPIRUS_SEL_EVAL_SEEDS=1 EPIRUS_BAND_DIR="$T" EPIRUS_T3P_OUT="$T/CANARY.js" node tools/train-3p.mjs 2 5 2 4 >
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	EPIRUS_TRAIN_MODE=multi EPIRUS_MUT_MODE=seg EPIRUS_HOTSTART=1 EPIRUS_SEED=13 EPIRUS_ARM=V7CANARY EPIRUS_HOLDOUT_SEG=1 EPIRUS_SEL_EVAL_SEEDS=1 EPIRUS_BAND_DIR="$T" EPIRUS_T3P_OUT="$T/V7CANARY.js" node tools/train-3p.mjs 2 5 2 4 >
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/eval-5p.mjs 12 5 77000
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node --check tools/train-3p.mjs && node --check tools/pick-best.mjs && echo
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/train-3p.mjs 8 3 4 4 >
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
+2026-11-03	2026-11-03T12-36-04-485+08-00-oyw6x8-p26736.jsonl	node --check` 全过。改动面：`tools/pick-best.mjs`（新纯函数）‖ `tools/train-3p.mjs`（旗标 + 调用点 + 同代接线名单 + meta）‖ `tools/gate-drafts.mjs`（G4CELLS 行）‖ `tools/promote-champion.mjs`（解析 + 只记录行 + meta）‖ `tools/score13.mjs`（解析 + 4 条夹具）‖ 新增 `tools/probe-sel-grid.mjs`。**没新增门**（按用户
+2026-11-04	2026-11-04T10-00-16-313+08-00-8qpfbm-p22700.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-04	2026-11-04T10-00-16-313+08-00-8qpfbm-p22700.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-04	2026-11-04T10-00-16-313+08-00-8qpfbm-p22700.jsonl	node --check tools/gates/meta-repo.mjs && node --check tools/train-3p.mjs && node tools/np-test.mjs --group=meta 2>&1 | tail -8
+2026-11-04	2026-11-04T10-00-16-313+08-00-8qpfbm-p22700.jsonl	node tools/train-3p.mjs 6 3 4 4 >
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && git add tools/train-3p.mjs docs/research/MECHANISM-2026-11-04-training-breadth-qoder.md docs/research/RESULTS-2026-11-03-DAY-qoder.md docs/research/LIVE-LINES.md && git commit -q -m
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 150 5 24 8 >
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 14 5 12 8 >
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	EPIRUS_ANCHOR=3 EPIRUS_ANCHOR_TO=garbage node tools/train-3p.mjs 2 5 4 4 2>&1 | tail -1
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	EPIRUS_ANCHOR=2 EPIRUS_ANCHOR_TO=widest node tools/train-3p.mjs 2 5 4 4 2>&1 | tail -1
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 >
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 > scratch/coldanchor-1104/CB13.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 > scratch/coldanchor-1104/CG13.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 > D:/code/Epirus-Web/scratch/coldanchor-1104/CG13.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 > D:/code/Epirus-Web/scratch/coldanchor-1104/CA13.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/AK3-s7.js --mode=$M --shipbigt=0 --shipdrain=0 2>&1 | grep -oE
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 50 $1 77000 scratch/ga-arms/$p.js --mode=$2 --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 50 $1 77000 docs/artifacts/$p.js --mode=$2 --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && node --check scratch/morning1104-g45-gap.mjs && git add tools/train-3p.mjs scratch/morning1104-g45-gap.mjs scratch/night6/strength-long-fix.tsv scratch/night6/strength-multi-fix.tsv && git commit -q -m
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 50 $1 77000 scratch/night5/EFFG-s41.js --mode=$2 --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 150 5 24 8 > D:/code/Epirus-Web/scratch/anchorkeep-1104/AK3-s23.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs <局数> 5 77000 <包>` 再把 1st% 传进来。
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && echo SYNTAX_OK; grep -nE
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/CB13.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/CG13.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/CA13.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs [0-9]+ [0-9]+ [0-9]+ [0-9]+
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/$P.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 $D scratch/ga-arms/AK3-s7.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && echo SYNTAX_OK; for f in GKS-s7 GKS-s13 GKS-s41; do printf '%-9s ' $f; tail -1 scratch/gks-1104/$f.log | cut -c1-46; done; date +%H:%M
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node --check tools/train-3p.mjs && echo SYNTAX_OK && grep -n
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/train-3p.mjs 1200 5 8 8 > scratch/coldh-1104/HS4b.log 2>&1; echo
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-bands/HS-4/HS-4-$f.bak --mode=long --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/HS4b.js --mode=$M --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-bands/HS-4/$f --mode=long --shipbigt=0 --shipdrain=0 2>/dev/null | grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 scratch/ga-arms/KDFULL400-s13.js --mode=long --shipbigt=0 --shipdrain=0 > scratch/strength-1104ev/KDFULL400-s13-long-77000.txt 2>&1; grep -oE '
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5
+2026-11-04	2026-11-04T11-55-07-727+08-00-lk0yz4-p7296.jsonl	node tools/eval-5p.mjs 200 5 77000 <包> --mode=<long|multi> --shipbigt=0 --shipdrain=0`（= 午后 `scratch/afternoon-verdict-qoder.sh` 逐字同口径）
+2026-10-19	2026-10-19T14-01-22-933+08-00-q4y8yh-p14288.jsonl	EPIRUS_XN2W=1 EPIRUS_XN2G=2 EPIRUS_BAND_DIR="$WT/.b$i" EPIRUS_ARM=nptest-arm EPIRUS_LOG_DEFAULT_OUT=1 node tools/train-3p.mjs 1 3 2 2 >
+2026-10-19	2026-10-19T14-01-22-933+08-00-q4y8yh-p14288.jsonl	node --check tools/train-3p.mjs 2>&1 | head -3; echo
+2026-10-19	2026-10-19T14-01-22-933+08-00-q4y8yh-p14288.jsonl	EPIRUS_SEED=31 EPIRUS_TB3P=1 EPIRUS_TB3P_GAMES=20 EPIRUS_TB_OUT="$DIR/o.js" EPIRUS_ARM=d124 node tools/train-best.mjs 1 4 >
+2026-10-20	2026-10-20T10-38-11-357+08-00-fodgwz-p14288.jsonl	node tools/eval-5p.mjs 2 5 77000 js/bundled-champion-3p.js --pool=defend,wall 2>&1 | grep -iE
+2026-10-20	2026-10-20T10-38-11-357+08-00-fodgwz-p14288.jsonl	node tools/eval-5p.mjs 2 5 77000 js/bundled-champion-3p.js --pool=defend,wall --dump-per=/tmp/poolprobe.per.txt >/dev/null 2>&1; echo
+2026-10-20	2026-10-20T10-38-11-357+08-00-fodgwz-p14288.jsonl	node tools/eval-5p.mjs 2 5 77000 js/bundled-champion-3p.js --pool=defend,wall --dump-per=docs/research/archive/2026-10-20-seat-swap/pool-flag-silent.per.txt 2>&1 | tail -2 && grep -c subject docs/research/archive/2026-10-20-seat-swap/pool-flag-silent.per.txt && grep
+2026-10-20	2026-10-20T10-38-11-357+08-00-fodgwz-p14288.jsonl	node tools/eval-5p.mjs 2 5 77000 js/bundled-champion-3p.js --pool=defend,wall --dump-per=…`）：
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7teach-32.bak EPIRUS_SEED=88010 EPIRUS_SUPPORT_PRIOR=0 EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-teach-p0 EPIRUS_T3P_OUT=docs/artifacts/e675-out/teach-p0.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-teach-p0 node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/teach-p0.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7teach-32.bak EPIRUS_SEED=88010 EPIRUS_SUPPORT_PRIOR=2 EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-teach-p2 EPIRUS_T3P_OUT=docs/artifacts/e675-out/teach-p2.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-teach-p2 node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/teach-p2.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	TAG=$1; SP=$2; P=$3; EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=$SP EPIRUS_SEED=88010 EPIRUS_SUPPORT_PRIOR=$P EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-$TAG-p$P EPIRUS_T3P_OUT=docs/artifacts/e675-out/$TAG-p$P.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-$TAG-p$P node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/$TAG-p$P.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	TAG=$1; SP=$2; P=$3; SD=$4; EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=$SP EPIRUS_SEED=$SD EPIRUS_SUPPORT_PRIOR=$P EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-$TAG-p$P-s$SD EPIRUS_T3P_OUT=docs/artifacts/e675-out/$TAG-p$P-s$SD.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-$TAG-p$P-s$SD node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/$TAG-p$P-s$SD.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	TAG=$1; SP=$2; P=$3; SD=$4; OUT=$5; EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=$SP EPIRUS_SEED=$SD EPIRUS_SUPPORT_PRIOR=$P EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-$OUT EPIRUS_T3P_OUT=docs/artifacts/e675-out/$OUT.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-$OUT node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/$OUT.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	TAG=$1; SP=$2; EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=$SP EPIRUS_SEED=88010 EPIRUS_SUPPORT_PRIOR=0 EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675big-$TAG EPIRUS_T3P_OUT=docs/artifacts/e675-out/big-$TAG.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-big-$TAG node tools/train-3p.mjs 400 3 8 12 > docs/artifacts/e675-out/big-$TAG.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	TAG=$1; SP=$2; P=$3; EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=$SP EPIRUS_SEED=88012 EPIRUS_SUPPORT_PRIOR=$P EPIRUS_POOL_OPPS=2 EPIRUS_ARM=e675-$TAG-p$P-s88012 EPIRUS_T3P_OUT=docs/artifacts/e675-out/$TAG-p$P-s88012.js EPIRUS_BAND_DIR=docs/artifacts/e675-out/band-$TAG-p$P-s88012 node tools/train-3p.mjs 120 3 8 8 > docs/artifacts/e675-out/$TAG-p$P-s88012.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_SUPPORT_PRIOR="$V" EPIRUS_T3P_OUT=/d/wt-e675-mut/x.js EPIRUS_BAND_DIR=/d/wt-e675-mut/bx node tools/train-3p.mjs 1 2 2 2 > /d/wt-e675-mut/c.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_T3P_OUT=/d/wt-e675-mut/y.js EPIRUS_BAND_DIR=/d/wt-e675-mut/by node tools/train-3p.mjs 1 2 2 2 2>&1 | grep -o
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_SUPPORT_PRIOR="$P" EPIRUS_T3P_OUT=/d/wt-e675-mut/leg-$P.js EPIRUS_BAND_DIR=/d/wt-e675-mut/legb-$P EPIRUS_SEED=88010 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7wall-34.bak node tools/train-3p.mjs 30 3 8 8 > /d/wt-e675-mut/leg.log 2>&1; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	EPIRUS_T3P_OUT=/d/wt-e675-mut/leg-unset.js EPIRUS_BAND_DIR=/d/wt-e675-mut/b-unset EPIRUS_SEED=88010 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7wall-34.bak node tools/train-3p.mjs 30 3 8 8 > /d/wt-e675-mut/leg-unset.log 2>&1; else EPIRUS_SUPPORT_PRIOR=2 EPIRUS_T3P_OUT=/d/wt-e675-mut/leg-two.js EPIRUS_BAND_DIR=/d/wt-e675-mut/b-two EPIRUS_SEED=88010 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/v7wall-34.bak node tools/train-3p.mjs 30 3 8 8 > /d/wt-e675-mut/leg-two.log 2>&1; fi; echo
+2026-10-20	2026-10-20T23-29-50-886+08-00-73bxaj-p15284.jsonl	node tools/train-3p.mjs 120 3 8 8 >
+2026-10-21	2026-10-21T07-00-58-919+08-00-8yw284-p15284.jsonl	node --check tools/train-3p.mjs && echo
+2026-10-21	2026-10-21T07-00-58-919+08-00-8yw284-p15284.jsonl	EPIRUS_SEED=7 EPIRUS_ARM="tk-$k" EPIRUS_BAND_DIR="$D/b$k" EPIRUS_T3P_OUT="$D/arm-$k.js" node tools/train-3p.mjs 2 3 4 3 >
+2026-10-21	2026-10-21T07-00-58-919+08-00-8yw284-p15284.jsonl	node tools/train-3p.mjs 120 3 8 8 >
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=t EPIRUS_SEED=7 EPIRUS_BAND_DIR="$D/b" EPIRUS_T3P_OUT="$D/O.js" EPIRUS_REGEN_SLICE=abc node tools/train-3p.mjs 1 5 1 1 2>&1 | tail -4; echo
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=t2 EPIRUS_SEED=8 EPIRUS_BAND_DIR="$D/b2" EPIRUS_T3P_OUT="$D/O2.js" EPIRUS_REGEN_SLICE=0.5 node tools/train-3p.mjs 1 5 1 1 2>&1 | grep -i
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=a1 EPIRUS_SEED=7 EPIRUS_BAND_DIR="$D/b" EPIRUS_T3P_OUT="$D/O.js" EPIRUS_REGEN_SLICE=abc node tools/train-3p.mjs 1 5 1 1 >/dev/null 2>
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=a2 EPIRUS_SEED=8 EPIRUS_BAND_DIR="$D/b2" EPIRUS_T3P_OUT="$D/O2.js" EPIRUS_REGEN_SLICE=0.5 node tools/train-3p.mjs 1 5 1 1 >
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=a3 EPIRUS_SEED=9 EPIRUS_BAND_DIR="$D/b3" EPIRUS_T3P_OUT="$D/O3.js" node tools/train-3p.mjs 1 5 1 1 >
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=b1 EPIRUS_SEED=11 EPIRUS_BAND_DIR="$D/b1" EPIRUS_T3P_OUT="$D/O.js" EPIRUS_REGEN_SLICE=0.5 node tools/train-3p.mjs 2 5 4 4 >
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=b2 EPIRUS_SEED=12 EPIRUS_BAND_DIR="$D/b2" EPIRUS_T3P_OUT="$D/O2.js" EPIRUS_REGEN_SLICE=abc node tools/train-3p.mjs 2 5 4 4 >/dev/null 2>&1; echo
+2026-10-21	2026-10-21T23-23-00-119+08-00-veo75x-p42728.jsonl	EPIRUS_ARM=nptest-probe EPIRUS_SEED=999 EPIRUS_BAND_DIR="$D/bands" EPIRUS_T3P_OUT="$D/RR.js" node tools/train-3p.mjs 2 5 4 4 >
+2026-10-22	2026-10-22T14-00-32-875+08-00-6o2n9t-p31644.jsonl	node --check tools/gates/ship-promote.mjs && echo SP_CHECK_OK
+2026-10-22	2026-10-22T14-00-32-875+08-00-6o2n9t-p31644.jsonl	node --check tools/gates/ship-promote.mjs && node --check tools/gates/train-evo.mjs && echo CHECK_OK && node tools/np-test.mjs --only=
+2026-11-06	2026-11-06T10-48-16-466+08-00-hc052b-p33216.jsonl	node tools/train-selftest.mjs # 训练侧三条凭据
+2026-11-06	2026-11-06T10-48-16-466+08-00-hc052b-p33216.jsonl	node tools/train-fast.mjs 500 # 快速 500 代（产物落 docs/artifacts/train-fast-out.js；EPIRUS_PUBLISH=1 才写 js/bundled-champion.js）
+2026-11-06	2026-11-06T10-48-16-466+08-00-hc052b-p33216.jsonl	node tools/train-best.mjs 4 600 # 4 个候选择优（推荐）
+2026-11-06	2026-11-06T10-48-16-466+08-00-hc052b-p33216.jsonl	node tools/train-3p.mjs 60 5 24 24 # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+2026-11-07	2026-11-07T11-32-14-965+08-00-ma0i1m-p31660.jsonl	node tools/train-selftest.mjs # 训练侧三条凭据
+2026-11-07	2026-11-07T11-32-14-965+08-00-ma0i1m-p31660.jsonl	node tools/train-fast.mjs 500 # 快速 500 代（产物落 docs/artifacts/train-fast-out.js；EPIRUS_PUBLISH=1 才写 js/bundled-champion.js）
+2026-11-07	2026-11-07T11-32-14-965+08-00-ma0i1m-p31660.jsonl	node tools/train-best.mjs 4 600 # 4 个候选择优（推荐）
+2026-11-07	2026-11-07T11-32-14-965+08-00-ma0i1m-p31660.jsonl	node tools/train-3p.mjs 60 5 24 24 # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs 2>&1 | tail -2; echo
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs 2>&1 | tail -1; echo
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs 2>&1 | tail -1
+2026-11-09	2026-11-09T09-58-18-148+08-00-28eg8z-p20556.jsonl	node tools/train-3p.mjs 60 5 8 8 >
+2026-11-09	2026-11-09T19-58-59-825+08-00-2r8lvc-p42844.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular]
+2026-11-09	2026-11-09T19-58-59-825+08-00-2r8lvc-p42844.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件>'); process.exit(2); }
+2026-11-09	2026-11-09T19-58-59-825+08-00-2r8lvc-p42844.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2]
+2026-11-09	2026-11-09T19-58-59-825+08-00-2r8lvc-p42844.jsonl	node tools/exam-4n.mjs 12 77000 scratch/ds-1109/G5C-100.js --dose=page 2>/dev/null | grep 冠军4N; node tools/exam-4n.mjs 12 77000 scratch/ds-1109/G5C-100.js --dose=page --expool=v2 2>/dev/null | grep 冠军4N; echo
+2026-11-09	2026-11-09T19-58-59-825+08-00-2r8lvc-p42844.jsonl	node tools/exam-4n.mjs 12 77000 scratch/ds-1109/G5C-100.js --expool=v3 2>&1 | head -2
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/train-3p.mjs --help 2>&1 | head -30; echo
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node --check tools/train-3p.mjs && echo
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	EPIRUS_ARCH2='S1ob:input=obs5,gen=3,keySplit=1,seatH=24,actH=24,hid=32,hid2=24' EPIRUS_CARD_ABORT=999 EPIRUS_CARD_MIN=30 EPIRUS_CARD_ABORT_GAMES=20 EPIRUS_ARM=QWIN1110AFT EPIRUS_SEED=12345 EPIRUS_T3P_OUT=scratch/qoder-1110-win-smoke-after.js node tools/train-3p.mjs 1 3 2 2 > scratch/qoder-1110-win-after.txt 2>&1; echo
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2|v3] [--plan=v3]
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyN=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2]
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件>'); process.exit(2); }
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node --check tools/exam-4n.mjs && echo
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs 1 77000 docs/artifacts/e507-out/Q-s47.js --onlyN=2 --dose=page 2>&1 | grep -E
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs 1 77000 docs/artifacts/e507-out/Q-s47.js --onlyn=2 --dose=page 2>&1 | tail -3 | cut -c1-300
+2026-11-10	2026-11-10T22-42-20-117+08-00-4h38kr-p32116.jsonl	node tools/exam-4n.mjs [rounds=6] [seed=77000] <冠军文件> [--mode=multi] [--onlyn=2,3,5,8] [--dose=exam|page] [--eps-tier=lv:regular] [--expool=v1|v2|v3] [--plan=v3]
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QX-XFER-SMOKE EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/smoke-out.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 1 5 2 4 > scratch/qoder-1115-xfer/smoke.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	node --check training/train-3p.mjs && echo SYNTAX-OK && EPIRUS_ARCH2=1 EPIRUS_ARM=QX-XFER-SMOKE EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/smoke-out.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv timeout 420 node training/train-3p.mjs 1 5 2 4 > scratch/qoder-1115-xfer/smoke2.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QX-XFER-SMOKE2 EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/smoke2-out.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 2 5 6 6 > scratch/qoder-1115-xfer/smoke3.log 2>&1; E=$?; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QX-XFER-PACK4 EPIRUS_SEED=301 EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/PACK4.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_HOLDOUT_SEG=15 EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 60 5 6 6 --force-copy --copy-note=配对臂产物要留在当批目录当 mem-probe 夹具 > scratch/qoder-1115-xfer/arm-PACK4.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QX-XFER-CNT4 EPIRUS_SEED=301 EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/CNT4.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_HOLDOUT_SEG=15 EPIRUS_COUNTER_OPPS=gunFocus,snipeSpam,reflectWall,laserBank node training/train-3p.mjs 60 5 6 6 --force-copy --copy-note=配对臂产物要留在当批目录当 mem-probe 夹具 > scratch/qoder-1115-xfer/arm-CNT4.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QXP4 EPIRUS_SEED=301 EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/PACK4.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_HOLDOUT_SEG=15 EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 60 5 6 6 > scratch/qoder-1115-xfer/arm-PACK4.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2=1 EPIRUS_ARM=QXC4 EPIRUS_SEED=301 EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/CNT4.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands EPIRUS_HOLDOUT_SEG=15 EPIRUS_COUNTER_OPPS=gunFocus,snipeSpam,reflectWall,laserBank node training/train-3p.mjs 60 5 6 6 > scratch/qoder-1115-xfer/arm-CNT4.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	node training/train-3p.mjs 2 5 4 4 > scratch/qoder-1115-xfer/smoke-noa2.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2="S1o:input=obs6,seatL2=1e-4" EPIRUS_INIT_SCALE=2 EPIRUS_SEED=7 EPIRUS_ARM=QXP4b EPIRUS_COUNTER_OPPS=synthMix EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/PACK4b.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands2 EPIRUS_HOLDOUT_SEG=8 EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 25 5 4 12 > scratch/qoder-1115-xfer/arm-PACK4b.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2="S1o:input=obs6,seatL2=1e-4" EPIRUS_INIT_SCALE=2 EPIRUS_SEED=7 EPIRUS_ARM=QXC4b EPIRUS_COUNTER_OPPS=synthMix,gunFocus,snipeSpam,reflectWall,laserBank EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/CNT4b.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands2 EPIRUS_HOLDOUT_SEG=8 node training/train-3p.mjs 25 5 4 12 > scratch/qoder-1115-xfer/arm-CNT4b.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2="S1o:input=obs6,seatL2=1e-4" EPIRUS_INIT_SCALE=2 EPIRUS_SEED=$S EPIRUS_ARM=QXP4b-s$S EPIRUS_COUNTER_OPPS=synthMix EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/PACK4b-s$S.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands-s$S EPIRUS_HOLDOUT_SEG=8 EPIRUS_POOL_OPPS=4 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_POOL_OPPS_TABLE=scratch/qoder-1115-xfer/pool-opp-nonH4.tsv node training/train-3p.mjs 25 5 4 12 > scratch/qoder-1115-xfer/arm-PACK4b-s$S.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	EPIRUS_ARCH2="S1o:input=obs6,seatL2=1e-4" EPIRUS_INIT_SCALE=2 EPIRUS_SEED=$S EPIRUS_ARM=QXC4b-s$S EPIRUS_COUNTER_OPPS=synthMix,gunFocus,snipeSpam,reflectWall,laserBank EPIRUS_T3P_OUT=scratch/qoder-1115-xfer/out/CNT4b-s$S.js EPIRUS_BAND_DIR=scratch/qoder-1115-xfer/bands-s$S EPIRUS_HOLDOUT_SEG=8 node training/train-3p.mjs 25 5 4 12 > scratch/qoder-1115-xfer/arm-CNT4b-s$S.log 2>&1; echo
+2026-11-15	2026-11-15T22-02-37-406+08-00-tfwbma-p29280.jsonl	node training/train-3p.mjs 25 5 4 12
+2026-11-18	2026-11-18T22-07-33-222+08-00-kben34-p42200.jsonl	node tools/arena-eval.mjs --pack=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak --id=EQ-S4-E9 --seed=82200 > scratch/qoder-1118-front-noise/timing.json 2> scratch/qoder-1118-front-noise/timing.err; RC=$?; E=$(date +%s); echo
+2026-11-18	2026-11-18T22-07-33-222+08-00-kben34-p42200.jsonl	node tools/arena-eval.mjs --pack=
+2026-11-18	2026-11-18T22-07-33-222+08-00-kben34-p42200.jsonl	node tools/arena-eval.mjs --pack=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak --id=EQ-S4-E9 --seed=82200 --dose=page > scratch/qoder-1118-front-noise/probe_page_EQU.json 2>&1; python -c

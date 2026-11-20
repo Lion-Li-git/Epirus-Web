@@ -43,9 +43,16 @@ const dark = rows.filter((r) => r.status !== '在用');
 const md = [];
 md.push('# 训练侧旋钮册（生成物，勿手改）');
 md.push('');
+/* ⚠ 头注也由本文件生成：以前有人在册子上手加过一段"生成器 tools/knob-registry.mjs…CI 每次 push --check"，
+ *   那个文件名的生成器**从未入库**（git 史里查不到），而 `--check` 只比下面的数据账三个数 ⇒ 错话活了下来，
+ *   并且任何人一跑重生成就会把它抹掉。头注写进生成器才是它该待的地方（11-20 核对）。 */
+md.push('> 生成器就是本文件：`node training/knobs.mjs` 重生成；CI 每次都跑 `node training/knobs.mjs --check`（`.github/workflows/gates.yml`）。');
+md.push('> ⚠ `--check` 只核下面的**数据账**（全集/在用/暗键三个数）⇒ 本头注不在它的比对范围，别把手写说明加在册子上，加到这里。');
+md.push('> 真源：`training/server/knob-guard.mjs` 的 `readKeysOf()`（入口的源码 + 传递 import 闭包 + 显式声明的名单）解析现存入口的 env 读取。');
+md.push('> 注解：`training/train-3p.mjs` 的 `SELF_ENV_KEYS` 行尾注释——注解住在读取处旁边，删旋钮时自然消失。');
+md.push('> 历史台账（`REMOVED_TRAIN_KEYS` 等）在被删文件里，随 git 史可考。');
 md.push('> 2026-11-19 起本册大幅缩水：v7 线（train-3p/best/fast/server）已删除，其 EPIRUS_* 旋钮宇宙随之消失；');
 md.push('> 2.0 产线（pg-train / supfit-gd）是 **--flag** 接口（见 training/README.md §〇），不走 env 旋钮。');
-md.push('> 真源：server/knob-guard.mjs 解析现存入口的 env 读取。历史台账（REMOVED_TRAIN_KEYS 等）在被删文件里，随 git 史可考。');
 md.push('> 数据账：全集 ' + universe.length + ' ‖ 在用 ' + live.length + ' ‖ 暗键 ' + dark.length);
 md.push('');
 md.push('## 全量（按名排序）');

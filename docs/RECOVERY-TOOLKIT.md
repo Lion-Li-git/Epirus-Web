@@ -70,3 +70,17 @@ node tools/pool-xray.mjs --cov-th=3     # 「跨环境会用」阈值（默认 3
 2. era-correct worktree：`git worktree add D:/code/wt-<名> <当时 commit>`（旗标集随时代变化：e2816572 的 pg-train 无 `--obs`；bf303d0d 起才有 `--obs=obs6/--dmgW/--beadSpendW`；缺依赖把主仓正身拷进 worktree 同路径）。
 3. 照抄原始命令跑（`--out=` 走 scratch 别名**不碰盘上原件**），`widOf` 对 lineage 在册 wid 试金。
 4. 命中后：拷正身入 `docs/artifacts/` 原路径 → `git add -f` → registry sha256 同步 → 台账 `missing→ok` → `arena-eval` 自证。
+
+## 7. `tools/command-checkup.mjs` —— 出土命令"今天能不能照抄"体检（11-20 深夜 · Qoder）
+
+```bash
+node tools/command-checkup.mjs     # 读两张在册命令表 → scratch/command-checkup/command-checkup.tsv
+```
+
+把会话里挖出的命令逐条判成 `COPY-OK / COPY-NEEDS-PATH-FIX / COPY-FAIL-ENTRY-GONE / COPY-FAIL-DARK-KEYS /
+COPY-FAIL-DEAD-KEY / NEED-PREREQ / UNREADABLE-FRAGMENT / NOT-TRAINER`。判据不手抄：暗键与死键走生产
+`training/server/knob-guard.mjs` 的 `detectDarkKnobs`，`SELF_ENV_KEYS` 从 `training/train-3p.mjs` 源码机械提取，
+脚本自带**进出对账**（读入 ≠ 出表就打印差值）。
+结论与判语见 [research/COMMAND-CHECKUP-2026-11-20.md](research/COMMAND-CHECKUP-2026-11-20.md)：
+**对 505 枚缺件有用的老命令，0 条能原样照抄**，其中一半只欠一个路径名（`tools/train-3p.mjs`→`training/train-3p.mjs`）；
+暗键高度集中在 v7 奖励族 ⇒ **该换 era worktree，不该改键名**。
