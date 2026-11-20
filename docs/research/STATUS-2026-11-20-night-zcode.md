@@ -142,3 +142,18 @@
 - **校准优先设计**：有幸存者的批先单跑幸存者 seed 验 era/配置（1-2 分钟），全候选 miss ⇒ 跳过整批记档；无校准批整批扫。**v7l2c 三候选全 miss**（配置逐字同、唯权重异 ⇒ 批时树=会话编辑中态，夹在 33b963ff 与 828b9100 之间不可达）——**会话树重构**（把会话里 13:24→16:40 的 Write/Edit 按时序回放到 worktree）= 下一班的能力项，能救 v7l2c/v7l2f/l2 系列 ~40 枚。
 - **mix/sty 批（09-12 白天）**：早于 ring2-run.mjs 诞生（09-13）⇒ 需 pre-runner 回放流（裸 server+/train 循环）；mix 的 16 对手=12+4 席 champ: 座位（champion-5p-hA9/armB12f/armA9 三包在盘 ✓）。
 - 20 对手名单（v7big1/v7press1/2）仍未出土（e68ffc09 只有 16/17/18；22 名单在 7134b299）。
+
+## 九、夜班 3 续（05:2x）：mix/sty 配方定案 + lineage ts=UTC 系统修正
+
+### 9.1 mix/sty 配方（dsh 0add3d39 v4 原文出土，全定案）
+
+- §8.4「mix/sty 在 09-12 白天、早于 runner」判断**错误**：lineage ts 是 UTC——mix 批实际 09-12 **22:23-22:32** +0800、sty 批 **22:49-22:54** +0800，都在会话 0add3d39（20:36 起）窗内，且都经时代 ring2-run 跑（v4 会话原文 `RING2_STAGE=train RING2_ARM=mix/sty`、状态日志 docs/artifacts/ring2-status-sty.log、会话墙钟 22:50:54 "sty=2/6" 与 lineage UTC ts 逐位对上）。
+- **mix**（16 对手）= A12 + `champ:docs/artifacts/champion-5p-v1.3.58.bak,champ:...hA9.bak,champ:...armB12f.bak,champ:...armA9.bak`（4 席），era=**8a018817**（v1.5.2 22:36 提交 champ: 池支持；批跑时未提交）。
+- **sty**（12+风格切片）= A12 同池 + `styleopps=champ:×3（v1.3.58/hA9/armB12f；armA9 留出场——会话设计原文）&stylew=0.5&stylegames=2`，era=**f872ee6c**（v1.5.3 22:58 复合适应度；批跑时未提交）。**sty 批 6/6 逐位命中**（sty-31 一发即中；32-36 首轮链式偏掉、修驱动重跑后全中，每枚 hotstartFrom=e379c62c 与原批一致）。
+- 驱动 `scratch/replay-mixsty.mjs`：era worktree + 时代 train-server 直驱（8811/8812 错峰），流程照抄时代 runner 的 trainSeed——**每 seed 重铺 BASE**→槽 js/bundled-champion-3p.js → /train → SSE done → 槽拷出 → wid 试金 → 落账。首轮只在起 server 时铺一次槽 ⇒ seed 32 起从上一枚产物链式热启动全偏（会话原文实锤：每个 seed 的开跑行都是「起点 = v1.3.58 权重」）——修复后 sty 5/5、mix-31 已中。
+
+### 9.2 lineage ts 全账 UTC（系统修正，本夜最大坑）
+
+- **六处独立验证**：def-31（03:05 UTC=11:05+0800 会话内）、eco-31、v12-81（+8h=19:31+0800，era 689516cd=19:01 吻合）、mix/sty（dsh 墙钟 22:50:54）、V2-31（+8h=09-28 01:29，era 42d7c86e=01:48 吻合）。
+- ⇒ `scratch/server-jobs-build.py` 修正：ts **+8h** 后喂 git --since/--before（utc_to_local()）。旧 jobs 的 era 候选全体偏早 8 小时（v12 命中是稀疏提交区间的侥幸）；带校准的批靠幸存者探针兜底没炸，无校准批整夜白磨。
+- jobs 重建：109 批（mix/sty 移交专用驱动；带校准 34 批），双 shard 杀旧重启——**从此所有后台长任务带 harness 标记**（run_in_background），退出自动注入通知，不再有 windowless 进程（用户点名纠正过两次的坑，本次起根除）。

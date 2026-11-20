@@ -30,14 +30,25 @@ with io.open('champion-map/data/page/lineage.tsv', encoding='utf-8') as f:
             lin[c[0]] = {'seed': c[4], 'wid': c[9], 'ts': c[3], 'mode': c[25]}
 
 
+def utc_to_local(ts):
+    """lineage ts 是 UTC（def-31/eco-31/v12/mix/sty/V2-31 六处独立实证，sty 与会话墙钟 22:50:54 对上）；
+    git --since/--before 按本地 +0800 解析 ⇒ 先 +8h 再喂。"""
+    from datetime import datetime, timedelta
+    try:
+        t = datetime.strptime(ts.replace('T', ' ')[:19], '%Y-%m-%d %H:%M:%S') + timedelta(hours=8)
+        return t.strftime('%Y-%m-%d %H:%M:%S')
+    except Exception:
+        return ts.replace('T', ' ')
+
+
 def after_commits(ts, k=2):
-    r = subprocess.run(['git', 'log', '--reverse', '--pretty=%h', '--since=' + ts.replace('T', ' ')],
+    r = subprocess.run(['git', 'log', '--reverse', '--pretty=%h', '--since=' + utc_to_local(ts)],
                        capture_output=True, encoding='utf-8')
     return [x for x in (r.stdout or '').strip().split('\n') if x][:k]
 
 
 def before_commit(ts):
-    r = subprocess.run(['git', 'log', '-1', '--pretty=%h', '--before=' + ts.replace('T', ' ')],
+    r = subprocess.run(['git', 'log', '-1', '--pretty=%h', '--before=' + utc_to_local(ts)],
                        capture_output=True, encoding='utf-8')
     return (r.stdout or '').strip()
 
@@ -68,6 +79,8 @@ with io.open('scratch/v7-mined/server-batch-config.tsv', encoding='utf-8') as f:
         if len(c) < 18:
             continue
         base = c[ixx['batch']]
+        if base in ('mix', 'sty'):
+            continue    # 专用驱动 scratch/replay-mixsty.mjs 已接管（会话原文配方，2026-11-21）
         ids = c[ixx['missing_ids']].split(',')
         tsmin = c[ixx['ts_min']]
         if not ids or tsmin == 'null' or not tsmin:
