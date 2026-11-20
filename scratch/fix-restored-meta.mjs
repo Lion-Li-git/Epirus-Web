@@ -77,11 +77,7 @@ const RESTORED = [];
     if (c.length >= 9) reg[c[0]] = c[1];
   });
   /* 今晨恢复的 id（SLOT 16 + 面板 3 + B 家族已落账的） */
-  const IDS = ['SLOT-6ed47e18','SLOT-bb5c0e8e','SLOT-4afeed5f','SLOT-033c7601','SLOT-03749abc','SLOT-cc573172','SLOT-9ada5161',
-    'SLOT-f970452c','SLOT-037b2f71','SLOT-255f008a','SLOT-5d6fd40e','SLOT-cd32f240','SLOT-f5735e56','SLOT-18eafc3f',
-    'SLOT-9e83020d','SLOT-e379c62c','v7press-36','v7tgt2-52','v7n1-31',
-    'G03-71','S71','T111','L02-31','L02-71','M05-111','M05-151','M05-191','M05-231','RG1-31','RG1-71',
-    'E00-31','E00-71','E20-31','E20-71','NC-231','NC-301','NC-341','D005-31','D005-71','V2-31'];
+  const IDS = Object.keys(led);
   for (const id of IDS) {
     const p = led[id] || reg[id];
     if (p && existsSync(join(ROOT, p))) RESTORED.push([id, p]);
