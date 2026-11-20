@@ -311,7 +311,7 @@ v17-145	docs/artifacts/v17-145.bak	missing
 v17-146	docs/artifacts/v17-146.bak	missing	
 v17-31	docs/artifacts/v17-31.bak	missing	
 V191	docs/artifacts/e234-out/V191.js	missing	
-V2-31	docs/artifacts/e68-out/V2-31.bak	missing	
+V2-31	docs/artifacts/e68-out/V2-31.bak	ok	
 V71	docs/artifacts/e234-out/V71.js	missing	
 v7a-31	docs/artifacts/v7a-31.bak	ok	
 v7a-32	docs/artifacts/v7a-32.bak	sha-diff-wid-same	c84cdc1924a1d1857290b5cbb975045c8e9111a09efea0cf9f95870e675a9631
