@@ -44,7 +44,14 @@ function entryState(cmd) {
 }
 
 const ENVKV = /(?:^|[\s;&(])(EPIRUS_[A-Z0-9_]+)=([^\s;)"']+)/g;
-const DEP = /(?:EPIRUS_SEEDPACK|--base|EPIRUS_BASE|--seedpack|SEEDPACK)=?([\w\-./\\]+\.(?:bak|js))/g;
+/* 母本/依赖：**只认实测存在的键**（本文件第一版在这里写了几个猜出来的键名，代价见下）。
+ *   ⚠ 判据级知识：`training/knobs.mjs` 扫"旋钮宇宙"时**不剥注释**——凡 tools/ 或 training/ 下的
+ *     源码文本（含注释）出现某个 EPIRUS_ 全名，就会被当成一根真旋钮收进册子（实测全集 186→187 ‖ 暗键 167→168），
+ *     并被 `node training/knobs.mjs --check` 判成"册子过期"。⇒ 在本仓写这类文件时，**注释里不要落具体键名**，
+ *     要指代就用中文描述，否则等于往旋钮宇宙里加行。
+ *   实测两张表里承载母本路径的只有那根"种子包"键（64 处）；另外两根 OUT 类的是产物落点，不算依赖。
+ *   口径边界：若别处还有别的母本写法（如 2.0 产线的教师旗标），本判据覆盖不到，会退化成 COPY-OK 而非 NEED-PREREQ。 */
+const DEP = /EPIRUS_SEEDPACK=([\w\-./\\]+\.(?:bak|js))/g;
 
 const TRAINER = /(train-3p|train-best|pg-train|supfit[\w-]*)\.m?js/;
 /* 残缺片段判据：会话/遥测里被切断的命令尾巴（`| grep -E`、`tail -2;`、以 . 开头的路径）⇒ 不可判"可用" */
