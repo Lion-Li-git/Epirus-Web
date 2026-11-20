@@ -1,0 +1,779 @@
+session	command
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8]
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && timeout 300 node tools/train-3p.mjs 40 3 6 10 2>&1 | tail -12
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 400 3 10 16`.
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 400 3 10 16 2>&1 | tail -12
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 10 20 2>&1 | tail -8 && echo
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 600 3 16 32 2>&1 | tail -10
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && timeout 900 node tools/train-3p.mjs 500 3 24 32 2>&1 | tail -9
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && timeout 900 node tools/train-3p.mjs 400 3 20 32 2>&1 | tail -16
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && grep -c
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 400 3 20 32 2>&1 | tail -16
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check js/train/evo.js && timeout 900 node tools/train-3p.mjs 400 3 20 32 2>&1 | tail -14
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs [代=200] [人数=3] [每代局数=8] [种群=12]`（支持热启动）、
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32` (with warm start from the current champion — but the current champion was trained under the OLD rules, so warm start may be counterproductive... Actually warm start keeps the old champion as pop[0], and if it
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32` — with warm start (the current champion from the buggy rules).
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32 2>&1 | tail -12
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32`）。
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check js/train/bots.js && node --check tools/train-3p.mjs && node --check tools/eval-3p.mjs && echo
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check bots.js && ... && timeout 900 node tools/train-3p.mjs` — the python failed (exit 1) → the `&&` chain should NOT have continued... but the training DID run.
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs ...` — these are separate lines (newline-separated, not &&). So after python failed, the next line ran regardless ✓. So the training ran with the OLD pool (no farmer) → 52.9%.
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32` (+ farmer bot in the pool).
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32 2>&1 | tail -14
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && node tools/spec-run.mjs && node tools/np-test.mjs 2>&1 | grep -E
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 20 32`，网页训练场维持只训 2 人。
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/spec-run.mjs`（2 人 36/36，Node 桩）、`node tools/np-test.mjs`（N 人 28/28）、`node tools/np-probe.mjs`（多人页面 16/16，端口 9351）、`node tools/smoke.mjs`（2 人页面，端口 9337，send() 无超时易挂死）、`node tools/eval-3p.mjs`、`node tools/train-3p.mjs [代=200] [人数=3] [每局=8] [种群=12]`。
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3` 或让训练场多跑几轮接着练。
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 500 3 8 12` (500 gens, 3 players, 8 games/gen, pop 12). That took ~8-10 min single-process previously. Hmm, it
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && echo
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 40 3 6 8 >
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && for r in 1 2; do
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3 5 6 >
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 40 3 6 8 2>&1 | tail -3
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 40 3 6 8` — hmm, argv[4]=6 → GAMES=6, argv[5]=8 → POP=8. Fine.
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3 5 6 2>&1 | tail -2
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && EPIRUS_SEED=11 node tools/train-3p.mjs 15 3 4 6 2>&1 | grep -E
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 15 3 4 6 2>&1 | grep -E
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check tools/train-3p.mjs && EPIRUS_SEED=11 node tools/train-3p.mjs 12 3 4 6 2>&1 | grep -E
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs ...
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3` twice with EPIRUS_SEED=11, then compare the sha of the weights in the out file.
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3 >/dev/null 2>&1; node -e
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3` = gens N? From the v1.3.48 entry:
+227e2bc8-49f3-4852-9923-92f8333e03d5	node tools/train-3p.mjs 20 3 >/tmp/t3p-$i.log 2>&1
+227e2bc8-49f3-4852-9923-92f8333e03d5	node --check, np-test, spec-run, repro-check, train-3p, subsidy-diag, grant-mech-diag. One of them must bump index.html. Possibly `repro-check.mjs` or a pre-commit-ish step. Or `train-3p.mjs` calls a
+0add3d39-7534-4b8a-b64b-8afdeaf07d2b	node tools/train-3p.mjs [代=200] [人数=3] [每代局数=8] [种群=12]`（支持热启动）、
+4d4a95f4-4ee6-4231-9cc0-7e55372b98b6	node tools/train-3p.mjs [代=200] [人数=3] [每代局数=8] [种群=12]`（支持热启动）、
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs ...` ✓ — I need its full usage ✓ (args: presumably `[gens] [pop] [seed]`-ish ✓ — let me read its header ✓).
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs <gens> <N> <games> <pop>` ✓ — hmm: what
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 250 5 8 16`?? hmm: `[代] [人数] [每代评估局数] [种群]` ✓ ⇒ `250 5 8 16` ✓ hmm: N=5 (the 3P arms were 5-seat ✓ — hmm: the 3P slot is trained with N=3-5? ✓ my earlier arms used n=5 ✓ ✓) ⇒ let me use the same as my earlier arms ✓ (gens=250, n=5, gpo=8, pop=16 ✓) + HOT = the current 3P champion ✓ (does train-3p support HOT ✓? hmm: my ring2 arms used `RING2_HOT` ✓ — for train-3p, maybe `EPIRUS_HOT`/`EPIRUS_B
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs <GENS> 5 8 8` ✓ (a modest budget ✓ — let me pick GENS=40 (a
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 > xn1-arm.log 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8`
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8`（70.7 秒）。非空枪自检过（banner 打出 `XN混适应度 W=1 2P局=4/个体`）；主判据 2P 迁移 **0/120**，但**产物与现役逐字节相同**（108714 字符、5693 数值项 0 处不同）⇒ 空枪。机理：N6 切片是 `scoreMemberN(params, **OPPS**, XN2G, 2, …)` = 对**多人池**打 2P，而实测现役包对 `pickBalanced`/`pickGunSpam`/`pickAggro` 在 2P **全 0% 胜率** ⇒ 人人 ≈0 分 ⇒ 切片是常数 ⇒ 加常数不改排序 ⇒ 选择全由 3P 侧驱动 ⇒ 必然回到热启动点。修法：①切片换 2P 强参照（`v7xfer44c13-2p`/`v7t2p-2p`+四脚本）；②把「带内候选落盘」从 train-best 移植到 train-
+0eabf427-33d3-4475-b859-9dda1201ae22	node --check tools/train-3p.mjs && node --check tools/np-test.mjs && echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 > xn2-arm.log 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 > xn3-arm.log 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node --check tools/train-3p.mjs && echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | tail -1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 > xn4-arm.log 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8`（banner 确认列出 `exam:random+…+exam:beadburst` 20 个 ✓）。
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 > xn5-arm.log 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs ...` ✓
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 100 5 8 8 2>&1
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 3 5 8 8 2>&1 | grep -E
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | head -2 | grep -c
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 2 5 8 8 2>&1 | grep -E
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 >/dev/null 2>&1; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | tail -1 | cut -c1-50; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | head -1 | cut -c1-40; echo
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2` ⇒ must print `passiveField=0.5` ✓ **and** the run must not exit 6 ✓; plus a *direct* check that the consumer sees it ✓ (the getter ✓ — hmm: the getter lives in the sandbox ✓ ⇒ my print uses the *setter
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2` ⇒ must print
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | grep -E
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2 2>&1 | grep -cE
+0eabf427-33d3-4475-b859-9dda1201ae22	node tools/train-3p.mjs 1 3 2 2`
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 100 5 8 8
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 100 5 8 8` with env (HOTSTART/SEEDPACK/SEED/XN2W/XN2G/XN2REF/CLEAR_W/ARM) ⇒ 100 gens · 5 ? · 8 ? · 8 ? ⇒ unknown runtime (could be long!). Let me check the header for the arg meanings + a suggested small budget ✓.
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]` ⇒ and it writes to `docs/artifacts/train-3p-out.js` unless `EPIRUS_PUBLISH=1` ✓ (safe by default: it snapshots the shipped champion and restores on exit ✓ so a training run **won
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs <gens> 3 <games> <pop>` with env knobs (his recipe). Let me pick a **modest** budget: e.g. `30 3 8 8` (30 gens · 3 players · 8 games/gen · pop 8)? Runtime unknown; the production recipe in his log was `100 5 8 8` (100 gens) hmm — for a
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 30 3 8 8` (hot-start from the current champion — hmm, EPIRUS_SEEDPACK defaults to the shipped champion presumably with HOTSTART=1 ✓) and check the banner ✓. Actually, his earlier note:
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 30 3 8 8` with a hot start from the current champion + a seed. Let me include the
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 30 3 8 8
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 60 3 8 8 | Select-String -Pattern
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 60 3 8 8 2>&1 | Select-String -Pattern
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 30 3 8 8`
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8` ⇒ check the banner + the read-back ✓; and a negative test: `EPIRUS_REGEN_SLICE=abc` ⇒ exit 7 ✓ — the
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8 2>&1 | Select-String -Pattern
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8 2>&1 | Select-Object -First 2 | ForEach-Object { $_.Line }
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8 2>&1 | Select-Object -First 1 | ForEach-Object { $_.Line }
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8; Write-Host
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8 *> $null; Write-Host
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 60 3 8 8 | filter
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 2 3 8 8 2>&1 | grep -E
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs 30 3 8 8 2>&1 | Select-String -Pattern
+e68ffc09-9558-47a7-aa89-a59e3b0c7fab	node tools/train-3p.mjs <代> 3 8 8`：**60 代 ≈ 15 秒**（所以
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 40 3 8 8
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 40 3 8 8 > /tmp/kr0.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 40 3 8 8 > /tmp/kr1.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 40 3 8 8   # 同种子
+7134b299-8442-430e-b03c-bd4f9332bd76	node check computing per-entry read sets and what would be flagged. But first I need to wire at least train-3p (which still has its own guard). Let me test the module standalone now:
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 >/dev/null 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 2>&1 | grep -c
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 8 4 2>&1 | grep -o
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2` returned exit **0**, but D122 expects **6**. That
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/train-3p.mjs && echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs`; `tools/pick-best.mjs` | independently recomputes the entropy from `landByKey` (`np:4806`); re-uses the `
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-best.mjs 2 25`，KR=0 与 KR=1 的 pack sha1 都是 `c67521d82ff32d2a`、去掉 ts 后文件逐字节相同；server 路径（gens=6 pop=8 gpo=4 n=3 fresh=1 seed=7）两次 pack sha1 都是 `ad5baadcd32aaec8`。而接线正确的 train-3p（seed=31, 40 代, 3 人 8 局 种群 8）KR=0/1 有 5689/5689 个参数不同（a[] 哈希 `42fa1202f8d1` vs `1e86bf8fd78e`），`meta.recipe.killReward` 0 vs 1、回读 `__krPaid=1`。② 规则在目标场景结构上不触发（复现 v1.5.193①）：`probe-kill-reward --packs=js/bundled-champion-3p.js --fields=guardwall,pool --rules=0,1,2 --games=60` ⇒ guardwall 场 5.00 击杀/局但**奖励发放 0.00/局**、归因伤害 0.00、终场存活 0%、Δ +0.0pt（三档逐位相同）；pool 场发放 ~0.9-1.0/局但 Δ 在 ±1.96SE 内。③ CHANGELOG 已结
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-best.mjs 2 25`，KR=0 与 KR=1 的 pack sha1 都是 `c67521d82ff32d2a`、去掉 ts 后文件逐字节相同；server 路径（gens=6 pop=8 gpo=4 n=3 fresh=1 seed=7）两次 pack sha1 都是 `ad5baadcd32aaec8`。接线正确的 train-3p（seed=31, 40 代, 3 人 8 局 种群 8）KR=0/1 有 5689/5689 个参数不同（a[] 哈希 `42fa1202f8d1` vs `1e86bf8fd78e`），`meta.recipe.killReward` 0 vs 1、回读 `__krPaid=1`。② 规则在目标场景结构上不触发：`node tools/probe-kill-reward.mjs --packs=js/bundled-champion-3p.js --fields=guardwall,pool --rules=0,1,2 --games=60` ⇒ guardwall 场 5.00 击杀/局但**奖励发放 0.00/局**、归因伤害 0.00、终场存活 0%、Δ +0.0pt（三档逐位相同）；pool 场发放 ~0.9-1.0/局但 Δ 在 ±1.96SE 内。③ CHANGELOG 已
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/np-test.mjs` (194 gates, ~12 min), `node tools/spec-run.mjs`, `node tools/rules-fingerprint.mjs`, `node tools/probe-ideal-champion.mjs`, `node tools/probe-kill-reward.mjs`, `tools/eval-5p.mjs`, `tools/train-3p.mjs`/`train-best.mjs`/`train-fast.mjs` + the knob guard (exit 6), `EPIRUS_PUBLISH` gate on train-3p/train-fast but NOT on train-best (⚠️ train-best writes the shipped 2P slot by default!), `EPIRUS_TB_OUT` to redirect.
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs <gens> <pop> <games> <gpo>`（会读 `EPIRUS_KILL_REWARD`；写了 `EPIRUS_PUBLISH=1` 才写线上槽？—— 需要核实；`train-3p` 有 `EPIRUS_PUBLISH` 门槛 ✓，落点 `-out.js`）
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs <gens> <pop> <games> <gpo>`? From my earlier use: `node tools/train-3p.mjs 1 3 3` hmm. Let me check the usage lines of the three trainers to give correct commands.
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 2 3 4 3
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 8 4
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 → 2 秒
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 2 3 4 3 → 4 秒
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 8 4 → 2 秒
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 > /tmp/d158.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 >/tmp/sq_off.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 >/tmp/sq_off2.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 2 2 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 4 4 >/dev/null 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 20 3 6 6 > /tmp/arm_base.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 20 3 6 6 > /tmp/arm_seq.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 5 3 6 6 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 5 3 6 6 >/dev/null 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 12 3 6 6 >/tmp/ab0.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 12 3 6 6 >/tmp/ab2.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 > /tmp/w$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 5 3 6 6 2>&1 | grep
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 20 3 8 8 2>&1 | grep
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 20 3 8 8 2>&1 | grep -o
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/train-3p.mjs && node --check tools/seq-reward-lib.mjs && echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 > /tmp/anc$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 > /tmp/L$lam.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 > /tmp/F$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 30 3 8 8 > /tmp/G$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/seq-reward-lib.mjs && node --check tools/train-3p.mjs && git add -A && git -c user.name=
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 30 3 8 8 > /tmp/H$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 120 3 8 8 > /tmp/sel120.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 3 8 8 > /tmp/b0.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 120 3 8 8 > /tmp/s$s.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 > /tmp/ft$w.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/train-3p.mjs 2>&1 | head -4
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 2>&1)
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 >/dev/null 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/train-3p.mjs && node --check server/econ-env.mjs && echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1 2>&1); st=$?
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 200 3 8 8 > /tmp/d713-$nm.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 2 >/dev/null 2>&1; }
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 2 >/dev/null 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 200 3 8 8 > /tmp/d713b-$nm.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dlong-Lctl.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dlong-Lspend.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dlong-Ldemo.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dtension-$s.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/drep-$s.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dB-B0.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dB-B1.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dB-B2.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 4 3 8 8 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dsw-$s.log 2>&1; echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 60 3 8 8 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | grep -o
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | tail -6 | cut -c1-160
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | grep -B2
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node --check tools/train-3p.mjs && node --check tools/np-test.mjs && echo
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 > /tmp/bp-$1.log 2>&1; }
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | tail -3 | cut -c1-140
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 2>&1 | tail -2 | cut -c1-140
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 > /tmp/ck-$nm.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dC-C0s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dC-C1s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dC-C2s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dE-EL0.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dE-EL2.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dF-F0s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dF-F2s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 2 3 8 8 2>&1 | grep -E
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dG-G0s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8 > /tmp/dG-G2s$s.log 2>&1 ) &
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 1200 3 8 8` = gens, N=3, pop, games?). Wait: my train commands were `train-3p.mjs 1200 3 8 8` = GENS=1200, N=3, pop=8, games=8? So **N=3 is the scoring table** ✓ and the product is 5P. 千问
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 > /tmp/fc-$nm.log 2>&1
+7134b299-8442-430e-b03c-bd4f9332bd76	node tools/train-3p.mjs 3 3 8 8 > /tmp/fc2-$nm.log 2>&1
+d32b00d3-7e30-4bf7-96ad-efaa77ad47ff	node tools/train-3p.mjs 800` 逐位可复现，见 §E52/§E55/§E57。其余 53 支臂产物与带内候选一律落在被 .gitignore 忽略的 `docs/artifacts/e5{0,3}-out/` 子目录内，不进账本）
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 800` 逐位可复现，见 §E52/§E55/§E57。其余 53 支臂产物与带内候选一律落在被 .gitignore 忽略的 `docs/artifacts/e5{0,3}-out/` 子目录内，不进账本）
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node --check tools/train-3p.mjs && node --check tools/eval-5p.mjs && echo
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 3 5 3100 --divK=4 2>&1 | tail -3 | cut -c1-120
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 3 5 3100 --divK=4` ⇒ **`⛔ 不认识的参数：--divK=4`** — train-3p only accepts *positional* args! So the econ reward knobs are passed via **env** (`EPIRUS_*`), not CLI flags. And `CLI_ECON_REWARD_KEYS` is the list of keys that the *env* can set without triggering the
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 3 5 3100` should no longer exit 6.
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 3 5 3100 2>&1 | tail -3 | cut -c1-130
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node --check tools/train-3p.mjs && node --check tools/np-test.mjs && echo
+ced71ba1-791e-4657-86f3-91cbe9eb186c	node tools/train-3p.mjs 3 5 3100` runs 226.4s without `exit 6`); positional-args only (econ knobs go via env).
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 4 5 12 12 2>&1 | grep -E
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node --check tools/train-3p.mjs && echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 5 6 4 2>&1 | grep -E
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 40 3 8 8 2>&1 | grep -E
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 40 3 8 8 >/dev/null 2>&1
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 40 3 8 8`），不改任何旋钮；
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 40 3 8 8`，
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4 >/dev/null 2>&1
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4`（env `EPIRUS_SEED=7` + 任意 `EPIRUS_ARM` + `EPIRUS_BAND_DIR=<临时目录>`）。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 800 5 12 12 > /tmp/e315b/contX.log 2>&1 &
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 800 5 12 12 > /tmp/e315b/contP.log 2>&1 &
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4（env EPIRUS_SEED=7 + EPIRUS_ARM + EPIRUS_BAND_DIR）；
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4` + `EPIRUS_SEED=7`；`wh()` 哈希的是正则抓到的**原始字符串**不是解析后数字——我在此错了两次）。不要接的两处：`server/train-server.mjs`、`tools/train-best.mjs`（D162 钉着）。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4 2>&1 | grep -E
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node --check` locally and it passed, and the meta tests pass too. But maybe the clean-clone failure is from a different gate that depends on the artifacts I created locally—like those training output files. The new `EPIRUS_TRAIN_EPS` default I set could be triggering a gate assertion that checks for specific behavior differences between `train-3p` and `train-best`.
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node processes, `train-3p-out.js` modified recently → it
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4` + EPIRUS_SEED=7，wh() 哈希的是正则抓到的**原始字符串**）。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4`（EPIRUS_SEED=7 + EPIRUS_ARM + EPIRUS_BAND_DIR），且 wh() 哈希的是正则抓到的**原始字符串**而非解析后的数字。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12`，每臂私有 `EPIRUS_BAND_DIR` 与 `EPIRUS_T3P_OUT`
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12`, 8/8 exit 0, 6 bands each, 12.9 min; **48 arms after sha1 dedup all distinct**.
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 2 2 2>&1 | tail -2; echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4 > /d/hp2.log 2>&1
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4 > /d/ctl.log 2>&1
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4` with EPIRUS_SEED=7). So for THIS tiny arm, the written artifact is stable/identical regardless of the opponent table — because... the written artifact is the **hot-start seed or the initial best**? The D123 gate uses exactly this arm and asserts a constant hash — i.e., **this arm is designed to be reproducible and its output is stable**. Since it
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12` with and without the knob (each ~140s per the repo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 60 5 12 12` — from train-3p
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 60 5 12 12 >
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4`（D123 那支迷你臂）⇒ 产物哈希 **`aa743488cc`** = 登记基线，**逐位不变**；`opp-human` 一行不印。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node --check tools/train-3p.mjs` OK
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 3 6 4 ⇒ 产物哈希 aa743488cc = 登记基线，逐位不变；一行不印。
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12`
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs <gens> <players> <games> <pop>`; per-arm ≈140s at 250 gens?; measured: 60-gen arm ≈ 100s.
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs <gens> <players> <games> <pop>`
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12` per arm, 8 arms = 12.9 min ⇒ ~97s/arm. So a 250-gen arm ≈ 97s.
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 250 5 12 12` with `EPIRUS_SEED`, `EPIRUS_BAND_DIR`, `EPIRUS_T3P_OUT`. And the CHANGELOG v1.6.50 entry mentioned
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 5 6 4 2>&1 | tail -5
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 3 5 6 4 2>&1 | tail -4
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node --check` 全过 ‖ 定向门 D176 ✔（跑真 train-3p）D231 ✔（跑真 soup-pack）D191 ✔ —— 都是定向跑，不是整轮认证
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2` with env:
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2 > /tmp/ht.txt 2>&1
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node --check tools/train-3p.mjs`
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2 > /tmp/ht2.txt 2>&1; echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2 > /tmp/ct.txt 2>&1; echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2 > /tmp/ht3.txt 2>&1; echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node tools/train-3p.mjs 1 3 1 2 > /tmp/ct2.txt 2>&1; echo
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node has no recorded parent AND it was a CLI run (source=train-3p) AND the CLI default seedpack is the live slot ⇒ infer the parent = the slot occupant at its ts
+0f082cf0-1ded-445e-8bf1-86fb6c87de76	node has no parent at all AND its meta says `source = tools/train-3p.mjs` (or it has no `hotstartFrom`/`EPIRUS_SEEDPACK`) ⇒ look up `ship-times.tsv` for the slot occupant at its `ts` and attach it as class `slot-infer`** (dashed).
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8`）。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8`（**train-fast 是 2P 那台、train-3p 是多人那台 ⇒ 照记录复跑会跑错机器**）②「这批是冷启动」从没落纸。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <gens> <nPlayers> <pop> <games>` per Qwen
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 8 3 8 8 *> $o;
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8 *>> $log
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8（无 IMIT_*）
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8 *>> $log;
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8`；三臂 = 教师(only=ring) / 无教师对照 / 换一手；先例 §E499：教狙击 0.23→0.67 而教师 42.4（
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 80 3 8 8
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 80 3 8 8 *>> $log
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 80 3 8 8（无 IMIT_*）
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8` = 2 min) ✔. And Qwen
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8）
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8`）⇒ `node tools/np-test.mjs --only=D191` **✔**、`dedupe-artifacts --audit` 回到 `unregistered: 0`。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 3 8 8`）⇒ `--only=D191` **✔**、`dedupe-artifacts --audit` 回到 `unregistered: 0`（这正是他两次记账点到的那个红）。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <gens> 5 <games> <pop>` with `EPIRUS_TRAIN_MODE=long` ✔ (recognized values?
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 5 8 8`, with per-arm logs + product copies (to `docs/artifacts/imit-C-out/`... hmm, that dir caused D191 trouble; the copies are duplicates of the packs?? Hmm! D191 caught a duplicate because my copy was identical to the original `train-3p-out.js`?! Wait: `C-control-400gen.js` was a *copy* of `docs/artifacts/train-3p-out.js` (the run
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 5 8 8
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 5 8 8（无 IMIT_*）
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs 400 5 8 8 *>> $log
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs ...`（读不出会 `exit 5`，拒绝静默冷启动）。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <代> 5 8 8`（读不出会 `exit 5`，拒绝静默冷启动）。
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <代> 5 8 8
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <代> <人数> <每代局数> <种群>` + 一批 `EPIRUS_*` 旋钮 | `tools/train-3p.mjs:76-79` |
+47b47327-0aa8-4958-8acc-e505b84fb79b	node tools/train-3p.mjs <代> <人数> <每代局数> <种群>` + 一批 `EPIRUS_*` 旋钮 | `train-3p.mjs:76-79` |
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 400 3 8 8
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/np-test.mjs --part=train-runner`, the part would spawn gate bodies. And a gate body could be running `train-3p.mjs 60 3 8 8` (PID 25228, started 19:10:39).
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node processes (PID 40956 np-test-ish from 19:07:49, PID 25228 train-3p from 19:10:39) were writing it.
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node 进程 | `train-3p.mjs **60 3 8 8**`（**没有** `EPIRUS_T3P_OUT` 改道）创建于 **19:10:39** |
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4 2>&1 | Select-Object -Last 6
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs` overwrites). The repo
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4` with seed 7 → check default file unchanged.
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4`
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4 | Out-Null
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 6 4 | Out-Null;
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node --check tools/train-3p.mjs` ✔
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node --check js/train/evo.js; node --check tools/train-3p.mjs; if ($LASTEXITCODE -eq 0) {
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 120 3 8 12
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 400 3 8 12
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 400 3 8 12 2>&1
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node process running `train-3p`?
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 400 3 8 12` 进程活着。
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 5 3 8 12 2>&1 | Select-Object -Last 2;
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 5 3 8 12 2>&1 | Select-Object -Last 1;
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 5 3 8 12` → expect exit 0.
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node --check tools/train-3p.mjs; if ($LASTEXITCODE -ne 0) {
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 8 12 2>&1 | Select-Object -Last 2;
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 3 3 8 12 2>&1 | Select-String
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 100 3 8 12 >
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node --check tools/train-3p.mjs; if ($LASTEXITCODE -eq 0) {
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 8 3 4 6 2>&1 | Select-String
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2 2>&1 | Select-String
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2` writes the default path in the repo! That
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2` (without redirect) earlier ⇒ **it regenerated the default output**, potentially breaking D123
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 2 2 2 2>&1 | Select-String
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2` (the default mini-arm). My run `1 3 2 2` produced 3e835272 — different. Hmm, maybe because of env defaults changed (support=2? no, train-3p doesn
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2` 生成
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2`（**没改道**）⇒ 它做了两件坏事：
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 1 3 2 2`（没改道）⇒ 覆盖了 `docs/artifacts/train-3p-out.js`（`aa743488cc` → `3e835272`）。
+b3a09167-612e-4cfe-8bc5-99db4f6f64af	node tools/train-3p.mjs 120 3 8 8 *> $a.log
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs [代=200] [人数=3] [每代局数=8] [种群=12]`（支持热启动）、
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 2 3 2 2 2>&1 | Select-Object -Last 3; Write-Host (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 2 3 2 2 2>&1 | Select-Object -Last 2; Write-Host (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 2 3 2 2 2>&1 | Select-Object -Last 2; $t1=Get-Date; Write-Host (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 1 2>&1 | Select-Object -Last 2; $t1=Get-Date; Write-Host (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node from yesterday 22:51 — maybe a server; leave it). Repo changes intact: champion-map (viewer, shot, index), tools/gates/train-env.mjs, tools/np-test.mjs, tools/train-3p.mjs.
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 8 3 8 8 2>&1 | Select-Object -Last 1; $t1=Get-Date; Write-Host (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 40 3 16 16 2>&1 | Select-String -Pattern
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 300 5 24 24 *> ($T +
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 300 5 24 24 *> log } -ArgumentList ... }
+02aa89f9-ca7a-4143-8304-5c3320544b47	node procs maybe killed). Now launch parallel 4 runs: ctl/teach × 77000? 77000 already done for both; need ctl-77001 and teach-77001. To increase stats, also run 77002 and 77003 both arms = 6 runs parallel. CPU: 18 cores; each train-3p may use multiple workers; 6 could oversubscribe but user wants concurrency. Start 6 (2 arms × seeds 77001,77002,77003) with Start-Job.
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 300 5 24 24 *> (Join-Path $env:TEMP (
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 4 5 8 4` with teach env, log grep 注入统计. Launch quick foreground (~30s) — but 12 heavy jobs running; still okay.
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 4 5 8 4 2>&1 | Select-String -Pattern
+02aa89f9-ca7a-4143-8304-5c3320544b47	node --check js/train/evo.js; Write-Host EXIT=$LASTEXITCODE; node tools/train-3p.mjs 2 5 8 4 2>&1 | Select-Object -First 12
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 2 5 8 4 2>&1 | Select-String -Pattern
+02aa89f9-ca7a-4143-8304-5c3320544b47	node processes. 18 logical cores; 12 concurrent training processes may oversubscribe (each train-3p may use multiple workers? Earlier 12 concurrent finished in 13 min, so okay).
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 300 5 24 24` — args: gens=? n=5 pop=24 games=24. But mode default? train-3p mode default maybe
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+02aa89f9-ca7a-4143-8304-5c3320544b47	node --check tools/train-3p.mjs; Write-Host EXIT=$LASTEXITCODE
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 2 5 8 6 *> ($T+
+02aa89f9-ca7a-4143-8304-5c3320544b47	node tools/train-3p.mjs 300 5 24 24` + `EPIRUS_TRAIN_MODE=long EPIRUS_COUNTER_OPPS=guardSpam,gunFocus EPIRUS_SEL_COUNTER=1 EPIRUS_POOL_OPPS=2 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_SEL_POOL=1 EPIRUS_SEL_G
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 300 5 24 24` + `EPIRUS_TRAIN_MODE=long EPIRUS_COUNTER_OPPS=guardSpam,gunFocus EPIRUS_SEL_COUNTER=1 EPIRUS_POOL_OPPS=2 EPIRUS_POOL_OPPS_TIER=hard EPIRUS_SEL_POOL=1 EPIRUS_SEL_G45=1 EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/g16-77001.bak EPIRUS_LASER_W=0.1`，seed 77000 / 77001。
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs <gens> 5 24 24` + `EPIRUS_*` 配方（配方原文在各 §「命令」行；本文件不抄，避免第二份）。
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 300 5 24 24` ⇒ 300 gens, n=5, pop=24, games=24. Use e.g. `120 5 24 24`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs ...`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 120 5 24 24 > $base
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 120 5 24 24
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs  60 5 24 24
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 60 5 24 24 >
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 1 2` 走完 **2 代训练 + 5760 局 playoff + band 落盘 + 写产物** ⇒ 新结构在真训练环里跑得通。⚠ 必须 `EPIRUS_XN2REF=exam`：默认值要读现役 2P 包，2.0 的 `unpack` 读不进 ⇒ 按
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 1 2` 在 arch2 下 92.9 秒走完 4 局训练 + **5760 局 playoff** ⇒ ≈72 局/秒 ⇒ 5760 评估/臂 ≈ **80 秒**，六臂 ≈ 8 分钟（并发会失真 ⇒ 本波不引秒数）。
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check tools/train-3p.mjs;
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2` (gen=2, n=5, pop=2, games=2) — quick smoke. Note env var syntax in PowerShell: `$env:EPIRUS_PAIRED=
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2 2>&1 | Select-String
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2` — the arg order might be (gens, n, pop, games) — earlier the doc used `node tools/train-3p.mjs 2 5 1 2`. So 2 5 2 2 = 2 gens, n=5, pop=2, games=2. OK.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2 2>&1 | Select-Object -Last 25
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 2 2 2>&1 | Select-Object -Last 12
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 8 8 8`（argv[2..5]）；8P 考卷 = `eval-5p.mjs 10 8 81000 <包> --shipbigt=0 --shipdrain=0`。
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 8 8 8`; 8P exam `eval-5p.mjs 10 8 81000 <包> --shipbigt=0 --shipdrain=0`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs GENS N GAMES POP`（argv[2..5]），`N=8` 即 8P 桌；
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 > scratch/gate6-$mode-s13.log 2>&1;
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/${a.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-W-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-W-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-W-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-P-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-P-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-P-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-D-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-D-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 3 8 8 *> scratch/DD-D-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 8 8`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 8 8` (GENS N GAMES POP).
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 3 5 8 8
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 3 5 8 8 *> scratch/SMOKE-PO-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/${a.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s17.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s23.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-D4a-s29.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s17.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s23.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5-K2-s29.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check tools/proto2/supfit-gd.mjs;
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=<v:92 pack> --teacher=pack:<path> --groups=60 --steps=10 --out=...`.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/GD3-SWORD.bak --teacher=pack:docs/artifacts/e234-out/D4a.js --groups=60 --steps=10 --out=scratch/arms/SMOKE-pack-clone.bak --tag=smoke 2>&1 | Select-Object -Last 12
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check tools/proto2/supfit-gd.mjs
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/GD3-SWORD.bak --teacher=pack:docs/artifacts/e234-out/D4a.js --groups=60 --steps=10 --out=scratch/arms/SMOKE-pack-clone.bak --tag=smoke 2>&1 | Select-Object -Last 8
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/GD3-SWORD.bak --teacher=pack:docs/artifacts/e234-out/D4a.js --groups=800 --steps=400 --out=scratch/arms/CLONE-D4a.bak --tag=clone-d4a *> scratch/clone-d4a.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/GD3-SWORD.bak --teacher=pack:docs/…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5CL-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5CL-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5CL-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/${name}-run2.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5CL-s13-run2.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs ${a.gens} 5 8 8 *> scratch/${a.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-K2-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-D4a-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-K2-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-D4a-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/P5NG-K2-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 8 8 *> scratch/P4-400-NG-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 8 8 *> scratch/P4-400-D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-D4a-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/M4-D4a-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-D4a-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/L5-D4a-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check js/train/evo.js; node --check tools/train-3p.mjs; node --check tools/probe-cem-arm.mjs;
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --steps=400 --out=scratch/arms/ORC-D4a.bak --objective=cand`
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check tools/proto2/arena2.mjs; node --check tools/proto2/supfit-gd.mjs;
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --steps=400 --out=scratch/arms/ORC-D4a.bak --objective=cand --arenaShapes=5:long`
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --steps=400 --out=scratch/arms/ORC-D4a.bak --objective=cand --arenaShapes=5:long *> scratch/orc-distill.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleD…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --steps=400 --out=scratch/arms/ORC-D4a-u.bak --objective=cand --arenaShapes=5:long *> scratch/orc-distill-u.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --out=scratch/arms/ORC-D4a-${r.name}.bak --objective=cand --arenaShapes=5:long ${r.args} *> scratch/orc-distill-${r.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --out=scratch/arms/ORC-D4a-w25.bak --objective=cand --arenaShapes=5:long --defWeight=0.25 --steps=400 *> scratch/orc-distill-w25.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --out=scratch/arms/ORC-D4a-s120.bak --objective=cand --arenaShapes=5:long --steps=120 *> scratch/orc-distill-s120.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --teacher=oracleDef --groups=800 --out=scratch/arms/ORC-D4a-sub.bak --objective=cand --arenaShapes=5:long --oracleSubset=1 --steps=400 *> scratch/orc-distill-sub.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/STG-gun-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/STG-gun-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/STG-gun-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/CUR-MIX-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/CUR-MIX-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/MIX30-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/MIX30-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/MIX30-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 8 8` — quick smoke. But hotstart requires v:92 pack with input obs3b — can
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 8 8 *> scratch/SMOKE-OC-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3-mix-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3-mix-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3-mix-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3b-mix-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3b-mix-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3b-mix-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3c-mix-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3c-mix-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3c-mix-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3H-L5D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3H-L5D4a-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3H-L5D4a-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3H-GD3-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3S-GA2Rsw-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3S-GA2Rsw-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3S-GA2Rp-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3S-GA2Rp-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3F70-L5D4a-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/OC3F70-GA2Rsw-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 8 8 *> scratch/SMOKE-NORM-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-N-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-C-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-N-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-C-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-N-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/E1-C-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 25 5 8 8 (hotstart prev)
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 25 5 8 8 *> scratch/E3-s13-c$i.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 30 5 8 8 *> (
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-C-ctrl-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-E-points-def-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-C-ctrl-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-E-points-def-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-C-ctrl-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/Q-E-points-def-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/OC3C-L5D4a.bak --out=scratch/arms/GATE-DIST-s13.bak --teacher=pack:docs/artifacts/e234-out/D4a.js --steps=600 --lr=0.02 --seed=13
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=X --out=Y --teacher=pack:D4a --steps=800 --lr=0.02 --seed=13 --tag=...`
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/GATE-DIST-s13.bak --teacher=pack:docs/artifacts/e234-out/D4a.js --steps=800 --lr=0.02 --seed=13 --tag=GATE-DIST > scratch/GATE-DIST-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/GD-GATE-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/GD-GATE-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/GD-GATE-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/GATE-SELF-s13.bak --teacher=chain --steps=600 --lr=0.02 --seed=13 --tag=GATE-SELF > scratch/GATE-SELF-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/GATE-SELF2-s13.bak --teacher=chain --steps=600 --lr=0.02 --seed=13 --tag=GATE-SELF2 > scratch/GATE-SELF2-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/GATE-SELF3-s13.bak --teacher=chain --steps=800 --lr=0.02 --seed=13 --rareOnly=guard,reflect --rareFrac=0.6 --tag=GATE-SELF3 > scratch/GATE-SELF3-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W0-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W0-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W0-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W005-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W005-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W005-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W015-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W015-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W015-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node one-liner... or just launch and see if train-3p accepts.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/CBG-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/CBG-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/CBG-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8` — default path uses scoreMemberN (gFit)? The logs show
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W05-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W05-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 8 8 *> scratch/BREAD-W05-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check` 全过。改动面：`tools/pick-best.mjs`（新纯函数）‖ `tools/train-3p.mjs`（旗标 + 调用点 + 同代接线名单 + meta）‖ `tools/gate-drafts.mjs`（G4CELLS 行）‖ `tools/promote-champion.mjs`（解析 + 只记录行 + meta）‖ `tools/score13.mjs`（解析 + 4 条夹具）‖ 新增 `tools/probe-sel-grid.mjs`。**没新增门**（按用户
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node --check` 全过。改动面：`tools/pick-best.mjs`（新纯函数）‖ `tools/train-3p.mjs`（旗标 +
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs <gens> <n> <pop> <games>`? Our launches used `150 5 8 8` = gens, n, pop, games. So `50 5 8 24` = 9600 games per arm — same cost. PAIRED via EPIRUS_PAIRED=1.
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 4 4 *> scratch/SMOKE-SWEEP-OFF.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 2 5 4 4 *> scratch/SMOKE-SWEEP-ON.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 24 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 24 *> scratch/EVALFIX-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 24 *> scratch/EVALFIX-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 24 *> scratch/EVALFIX-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 1 5 24 4 *> scratch/SMOKE-SW2.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/EVALFIX-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/EVALFIX-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/EVALFIX-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/EVALOLD-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/EVALOLD-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/EVALOLD-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 ${games} 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/WIDEFIX-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/WIDEOLD-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/WIDEFIX-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/WIDEOLD-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/WIDEFIX-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 8 8 *> scratch/WIDEOLD-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --tag=VDIST > scratch/VDIST-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST2-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --dagger=4 --tag=VDIST2
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST2-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --dagger=4 --tag=VDIST2 > scratch/VDIST2-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST3-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --tag=VDIST3 > scratch/VDIST3-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST4-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --tag=VDIST4 > scratch/VDIST4-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arm…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST5-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --tag=VDIST5 > scratch/VDIST5-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST6-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --tag=VDIST6 > scratch/VDIST6-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/DBG.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=20 --groups=80 --lr=0.02 --seed=13 > scratch/dbg-supfit.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/VDIST7-s13.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 --tag=VDIST7 > scratch/VDIST7-s13.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/OC3-L5.bak --out=scratch/arms/VDIST7-OC3.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=800 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 --tag=VDIST7OC > scratch/VDIST7-OC3.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/OC3FIX-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/OC3FIX-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/OC3FIX-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/OC3-L5.bak --out=scratch/arms/VDIST8-OC3.bak --teacher=pack:scratch/ga-arms/V7L-s13.js --steps=2000 --groups=1600 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 --tag=VDIST8OC > scratch/VDIST8-OC3.log 2>&1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/OC3-L5.bak --out=scratch/arms/VDIS…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/OC3LONG-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/OC3GATE-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 50 5 24 8 *> scratch/OC3GATE-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/GATED-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/GATED-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/GATED-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/EFFG-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/EFFG-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/EFFG-s7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 40 5 24 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 40 5 24 8 *> scratch/GTOFF-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 40 5 24 8 *> scratch/GTON-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 1200 3 8 8
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s13-a0.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s13-a008.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s13-a03.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s41-a0.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s41-a008.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s41-a03.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s7-a0.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s7-a008.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH-s7-a03.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s13-a3.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s13-a10.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s41-a3.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s41-a10.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s7-a3.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/ANCH2-s7-a10.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/KD-V7.bak --teacher=pack:js/bundled-champion-3p.js --steps=800 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/ga-arms/L5-D4a-s13.js --out=scratch/arms/KD-V7.bak --teacher=pack:js/bundled-champion-3p.js --steps=800 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 *> scratch/kd-v7.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 1 5 24 8 *> scratch/khseed.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/KHSEED.js --out=scratch/arms/KHDIST.bak --teacher=pack:js/bundled-champion-3p.js --steps=800 --lr=0.02 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 *> scratch/khdist.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/${a.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/KHCOLD-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/COLD-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/KHDIS-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/KDGA-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/KHSEED.js --out=scratch/arms/KHDIST2.bak --teacher=pack:js/bundled-champion-3p.js --steps=3000 --lr=0.02 --groups=2000 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 --rareOnly=guard,reflect,bagua,miniT,bigT,drain --rareFrac=0.5
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/KHSEED.js --out=scratch/arms/KHDIST2.bak --teacher=pack:js/bundled-champion-3p.js --steps=3000 --lr=0.02 --groups=2000 --seed=13 --arenaShapes=5:long,5:multi --shapeBal=1 --rareOnly=guard,reflect,bagua,bigT,charge --rareFrac=0.5 *> scratch/khdist2.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/proto2/supfit-gd.mjs --upstream=scratch/arms/KHSEED.js --out=scratch/arms/KHDIS…
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/KDFULLGA-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/KDFULLGA-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 24 8 *> scratch/${name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 24 8 *> scratch/KDFULL400-s13.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 400 5 24 8 *> scratch/KDFULL400-s41.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/FIX-sel.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 150 5 24 8 *> scratch/FIX-ctl.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 1 2 24 8 *> scratch/p2test.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs ${gens} ${n} ${games} ${pop} *> scratch/${a.name}.log`,
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 60 2 24 8 *> scratch/P2ONLY.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 30 2 24 8 *> scratch/P2MIX.log
+f2f41eee-f2b7-4d9d-a848-40ce00ce597b	node tools/train-3p.mjs 30 5 24 8 *> scratch/P2MIX.log
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs <代> <N> 24 8`。
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs <代> <N> 24 8`. Need the exact env ZCode used for PASS2 (course + KILL_FIELD + WIDTH_W). Let me check the arm log `arm-PASS2-Q.log` for the exact command.
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 ? 24 8
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs <代> <N> 24 8` — N = players (5?), 24 games, 8 pop. In handoff: `node tools/train-3p.mjs <代> <N> 24 8`. For PASS2: 150 代 pop8 games24. N probably 5.
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs <代> <N> <games> <pop>`? From handoff: `node tools/train-3p.mjs <代> <N> 24 8`. For PASS2 150 代 pop8 games24, N=? Let me check the .js META of PASS2 for gens/pop/games/n.
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 5 24 8
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs <代> <N> 24 8` — yes gens, N, games, pop.
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 5 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 1 3 2 2`（没改道）⇒ 覆盖了 `docs/artifacts/train-3p-out.js`（`aa743488cc` → `3e835272`）。
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs` ✔
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 400 3 8 8`）⇒ `--only=D191` **✔**、`dedupe-artifacts --audit` 回到 `unregistered: 0`（这正是他两次记账点到的那个红）。
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 400 3 8 8` —— `train-fast` 是 **2P** 那台、`train-3p` 是**多人**那台 ⇒ 照原记录去复跑会复现不出这批。已在任务记录与日志 §DONE-9 订正。
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 3 24 8
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 3 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 100 3 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs 2>&1;
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 2 3 8 4 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 1 3 4 2 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node scratch/ds-1108/fix-place.mjs; node --check tools/train-3p.mjs 2>&1;
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node scratch/ds-1108/fix-place2.mjs; node --check tools/train-3p.mjs;
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs 2>&1 | Select-Object -First 6 | ForEach-Object { $_.Substring(0,[Math]::Min(160,$_.Length)) };
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node scratch/ds-1108/fix-brace.mjs; node --check tools/train-3p.mjs;
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node scratch/ds-1108/fix-brace2.mjs; node --check tools/train-3p.mjs 2>&1 | Select-Object -First 4 | ForEach-Object { $_.Substring(0,[Math]::Min(160,$_.Length)) };
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs;
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 400 8 8 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 150 3 24 8` — from my earlier arms that
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 400 3 8 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 60 5 8 8 >
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node train-3p).
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node train-3p processes.
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 60 5 8 8 *>
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 60 5 8 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 100 5 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 200 5 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 100 5 8 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 50 5 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs 2>&1 | Select-Object -First 6 | ForEach-Object { $_.Substring(0,[Math]::Min(200,$_.Length)) }` , timeoutMs: 60000});
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs 2>&1 | Select-Object -First 6 | ForEach-Object { $_.Substring(0,[Math]::Min(200,$_.Length)) }
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node --check tools/train-3p.mjs *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/proto2/selftest3.mjs scratch/arms/gd3b-ks-sb.bak（scratch/ 不入库，盘上没有就先跑一发 supfit-gd/pg-train 冒烟产出）。
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 2 5 24 8 *> scratch
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node script that mimics train-3p
+2b7cc70b-c5f4-44eb-a3e5-d883d2b319b2	node tools/train-3p.mjs 1 5 24 8 *> scratch
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 1 5 24 8` with env vars:
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node --check` for JS files (they are scripts, `node --check` works for .js). `evo.js` uses browser globals but syntax check fine. `train-3p.mjs` and `msbatch2.mjs` check.
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs [gens] [players] [games] [pop]`. Use `1 5 24 8` (1 gen, 5P, 24 games, pop 8). The batch runner uses 24 games, pop 8.
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 1 5 24 8
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 1 5 24 8 2>&1 | Select-Object -Last 60
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 1 5 24 8` — first arg gens=1. Yes.
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 1 5 12 4` with the full batch env and `EPIRUS_SEL_COUNTER=1` to ensure no errors? The full batch will run; the smoke already validated coaches. Fine.
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 200 5 24 8
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/proto2/selftest3.mjs scratch/arms/gd3b-ks-sb.bak（scratch/ 不入库，盘上没有就先跑一发 supfit-gd/pg-train 冒烟产出）。
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs <gens> 5 24 8` **without** `EPIRUS_ARCH2` (v7 mode) and with `EPIRUS_HOTSTART=1 EPIRUS_SEEDPACK=docs/artifacts/kept/e70-out__D02-31.bak`.
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/proto2/supfit-gd.mjs
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/proto2/supfit-gd.mjs --upstream=docs/artifacts/night-adapt/MSB4-R1S1928336850.js --teacher=pack:docs/artifacts/kept/e70-out__D02-31.bak --groups=200 --steps=100 --out=scratch/review-1110/K2-clone-test.bak --smoke=6 2>&1 | Select-Object -Last 40
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/proto2/supfit-gd.mjs --upstream=docs/artifacts/night-adapt/MSB4-R1S1928336850.js --teacher=pack:docs/artifacts/kept/e70-out__D02-31.bak --groups=800 --steps=400 --dagger=0 --shapeBal=1 --out=scratch/review-1110/K2-clone-d0.bak --smoke=20 2>&1 | Select-Object -Last 25
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 10 5 8 4 2>&1 | Select-Object -Last 25
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 2 5 8 4 2>&1 | Select-Object -Last 25
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 10 5 8 4 2>&1 | Select-Object -Last 12
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/proto2/supfit-gd.mjs --upstream=docs/artifacts/night-adapt/MSB4-R1S1928336850.js --teacher=pack:docs/artifacts/night-adapt/CTRL2-Q-s13.js --groups=800 --steps=400 --dagger=0 --shapeBal=1 --out=scratch/review-1110/CTRL2-clone.bak --smoke=20 2>&1 | Select-Object -Last 22
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs <代> <N> 24 8`。
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node tools/train-3p.mjs 150 5 24 8
+04e0a3ef-782a-40e0-a1eb-fc943e064895	node --check training/train-3p` no need.
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/train-3p.mjs 60 5 24 24   # 多人：代数 / 人数 / 种群 / 每体局数（用法见 --help）
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/train-3p.mjs 200 5 24 8
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/train-3p.mjs` with `EPIRUS_PACK_OPP=scratch/arms/GD3-RATION.bak` and minimal? It will train; no. Could add a **dedicated helper** `tools/pack-params.mjs` and use; but no.
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node tools/train-3p.mjs [代=200] [人数=3] [每代评估局数=8] [种群=12]
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真的开跑一支臂**
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node tools/train-3p.mjs --help` 以前被读成 `GENS=NaN` ⇒ **真
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/train-3p.mjs 1 5 1 2` with env and PACK_OPP; but it will write `js/bundled-champion-3p.js` perhaps, dangerous; use `EPIRUS_BUNDLE_OUT` temp. Time. Maybe not.
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/train-3p.mjs 1 5 1 2
+af4c3351-80bc-48cd-91ee-bc744ef18bb6	node training/proto2/supfit-gd.mjs
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/train-3p.mjs 200 5 24 8
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/knobs.mjs --check` 报：**全集 245 / 在用 235 / 暗键 9**（基线远超 `AGENTS.md` KPI `≤40`）。 | 按「加一删二」原则分批合并/退役历史实验旋钮，每批留前→后计数，并同步更新 `training/TRAINING-KNOBS.md`。 | `training/train-3p.mjs`、`training/knobs.mjs`、`training/TRAINING-KNOBS.md` |
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --help 2>&1 | Select-Object -First 80
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6P4-S4000.bak --games=3000 --batch=48 --temp=0.5 --klW=0.06 --lr=2e-4 --seed=1116 --arenaShapes=2:standard,2:multi,5:multi,8:multi --out=scratch/arms/OBS6-PG2P-STD-pilot.bak --segEvery=1000
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=1000 --batch=48 --temp=0.5 --klW=0.06 --lr=2e-4 --seed=1116 --arenaShapes=2:standard --out=scratch/arms/PG2P-smoke.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=1000 --batch=48 --temp=0.5 --klW=0.06 --lr=2e-4 --seed=1116 --arenaShapes=2:standard --out=scratch/arms/PG2P-smoke.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=24000 --batch=48 --temp=0.5 --klW=0.06 --lr=2e-4 --seed=1116 --arenaShapes=2:standard --segEvery=8000 --out=scratch/arms/PG2P-STD24k.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=6000 --batch=48 --temp=0.5 --klW=0.06 --lr=2e-4 --seed=1117 --arenaShapes=2:standard,2:multi,5:multi,8:multi --segEvery=2000 --out=scratch/arms/PG2P-MIX6k.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --teacher=pack:js/bundled-champion.js --student=docs/artifacts/.../OBS6E9.bak --arenaShapes=2:standard --games=...
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:js/bundled-champion.js --arenaShapes=2:standard --groups=600 --steps=300 --lr=0.02 --seed=1118 --objective=cand --classPow=0.25 --classCap=3 --out=scratch/arms/OBS6-2PDIST.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:js/bundled-champion.js --arenaShapes=2:standard --groups=600 --steps=300 --lr=0.02 --seed=1118 --objective=cand --classPow=0.25 --classCap=3 --out=scratch/arms/OBS6-2PDIST.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:js/bundled-champi…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:js/bundled-c…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=6000 --batch=48 --temp=0.5 --kl…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/OBS6E9.bak --games=6000 --batch=48 --temp=0.5…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=0.5 --klW=0.08 --lr=2e-4 --seed=1119 --arenaShapes=3:multi,5:multi,5:long,8:multi --segEvery=2000 --out=scratch/arms/OBS6-2PDIST-MULTI6k.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=0.5 --klW=0.08 --lr=…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=0.5 --klW=0.08 …
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.02 --lr=2e-4 --seed=1120 --arenaShapes=3:multi,5:multi,5:long,8:multi --shapeKey=guard:0.10,reflect:0.10,bagua:0.05 --segEvery=2000 --out=scratch/arms/OBS6-2PDIST-MULTI6k-DEF.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.02 --lr=…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-2PDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.02 …
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check`, and `node training/knobs.mjs --check`? New flag is not env, no knob. `supfit-gd` is not in `knobs` maybe. Check `node --check`.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; if($LASTEXITCODE -eq 0){Write-Output
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2 --arenaShapes=2:standard,3:multi,5:multi,8:multi --shapeBal=1 --rolloutMode=game --groups=1200 --steps=400 --lr=0.02 --seed=1121 --objective=cand --classPow=0.25 --classCap=3 --out=scratch/arms/OBS6-SHAPEDIST.b
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifacts/ob…) finished [status: completed, exit code: 1]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifac…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2shapes=2 --arenaShapes=2:standard,3:multi,5:multi,8:multi --shapeBal=1 --rolloutMode=game --groups=1200 --steps=400 --lr=0.02 --seed=1121 --objective=cand --classPow=0.25 --classCap=3 --out=scratch/arms/OBS6-SHAPEDIST.b
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifacts/ob…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-2PDIST.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2shapes=2 --arenaShapes=2:standard,3:multi,5:multi,8:multi --shapeBal=1 --rolloutMode=game --groups=1200 --steps=400 --lr=0.02 --seed=1122 --objective=cand --classPow=0.25 --classCap=3 --out=scratch/arms/OBS6-SHAPEDIST2.bak 2>&1 | T
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-2PDIST.bak --teacher=pack:docs/artifacts/obs6-coldstart…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-2PDIST.bak --teacher=pack:docs/artifacts/obs6-cold…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2:standard --teacher3=pack:docs/artifacts/obs6-coldstart/OBS6-LH6P.bak --teacher3frac=0.8 --teacher3Shapes=5:long --arenaShapes=2:standard,3:multi,5:multi,5:long,8:multi --shapeBal=1 --rolloutMode=game --groups=1500 --ste
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:docs/artifacts/obs6-coldst…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:docs/artifacts/obs6-c…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2:standard --teacher3=pack:scratch/arms/OBS6LH12.bak --teacher3frac=0.5 --teacher3Shapes=5:long --arenaShapes=2:standard,3:multi,5:multi,5:long,8:multi --shapeBal=1 --rolloutMode=game --groups=1800 --steps=700 --lr=0.015
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2:standard --teacher3=pack:scratch/arms/OBS6LH12.bak --teacher3frac=0.6 --teacher3Shapes=5:long --arenaShapes=2:standard,3:multi,5:multi,5:long:r2,8:multi --shapeBal=1 --rolloutMode=game --groups=1500 --steps=600 --lr=0.0
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=E9 --teacher=pack:E9 --teacher2=... --teacher2frac=.9 --teacher2Shapes=2 --arenaShapes=2:standard,3:multi --shapeBal=1 --rolloutMode=game --groups=60 --steps=10 --out=scratch/arms/SMOKE-SHAPE.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher=pack:docs/artifacts/obs6-coldstart/OBS6E9.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2 --arenaShapes=2:standard,3:multi --shapeBal=1 --rolloutMode=game --groups=60 --steps=10 --out=scratch/arms/SMOKE-T2.bak 2>&1 | Select-Object -Last 6
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-SHAPEDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.05 --lr=2e-4 --seed=1126 --arenaShapes=5:long --shapeKey=ring:0.05,railgun:0.1,bigT:0.05 --segEvery=2000 --out=scratch/arms/OBS6-SHAPEDIST-LHPG.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-SHAPEDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.05 --lr=2e-4 --seed=1126 --baseline=ridge --arenaShapes=5:long --shapeKey=ring:0.05,railgun:0.10,bigT:0.05 --segEvery=2000 --out=scratch/arms/OBS6-SHAPEDIST-LHPG.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:scratch/arms/OBS6-SHAPEDIST.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.9 --teacher2Shapes=2:standard --teacher3=pack:scratch/arms/OBS6LH11.bak --teacher3frac=0.55 --teacher3Shapes=3:long,5:long --teacher3keys=ring,charge,railgun,bigT,laserEye --arenaShapes=2:standard,2:long,3:multi,3:long,5:multi,5:long,8:multi --shape
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:scratch/arms/OBS6-SHAPEDIS…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST.bak --teacher=pack:scratch/arms/OBS6-SHA…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST-V3S2.bak --teacher=pack:scratch/arms/OBS6-SHAPEDIST-V3S2.bak --teacher2=pack:js/bundled-champion.js --teacher2frac=0.7 --teacher2Shapes=2:standard --teacher3=pack:docs/artifacts/e528-out/T8-s114.js --teacher3frac=0.5 --teacher3Shapes=3:long,5:long --teacher4=pack:docs/artifacts/v7blk1-92.bak --teacher4frac=0.4 --teacher4Shapes=2:long,3:multi,5:multi --ar
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST-V3S2.bak --teacher=pack:scratch/arms/OBS6-SHA…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-SHAPEDIST-V3S2.bak --teacher=pack:scratch/arms/OBS…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-SHAPEDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.05 --lr=2e-4 --seed=1129 --baseline=ridge --ridgeFeat=small --ridgeL2=0.1 --arenaShapes=5:long --shapeKey=ring:0.05,railgun:0.10,bigT:0.05 --segEvery=2000 --out=scratch/arms/OBS6-SHAPEDIST-LHPG2.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-SHAPEDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.05 --…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-SHAPEDIST.bak --games=6000 --batch=48 --temp=1.0 --klW=0.…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/selftest3.mjs` and `node training/proto2/selftest2.mjs` maybe; `pg-train` `--onlySeg` etc. We can run syntax and selftest3. But user asks inspection; verifying work is good.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs`, `pg-train.mjs`.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; node --check training/proto2/pg-train.mjs; Write-Output
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node tools/proto2/selftest3.mjs scratch/arms/gd3b-ks-sb.bak（scratch/ 不入库，盘上没有就先跑一发 supfit-gd/pg-train 冒烟产出）。
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/grow-modebias-nmode.mjs docs/artifacts/obs6-coldstart/OBS6-UNIFIED-U4.bak scratch/arms/OBS6-UNIFIED-U4-2L.bak 2>&1 | Select-Object -Last 2; node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L.bak --teacher=pack:scratch/arms/OBS6-UNIFIED-US1-2L.bak --shapeTeachers=2:long=pack:scratch/arms/OBS6-UNIFIED-U4-2L.bak@1 --arenaShapes=2:standard,2:long,5:long --shapeBal=1 --rolloutMode=game --groups=900 --steps=120 --lr=0.0008 --seed=1130 --objective=cand --classPow=0.35 --classCap=5 --dagger=0 --out=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak 2>&
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L.bak --teacher=pack:scratch/arms/OBS6-UNIFIED-US1-2L.bak --shapeTeachers=2:long=pack:scratch/arms/OBS6-UNIFIED-U4-2L.bak@1;5:long=pack:scratch/arms/OBS6-UNIFIED-U4-2L.bak@1 --arenaShapes=2:standard,2:long,5:long,8:multi --shapeBal=1 --rolloutMode=game --groups=1500 --steps=180 --lr=0.0006 --seed=1131 --objective=cand --classPow=0.35 --classCap=5 --da
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L.bak --teacher=pack:scratch/arms/OBS6-UNIFIED-US1-2L.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L.bak --teacher=pack:scratch/arms/OBS6-UNI…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L.bak --teacher=pack:scratch/arms/OBS…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --teacher=pack:scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --games=3000 --batch=48 --temp=1.0 --klW=0.05 --lr=2e-4 --seed=1133 --baseline=ridge --ridgeFeat=small --ridgeL2=0.1 --arenaShapes=5:multi,5:long,8:multi --shapeModes=long,multi --lamExp=0.05 --shapeKey=railgun:0.10,bigT:0.05,charge:0.02 --segEvery=1500 --out=scratch/arms/OBS6-UNIFIED-US1-2L-ECON.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --games=3000 --batch=48 --temp=1.0 --…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --games=3000 --batch=48 --temp=1…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --teacher=pack:scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIE…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --teacher=pack:scratch/arms/OB…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/OBS6-UNIFIED-US1-2L-PILOT.bak --teacher=pack:scratch/ar…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node --check training/proto2/supfit-gd.mjs; node training/proto2/supfit-gd.mjs --upstream=scratch/arms/SOUP-PILOT-AR2-67.bak --teacher=pack:scratch/arms/SOUP-PILOT-AR2-67.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/SOUP-PILOT-AR2-67.bak --games=2000 --batch=48 --temp=1.0 --klW=0.10 --lr=2e-4 --seed=1137 --baseline=ridge --ridgeFeat=small --ridgeL2=0.1 --arenaShapes=3:multi,5:multi,5:long --shapeModes=multi,long --lamExp=0.03 --shapeKey=gun:0.10,sword:0.10,railgun:0.10,bigT:0.05 --segEvery=1000 --out=scratch/arms/SOUP67-FINISH.bak 2>&1 | Tee-Object -FilePath
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/SOUP-PILOT-AR2-67.bak --games=2000 --batch=48 --temp=1.0 --klW=0.10…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/SOUP-PILOT-AR2-67.bak --games=2000 --batch=48 --temp=1.0 --klW…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-E9.bak --teacher=pack:scratch/arms/EQ-S4-E9.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-SPLDIST.bak --teacher=pack:scratch/arms/EQ-S4-E9.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-SPLDIST.bak --teacher=pack:scratch/arms/EQ-S4-E9.…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-SPLDIST-G4.bak --teacher=pack:scratch/arms/EQ-S4-E9.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-SPLDIST-G4.bak --teacher=pack:scratch/arms/EQ-S4-E9.ba…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-SPLDIST-G4.bak --teacher=pack:scratch/arms/EQ-S4-…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-E9.bak --games=3000 --batch=48 --lr=0.00025 --seed=2026111701 --temp=0.45 --lamC=0.01 --lamF=0.08 --lamExp=0.20 --penDeadElec=0.03 --dmgW=0.03 --beadSpendW=0.08 --defTax=0.01 --shapeModes=multi,long --arenaShapes=2:standard,2:long,2:multi,3:multi,5:multi,5:long,8:multi --klW=0.18 --klModes=standard --klTilt=ring,railgun,bigT,laserEye --klTiltMul=1.5 --baseline=ridge --
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-E9.bak --games=3000 --batch=48 --lr=0.00025 --seed=2026111701…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-E9.bak --games=3000 --batch=48 --lr=0.00025 --seed=20261…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak --teacher=pack:docs/artifacts/obs6-coldstart/EQ-S4-E9.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak --teacher=pack:docs/artifacts/…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak --teacher=pack:docs/artif…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-GD6ATEACH.bak --teacher=pack:scratch/arms/EQ-S4-GD6ATEACH.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-GD6ATEACH.bak --teacher=pack:scratch/arms/EQ-S4-GD6ATE…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=scratch/arms/EQ-S4-GD6ATEACH.bak --teacher=pack:scratch/arms/EQ-S4-G…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --teacher=pack:docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --teacher=pack:docs/art…) finished [status: completed, exit code: 0]. Read its output with job_output.
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/supfit-gd.mjs --upstream=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --teacher=pack:doc…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --games=3000 --batch=48 --lr=0.00025 --seed=2026111710 --temp=0.45 --lamC=0.10 --lamF=0.08 --lamExp=0.20 --penDeadElec=0.03 --dmgW=0.03 --beadSpendW=0.08 --defTax=0.01 --shapeModes=long --arenaShapes=2:long,5:long,5:long,8:long --klW=0.18 --klModes=standard --klTilt=charge,ring,railgun,bigT --klTiltMul=1.2 --baseline=mean --segEvery=1000
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --games=3000 --batch=48 --lr=0…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak --games=3000 --batch=48 -…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=2026111720 --temp=0.45 --lamC=0 --lamF=0.06 --lamExp=0.20 --penDeadElec=0.12 --beadSpendW=0.12 --defTax=0.01 --shapeModes=long --arenaShapes=5:long,8:long --arenaPool=names:EQ-S4-E9,MX3-GDEQ-GD,MX5-GD-LE40,EQ-S4-GD6ATEACH,MX8-TN25-KL --klW=0.30 --klModes=multi,standard --klTilt=charge,ring,railgun,bigT --klTiltMul
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=20261…) finished [status: completed, exit code: 1]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=…
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=2026111720 --temp=0.45 --lamC=0 --lamF=0.06 --lamExp=0.20 --penDeadElec=0.12 --beadSpendW=0.12 --defTax=0.01 --shapeModes=long --arenaShapes=5:long,8:long --arenaPool=product --klW=0.30 --klModes=multi,standard --klTilt=charge,ring,railgun,bigT --klTiltMul=1.2 --baseline=mean --segEvery=400 --out=scratch/arms/EQ-S
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=20261…) finished [status: completed, exit code: 0]. Output:
+7715716a-c7fb-47ca-9399-ed91c76ffe4a	node training/proto2/pg-train.mjs --up=scratch/arms/EQ-S4-RINGEC6.bak --games=1200 --batch=48 --lr=0.00025 --seed=2026111721 --temp=0.45 --lamC=0 --lamF=0.06 --lamExp=0.20 --penDeadElec=0.12 --beadSpendW=0.12 --defTax=0.02 --shapeModes=long --arenaShapes=5:long,8:long --arenaPool=names:reflectspam,reflectmix,reflecttank,guardspam,protowall,wall,tankline --klW=0.30 --klModes=multi,standard --klTilt=charge,ring,railgun,bigT --k
