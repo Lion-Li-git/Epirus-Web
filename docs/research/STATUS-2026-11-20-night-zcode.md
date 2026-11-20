@@ -110,3 +110,25 @@
 - `scratch/slot-recover.mjs`（timeline 逐段取件+守卫+嵌入，可重跑）‖ `scratch/bfam-batch{,2,3}.mjs`（并发批+wid 试金+台账落账）‖ `scratch/survivor-env.mjs`（全库幸存者 recipe.env 出土，165 枚）‖ `scratch/read-env.mjs`。
 - `training/train.mjs` era 委托层补**建树竞态防线**（并发批多路同 era 时复用未检出完的树会 exit 2——本轮 D005/NC-301/L05K 三臂栽过，重试即愈）。
 - **冗余副本纪律**：e370-out 取件产物里 19 件与在册包同 wid ⇒ 挪隔离+dupes-manifest 登记 move 行（D191 归零）；v7 时代原件一律不落仓（rank 会被它抢走，把既有在册文件挤成"多余"）。
+
+## 八、11-20 深夜续班（23:15→ · zcode 夜班 3）
+
+> 接账：白天班（gemini/ds/qwen）台账 566→505——2.0 小族 24 枚落仓（fam 14/16/17/21/22/23/24/25 全清）、**server 回放打通**（09-12/13 四批配方出土，统一根包=champion-5p-v1.3.58.bak=e379c62ccd2648fa，def-31 逐位验证）、def 33-36/v11×12/v7catE1/v7clear2/v7curri1、qoder 两层挖矿修复+出土命令体检（COMMAND-CHECKUP）。
+
+### 8.1 A 线判定（fam 19/20，交接点名的"第一件事"）
+
+- **KDO5C 原始命令全文出土**（zcode db rowid=26662，11-10 05:05 终版 600 步重产）：`supfit-full --up=scratch/obs4/KDO5-seed.bak --steps=600 --groups=1200 --lr=1e-4 --batch=24 --seed=13 --temp=0.5 --games=400 --n=5 --mode=long --collect=teacher --teacher=KDG-C-Q-s41 --wKey=gun:2 --wKey=sword:2`，era=20cb5255（补丁 tch2b 于 05:05:07 应用、05:06 入库、终跑 05:05:42 发射 ⇒ 终跑树=该提交）。
+- **按原文重跑 → 3c7c74e7 ≠ 2eecbe24（与白天班同果）**。根因定性：**KDO5-seed.bak = makePolicy(0.25) 随机抽签**（arch2 makePolicy rng 缺省走宿主 Math.random，make-seed5 不播种）⇒ 原件 11-19 被 TRIM、内容从未整读进任何会话日志（zcode db 40KB+ 含包正文行 255 条全非 obs4 夜）⇒ **课程 1（MSB2×3）根不可达，KDO5C 不可逐位复现**。
+- **链根修正（交接的第二程假设有误）**：lineage 实际父链 = ADAPT-DEF-O5-s916 ← **23a782cb**（≠KDO5C）⇒ 课程 2/3（S916→S916R2B→MSB6×3/MSB8×2/MSB9/MSB10/MSB12 = 11 枚）挂在 23a782cb 下——23a782cb 身份未破（千问 missing-vs-transcript 表 grade C），下一班沿 qoder projects 层挖 ADAPT-DEF-O5-s916 的创建命令定其上游。
+- fam 20：GD6b-TILT ← MSB8-charge（fam 19 链内）⇒ 同面。
+
+### 8.2 C 线快赢：V2-31 逐位复现（46e3bd20）
+
+千问 A 级名单的 qoder Write 原文 = **e68 批驱动脚本**（09-27 17:24，/tmp/kr3/e68）：V0=纯、V1=C0.2、V2=SK0.35、V3=C0.2+SK0.35，母本 win-Ldemo，1200 3 8 8。V2-31 按 era=42d7c86e 重跑 **wid 75019bc5 逐位命中**（SEL_KEEP 语义+era 判例三证）。台账 505→504。
+
+### 8.3 B 线主攻：server 系 115 批 452 枚批级回放过夜扫
+
+- **批→配置表**（scratch/v7-mined/server-batch-config.tsv）：115 批（id 前缀=批），同前缀幸存者 META 直读配置 34 批（119 枚），其余按对手阶梯推断（oppsN→URL 名单：12/13/15/16/17/18/22 齐，20 名单未得——v7big1/v7press1/2 三批 18 枚暂跳）。
+- **回放器**：官方 `tools/ring2-run.mjs`（本就是通用 seed-sweep：RING2_POOL 任传名单/ARM/SEEDS/MODE/HOT）在 era worktree 内驱动 era train-server。**两处坑入档**：① era 树槽文件≠批时代根——原工作流每次跑前 cp 根包到槽（def-31 META hotstartFrom 实证）⇒ 驱动按 slotAt(ts) 找时代槽冠军包（e370-out/隔离区/registry 三处查找）拷入 worktree；② 老 era 的 runner（<09-20）不认 RING2_HOT ⇒ 驱动对 era runner 打一行补丁（copyFileSync(BASE→env.RING2_HOT||BASE)）——只改驱动层，era server/js 一字不动。
+- 校准：def-31 @ e227d222 seed31 **wid 3406d277 + firstRate 0.33904761904761904 与原件逐位**（09ce558d 同参数不中 ⇒ era 一格之差全盘皆错， Wid 试金是唯一裁判）。
+- 双 shard（RING2_PORT 8906/8921 错峰）过夜扫 112 批 434 枚；命中即拷台账路径+翻账+git add。
