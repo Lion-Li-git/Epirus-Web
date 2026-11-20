@@ -32,10 +32,10 @@ D7a	docs/artifacts/e234-out/D7a.js	missing
 D8a	docs/artifacts/e234-out/D8a.js	missing	
 def-31	docs/artifacts/def-31.bak	ok	
 def-32	docs/artifacts/def-32.bak	missing	
-def-33	docs/artifacts/def-33.bak	missing	
-def-34	docs/artifacts/def-34.bak	missing	
-def-35	docs/artifacts/def-35.bak	missing	
-def-36	docs/artifacts/def-36.bak	missing	
+def-33	docs/artifacts/def-33.bak	ok	
+def-34	docs/artifacts/def-34.bak	ok	
+def-35	docs/artifacts/def-35.bak	ok	
+def-36	docs/artifacts/def-36.bak	ok	
 E00-31	docs/artifacts/e85-out/E00-31.bak	ok	
 E00-71	docs/artifacts/e85-out/E00-71.bak	ok	
 E1	docs/artifacts/e234-out/E1.js	missing	
@@ -1000,4 +1000,4 @@ RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	ok
 P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	ok	
 night2-S6	docs/artifacts/night2-S6.bak	ok	
 night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	ok	
-day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok
+day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	ok	
