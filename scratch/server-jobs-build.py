@@ -32,13 +32,18 @@ with io.open('champion-map/data/page/lineage.tsv', encoding='utf-8') as f:
 
 def utc_to_local(ts):
     """lineage ts 是 UTC（def-31/eco-31/v12/mix/sty/V2-31 六处独立实证，sty 与会话墙钟 22:50:54 对上）；
-    git --since/--before 按本地 +0800 解析 ⇒ 先 +8h 再喂。"""
+    git --since/--before 按本地 +0800 解析 ⇒ 先 +8h 再喂。
+    注意：config 表的 ts_min/ts_max 是**分钟精度**（无秒）——必须补 :00 再解析，
+    否则 strptime 静默失败原样返回（11-21 夜二阶坑：115 批全中招，修正版白跑一轮）。"""
     from datetime import datetime, timedelta
+    s = ts.replace('T', ' ')[:19]
+    if len(s) == 16:
+        s += ':00'
     try:
-        t = datetime.strptime(ts.replace('T', ' ')[:19], '%Y-%m-%d %H:%M:%S') + timedelta(hours=8)
+        t = datetime.strptime(s, '%Y-%m-%d %H:%M:%S') + timedelta(hours=8)
         return t.strftime('%Y-%m-%d %H:%M:%S')
     except Exception:
-        return ts.replace('T', ' ')
+        raise SystemExit('utc_to_local 解析失败: ' + repr(ts))
 
 
 def after_commits(ts, k=2):

@@ -157,3 +157,4 @@
 - **六处独立验证**：def-31（03:05 UTC=11:05+0800 会话内）、eco-31、v12-81（+8h=19:31+0800，era 689516cd=19:01 吻合）、mix/sty（dsh 墙钟 22:50:54）、V2-31（+8h=09-28 01:29，era 42d7c86e=01:48 吻合）。
 - ⇒ `scratch/server-jobs-build.py` 修正：ts **+8h** 后喂 git --since/--before（utc_to_local()）。旧 jobs 的 era 候选全体偏早 8 小时（v12 命中是稀疏提交区间的侥幸）；带校准的批靠幸存者探针兜底没炸，无校准批整夜白磨。
 - jobs 重建：109 批（mix/sty 移交专用驱动；带校准 34 批），双 shard 杀旧重启——**从此所有后台长任务带 harness 标记**（run_in_background），退出自动注入通知，不再有 windowless 进程（用户点名纠正过两次的坑，本次起根除）。
+- **二阶坑（06:00-09:4x 白磨一轮的根因）**：config 表的 ts_min/ts_max 是**分钟精度**（无秒位）——utc_to_local 的 strptime('%H:%M:%S') 对 '14:35' 静默 ValueError 走 except 原样返回 ⇒ +8h 一行都没生效，115/115 批全中招（v9 的 9 枚命中来自硬编码 era 特例，不是时区修正）。修复：秒位补 `:00` 再解析，**解析失败改 fail-fast SystemExit**（禁静默回退，AGENTS #3）。v7gf1 era 首选随之修正为 c7076ac9（gunfocus 提交本体——「聚焦枪手进池跑了一臂」就是 v7gf1 本批，批时 22:35-22:47 +0800，提交 22:59）；此前 era 树无 gunfocus bot ⇒ server「未知/缺失对手」error ⇒ runner 233 行炸批（46 枚「产物未落」的主因之一）。
