@@ -1,0 +1,3 @@
+table	games	focusFire%	tauntLinked/tauntGames	emptyTouch%	entropy	winnerDist	emptyCasts
+T1-hard核	900	100.0	0/1	1.0	1.540		{"bigT":8,"curse":1}
+T2-混风格	900	100.0	0/1	11.9	1.725		{"tank":39,"curse":43,"bigT":8,"ring":14,"transfer":3}

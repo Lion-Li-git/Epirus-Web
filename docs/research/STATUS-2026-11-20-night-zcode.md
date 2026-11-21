@@ -228,7 +228,7 @@
 
 ### 13.3 池配合量具 v0 落成 + 基线读数（900 局/桌，multi+long，3 seeds）
 
-工具：`scratch/pool-synergy-meter.mjs`——roster-lib 真包席 + duelAssembly onTurn 钩子（引擎实际解析的 actions）+ damage 事件；T1=hard 核 5 枚固定桌 vs T2=hard 核 3 枚+X2b-fuse+rod r10 固定桌，同 seed 配对。基线存档 `scratch/v7-mined/pool-synergy-baseline.tsv`。
+工具：`tools/pool-synergy-meter.mjs`——roster-lib 真包席 + duelAssembly onTurn 钩子（引擎实际解析的 actions）+ damage 事件；T1=hard 核 5 枚固定桌 vs T2=hard 核 3 枚+X2b-fuse+rod r10 固定桌，同 seed 配对。基线存档 `champion-map/data/pool-synergy-baseline-1122.tsv`。
 
 | 指标 | T1 hard 核 | T2 混风格 | 判读 |
 |---|---|---|---|
