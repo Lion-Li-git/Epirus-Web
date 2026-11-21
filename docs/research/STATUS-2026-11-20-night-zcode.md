@@ -239,3 +239,17 @@
 | 胜者分布 | taunt-dsp0b 33.4% 领跑 | X2b-fuse 9.2%、rod 4.9%、draw 13 | 风格成员弱但不为零；gun>curse/curse>gun 共现对出现 |
 
 **支撑口径 v2**：全同质 hard 桌局九空轴≈死轴（1%）；混风格桌空轴活过来（11.9%）。hard 带风格拉开距离 = 桌局配合多样性的直接杠杆。
+
+### 13.4 评估判据预注册（08:00 前不许改动，§148.9 纪律）
+
+基线：E1 底 arenaB **-30.4**（池前线 -30.36 同源）、全门过、风格向量 curse 11.2%/bigT 4.6%/firestorm 7.3%、G4[multi] 只枪读数以 promote dry 现跑为准。
+
+| 判 | 线 | 含义 |
+|---|---|---|
+| 强度 | product arenaB ≥ **-35** | 不比底座漂差 5pt 以上（C1 教训线）；≥ -25 = 真抬强 |
+| 入池地板 | `promote-champion --dry --support=2` **0 阻断** | E1 本来全门过 ⇒ PG 不得把门打挂（F≥20%、G4[multi]≤60%、G5[long]≤25%） |
+| 风格 | c2b：G4[multi] 只枪% **下降** 且 锚L1 ≤0.20 | 倾斜锚放大签名轴（只枪率下降 = 行为更多样），锚未漂走 |
+| C4 | tank 标签 ≥200 且 selftest3 六腿绿 | tank 接盘者候选成立 → 进 PG 长臂 |
+| 失败处置 | 任一门挂 | 该臂记淘汰判例入 RUN-LOG，seg 快照留 scratch 不删（§24） |
+
+评估命令（单包四连）：`selftest3 <pack>` ‖ `arena-noise-floor --json --id=<tag> --pack=<path>` ‖ `promote-champion --dry --support=2 <pack>` ‖ 锚L1 读臂日志尾。
