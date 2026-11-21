@@ -191,6 +191,33 @@ const purifyPick = (state, pid, cs) => {
   if (nStickers < 1 && !disabled) return null;   /* 夜3班 TZPUR-B 起：≥2 符触发在咒源场实测 0 演示（11 符/20 局摊 4 席攒不到 2），降到 ≥1——清火弱/禁用仍有价值 */
   return pickKey(cs, R.SK.PURIFY) || null;
 };
+/* 11-21 挑衅 / 避雷针 / 镜面 专项教师（仅在键道触发，平时返回 null 交由主教师保底强度） */
+const tauntPick = (state, pid, cs) => {
+  if (castCount(state, pid, R.SK.TAUNT) >= 2) return null;
+  let best = null, bestScore = -Infinity;
+  for (const c of cs) {
+    if (!c || c.key !== R.SK.TAUNT || c.affordable === false || c.target == null) continue;
+    const o = state.p[c.target];
+    if (!o || o.hp <= 0 || o.tauntPending || o.tauntActive) continue;
+    const sc = (o.hp || 0) * 10 - (o.ep || 0);
+    if (sc > bestScore) { bestScore = sc; best = c; }
+  }
+  return best;
+};
+const rodPick = (state, pid, cs) => {
+  const me = state.p[pid] || {};
+  if ((me.rodGuard || 0) > 0 || castCount(state, pid, R.SK.ROD) >= 2) return null;
+  const threat = (state.p || []).some((q) => q && q.id !== pid && q.hp > 0 && ((q.ep || 0) >= 5 || (q.elec || 0) >= 1));
+  if (!threat) return null;
+  return pickKey(cs, R.SK.ROD) || null;
+};
+const mirrorPick = (state, pid, cs, legal) => {
+  if (castCount(state, pid, R.SK.MIRROR) >= 2) return null;
+  const lg = (legal && legal.length >= 2) ? legal : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
+  const got = W.EpirusBots && W.EpirusBots.pickMirrorSpam ? W.EpirusBots.pickMirrorSpam(state, pid, lg) : null;
+  if (!got || got.key !== R.SK.MIRROR || got.target == null || got.target2 == null) return null;
+  return cs.find((c) => c.key === R.SK.MIRROR && c.target === got.target && c.target2 === got.target2 && c.affordable !== false) || null;
+};
 /* 11-18 摄魂处决教师（夜3班 · T2 真覆盖补课，用户令）：摄魂=处决器（3ジ · 仅 HP≤1 目标 · 命中自愈 1）。
  *   引擎只对 HP≤1 活敌提供 drain 候选 ⇒ 机会=候选出现，教师语义 = "有候选就处决"（收人头+白赚 1 血）；
  *   无候选返回 null（lane 语义下该拍不出标签）。
@@ -816,6 +843,12 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => chargePick(state, pid, cs)
   : name === 'purify'
     ? (state, pid, cs) => purifyPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'taunt'
+    ? (state, pid, cs) => tauntPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'rod'
+    ? (state, pid, cs) => rodPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'mirror'
+    ? (state, pid, cs, legal) => mirrorPick(state, pid, cs, legal) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'drain'
     ? (state, pid, cs) => drainPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'transfer2'
@@ -935,7 +968,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'purify', 'drain', 'transfer2', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'purify', 'taunt', 'rod', 'mirror', 'drain', 'transfer2', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）

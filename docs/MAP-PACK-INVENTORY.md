@@ -1,6 +1,6 @@
 # 全图谱冠军包盘存总表（Champion Map Pack Inventory）
 
-> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,003` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行）为真源，于 `2026-11-21` 实盘核验。  
+> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,005` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行历史对照）为真源，于 `2026-11-21`（`v2.1.11` 池维护升级后）实盘核验。  
 > 相关文档：[`docs/ARTIFACT-LOSS-1119.md`](ARTIFACT-LOSS-1119.md) ‖ [`docs/GOAL-2026-11-19-ruler-resolution.md`](GOAL-2026-11-19-ruler-resolution.md) ‖ [`docs/POOL-CONTRACT.md`](POOL-CONTRACT.md) ‖ [`docs/research/STATUS-2026-11-21-fam7-fam9-complete.md`](research/STATUS-2026-11-21-fam7-fam9-complete.md)
 
 ---
@@ -9,12 +9,12 @@
 
 | 口径 | 数量 | 说明 |
 |---|---:|---|
-| **图谱在册总数** | **1,003** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **172** 枚 |
+| **图谱在册总数** | **1,005** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **174** 枚（含新增 `nov21-purify-dsp0`、`nov21-taunt-dsp0b`） |
 | 无路径记录（`no-path`） | **19** | 仅见于 `fam=11`（4）、`fam=13`（14）、`fam=19`（1） |
-| 有路径记录（`hasPath`） | **984** | 以下盘面状态均基于此 984 枚 |
-| **实际在盘（可用）** | **568** | 原封 `sha256` 一致 **482** 枚（含失落表后新增 `night2-E1-det-strong`）+ 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
+| 有路径记录（`hasPath`） | **986** | 以下盘面状态均基于此 986 枚 |
+| **实际在盘（可用）** | **570** | 原封 `sha256` 一致 **484** 枚 + 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
 | **盘上仍缺失（`missing`）** | **416** | `400` 枚早期 `v1.5.x` `server` 盲扫尾批（`fam=1..6`）+ `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
-| **现役产品冠军池** | **25** | **`hard` 11 枚 / `soft` 14 枚**，**`25/25` 全员在盘（0 缺失）** |
+| **现役产品冠军池** | **26** | **`hard` 13 枚 / `soft` 13 枚**，**`26/26` 全员在盘（0 缺失、`seatUnknown=0`）** |
 | **现役 B 轴 24 锚联盟** | **24** | [`arena-league-1118-page.tsv`](../champion-map/data/arena-league-1118-page.tsv)，**`24/24` 全员在盘（0 缺失）** |
 
 > 缺失台账分目录剩余（共 `416` 枚）：`docs/artifacts/*.bak` 根目录 **401** 枚、`docs/artifacts/night-adapt/` **14** 枚、`scratch/arms/` **1** 枚（`GD6b-TILT-3p.bak`）。
@@ -50,16 +50,16 @@
 | **20** | `2.0` | 4 | 2 | 2 | 0 | **2** | 0 | `GD6` 蒸馏多线（11-12：`GD6b-TILT-3p` / `MSB18`） | **永久阻断**（上游挂 `fam=19` 的 `MSB8-charge`） |
 | **21** | `2.0` | 8 | 8 | 8 | 0 | **0** | 0 | 2.0 `obs6` 无教师冷启动（11-14：`OBS6A4/W2/A5` 等） | 已清零 |
 | **22** | `2.0` | 13 | 13 | 13 | 0 | **0** | 0 | 2.0 `obs6` `v7` 蒸馏（11-14） | 已清零 |
-| **23** | `2.0` | 19 | 19 | 19 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16：`OBS6-UNIFIED-*`、`EQ-*`） | 已清零（11-20 补齐最后 10/10） |
+| **23** | `2.0` | 21 | 21 | 21 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16 起，含 `nov21` 新入图两枚） | 已清零（11-20 补齐最后 10/10 + 11-21 新入图 +2） |
 | **24** | `2.0` | 7 | 7 | 7 | 0 | **0** | 0 | 2.0 `obs6` `V3` 融合 / 路由（11-16） | 已清零（B 轴缺锚与 `V3H3` 全归位） |
 | **25** | `2.0` | 20 | 20 | 20 | 0 | **0** | 0 | 2.0 `obs6.5` 键道 / 覆盖训练（11-17） | 已清零 |
-| **合计** | — | **1,003** | **568** | **482** | **86** | **416** | **19** | 全谱系（`1.8` `831` + `2.0` `172`） | `19` 族清零；余 `400` 早期 `server` + `16` 不可复根链 |
+| **合计** | — | **1,005** | **570** | **484** | **86** | **416** | **19** | 全谱系（`1.8` `831` + `2.0` `174`） | `19` 族清零；余 `400` 早期 `server` + `16` 不可复根链 |
 
 ---
 
-## 三、现役产品冠军池（25 枚 · 全员在盘）
+## 三、现役产品冠军池（26 枚 · 全员在盘）
 
-> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 11 / soft 14`，全部满足 `promoteVerdict=pass`）。
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 13 / soft 13`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
 
 | # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
 |---:|---|---|---|---:|---:|---|---|
@@ -71,28 +71,29 @@
 | 6 | `MX6-GD-TF15` | `hard` | `95940870c4b8d16e` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak` | `transfer` + `railgun` + `bigT`（5P 原生强） |
 | 7 | `MX6-GD-TF20` | `hard` | `bab64e2b297b1e68` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak` | `transfer` + `miniT` + `railgun` + `bigT` |
 | 8 | `MX8-TN25-KL` | `hard` | `0940f463c2ac8966` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak` | `KL-PG` 收官（`drain` + `railgun`） |
-| 9 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | 强宽六轴全持代表 |
-| 10 | `OBS6P9-S4000` | `hard` | `cfb62c2c977897fd` | 1 | 3 | `docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak` | 高 `bpM` 真伤双穿 + `holo` 线（现役 `B` 榜高位） |
-| 11 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 唯一载体（11-19 点名保留） |
-| 12 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
-| 13 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
-| 14 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
-| 15 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
-| 16 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
-| 17 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
-| 18 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
-| 19 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
-| 20 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | **-1** | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（待补 `seat-rule`） |
-| 21 | `night2-S6` | `soft` | `d12c18baca6c1eab` | 1 | 8 | `docs/artifacts/night2-S6.bak` | 双教师过渡载体（天火 0/315，`arenaB=-104.8pt`，待替换议案） |
-| 22 | `night2-X2b-fuse` | `soft` | `629d4ae567266821` | 1 | 0 | `docs/artifacts/night2-X2b-fuse.bak` | 双父系融合代锚（废贴 0/671，`arenaB=-87.2pt`，待替换议案） |
-| 23 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
-| 24 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
-| 25 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
+| 9 | `nov21-purify-dsp0` | `hard` | `b4a65ee4437584cf` | 0 | 0 | `docs/artifacts/nov21-purify-dsp0.bak` | **11-21 DS-P0 净化补盲**（`arenaB=+14.04pt`，珠闭环 100%，条件净化 `0.27/局`） |
+| 10 | `nov21-taunt-dsp0b` | `hard` | `db7883520de2e2fe` | 0 | 0 | `docs/artifacts/nov21-taunt-dsp0b.bak` | **11-21 DS-P0 挑衅补盲**（`arenaB=+17.92pt` / `arR=+35.83pt`，Stage1 **`taunt` 95/120 格 · 1,822 次**） |
+| 11 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | 强宽六轴全持代表 |
+| 12 | `OBS6P9-S4000` | `hard` | `cfb62c2c977897fd` | 1 | 3 | `docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak` | 高 `bpM` 真伤双穿 + `holo` 线（现役 `B` 榜高位） |
+| 13 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 唯一载体（11-19 点名保留） |
+| 14 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
+| 15 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
+| 16 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
+| 17 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
+| 18 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
+| 19 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
+| 20 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
+| 21 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
+| 22 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | 1 | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（11-21 已补测 `seatKill=1`） |
+| 23 | `night2-X2b-fuse` | `soft` | `629d4ae567266821` | 1 | 0 | `docs/artifacts/night2-X2b-fuse.bak` | 双父系融合代锚（废贴 0/671，`arenaB=-87.2pt`，暂留 `armor/tank`） |
+| 24 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
+| 25 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
+| 26 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
 
-> 现役池结构性短板（待后续训练补齐）：  
-> 1. 全池镜像 `4` 项技能为 `0/25` 灭绝态：`rod` / `taunt` / `purify` / `mirror`（`hard` 带 `8` 项 `0/11`）；  
-> 2. `night2-E1-det-strong` 已入 `soft` 但 `seatKill=-1`，待补跑一次 `champion-map/seat-rule.mjs`；  
-> 3. 软带负资产 `night2-S6` / `night2-X2b-fuse` 留待有替代过线包时按流程 `--retire`。
+> 现役池状态（`2026-11-21` `v2.1.11` 已退役 `night2-S6`）：  
+> 1. `taunt` 已升级为 **`hard` 带主力活跃载体（`95/120` 格，`1,822` 次）**；`purify` 已入 `hard` 带（Stage 1 因默认夹具少咒源仅 `2` 次使用，对活咒源 `4×det-gd` 实测 `0.27/局`）；  
+> 2. Stage 1 活跃格仍为空白的是 `rod`（`0/26` 活跃，`anyUse=1/26`；已有 `scratch/arms/nov21-rod-rm.bak` 条件 `rod 8/100`、`arenaB=-1.86pt` 待深化）与 `mirror`（`0/26`，既有裁定「可没有」）；  
+> 3. `night2-E1-det-strong` 已补齐 `seatKill=1`（全池 `seatUnknown = 0`）；`night2-X2b-fuse` 留待有强 `armor` 载体过线后按 `--retire` 替换。
 
 ---
 

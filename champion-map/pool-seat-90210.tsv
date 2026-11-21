@@ -75,3 +75,9 @@ MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	multi	200	90210	0	7.5	
 MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	long	200	90210	3.5	2.5	0	10.5	0.5	3.5	3.5	3.43	10.5	只枪压制	3
 MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	multi	200	90210	0	22	0	49	33.5	0	0	14.93	49.0	只枪压制	2.5714285714285716
 MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	long	200	90210	0.5	1.5	2	14	0	0.5	0.5	2.71	14.0	只枪压制	2.142857142857143
+night2-E1-det-strong	docs/artifacts/night2-E1-det-strong.bak	multi	200	90210	0	35.5	9	62	46	0	0	21.79	62.0	只枪压制	7
+night2-E1-det-strong	docs/artifacts/night2-E1-det-strong.bak	long	200	90210	1	3.5	2.5	19	2	1	1	4.29	19.0	只枪压制	3.5714285714285716
+nov21-purify-dsp0	docs/artifacts/nov21-purify-dsp0.bak	multi	200	90210	0	0	9.5	0	0	0	0	1.36	9.5	只攒不打(农民)	8.571428571428571
+nov21-purify-dsp0	docs/artifacts/nov21-purify-dsp0.bak	long	200	90210	0.5	8	1.5	29.5	10	0.5	0.5	7.21	29.5	只枪压制	4.285714285714286
+nov21-taunt-dsp0b	docs/artifacts/nov21-taunt-dsp0b.bak	multi	200	90210	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	11.142857142857142
+nov21-taunt-dsp0b	docs/artifacts/nov21-taunt-dsp0b.bak	long	200	90210	2	0	0	0	0	2	2	0.86	2.0	全程刷反弹	3.5714285714285716

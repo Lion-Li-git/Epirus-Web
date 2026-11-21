@@ -4,6 +4,19 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.11 — 11-21（DS-P0 `purify` / `taunt` 双强包入 `hard` 带 ‖ `night2-S6` 退役 ‖ 池 25 → 26）
+
+**这一版是什么**：在 `Q-s47` 恢复解除建图阻塞后，于 [`training/proto2/supfit-gd.mjs`](training/proto2/supfit-gd.mjs) 补齐仅键道触发的 `taunt` / `rod` / `mirror` 专科教师，训练并筛选出两枚 `hard` 带 `DS-P0` 补盲新将正式入池，同时回填 `night2-E1-det-strong` 人席并退役软带头号负资产 `night2-S6`（池 `25 → 26`，`hard 13 / soft 13`，全池 `seatUnknown = 0`）。
+
+- **新入池 `hard` 带（2 枚 · 全 `seatKill=0` ‖ 自动合格）**：
+  - `nov21-purify-dsp0`（[`docs/artifacts/nov21-purify-dsp0.bak`](docs/artifacts/nov21-purify-dsp0.bak)，`wid=b4a65ee4437584cf`）：`EQ-S4-E9@0.70 + purify@0.30`（活咒源 `day1119-det-gd`）；6 种子 `arenaB = +14.04pt`、`promote` **0 阻断**（珠经济 100% 闭环）、`seatKill=0`、对活咒源条件净化 `0.27/局`（为 `hard` 带补上 `purify`）。
+  - `nov21-taunt-dsp0b`（[`docs/artifacts/nov21-taunt-dsp0b.bak`](docs/artifacts/nov21-taunt-dsp0b.bak)，`wid=db7883520de2e2fe`）：`EQ-S4-E9@0.70 + taunt@0.30`；6 种子 `arenaB = +17.92pt`（100 局 `arR = +35.83pt`）、`seatKill=0`（`multi` 7/7 全 `0%`）、`promote` 上线档全过（`G4 0%/28%`，`G5[long]=29% ≤ 40%`）、Stage 1 普查 **`taunt` 活跃 `95/120` 格（`1,822` 次出手）**。
+- **池维护升级**：
+  - 补测并回填 `night2-E1-det-strong` 的人席否决（`seatKill: -1 → 1`）；
+  - 通过 `pool-add.mjs --retire=night2-S6` 退役并清理软带负资产 `night2-S6`（`arenaB=-104.8pt`、`seatKill=8`、废贴 `0/315`）；
+  - 同步重烘 [`js/bundled-champion-pool.js`](js/bundled-champion-pool.js)（`7966 KB`，`26` 枚）及 `champion-map/{index,trends,skill-report}.html`，刷新 `index.html?v=p1121a`；更新 [`docs/MAP-PACK-INVENTORY.md`](docs/MAP-PACK-INVENTORY.md) 与 [`docs/TRAINING-RUN-LOG.md`](docs/TRAINING-RUN-LOG.md)。
+- **同波机制排查留档**：`nov21-rod-rm`（`RING-MINIT-CONT` 底座 + `rod`）在 `arenaB = -1.86pt` 下将条件 `rod` 抬至 `8/100` 局；`nov21-mirror-dsp0` 暴露双目标 `(t1, t2)` 12 组分散 `cand` 梯度且挤占主线（`G4/G5` 阻断，不入池）。
+
 ## v2.1.10 — 11-21（全图谱包盘存总表 + 固定训练参数台账 + 历史缺件抢救里程碑）
 
 **这一版是什么**：整理并固化全谱系冠军包的盘存与可复现边界总文档，建立后续所有训练臂共用的固定训练参数流水台账，并同步纳入 `fam=7` / `fam=9`（`36/36`）及 `2.0` 小族（`24/40`）逐位抢救落仓成果（全图缺失由 `668 → 416`）。
