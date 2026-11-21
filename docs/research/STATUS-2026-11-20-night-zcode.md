@@ -180,3 +180,30 @@
 - DS 晚五臂全败（rm/rb9/rb9-pg/ring/ring2）的根因双判例：①**底座选择**——RINGB9 有 ring 习惯但清不了龟壳（G5 61%）；TZT2D=11-18 普测 G5 **0%** 清场型 ALL-GATE；②**ring 剂量**——ring 0.20 对无 ring 习惯的底座是行为改写过量（反弹墙 14.5→0.00、连狙击枪 290→0），**减半到 0.10 行为存活**。rod 标签采样结构（rareOnly=rod,ring 0.45、无 arenaPool）照抄 rod-ring，rod 标签 233/4800 有效注入。
 - **第 7 臂 nov21-rod-tzt2d-r10 promote 0 阻断**（F 20.1%、反弹墙 14.75、G4[multi] 49.7 余 10pt、G5 全 0%）→ 用户 21:1x 点名入池（人席 2 格原话在案：multi 只枪压制 76.5/70.5、只防御 43.5/37.5 对基准 +44/+30，与 G4[multi] 骑线同弱点三量具互证）→ **池 26→27（soft），rod 覆盖 0→1**。前线 -30.4 落册；measure-point 图节点 + skill-report 22 技 + bundle/图重烘同笔（b331ce31，gate-all --auto 6 道全绿）。
 - 留观项：multi 被人形玩家克制（G4 骑线+人席 2 格同源）——若实战读数差，`pool-add --retire` 随时撤；下一臂若要修，方向是 TZT2D 底 + steps/lr 减剂量（机制未证，先记档不跑）。
+
+## 十二、通宵班（11-21 22:05 → 11-22 02:3x）：B 线精配回放破局 + 训练判例群
+
+### 12.1 B 线（74 盲扫批）战果：29 枚入账（台账 416→382→388 内含 v13 时序，终值见台账）
+
+- **server 子集 7 批全处理**：v17×7、v15×6、fgtA×5、fgtB×5、v13×5、v16×6 = **29 枚逐位**；miss 残账：fgtA-35/fgtB-34（单 seed 配置差）、v13-105/106（我清孤儿服务器误伤，补扫中）、fstA×6（**会话编辑中态**：批时 14:09 在跑未提交的 v1.5.15 改动（14:38 才提交），两 era 试尽归档）。
+- **era 判例第三形态**：特征提交落在批前 ±10 分钟内的批，era=该**特征提交本体**（fgtB=31310c26 哨声惩罚、v16=66fc7fa0 罚关闭形态——提交信息里写着「v16 那 6 个 seed 是在惩罚关闭下跑的」）；after_commits[0]（批后提交）一律不对。
+- **env 注入能力落地**：sweep 驱动加 `env` 列（KEY=VAL;…），会话原文旋钮（EPIRUS_FIGHT_WHISTLE/DEAL）直接进驱动；fstA 判例：EPIRUS_FIGHT_FIRST 在 era 代码无接线（静默空操作）。
+- **v7* CLI 批（62 批）= 移交能力项**：train-3p 时代，需 era worktree+CLI 回放；e68ffc09 命中 24 批上下文、7134b299 命中 6 批（原始命中见 $TEMP/mine-e68.txt / mine-7134.txt，需固化为仓库文件）。
+- 基础设施教训：陈旧 server 残响（fgtB-34/35/36 = fgtA-32/33/34 逐位同 wid、fstA 全 BASE）⇒ 跨批重扫前必杀 8906/8921 口孤儿；单行任务表禁用 shard=1（k%1 恒 0 过滤成空）。
+
+### 12.2 训练判例群（A 线/C 线，全部入 TRAINING-RUN-LOG）
+
+- **A1 armor 四臂书面裁定**：armor 的 guardSet 反弹族行为与 F 门（主动还手率）**结构性互斥**（EQ-S4-E9 底压 G5、TZT2D 底压 F，均与剂量无关）→ X2b-fuse 暂留占位；后继路线 ① PG 补标签 ② F 门语义裁定留用户。armorPick 教师代码保留可用。
+- **A2/A3 淘汰**：cannon 臂 F+G4[multi] 双阻断；r10b G4[multi] 84% 劣化——**专科 supfit 扰动系统性翻 F/G4[multi]**（底座自过、教学必翻其一），multi 只枪格在三臂间 49.7/76.3/84 高方差骑线。
+- **C1 负结果**：短程 PG（1500 局 24s）+ klW=0.12 抬不了强（arenaB -30.4→-45.5 反漂）——风格多样 hard 载体 = **长程 PG（小时级）算力项**移交。
+
+### 12.3 C 线（用户风格多样性令）：地形图 + 口径 v2 + 量具修复
+
+- 风格地形图（27 枚同夹具 coverage 向量，scratch/style-distance.mjs）：hard 带 11/13 挤同质核；**九条空轴**（tank/transfer/laserEye/holo/ring/curse/shift/bigT/proto）池均值合计 <10%。
+- **带划分口径 v2 落册**（441d55af，用户裁定）：强度+池配合+风格离散度三因子；风格多样性臂目标升格为进 hard 带拉开距离。
+- 量具：probe-round1-open 修复（沙箱缺 policy2.js 装载，已入仓待提交）；hard 带池对局基线存档（probe-pool，allSameGames 0/840）；**池配合量具（跨席组合出现率）= 新工具项待建**。
+- 留观：X2b-fuse（-87.2pt）是全池最外围独占风格位（0.94），撤换时需接盘者，否则 hard 更同质。
+
+### 12.4 池变动
+
+- **nov21-rod-tzt2d-r10 入池**（用户 21:1x 点名，人席 2 格原话在案）：池 26→**27**（hard 13 / soft 14），rod 覆盖 0→1（Stage1 17/120 格 / 151 次）。r10b 劣化未替换。
