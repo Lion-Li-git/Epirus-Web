@@ -207,3 +207,35 @@
 ### 12.4 池变动
 
 - **nov21-rod-tzt2d-r10 入池**（用户 21:1x 点名，人席 2 格原话在案）：池 26→**27**（hard 13 / soft 14），rod 覆盖 0→1（Stage1 17/120 格 / 151 次）。r10b 劣化未替换。
+
+## 十三、夜班延长段（11-22 02:3x → 09:00，用户令「长时训练方向开工 + 发散探索训练方法」）
+
+### 13.1 方法账核查（§15/§21 合规，跑前必查）
+
+- 已有结论不许重证：C1 判例（短程 PG 24s 抬不了强反而漂差，长程才是算力项）；§148.5（PG 必须模式门控 KL，先 selftest3）；klTilt 机制已有（11-14 breadth 补课判例：倾斜锚抬弱键份额）——**新应用**=把倾斜锚当风格轴方向盘（bang 向空轴/自身签名轴），机制未在风格轴上测过。
+- selftest3 六腿全绿过 `night2-E1-det-strong`（16561 参数，腿 C 1465 判定最坏误差 0）⇒ PG 臂允许开。
+
+### 13.2 Wave1 三长程臂（02:0x 点火，全部后台 harness，segEvery=50000）
+
+| 臂 | 配方 | 假设 |
+|---|---|---|
+| `nov22-c2a-freeze-long` | E1 底 + klW=0.12 + klModes=multi,long + games=500k + lr=1e-4 + C1 同 arena（3 真强包+aggro,wall） | C1 纯时程放大（1500→500k，333×）：长程能否把「锚风格」和「抬强度」同时拿到 |
+| `nov22-c2b-tilt-long` | 同上 + klTilt=curse,bigT,firestorm mul=2 | 倾斜锚当**风格方向盘**：把 E1 自身签名轴（池均值近空轴）再放大，风格距离与强度同涨 |
+| `nov22-c2c-synergy` | 同 c2a 但 arenaPool=hard 带 8 强真包席、games=300k | 强度对手=hard 带成员本体（口径 v2 第二因子进训练桌）：对着要进的带练 |
+
+- **配速裁定**：三臂并发实测 ~14.5 局/s（C1 单跑 62/s，并发抢内存带宽）⇒ 500k 全程 ~9.5h 超班内预算。裁定：**seg 快照为评估节点**（segEvery 机制本来的用途——PG 后段漂移、多节点筛选），08:00 用最新 seg 评估，剩余 kill 不心疼。
+- C2c 首发败因：`pack:nov21-taunt-dsp0` registry id 不在册（pool 表 id ≠ registry id）⇒ 改显式路径重发成功。判例：**arenaPool pack 席用文件路径最稳**。
+
+### 13.3 池配合量具 v0 落成 + 基线读数（900 局/桌，multi+long，3 seeds）
+
+工具：`scratch/pool-synergy-meter.mjs`——roster-lib 真包席 + duelAssembly onTurn 钩子（引擎实际解析的 actions）+ damage 事件；T1=hard 核 5 枚固定桌 vs T2=hard 核 3 枚+X2b-fuse+rod r10 固定桌，同 seed 配对。基线存档 `scratch/v7-mined/pool-synergy-baseline.tsv`。
+
+| 指标 | T1 hard 核 | T2 混风格 | 判读 |
+|---|---|---|---|
+| 空轴触达率 | **1.0%**（bigT 8 + curse 1 / 900 局） | **11.9%**（tank 39/c curse 43/ring 14/transfer 3） | **+10.9pt**：风格多样性在池层面直接控制桌层面行为多样性 |
+| 用卡熵 | 1.540 nats | 1.725 nats | +0.185 nats |
+| 集中火率 | 100% | 100% | **饱和不判别**（FFA 下 ≥2 source 打同一人恒真）——v1 要换成集中度 HHI / 逐受害者 source 数分布 |
+| 挑衅联动 | 1/1 | 0/1 | taunt 专家 900 局只 taunt 1 次（0.1%）——**「风格」要看桌局行为不能看包名**（taunt-dsp0b 的 taunt 在真桌上基本不开） |
+| 胜者分布 | taunt-dsp0b 33.4% 领跑 | X2b-fuse 9.2%、rod 4.9%、draw 13 | 风格成员弱但不为零；gun>curse/curse>gun 共现对出现 |
+
+**支撑口径 v2**：全同质 hard 桌局九空轴≈死轴（1%）；混风格桌空轴活过来（11.9%）。hard 带风格拉开距离 = 桌局配合多样性的直接杠杆。
