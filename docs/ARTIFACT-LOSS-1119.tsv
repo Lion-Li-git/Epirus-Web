@@ -59,12 +59,12 @@ eco-34	docs/artifacts/eco-34.bak	ok
 eco-34-v7	docs/artifacts/eco-34-v7.bak	sha-diff-wid-same	f91af5f6193b6a815ed8ae6812c12609256346ab4b0b531ff651f7c2926194a5
 eco-35	docs/artifacts/eco-35.bak	ok	
 eco-36	docs/artifacts/eco-36.bak	missing	
-eco2-31	docs/artifacts/eco2-31.bak	missing	
-eco2-32	docs/artifacts/eco2-32.bak	missing	
-eco2-33	docs/artifacts/eco2-33.bak	missing	
-eco2-34	docs/artifacts/eco2-34.bak	missing	
-eco2-35	docs/artifacts/eco2-35.bak	missing	
-eco2-36	docs/artifacts/eco2-36.bak	missing	
+eco2-31	docs/artifacts/eco2-31.bak	ok	
+eco2-32	docs/artifacts/eco2-32.bak	ok	
+eco2-33	docs/artifacts/eco2-33.bak	ok	
+eco2-34	docs/artifacts/eco2-34.bak	ok	
+eco2-35	docs/artifacts/eco2-35.bak	ok	
+eco2-36	docs/artifacts/eco2-36.bak	ok	
 EL0	docs/artifacts/eval-out/win-EL0.bak	sha-diff-wid-same	6519cabb10222ca2f0da3809c20cebe63e6dc0d8325a622fbbbb4893b20f2fdc
 fgtA-31	docs/artifacts/fgtA-31.bak	missing	
 fgtA-32	docs/artifacts/fgtA-32.bak	missing	
@@ -283,12 +283,12 @@ v13-104	docs/artifacts/v13-104.bak	missing
 v13-105	docs/artifacts/v13-105.bak	missing	
 v13-106	docs/artifacts/v13-106.bak	missing	
 v13-31	docs/artifacts/v13-31.bak	missing	
-v14-111	docs/artifacts/v14-111.bak	missing	
-v14-112	docs/artifacts/v14-112.bak	missing	
-v14-113	docs/artifacts/v14-113.bak	missing	
-v14-114	docs/artifacts/v14-114.bak	missing	
-v14-115	docs/artifacts/v14-115.bak	missing	
-v14-116	docs/artifacts/v14-116.bak	missing	
+v14-111	docs/artifacts/v14-111.bak	ok	
+v14-112	docs/artifacts/v14-112.bak	ok	
+v14-113	docs/artifacts/v14-113.bak	ok	
+v14-114	docs/artifacts/v14-114.bak	ok	
+v14-115	docs/artifacts/v14-115.bak	ok	
+v14-116	docs/artifacts/v14-116.bak	ok	
 v14-31	docs/artifacts/v14-31.bak	sha-diff-wid-same	c06f65f4db683530f41efa31d23e1488b4d742284d426397a2c0fd989915a8ac
 v15-121	docs/artifacts/v15-121.bak	missing	
 v15-122	docs/artifacts/v15-122.bak	missing	
@@ -347,8 +347,8 @@ v7b-43	docs/artifacts/v7b-43.bak	missing
 v7b-44	docs/artifacts/v7b-44.bak	missing	
 v7b-45	docs/artifacts/v7b-45.bak	missing	
 v7b-46	docs/artifacts/v7b-46.bak	missing	
-v7b-47	docs/artifacts/v7b-47.bak	missing	
-v7b-48	docs/artifacts/v7b-48.bak	missing	
+v7b-47	docs/artifacts/v7b-47.bak	ok	
+v7b-48	docs/artifacts/v7b-48.bak	ok	
 v7bead1-31	docs/artifacts/v7bead1-31.bak	missing	
 v7bead1-93	docs/artifacts/v7bead1-93.bak	ok	
 v7bead100-31	docs/artifacts/v7bead100-31.bak	missing	
