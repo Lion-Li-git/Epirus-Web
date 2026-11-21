@@ -4,11 +4,11 @@ B-s64	docs/artifacts/e513-out/B-s64.js	sha-diff-wid-same	1e79ae98ad131a16cbce595
 B0-111	docs/artifacts/e66-out/B0-111.bak	sha-diff-wid-same	8a77c067a507a87999686bf47eb01f869ad652bd14eb24342fedd84c3a2d5b12
 B0-31	docs/artifacts/e66-out/B0-31.bak	ok	
 B0L-31	docs/artifacts/e66-out/B0L-31.bak	sha-diff-wid-same	9d5bcdde1aed4b7afd216ec99ba61583396465c896f8501c4529ff54e7b7c7b7
-B0L-71	docs/artifacts/e66-out/B0L-71.bak	missing	
-B1	docs/artifacts/e234-out/B1.js	missing	
-B2	docs/artifacts/e234-out/B2.js	missing	
+B0L-71	docs/artifacts/e66-out/B0L-71.bak	ok	
+B1	docs/artifacts/e234-out/B1.js	ok	
+B2	docs/artifacts/e234-out/B2.js	ok	
 B5-05-31	docs/artifacts/kept/e100-out__B5-05-31.bak	ok	
-B5-05-71	docs/artifacts/e100-out/B5-05-71.bak	missing	
+B5-05-71	docs/artifacts/e100-out/B5-05-71.bak	ok	
 B5-10-31	docs/artifacts/e100-out/B5-10-31.bak	ok	
 B5-10-71	docs/artifacts/kept/e100-out__B5-10-71.bak	ok	
 BIG0	docs/artifacts/e234-out/BIG0.js	sha-diff-wid-same	875f7156a377628b24b338d8e851dacd1fa4a7f02aff0923b27ac4c2a08436f3
@@ -24,12 +24,12 @@ D005-71	docs/artifacts/e70-out/D005-71.bak	ok
 D02-71	docs/artifacts/e70-out/D02-71.bak	sha-diff-wid-same	80ada17d9a6f5c72ff36274b0f46b330093b65d7e3ec5634be5aa7db58705890
 D05-31	docs/artifacts/e70-out/D05-31.bak	sha-diff-wid-same	4df28c84224635aa59e1a959bcabc22b44e685d1cf775f38a3aa8487a61ccf31
 D1a	docs/artifacts/e68-out/V1-31.bak	sha-diff-wid-same	1abe9c480436bb673480770565708ebf6cd4796b693160feda919a8b76ffd274
-D2a	docs/artifacts/e234-out/D2a.js	missing	
-D3a	docs/artifacts/e234-out/D3a.js	missing	
+D2a	docs/artifacts/e234-out/D2a.js	ok	
+D3a	docs/artifacts/e234-out/D3a.js	ok	
 D4a	docs/artifacts/e234-out/D4a.js	ok	
-D6a	docs/artifacts/e234-out/D6a.js	missing	
-D7a	docs/artifacts/e234-out/D7a.js	missing	
-D8a	docs/artifacts/e234-out/D8a.js	missing	
+D6a	docs/artifacts/e234-out/D6a.js	ok	
+D7a	docs/artifacts/e234-out/D7a.js	ok	
+D8a	docs/artifacts/e234-out/D8a.js	ok	
 def-31	docs/artifacts/def-31.bak	ok	
 def-32	docs/artifacts/def-32.bak	ok	
 def-33	docs/artifacts/def-33.bak	ok	
@@ -38,13 +38,13 @@ def-35	docs/artifacts/def-35.bak	ok
 def-36	docs/artifacts/def-36.bak	ok	
 E00-31	docs/artifacts/e85-out/E00-31.bak	ok	
 E00-71	docs/artifacts/e85-out/E00-71.bak	ok	
-E1	docs/artifacts/e234-out/E1.js	missing	
+E1	docs/artifacts/e234-out/E1.js	ok	
 E10-31	docs/artifacts/kept/e85-out__E10-31.bak	ok	
-E2	docs/artifacts/e234-out/E2.js	missing	
+E2	docs/artifacts/e234-out/E2.js	ok	
 E20-31	docs/artifacts/e85-out/E20-31.bak	ok	
 E20-71	docs/artifacts/e85-out/E20-71.bak	ok	
 E3	docs/artifacts/e234-out/E3.js	ok	
-e35prod807	docs/artifacts/E35-prod-807.bak	missing	
+e35prod807	docs/artifacts/E35-prod-807.bak	ok	
 e35prod814	docs/artifacts/E35-prod-814.bak	ok	
 e39ctl911	docs/artifacts/E39-ctl-911.bak	ok	
 E51-t8-713	docs/artifacts/kept/artifacts__E51-t8-713.bak	ok	
@@ -97,19 +97,19 @@ H-s103	docs/artifacts/e518-out/H-s103.js	ok
 H-s84	docs/artifacts/e518-out/H-s84.js	ok	
 H-s85	docs/artifacts/e518-out/H-s85.js	ok	
 H-s95	docs/artifacts/e518-out/H-s95.js	ok	
-HF-191	docs/artifacts/e116-out/HF-191.bak	missing	
+HF-191	docs/artifacts/e116-out/HF-191.bak	ok	
 K-s63	docs/artifacts/e513-out/K-s63.js	ok	
-K1	docs/artifacts/e234-out/K1.js	missing	
+K1	docs/artifacts/e234-out/K1.js	ok	
 K2	docs/artifacts/kept/e70-out__D02-31.bak	ok	
-K4	docs/artifacts/e234-out/K4.js	missing	
+K4	docs/artifacts/e234-out/K4.js	ok	
 K5	docs/artifacts/e68-out/V1-71.bak	sha-diff-wid-same	11b1fc4a5bc8630ee0b59f89efaae1662bd3ab6a9a2c97279ab6eb86981e5f16
 K6	docs/artifacts/e70-out/D05-71.bak	sha-diff-wid-same	df28597080bc9e4765865a16bb9b5f06231a0ee8e3922447a34c1bcc275ae59c
 L02-31	docs/artifacts/e71-out/L02-31.bak	ok	
 L02-71	docs/artifacts/e71-out/L02-71.bak	ok	
 L05-71	docs/artifacts/e71-out/L05-71.bak	sha-diff-wid-same	1ede2c0b693f8fee5aaa4b4ae80f6dfb41548a002672c0dcd760cfacd2488efd
-L111	docs/artifacts/eval-out/win-L111.bak	missing	
-L151	docs/artifacts/eval-out/win-L151.bak	missing	
-L191	docs/artifacts/eval-out/win-L191.bak	missing	
+L111	docs/artifacts/eval-out/win-L111.bak	ok	
+L151	docs/artifacts/eval-out/win-L151.bak	ok	
+L191	docs/artifacts/eval-out/win-L191.bak	ok	
 L71	docs/artifacts/eval-out/win-L71.bak	sha-diff-wid-same	e5b92f1f0aa107b81c18b098eb1056e1d47e4f8460b034be7232189a61e4caa1
 Lctl	docs/artifacts/eval-out/win-Lctl.bak	sha-diff-wid-same	48bf44c327937f777fa3ca0149d73e88a2705866b13ac573b83e19f50001ee69
 Ldemo	docs/artifacts/eval-out/win-Ldemo.bak	ok	
@@ -129,9 +129,9 @@ mix-33	docs/artifacts/mix-33.bak	ok
 mix-34	docs/artifacts/mix-34.bak	ok	
 mix-35	docs/artifacts/mix-35.bak	ok	
 mix-36	docs/artifacts/mix-36.bak	ok	
-N5-0	docs/artifacts/e95-out/N5-0.bak	missing	
+N5-0	docs/artifacts/e95-out/N5-0.bak	ok	
 N5L-05	docs/artifacts/kept/e120-out__N5L-05.bak	ok	
-N5L-15	docs/artifacts/e106-out/N5L-15.bak	missing	
+N5L-15	docs/artifacts/e106-out/N5L-15.bak	ok	
 N5L-30	docs/artifacts/e106-out/N5L-30.bak	ok	
 NC-191	docs/artifacts/e75-out/NC-191.bak	ok	
 NC-231	docs/artifacts/e75-out/NC-231.bak	ok	
@@ -161,13 +161,13 @@ R-s107	docs/artifacts/e521-out/R-s107.js	ok
 R-s120	docs/artifacts/e521-out/R-s120.js	ok	
 R-s123	docs/artifacts/e521-out/R-s123.js	ok	
 R-s129	docs/artifacts/e521-out/R-s129.js	ok	
-R1	docs/artifacts/e234-out/R1.js	missing	
-R231	docs/artifacts/eval-out/win-R231.bak	missing	
-R271	docs/artifacts/eval-out/win-R271.bak	missing	
+R1	docs/artifacts/e234-out/R1.js	ok	
+R231	docs/artifacts/eval-out/win-R231.bak	ok	
+R271	docs/artifacts/eval-out/win-R271.bak	ok	
 R311	docs/artifacts/eval-out/win-R311.bak	ok	
-R351	docs/artifacts/eval-out/win-R351.bak	missing	
-R391	docs/artifacts/eval-out/win-R391.bak	missing	
-R431	docs/artifacts/eval-out/win-R431.bak	missing	
+R351	docs/artifacts/eval-out/win-R351.bak	ok	
+R391	docs/artifacts/eval-out/win-R391.bak	ok	
+R431	docs/artifacts/eval-out/win-R431.bak	ok	
 r61fix-31	docs/artifacts/r61fix-31.bak	missing	
 r61fix-81	docs/artifacts/r61fix-81.bak	missing	
 r61fix-82	docs/artifacts/r61fix-82.bak	missing	
@@ -188,7 +188,7 @@ S-s114	docs/artifacts/e521-out/S-s114.js	ok
 S-s120	docs/artifacts/e521-out/S-s120.js	ok	
 S71	docs/artifacts/e234-out/S71.js	ok	
 seed80	docs/artifacts/eval-out/sel80.bak	ok	
-seed81	docs/artifacts/eval-out/sel81.bak	missing	
+seed81	docs/artifacts/eval-out/sel81.bak	ok	
 seedtest2-41	docs/artifacts/seedtest2-41.bak	ok	
 SLOT-033c7601	docs/artifacts/e370-out/033c7601-v7.js	ok	
 SLOT-03749abc	docs/artifacts/e370-out/03749abc-v7.js	ok	
@@ -242,8 +242,8 @@ U-s205	docs/artifacts/e539-out/U-s205.js	ok
 U-s209	docs/artifacts/e539-out/U-s209.js	ok	
 U-s212	docs/artifacts/e539-out/U-s212.js	ok	
 U-s216	docs/artifacts/e539-out/U-s216.js	ok	
-U1	docs/artifacts/e234-out/U1.js	missing	
-U2	docs/artifacts/e234-out/U2.js	missing	
+U1	docs/artifacts/e234-out/U1.js	ok	
+U2	docs/artifacts/e234-out/U2.js	ok	
 V-s302	docs/artifacts/e551-out/V-s302.js	ok	
 V-s306	docs/artifacts/e551-out/V-s306.js	ok	
 V-s310	docs/artifacts/e551-out/V-s310.js	ok	
@@ -263,7 +263,7 @@ v11-73	docs/artifacts/v11-73.bak	ok
 v11-74	docs/artifacts/v11-74.bak	ok	
 v11-75	docs/artifacts/v11-75.bak	ok	
 v11-76	docs/artifacts/v11-76.bak	ok	
-V111	docs/artifacts/e234-out/V111.js	missing	
+V111	docs/artifacts/e234-out/V111.js	ok	
 v12-81	docs/artifacts/v12-81.bak	ok	
 v12-82	docs/artifacts/v12-82.bak	ok	
 v12-83	docs/artifacts/v12-83.bak	ok	
@@ -296,7 +296,7 @@ v15-123	docs/artifacts/v15-123.bak	missing
 v15-124	docs/artifacts/v15-124.bak	missing	
 v15-125	docs/artifacts/v15-125.bak	missing	
 v15-126	docs/artifacts/v15-126.bak	missing	
-V151	docs/artifacts/e234-out/V151.js	missing	
+V151	docs/artifacts/e234-out/V151.js	ok	
 v16-131	docs/artifacts/v16-131.bak	missing	
 v16-132	docs/artifacts/v16-132.bak	missing	
 v16-133	docs/artifacts/v16-133.bak	missing	
@@ -310,9 +310,9 @@ v17-144	docs/artifacts/v17-144.bak	missing
 v17-145	docs/artifacts/v17-145.bak	missing	
 v17-146	docs/artifacts/v17-146.bak	missing	
 v17-31	docs/artifacts/v17-31.bak	missing	
-V191	docs/artifacts/e234-out/V191.js	missing	
+V191	docs/artifacts/e234-out/V191.js	ok	
 V2-31	docs/artifacts/e68-out/V2-31.bak	ok	
-V71	docs/artifacts/e234-out/V71.js	missing	
+V71	docs/artifacts/e234-out/V71.js	ok	
 v7a-31	docs/artifacts/v7a-31.bak	ok	
 v7a-32	docs/artifacts/v7a-32.bak	sha-diff-wid-same	c84cdc1924a1d1857290b5cbb975045c8e9111a09efea0cf9f95870e675a9631
 v7a-33	docs/artifacts/v7a-33.bak	sha-diff-wid-same	1be9e3bf044917ca0b74fe836f527352b0f3d91653c5900a4d52906c8bfc9677
@@ -790,9 +790,9 @@ v9-43	docs/artifacts/v9-43.bak	ok
 v9-44	docs/artifacts/v9-44.bak	ok	
 v9-45	docs/artifacts/v9-45.bak	ok	
 v9-46	docs/artifacts/v9-46.bak	ok	
-W31	docs/artifacts/e234-out/W31.js	missing	
-W71	docs/artifacts/e234-out/W71.js	missing	
-X1	docs/artifacts/e234-out/X1.js	missing	
+W31	docs/artifacts/e234-out/W31.js	ok	
+W71	docs/artifacts/e234-out/W71.js	ok	
+X1	docs/artifacts/e234-out/X1.js	ok	
 e1-teach-77003		no-path	
 e1-ctl-77000		no-path	
 e2-grad-77002		no-path	
