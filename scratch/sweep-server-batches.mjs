@@ -123,7 +123,9 @@ for (const j of mine) {
     }
     /* ---- 阶段 2：全批扫 ---- */
     const era = verifiedEra || eraCands[0];
-    const altEras = eraCands.filter((e) => e !== era);
+    /* 盲扫批（无幸存者）只扫 1 个 era 候选：今晚实测 v7 系盲扫两 era 全 miss 率 100%，
+     * 第二候选纯烧算力——等配方账 env 精配的 wave4 再回来（11-21 12:5x 裁定） */
+    const altEras = j.calibWid ? eraCands.filter((e) => e !== era) : [];
     for (let ec = 0; ec < 1 + (j.calibWid ? 0 : Math.min(altEras.length, 1)); ec++) {
       const e2 = ec === 0 ? era : altEras[ec - 1];
       const wt = runBatch(j, e2, j.seeds.filter(Boolean).join(','), ec > 0);
