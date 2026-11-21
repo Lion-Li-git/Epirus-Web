@@ -6,6 +6,7 @@ E3	pass	—
 night2-E1-det-strong	pass	—			
 night2-X2b-fuse	pass	—			
 nov21-purify-dsp0	pass	—			
+nov21-rod-tzt2d-r10	pass	—			
 R-s123	pass	—			
 S-s120	pass	—			
 T8-s114	pass	—			
@@ -14,6 +15,7 @@ night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手�
 night2-S3	block	G5/long 清不了防席（它夺冠 28%） · G5/multi 清不了防席（它夺冠 61%）		61	
 night2-S6	block	G5/long 清不了防席（它夺冠 26%）		26	
 night2-X5-cannonT	block	F 被集火还手率 2.2% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕 · 行为门未过：G4[scratch/arms/night2-X5-cannonT/long] 无一行脚本能以 >60% 击 · G4/multi 被一行脚本打穿 94%	94		
+nov21-mirror-dsp0	block	行为门未过：G4[scratch/arms/nov21-mirror-dsp0/multi] 无一行脚本能以 >60%  · G5/long 清不了防席（它夺冠 50%）		50	
 nov21-taunt-dsp0b	block	G5/long 清不了防席（它夺冠 29%）		29	
 B5-10-31	pass	—			
 blk0t40-s31	pass	—			
