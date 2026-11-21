@@ -31,7 +31,7 @@ D6a	docs/artifacts/e234-out/D6a.js	missing
 D7a	docs/artifacts/e234-out/D7a.js	missing	
 D8a	docs/artifacts/e234-out/D8a.js	missing	
 def-31	docs/artifacts/def-31.bak	ok	
-def-32	docs/artifacts/def-32.bak	missing	
+def-32	docs/artifacts/def-32.bak	ok	
 def-33	docs/artifacts/def-33.bak	ok	
 def-34	docs/artifacts/def-34.bak	ok	
 def-35	docs/artifacts/def-35.bak	ok	
@@ -53,12 +53,12 @@ E59-land-902	docs/artifacts/E59-land-902.bak	ok
 E59-land-903	docs/artifacts/e59-out/E59-land-903.bak	sha-diff-wid-same	10eecb4e6adf432275419b60dfd226fad70325eb35f67196119d39d25c00a683
 E59-seq-902	docs/artifacts/e59-out/E59-seq-902.bak	sha-diff-wid-same	5c778b932efac96a2a6a86f188b030db00780c3571fdcbd8bd96c4fb8de23e82
 eco-31	docs/artifacts/eco-31.bak	ok	
-eco-32	docs/artifacts/eco-32.bak	missing	
+eco-32	docs/artifacts/eco-32.bak	ok	
 eco-33	docs/artifacts/eco-33.bak	ok	
 eco-34	docs/artifacts/eco-34.bak	ok	
 eco-34-v7	docs/artifacts/eco-34-v7.bak	sha-diff-wid-same	f91af5f6193b6a815ed8ae6812c12609256346ab4b0b531ff651f7c2926194a5
 eco-35	docs/artifacts/eco-35.bak	ok	
-eco-36	docs/artifacts/eco-36.bak	missing	
+eco-36	docs/artifacts/eco-36.bak	ok	
 eco2-31	docs/artifacts/eco2-31.bak	ok	
 eco2-32	docs/artifacts/eco2-32.bak	ok	
 eco2-33	docs/artifacts/eco2-33.bak	ok	
@@ -424,8 +424,8 @@ v7densE-31	docs/artifacts/v7densE-31.bak	missing
 v7densE-81	docs/artifacts/v7densE-81.bak	missing	
 v7densE-82	docs/artifacts/v7densE-82.bak	missing	
 v7divK-31	docs/artifacts/v7divK-31.bak	ok	
-v7divK-81	docs/artifacts/v7divK-81.bak	missing	
-v7divK-82	docs/artifacts/v7divK-82.bak	missing	
+v7divK-81	docs/artifacts/v7divK-81.bak	ok	
+v7divK-82	docs/artifacts/v7divK-82.bak	ok	
 v7divK2-81	docs/artifacts/v7divK2-81.bak	missing	
 v7divK2-82	docs/artifacts/v7divK2-82.bak	missing	
 v7divK2b-82	docs/artifacts/v7divK2b-82.bak	ok	
