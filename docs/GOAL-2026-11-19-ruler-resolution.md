@@ -47,3 +47,12 @@
 
 - 每次池/图改动后跑：`node tools/map-audit.mjs`、`node champion-map/rebuild-map.mjs`、`node tools/np-test.mjs`。
 - 在提交信息里引用本文件；状态变化回写本节。
+
+## 用户裁定 · 带划分口径 v2（2026-11-21 23:4x）
+
+1. **带分配三因子**：强度（arenaB/前线）只是其一；**池对局配合**（多人局组合效应）与**风格离散度**必须同看——单看包强度定带不成立，因为多人局会出现配合（蓄能→电磁炮、藤甲+转移、环+集火等组合），而组合只在风格异质的池里出现。
+2. **hard 带同质化实锤**（style-distance.mjs，fx-pool1119a 同夹具）：hard 13 枚全部挤在风格同质核（L1 到池质心 0.16–0.24），ji/gun/sword/reflect/snipe 五轴占 66%；**tank/transfer/laserEye/holo/ring/curse/shift/bigT/proto 九轴池均值合计 <10%**。全同质 hard 带抽出的桌局天然抑制配合出现。
+3. **后续动作**：
+   - 量测协议：`probe-pool --tier=hard` 跑池对局基线（开局脚本分布 / 非ジ协作组合出现率 / 各技能实际使用），对照混风格合成桌（hard 核 + 外围 soft 混抽）看配合是否出现；
+   - 训练侧：风格多样性臂（空轴教师：lasereye/drain/transfer2/ringEcon/ration6b 系）的目标是**进 hard 带可行**（过 promote 地板），把 hard 带风格距离拉开——新成员入 hard 时参考其到 hard 质心的 L1 距离，同簇超额成员缓入；
+   - 待退役的 `night2-X2b-fuse`（全池最外围风格位 0.94）撤换时**其风格位需要有接盘者**，否则 hard 带进一步同质化。
