@@ -1,0 +1,500 @@
+size_kb 30480 ‖ 批名 74
+===== fgtA : 0
+===== fgtB : 0
+===== fstA : 0
+===== v7aim1 : 0
+===== v7curri2 : 1
+(1 call), then edit+commit (1-2 calls), then report.
+
+Hmm, context is a real concern. Let me trim: run 体检 on ONE product (curri2-82, the most balanced) — enough for criterion ③/④.
+
+Let me do it, then record."},{"type":"tool-call","id":"call_00_tVuYrJAHWW67Y9LTJ57v3297","name":"pwsh","arguments":"{\"command\": \"node tools/promote-champion.mjs docs/artifacts/v7curri2-82.bak --dry --skip-gate-drafts 2>&1 | Select-String -Pattern '可行性|输出密度|功能角色' | ForEach-Object { $_.Line }\", \"description\": \"Health audit on best only-target product\", \"timeoutMs\": 600000, \"workdir\": \"D:\\\\code\\\\Epirus-Web\"}"}],"source":
+---
+===== v7fix1 : 2
+）身份：`v7new5_005-31`（sha1 268461f7c9f0 的继任，重记后仍是同权重），行为门 G4/G5 全过、差 F 还手 15%(&lt;20，--force 越过过)、墙 0.35、珠经济未闭环。
+- 环境事实：训练进行中 `promote-champion` 会因 `.training.lock` 拒跑；`gate-landscape` 在训练中整行 `—` 是保护；失败标记是 `?` 不是 `?`；`EPIRUS_*` 字面名只许出现在 server/econ-env.mjs（D77）；D82 要等臂跑完再列全产物名；比权重只比 a/f/fa/h 段；`autoGameN` 不能从中途续跑（要 `probe-ring-value.mjs` 的 `resumeN`）。
+- 待办：① 对 `v7fix1-82/-91` 跑 n=120 的 G4/G5（决定能否换掉过渡态）；② 把 B 臂结论回写（\"去掉教师才出强包\"是否成立）；③ 用户裁定\"伤害总数\"的多目标读法；④ 我的顺序清单剩余：把可玩性三栏（击杀归属/出手种类/ジ占比）接进 champ-audit、做 E4（挡伤害计分）、把 G 从门槛升格为收益项/强制轮换 divForceGens（推迟到目标函数改好之后）。
+
+That's a solid summary. Let me compress those three ranges.
+---
+5** 未变）· 2P 重记（**94.74% / 最差基准 72.50% 过门**）；**np-test 147/147 全绿**（D8/D16/D67/D82/D99 全绿）· spec **43/43** · smoke OK。`results/*` 仍未提交（用户自己的文件，按 D26 不动）。\
+\
+■ 刚跑完的两臂（job pwsh-1 已完成；同 seed 可与现包配对）\
+- **A) `v7fix1`**（修正特征后重训：FRAC=0.5 真示范 + CLEAR_W=0.05 + DIV_W=0.3 + 训练侧座位探针 24 局 + gunspam 池，seed 31/81/82/91/92/93）：A卷均值 **41.3%**（现包 47.6% ? ?6.3pt）；**五道门 2/6 过**：`v7fix1-82`（座位 28.7pt · G 4.77 · 墙 7.2 · 场A 31% · 场B 1.98，且**珠经济闭环** ?得珠105/花珠率0.914）· `v7fix1-91`（座位 13.3pt · G 3.47 · 墙 16.7 · 场A 27% · 场B 1.05）。\
+- **B) `v7noteach1`**（`EPIRUS_IMIT_FRAC=0` 无真示范对照，验\\\"去掉教师才出强包\\\"）：A卷均值 **43.6%**；**五道门 0/6**。\
+? **行为门 G4/G
+---
+===== v7iso1 : 0
+===== v7new1 : 2
+t","text":"**重训结果不错**：A 卷 6 seed 均值 **49.7%**（旧规则同配方 48.6%）· **过门率 1/6**（`seed 31`：座位 **22.9pt**、`G` 4.03、**场B 清场 2.8/局**）。关键是它能不能过**行为门** G4/G5 —— 跑完整（n=120）体检："},{"type":"tool-call","id":"call_00_B5XtXTB4ruh53UECGoMG7761","name":"pwsh","arguments":"{\"command\": \"$env:GATE4_GAMES='120'; $env:GATE3_GAMES='20'\
+node tools/promote-champion.mjs docs/artifacts/v7new1-31.bak --dry --exam-first=0 2>&1 |\
+  Select-String -Pattern '可行性|G4/G5 行为门|行为门未过|体检未过|· 硬门槛|各类占比|技能广度|输出密度' | ForEach-Object { $_.Line } | Select-Object -First 12\", \"description\": \"Full audit of the retrained candidate\", \"timeoutMs\": 2400000, \
+---
+.5 · **零出手局 0%** · 零伤害局 0% ? 珠经济未闭环（按ジ攒了花不掉的东西 = 命门）
+   技能广度 S（n=1352 个非ジ出手 · 20 局自对局）：S=1.443 = 类间 0.979 + 类内 0.464 · S_norm=0.429（分母 ln 29 固定） · G_eff=4.23（= 历史\"有效技能数\"，同值） · 覆盖 3/4 类 · 最大单卡占比 39.3%
+     各类占比：energy(含空转/过期珠) 21.4% · attack 57.2% · special 21.3%   ? 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**
+   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：? G4[v7new1-31/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」83% · 基线 29%/120局）；G4[v7new1-31/multi] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」92% · 基线 17%/120局）；G5[v7new1-31/long] 面对\"只防御不还手\"必须能清场（实测防席夺冠 63% · 阈值 ≤25%）；G4[v7new1-31/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」83% · 基线 
+---
+===== v7new4 : 2
+只枪 **70%**（?13pt）、G5 仍红（48/41%）。
+- `v7new3`（gunspam 池 + R60 规则，基线）vs `v7new4`（+`EPIRUS_CLEAR_W=0.2`，只差一变量）：A 卷 **43.1% → 47.2%（+4.1pt）**、ringwall **39.6% → 50.4%（+10.8pt）**；五道门：v7new3 **2/6**（91、93）、v7new4 **0/6**（91 只差场B 0.00 但 G 9.65！92/93 卡 G 或座位）。
+- 每臂 6 seed 实测 **~10.3 / 10.7 分钟**（用户纠正了 40~60 分钟的错估）。
+
+**进行中/下一步（本块之后）**：v7new3/v7new4 的 **G4/G5（n=120）** 还没测；`v7new4-91` 值得单测（G 9.65、座位 16.2pt、只差场B 0.00）。
+
+**D82 记账**：v7new3-81/-82 等**在跑时落盘**的产物当时未入账（我在 D82 红的情况下提交了 v1.5.112 那批，已在 CHANGELOG 注明\"随后补记\"）? **需要补全 v7new3-* 全部 6 个 + v7new4-* 全部 6 个的名字**。
+
+**环境/工具事实（避免重踩）**：① 训练臂运行中会把 `index.html`（与 bundle）**还原到起跑快照** ?
+---
+70%（?13pt）**、G5 仍红（48%/41%）。\
+- `v7new3`（gunspam 池 + R60 规则，**基线**）vs `v7new4`（**+`EPIRUS_CLEAR_W=0.2`，只差这一个变量**）：A 卷 **43.1% → 47.2%（+4.1pt）**、ringwall **39.6% → 50.4%（+10.8pt）**；五道门：`v7new3` **2/6**（`-91`、`-93` 全过）、`v7new4` **0/6**（`-91` 只差场B 0.00 但 **`G` 9.65**、座位 16.2pt）。\
+\
+■ 本段结束时**正在做/下一步**\
+- `v7new3`/`v7new4` 的 **G4/G5（`GATE4_GAMES=120`）尚未测**；优先单测 **`v7new4-91`**（`G` 9.65 · 座位 16.2pt · 只差场B 0.00）与 `v7new3-93`/`v7new3-91`。\
+- **D82 记账未补全**：`v7new3-*`（6 个）与 `v7new4-*`（6 个）需逐名写进 CHANGELOG（`v7new3-31` 已记；我曾在 D82 红的状态下提交 v1.5.112 那批，已在条目里注明\\\"随后补记\\\"）。\
+- 用户尚未裁定的剩余项：复核 §5 的 `nullAction` 统一根因（净化空转 / 重复埋雷 / 单
+---
+===== v7new5_01 : 2
+run both."},{"type":"text","text":"**扫描出结果了，而且有戏**：`CLEAR_W=0.1` 那臂出现了**五道全过**的产物（`v7new5_01-81`：座位 25.4pt · `G` 3.8 · 墙 2.2 · 场A 28% · **场B 清场 3.0**）—— 说明**广度与致死那道张力在中间权重下能让开**。立刻验行为门（n=120）："},{"type":"tool-call","id":"call_00_rtS92SnabZAqo70S5ii45761","name":"pwsh","arguments":"{\"command\": \"$env:GATE4_GAMES='120'; $env:GATE3_GAMES='20'\
+foreach ($a in @('v7new5_01-81','v7new5_005-31')) {\
+  Write-Host \\\"=== $a（n=120）\\\"\
+  node tools/promote-champion.mjs \\\"docs/artifacts/$a.bak\\\" --dry --exam-first=0 2>&1 |\
+    Select-String -Pattern 'G4/G5 行为门|行为门未过|可行性|各类占比|输出密度' | ForEach-Object { $_.Line } | Sel
+---
+密度/经济出口）：珠经济**未闭环**（花珠率 0，按ジ占比 0.538）? 记录不阻断 —— 连线上包都没过它（所以它现在没有判别力）
+   输出密度（20 局自对局）：每回合出手伤害 0.265 · 按ジ占比 53.8% · 伤害卡出手占比 27.0% · 出手 227.9/局 · 回合 87.0 · **零出手局 0%** · 零伤害局 0% ? 珠经济未闭环（按ジ攒了花不掉的东西 = 命门）
+     各类占比：attack 61.0% · energy(含空转/过期珠) 18.4% · defense 20.7%   ? 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**
+   G4/G5 行为门（第七轮复核 §15-1，**只判候选自己**）：? G4[v7new5_01-81/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」97% · 基线 17%/120局）；G4[v7new5_01-81/multi] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」98% · 基线 21%/120局）；G4[v7new5_01-81/long] 无一行脚本能以 >60% 击败它（最克「只枪(1ジ压制·打最肥)」97% · 基线 17%/120局）；G4[v7new5_01-81/multi] 无一行脚本能以 >60% 击败它（
+---
+===== v7new6 : 2
+7new6-94`：**只差场B 清场 0.28（门槛 0.3，差 0.02）**，其余全过（座位 13.2pt · `G` 4.2 · 墙 17.9 · 场A 31%），而且它的**珠经济闭环了**（整夜第一个）。? 按你\"不行就做 b\"，但在动手前我要先验它**行为门**（若过，它就是比 `v7new5_005-31` 更干净的 (B) 目标：只差 0.02 而不是两项）："},{"type":"tool-call","id":"call_00_35vggU1QC0sFRDcR1PBM4918","name":"pwsh","arguments":"{\"command\": \"$env:GATE4_GAMES='120'; $env:GATE3_GAMES='60'\
+foreach ($a in @('v7new6-94','v7new6-96','v7new6-97')) {\
+  Write-Host \\\"=== $a（n=120 · 场A/场B 用 60 局复测）\\\"\
+  node tools/promote-champion.mjs \\\"docs/artifacts/$a.bak\\\" --dry --exam-first=0 2>&1 |\
+    Select-String -Pattern '可行性|G4/G5 行为门' | ForEach-Object { $_.Line }
+---
+只差场B 清场 0.28（门槛 0.3，差 0.02）**，其余全过（座位 13.2pt · `G` 4.2 · 墙 17.9 · 场A 31%），而且它的**珠经济闭环了**（整夜第一个）。? 按你\"不行就做 b\"，但在动手前我要先验它**行为门**（若过，它就是比 `v7new5_005-31` 更干净的 (B) 目标：只差 0.02 而不是两项）："},{"type":"tool-call","id":"call_00_35vggU1QC0sFRDcR1PBM4918","name":"pwsh","arguments":"{\"command\": \"$env:GATE4_GAMES='120'; $env:GATE3_GAMES='60'\
+foreach ($a in @('v7new6-94','v7new6-96','v7new6-97')) {\
+  Write-Host \\\"=== $a（n=120 · 场A/场B 用 60 局复测）\\\"\
+  node tools/promote-champion.mjs \\\"docs/artifacts/$a.bak\\\" --dry --exam-first=0 2>&1 |\
+    Select-String -Pattern '可行性|G4/G5 行为门' | ForEach-Object { $_.Line } | Select-Ob
+---
+===== v7noteach1 : 0
+===== v7ringA1 : 1
+:## ★★★★ 01:57 实测：`EPIRUS_HOARD_LEFTOVER` 为什么\"像\"空操作 —— 并且**修正我 00:17 的说法**
+384:### 触发这条的是一件数据完整性事故（不是我想查的）
+391:### 真正的机制（用两条独立量具夹出来的）
+400:### 结论（写给 ds 的一句话）
+409:## ★★★★★ 02:00 实测合成：**这批产物没有一个\"攒得到钱\"，连 3× 攒钱奖励臂也攒不到**
+
+=== OPTIMIZATION-ep-cliff 的章节骨架
+1:# 优化分析（第十三轮 · 第三方复核者）：环不是病灶，**ep 特征在 16 之上冻结**才是
+6:## 0. 一句话
+18:## 1. 在位包：不是低估环，是看不到环（收入饥饿，实测）
+37:## 2. arm A（`v7ringA1-82`）：恰恰相反 —— 富死
+53:## 3. 环的\"价值\"被一个安慰剂打回原形（按局聚类的区间）
+83:## 4. 根因：`policy.js` 的 ep 输入在 16 之上**逐位冻结**（实测）
+107:## 5. 可优化的地方（按\"性价比 × 证据强度\"排）
+183:## 8. 真正的弱点轴：`targeter` 场里线上包**低于随机**（09-19 00:32 补测，推翻了 §5-L3 的原依据）
+209:## 6. 复跑入口（已入库到 `tools/`，都是我这轮
+---
+===== v7ringT3 : 2
+_IMIT_FRAC=0.35, EPIRUS_IMIT_TEACHER=deepsaver, EPIRUS_IMIT_OVERRIDE=1.
+
+Let me launch that + run the 体检."},{"type":"text","text":"**这次臂真的生效了**（产物不再与对照逐位相同）—— 但**没达到目标**，而且给出了一个更清楚的机制结论。先补判据③的体检，同时起下一臂（**攒钱教师**，直接打\"收入饥饿\"）："},{"type":"tool-call","id":"call_00_NQwP5jixnAqijPWi8LQz3946","name":"pwsh","arguments":"{\"command\": \"foreach ($f in @('docs/artifacts/v7ringT3-81.bak','docs/artifacts/v7ringT3-93.bak')) {\
+  Write-Host \\\"--- $f\\\"\
+  node tools/promote-champion.mjs $f --dry --skip-gate-drafts 2>&1 | Select-String -Pattern '可行性|输出密度|技能广度|功能角色' | ForEach-Object { $_.Line }\
+}\", \"description\": \"Run he
+---
+HER=deepsaver, EPIRUS_IMIT_OVERRIDE=1.
+
+Let me launch that + run the 体检."},{"type":"text","text":"**这次臂真的生效了**（产物不再与对照逐位相同）—— 但**没达到目标**，而且给出了一个更清楚的机制结论。先补判据③的体检，同时起下一臂（**攒钱教师**，直接打\"收入饥饿\"）："},{"type":"tool-call","id":"call_00_NQwP5jixnAqijPWi8LQz3946","name":"pwsh","arguments":"{\"command\": \"foreach ($f in @('docs/artifacts/v7ringT3-81.bak','docs/artifacts/v7ringT3-93.bak')) {\
+  Write-Host \\\"--- $f\\\"\
+  node tools/promote-champion.mjs $f --dry --skip-gate-drafts 2>&1 | Select-String -Pattern '可行性|输出密度|技能广度|功能角色' | ForEach-Object { $_.Line }\
+}\", \"description\": \"Run health audit on two ring teacher pr
+---
+===== v7role1w : 2
+475220158453211
+[9.4s] seed 31 进度 gen 50/250  best=0.8504787708037007
+[16.5s] seed 31 进度 gen 100/250  best=0.9773047349070867
+[23.4s] seed 31 进度 gen 150/250  best=1.1795492399728735
+[30.4s] seed 31 进度 gen 200/250  best=1.0525247162629892
+[78.7s] seed 31 产物 sha1=08d984486dbd
+[78.7s] seed 31 DONE  自评=0.4658 top2=0.6450  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role1w-31.bak
+[78.7s] seed 81 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=81&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,tar
+---
+42789109647
+[88.1s] seed 81 进度 gen 50/250  best=0.704147560747008
+[95.5s] seed 81 进度 gen 100/250  best=0.9671796766148797
+[102.4s] seed 81 进度 gen 150/250  best=0.9904029011094863
+[110.3s] seed 81 进度 gen 200/250  best=1.0323703750718425
+[158.3s] seed 81 产物 sha1=e12093d4cdf0
+[158.3s] seed 81 DONE  自评=0.4300 top2=0.5763  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role1w-81.bak
+[158.3s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ta
+---
+===== v7role5 : 2
+.6351396612205752
+[8.9s] seed 31 进度 gen 50/250  best=0.851945967470445
+[16.1s] seed 31 进度 gen 100/250  best=1.0016367450876944
+[22.7s] seed 31 进度 gen 150/250  best=0.8018161675955454
+[28.9s] seed 31 进度 gen 200/250  best=1.079245866118134
+[77.1s] seed 31 产物 sha1=0e355091715a
+[77.2s] seed 31 DONE  自评=0.4571 top2=0.6179  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role5-31.bak
+[77.2s] seed 81 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=81&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,targ
+---
+2588020173646
+[85.0s] seed 81 进度 gen 50/250  best=0.665693543480943
+[91.4s] seed 81 进度 gen 100/250  best=0.390731974822965
+[97.7s] seed 81 进度 gen 150/250  best=0.6974368403707587
+[102.2s] seed 81 进度 gen 200/250  best=0.5990451588460772
+[140.5s] seed 81 产物 sha1=d6a4189d17b5
+[140.5s] seed 81 DONE  自评=0.4942 top2=0.7254  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role5-81.bak
+[140.5s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,tar
+---
+===== v7stock1 : 2
+1.5.96 加的**回执**确实把它打出来了（`accepted=false`）—— 但它不会拦人；我是**事后**才看到。
+- **修法**：`applyImitEnv` 里\"名字解析失败\"改为**抛错拒绝**（消息里列出可用名字），
+  守门 D84 追加断言。? 与 v1.5.89/v1.5.96 同一条线：**开关要么生效、要么响亮失败，不许静默退回默认值。**
+- 正确名字（本轮实际验证）：`antiring` · `BOT_PICKS` 的键（如 `heavyfire` / `guardgun` / `reflectspam`）·
+  全局注册表的函数名（`pickRingSpam` ↑ 已验证可用、**`pickDeepSaver`** 是攒钱教师的正确名字）。
+
+**产物去向（D82 的账）**：`v7stock1-31` · `v7stock1-81` · `v7stock1-82` · `v7stock1-91` · `v7stock1-92` · `v7stock1-93`
+= **有效实验产物、但标签无效**（实际教师 = `heavyfire` 默认值）? 结论只能当\"heavyfire 示范\"读；
+原本要试的\"攒钱教师\"**仍未跑过**（正确 env：`EPIRUS_IMIT_TEACHER=pickDeepSaver`）。
+```
+
+Hmm — careful: if `pic
+---
+实把它打出来了（`accepted=false`）—— 但它不会拦人；我是**事后**才看到。
+- **修法**：`applyImitEnv` 里\"名字解析失败\"改为**抛错拒绝**（消息里列出可用名字），
+  守门 D84 追加断言。? 与 v1.5.89/v1.5.96 同一条线：**开关要么生效、要么响亮失败，不许静默退回默认值。**
+- 正确名字（本轮实际验证）：`antiring` · `BOT_PICKS` 的键（如 `heavyfire` / `guardgun` / `reflectspam`）·
+  全局注册表的函数名（`pickRingSpam` ↑ 已验证可用、**`pickDeepSaver`** 是攒钱教师的正确名字）。
+
+**产物去向（D82 的账）**：`v7stock1-31` · `v7stock1-81` · `v7stock1-82` · `v7stock1-91` · `v7stock1-92` · `v7stock1-93`
+= **有效实验产物、但标签无效**（实际教师 = `heavyfire` 默认值）? 结论只能当\"heavyfire 示范\"读；
+原本要试的\"攒钱教师\"**仍未跑过**（正确 env：`EPIRUS_IMIT_TEACHER=pickDeepSaver`）。
+```
+
+Hmm — careful: if `pickDeepSaver` is n
+---
+===== v7sub1 : 0
+===== v7w3r1 : 2
+释；本轮该格的在位包真值 **65%（长程）** 以此为准。
+141: 
+142: ---
+143: 
+144: ### 附：复跑入口
+145: ```bash
+146: node tools/np-test.mjs && node tools/spec-run.mjs && node tools/smoke.mjs && node tools/ui-probe.mjs   # 129/129 · 36/36 · OK · 10/10
+147: node tools/rules-fingerprint.mjs                                    # 8dda2677
+148: GATE4_GAMES=60 node tools/gate-drafts.mjs docs/artifacts/v7w3r1-31.bak docs/artifacts/v7role1w-31.bak
+149: node tools/champ-audit.mjs docs/artifacts/v7divK2-81.bak --games=40 --exam-games=40
+150: # 我这轮的临时探针（未入库，需要就说）：epirus-ep2.mjs（ep/环可负担/环出手/出手密度，支持批量 .bak）
+151: ```
+
+(End of file - total 151 lines)
+</content
+---
+5,"text":"```bash"},{"number":146,"text":"node tools/np-test.mjs && node tools/spec-run.mjs && node tools/smoke.mjs && node tools/ui-probe.mjs   # 129/129 · 36/36 · OK · 10/10"},{"number":147,"text":"node tools/rules-fingerprint.mjs                                    # 8dda2677"},{"number":148,"text":"GATE4_GAMES=60 node tools/gate-drafts.mjs docs/artifacts/v7w3r1-31.bak docs/artifacts/v7role1w-31.bak"},{"number":149,"text":"node tools/champ-audit.mjs docs/artifacts/v7divK2-81.bak --games=40 --exam-games=40"},{"number":150,"text":"# 我这轮的临时探针（未入库，需要就说）：epirus-ep2.mjs（ep/环可负担/环出手/出手密度，支持批量 .bak）"},{"number":151,"te
+---
+===== v7gf1 : 0
+===== v7seat2 : 2
+1.5.46 我自己的修复）
+Line 1350: ### 3. 修法
+Line 1356: ### 4. 可证伪验收（正在跑）
+Line 1360: ### 5. 连带
+Line 1365: ## v1.5.50 — 座位偏置二分（6 seed/格）：**泄漏不在三个特征块里**，转向训练动力学 + 新线索\"0 号座 3%\"
+Line 1367: ### 1. 读数（`EPIRUS_FEAT_MASK`，各格 6 seed，long·120 局）
+Line 1376: ### 2. 新线索（更锋利，下一步就查它）
+Line 1382: ### 3. 意外收获：**冻结不是普遍现象，是强迫/环奖励臂特有的**
+Line 1389: ### 4. 待办（顺序）
+Line 1395: ## v1.5.47 — 换冠军 `v7seat2-51`：**去座位偏置** + 首个\"零 `--force`\"的干净换冠军
+Line 1399: ### 1. 偏置的调查链（每一步都有\"能失败\"的对照）
+Line 1411: ### 2. 换冠军：`v7seat2-51` → `js/bundled-champion-3p.js`（**未用 `--force`**）
+Line 1426: ### 3. 待办
+Line 1435: ## v1.5.46 — **修座位偏置**（复核 §3，最高优先级）：并列不再按 pid 升序
+L
+---
+偏置二分（6 seed/格）：**泄漏不在三个特征块里**，转向训练动力学 + 新线索\"0 号座 3%\"
+Line 1367: ### 1. 读数（`EPIRUS_FEAT_MASK`，各格 6 seed，long·120 局）
+Line 1376: ### 2. 新线索（更锋利，下一步就查它）
+Line 1382: ### 3. 意外收获：**冻结不是普遍现象，是强迫/环奖励臂特有的**
+Line 1389: ### 4. 待办（顺序）
+Line 1395: ## v1.5.47 — 换冠军 `v7seat2-51`：**去座位偏置** + 首个\"零 `--force`\"的干净换冠军
+Line 1399: ### 1. 偏置的调查链（每一步都有\"能失败\"的对照）
+Line 1411: ### 2. 换冠军：`v7seat2-51` → `js/bundled-champion-3p.js`（**未用 `--force`**）
+Line 1426: ### 3. 待办
+Line 1435: ## v1.5.46 — **修座位偏置**（复核 §3，最高优先级）：并列不再按 pid 升序
+Line 1441: ### 1. 根因（一行代码的并列分支）
+Line 1450: ### 2. 修法（v1.5.46）
+Line 1460: ### 3. 影响面（为什么这条优先级最高）
+Line 1464: ### 4.
+---
+===== v7tgt4 : 0
+===== v7aim1f : 0
+===== v7aim2 : 0
+===== v7bead100 : 0
+===== v7bead15 : 0
+===== v7bead2 : 0
+===== v7bead25 : 0
+===== v7catE5 : 2
+386373131483505
+[8.7s] seed 31 进度 gen 50/250  best=0.8402105029607845
+[14.7s] seed 31 进度 gen 100/250  best=0.6474444935612822
+[21.9s] seed 31 进度 gen 150/250  best=0.7243024598754594
+[28.4s] seed 31 进度 gen 200/250  best=1.0571571313968402
+[63.9s] seed 31 产物 sha1=47ad69d9d28e
+[63.9s] seed 31 DONE  自评=0.4263 top2=0.5813  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7catE5-31.bak
+[63.9s] seed 81 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=81&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,targ
+---
+016960982966
+[71.0s] seed 81 进度 gen 50/250  best=0.7558517556522393
+[76.3s] seed 81 进度 gen 100/250  best=0.9139171463595627
+[82.6s] seed 81 进度 gen 150/250  best=0.9113214732830098
+[89.2s] seed 81 进度 gen 200/250  best=0.9492831759490605
+[121.1s] seed 81 产物 sha1=c274a38f849a
+[121.1s] seed 81 DONE  自评=0.5038 top2=0.7025  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7catE5-81.bak
+[121.1s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,tar
+---
+===== v7cur : 0
+===== v7cur2 : 0
+===== v7cur3 : 0
+===== v7densE : 2
+6603013676761038
+[9.2s] seed 31 进度 gen 50/250  best=0.8614654307193698
+[14.1s] seed 31 进度 gen 100/250  best=0.8112023161469182
+[18.7s] seed 31 进度 gen 150/250  best=0.8654998115119656
+[23.0s] seed 31 进度 gen 200/250  best=1.040552382429401
+[53.6s] seed 31 产物 sha1=84302bfbafa4
+[53.6s] seed 31 DONE  自评=0.4268 top2=0.6360  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7densE-31.bak
+[53.6s] seed 81 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=81&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,targ
+---
+785933251237646
+[60.3s] seed 81 进度 gen 50/250  best=0.5782269859268779
+[64.4s] seed 81 进度 gen 100/250  best=0.5119694136588407
+[68.7s] seed 81 进度 gen 150/250  best=0.887857457140409
+[73.0s] seed 81 进度 gen 200/250  best=0.7490378878455287
+[99.9s] seed 81 产物 sha1=9c3e7d18794a
+[99.9s] seed 81 DONE  自评=0.4482 top2=0.7173  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7densE-81.bak
+[99.9s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,targ
+---
+===== v7expo : 0
+===== v7f2b : 0
+===== v7f3 : 2
+失效\"，并由 §2-2 的三步脚本给出可判定的反证。**若他实际用的是 `EPIRUS_ECO_DIVW`（旧名），则臂的读数仍有效**——这一点我明确保留。
+187: 
+188: ---
+189: 
+190: ### 附：复跑入口
+191: ```bash
+192: node tools/np-test.mjs && node tools/spec-run.mjs && node tools/smoke.mjs && node tools/ui-probe.mjs
+193: node tools/rules-fingerprint.mjs                    # 8dda2677
+194: GATE4_GAMES=60 node tools/gate-drafts.mjs docs/artifacts/v7f3-9{1,3,4}.bak   # G4 已含\"只枪\"格
+195: # 本轮自研（临时脚本，未入库）：ep 轨迹/投资去兜底/轮换场沙盘/目标规则对照
+196: #   epirus-handoff.mjs  epirus-rot.mjs  epirus-focus.mjs
+197: # 需要的话我把这三个并进 tools/probe-diversity-axis.mjs 并配 D 门。
+198: ```
+
+(End of file - total 198 lines)
+</content
+---
+},{"number":190,"text":"### 附：复跑入口"},{"number":191,"text":"```bash"},{"number":192,"text":"node tools/np-test.mjs && node tools/spec-run.mjs && node tools/smoke.mjs && node tools/ui-probe.mjs"},{"number":193,"text":"node tools/rules-fingerprint.mjs                    # 8dda2677"},{"number":194,"text":"GATE4_GAMES=60 node tools/gate-drafts.mjs docs/artifacts/v7f3-9{1,3,4}.bak   # G4 已含\"只枪\"格"},{"number":195,"text":"# 本轮自研（临时脚本，未入库）：ep 轨迹/投资去兜底/轮换场沙盘/目标规则对照"},{"number":196,"text":"#   epirus-handoff.mjs  epirus-rot.mjs  epirus-focus.mjs"},{"number":197,"text":"# 需要的话我把这三个并进 tools/probe-diversity-axis.mjs 并配 D 门。"}
+---
+===== v7l2o : 0
+===== v7protoE : 2
+603013676761038
+[11.8s] seed 31 进度 gen 50/250  best=0.936993475081583
+[19.6s] seed 31 进度 gen 100/250  best=0.9294862158792414
+[27.2s] seed 31 进度 gen 150/250  best=1.1927794897090649
+[34.5s] seed 31 进度 gen 200/250  best=1.2390604946241561
+[94.3s] seed 31 产物 sha1=d5997a842c5e
+[94.3s] seed 31 DONE  自评=0.4680 top2=0.6732  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7protoE-31.bak
+[94.3s] seed 81 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=81&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,tar
+---
+51237646
+[104.0s] seed 81 进度 gen 50/250  best=0.5681788238642342
+[111.1s] seed 81 进度 gen 100/250  best=0.5749431742379432
+[118.5s] seed 81 进度 gen 150/250  best=0.8332019488025962
+[124.7s] seed 81 进度 gen 200/250  best=0.6138623343684643
+[159.7s] seed 81 产物 sha1=88b1636efdde
+[159.7s] seed 81 DONE  自评=0.3954 top2=0.6618  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7protoE-81.bak
+[159.7s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ta
+---
+===== v7r3 : 0
+===== v7rb1 : 0
+===== v7rb2 : 0
+===== v7role12 : 2
+099779547650465
+[9.8s] seed 31 进度 gen 50/250  best=0.8199876590383679
+[16.2s] seed 31 进度 gen 100/250  best=0.9537597466685337
+[23.2s] seed 31 进度 gen 150/250  best=0.7094343139058119
+[29.5s] seed 31 进度 gen 200/250  best=0.9732520033669044
+[84.2s] seed 31 产物 sha1=77d04c9185d0
+[84.2s] seed 31 DONE  自评=0.5092 top2=0.7488  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role12-31.bak
+[84.2s] seed 94 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=94&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,tar
+---
+775694548
+[93.8s] seed 94 进度 gen 50/250  best=0.9066595036576082
+[103.0s] seed 94 进度 gen 100/250  best=0.8435699177154212
+[110.4s] seed 94 进度 gen 150/250  best=0.8195973911053513
+[118.0s] seed 94 进度 gen 200/250  best=1.0277469021951242
+[165.7s] seed 94 产物 sha1=ce9839119b8f
+[165.7s] seed 94 DONE  自评=0.4721 top2=0.5758  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7role12-94.bak
+[165.7s] seed 95 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=95&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ta
+---
+===== v7roleC2 : 2
+013676761038
+[10.2s] seed 31 进度 gen 50/250  best=1.0713636194561544
+[17.4s] seed 31 进度 gen 100/250  best=1.0124095589693713
+[24.0s] seed 31 进度 gen 150/250  best=0.8716469797259594
+[31.2s] seed 31 进度 gen 200/250  best=0.7535779075990293
+[103.5s] seed 31 产物 sha1=69ccfbac10f1
+[103.5s] seed 31 DONE  自评=0.4375 top2=0.5908  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7roleC2-31.bak
+[103.5s] seed 94 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=94&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ta
+---
+32826319
+[112.9s] seed 94 进度 gen 50/250  best=0.8540023604620276
+[119.7s] seed 94 进度 gen 100/250  best=1.0605689694131148
+[125.9s] seed 94 进度 gen 150/250  best=0.9327806067397906
+[132.2s] seed 94 进度 gen 200/250  best=1.0296696902082532
+[182.4s] seed 94 产物 sha1=69bf6962753b
+[182.4s] seed 94 DONE  自评=0.4683 top2=0.6954  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7roleC2-94.bak
+[182.4s] seed 95 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=95&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam,reflectspam,guardspam,ta
+---
+===== v7s4 : 0
+===== v7s5 : 0
+===== v7s6 : 0
+===== v7s7 : 0
+===== v7s8 : 0
+===== v7s9 : 0
+===== v7seat24b : 2
+场 ≥ 0.3/局` 这道门，选择过程完全看不见**：\
+- 新规则下\\\"打 1 点就能在全灭判胜里赢\\\"（第五轮复核 §2-1）? **不杀人也能赢** ? 演化没有理由去长\\\"清场\\\"这个能力；\
+- 于是这批 `DIV_W=0.3` + 真示范的产物里 **4/6 的场B 清场 = 0.00**（在位包 0.63）。\
+? **这与座位是同一个病：门禁在量一个选择过程看不见的量。**\
+　　座位那处已对齐（探针 6→24 局）并看到改善；**场B 这处连项都没有** ? 需要新增一个\\\"清场计数\\\"奖励\
+　　（`EPIRUS_CLEAR_W`，env 门控、默认 0 ? 行为一字不变），然后照 §17 的教训**走消息**下发到 worker。\
+\
+**产物去向（D82 的账）**：`v7seat24b-31` · `v7seat24b-91` · `v7seat24b-92` · `v7seat24b-93`\
+= **有效实验产物**；`v7seat24b-31` 与 `v7seat24-31` **逐位一致**（同 seed 复现 ? 又一次确定性自证）；\
+其余 3 个**均未过五道门**（场B 为主）。\
+\
+## v1.5.99 — `EPIRUS_IMIT_SUB_ONLY`：**\\\"只教目标卡\\\"的示范只在补贴局里发生**\", \"old_string\": \
+---
+过程完全看不见**：\
+- 新规则下\\\"打 1 点就能在全灭判胜里赢\\\"（第五轮复核 §2-1）? **不杀人也能赢** ? 演化没有理由去长\\\"清场\\\"这个能力；\
+- 于是这批 `DIV_W=0.3` + 真示范的产物里 **4/6 的场B 清场 = 0.00**（在位包 0.63）。\
+? **这与座位是同一个病：门禁在量一个选择过程看不见的量。**\
+　　座位那处已对齐（探针 6→24 局）并看到改善；**场B 这处连项都没有** ? 需要新增一个\\\"清场计数\\\"奖励\
+　　（`EPIRUS_CLEAR_W`，env 门控、默认 0 ? 行为一字不变），然后照 §17 的教训**走消息**下发到 worker。\
+\
+**产物去向（D82 的账）**：`v7seat24b-31` · `v7seat24b-91` · `v7seat24b-92` · `v7seat24b-93`\
+= **有效实验产物**；`v7seat24b-31` 与 `v7seat24-31` **逐位一致**（同 seed 复现 ? 又一次确定性自证）；\
+其余 3 个**均未过五道门**（场B 为主）。\
+\
+## v1.5.99 — `EPIRUS_IMIT_SUB_ONLY`：**\\\"只教目标卡\\\"的示范只在补贴局里发生**\", \"old_string\": \"## v1.5.99 — `EP
+---
+===== v7tgt5 : 0
+===== v7attr : 0
+===== v7divK2 : 2
+RUS_DIV_W='0.06'; $env:EPIRUS_DIV_FORCE_GENS='60'; $env:EPIRUS_WALL_FILTER='1'
+$env:RING2_ARM='v7forceF'; $env:RING2_SEEDS='31'; $env:RING2_TAG='forceF'
+node tools/ring2-run.mjs
+```
+
+Careful: RING2_TAG affects log filenames (TAG = '-' + RING2_TAG) — so ring2-run-divK2.log etc. Good (distinct → fixes audit §8-6's overwrite issue). And ARM affects the .bak names: v7divK2-31.bak etc.
+
+Time: unknown, maybe 30-90 min. Launch in background.
+
+Wait — one thing to double check: does `ring2-run.mjs` require `.training-in-3p.js` to exist, or does it copy from BASE? Line 183: `copyFileSync(BASE, STAGE_IN)`. BASE is presumabl
+---
+32922854899
+[89.9s] seed 81 进度 gen 50/250  best=1.1900745074777477
+[99.8s] seed 81 进度 gen 100/250  best=1.1773301408930414
+[107.2s] seed 81 进度 gen 150/250  best=1.1756736371985939
+[114.2s] seed 81 进度 gen 200/250  best=1.1676434969838652
+[150.3s] seed 81 产物 sha1=84375e87b4d8
+[150.3s] seed 81 DONE  自评=0.3981 top2=0.6346  → D:\\code\\Epirus-Web\\docs\\artifacts\\v7divK2-81.bak
+[150.3s] seed 82 开跑（起点 = v1.3.58 权重, meta seed=31）: http://127.0.0.1:8906/train?gens=250&n=5&pop=16&gpo=8&seed=82&opps=random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver,ringspam
+[150.9s] seed 82 进度 gen 
+---
+===== v7anneal : 0
+===== v7f2 : 0
+===== v7f80 : 0
+===== v7g : 0
+===== v7l2a : 0
+===== v7m2_noTarget : 0
+===== v7new3 : 2
+RUS_CLEAR_W=0.2` —— **只差一个变量**）
+- 动因：`pickGunSpam` 的注释把机制写成\"**overkill 浪费 + 输出密度**（交 tempo 税去攒一种花不掉的东西）\"
+  ? 而清场奖励正是\"打击致死密度\"的那条信号（v1.5.103 已验过它**不是空操作**：场B 0.30→0.88）。
+- 结果：_（本节在 v7new4 落盘后补）_
+
+**产物去向（D82 的账）**：`v7new1-31` `v7new1-81` `v7new1-82` `v7new1-91` `v7new1-92` `v7new1-93`
+· `v7new2-31` `v7new2-81` `v7new2-82` `v7new2-91` `v7new2-92` `v7new2-93` · `v7new3-31`
+= **有效实验产物**（均**未上线**）。
+```
+
+Hmm, the product naming: D82 needs the *basenames* like `v7new1-81.bak` to appear as substrings ? I'll list them with `.bak`? My ledger style used bare names (e.g. `v7f5b-31`) and D82 accepted it ? (substring match).
+---
+ 规则，基线）vs `v7new4`（+`EPIRUS_CLEAR_W=0.2`，只差一变量）：A 卷 **43.1% → 47.2%（+4.1pt）**、ringwall **39.6% → 50.4%（+10.8pt）**；五道门：v7new3 **2/6**（91、93）、v7new4 **0/6**（91 只差场B 0.00 但 G 9.65！92/93 卡 G 或座位）。
+- 每臂 6 seed 实测 **~10.3 / 10.7 分钟**（用户纠正了 40~60 分钟的错估）。
+
+**进行中/下一步（本块之后）**：v7new3/v7new4 的 **G4/G5（n=120）** 还没测；`v7new4-91` 值得单测（G 9.65、座位 16.2pt、只差场B 0.00）。
+
+**D82 记账**：v7new3-81/-82 等**在跑时落盘**的产物当时未入账（我在 D82 红的情况下提交了 v1.5.112 那批，已在 CHANGELOG 注明\"随后补记\"）? **需要补全 v7new3-* 全部 6 个 + v7new4-* 全部 6 个的名字**。
+
+**环境/工具事实（避免重踩）**：① 训练臂运行中会把 `index.html`（与 bundle）**还原到起跑快照** ? 版本号会回跳，提交后要对齐（D8 盯着）；② `promote-champion` 在 `.training.loc
+---
+===== v7ring : 0
+===== v7salt : 0
+===== v7seat : 0
+===== v7smoke : 0
+===== v7teach : 0
+===== v7teach2 : 0
+===== v7tgt : 0
+===== v7l2f : 0
+===== v13 : 0
+===== v17 : 0
+===== v15 : 0
+===== v16 : 0
+===== v7l2s : 2
+ion-3p.js docs/artifacts/v7l2*.bak > docs/artifacts/crowd-balanced.log
+100: node tools/l2-epdepth-axis.mjs
+101: 
+102: # C：V2 装配的来路解剖（击杀归属 / 伤害归属 / 出手构成）
+103: node tools/probe-v2-anatomy.mjs 80
+104: 
+105: # ② 的效应判定（16 对同 seed 配对，符号翻转检验）—— 已判定，别重跑训练
+106: node tools/l2-e1-check.mjs f c
+107: 
+108: # 门禁口径（只读，绝不真 promote）
+109: node tools/gate-landscape.mjs docs/artifacts/v7l2s-91.bak docs/artifacts/v7l2c-103.bak js/bundled-champion-3p.js
+110: node tools/promote-champion.mjs --dry docs/artifacts/v7l2c-103.bak
+111: ```
+112: 
+113: ---
+114: 
+115: ## E. 三件我**没做完**的事（优先级从高到低）
+116: 
+117: 1. **E4：给\"挡下一次伤害\"独立计分。** §23 已证防御卡**
+---
+害归属 / 出手构成）"},{"number":103,"text":"node tools/probe-v2-anatomy.mjs 80"},{"number":104,"text":""},{"number":105,"text":"# ② 的效应判定（16 对同 seed 配对，符号翻转检验）—— 已判定，别重跑训练"},{"number":106,"text":"node tools/l2-e1-check.mjs f c"},{"number":107,"text":""},{"number":108,"text":"# 门禁口径（只读，绝不真 promote）"},{"number":109,"text":"node tools/gate-landscape.mjs docs/artifacts/v7l2s-91.bak docs/artifacts/v7l2c-103.bak js/bundled-champion-3p.js"},{"number":110,"text":"node tools/promote-champion.mjs --dry docs/artifacts/v7l2c-103.bak"},{"number":111,"text":"```"},{"number":112,"text":""},{"number":113,"text":"---"},{"number":114,"tex
+---
+===== v7l2h : 2
+llFilter/wallGames` 被顶出去 ? 红；加别名键又会顶出更多 ? **别名为省字符直接不设**。
+33: - **D77 全文扫描**：`EPIRUS_*` 这个字面名**只允许出现在 `server/econ-env.mjs`**，在别的文件里
+34:   哪怕只写在注释里也会被判\"第二个读取点\"。（本轮 `js/train/evo.js:675` 就因此红过一次。）
+35: - **D82 记账**：24 小时内落盘的每个 `.bak` 必须在 `CHANGELOG.md` 里以**字面文件名**出现（缩写不算）。
+36:   ? **等全部臂跑完**再一次性写 CHANGELOG，把每个产物名逐个列全；否则臂还在长就会一直缺。
+37:   现在缺的是 `v7l2c-82/91/93.bak`、`v7l2h-81.bak`（臂还在跑）。
+38: - 失败标记是 **`?`** 不是 `?` ? `grep '?'` 抓不到红，要用 `grep '?'`（我在 144/146 那一步被这个误导过一次，
+39:   差点以为\"没有红、是跳过\"）。
+40: 
+41: ## ? 读数码坑（今天上午我自己差点读错过一次）
+42: - **训练在跑时 `gate-landscape` 的输出整行是 `—` 且判 `? (其它)`，连线上包那行也是** ——
+43:   那是 `.training.loc
+---
+US_*` 这个字面名**只允许出现在 `server/econ-env.mjs`**，在别的文件里"},{"number":34,"text":"  哪怕只写在注释里也会被判\"第二个读取点\"。（本轮 `js/train/evo.js:675` 就因此红过一次。）"},{"number":35,"text":"- **D82 记账**：24 小时内落盘的每个 `.bak` 必须在 `CHANGELOG.md` 里以**字面文件名**出现（缩写不算）。"},{"number":36,"text":"  ? **等全部臂跑完**再一次性写 CHANGELOG，把每个产物名逐个列全；否则臂还在长就会一直缺。"},{"number":37,"text":"  现在缺的是 `v7l2c-82/91/93.bak`、`v7l2h-81.bak`（臂还在跑）。"},{"number":38,"text":"- 失败标记是 **`?`** 不是 `?` ? `grep '?'` 抓不到红，要用 `grep '?'`（我在 144/146 那一步被这个误导过一次，"},{"number":39,"text":"  差点以为\"没有红、是跳过\"）。"},{"number":40,"text":""},{"number":41,"text":"## ? 读数码坑（今天上午我自己差点读错过一次）"},{"number":42,"text"
+---

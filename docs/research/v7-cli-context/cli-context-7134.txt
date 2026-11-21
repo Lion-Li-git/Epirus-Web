@@ -1,0 +1,166 @@
+size_kb 31492 ‖ 批名 74
+===== fgtA : 0
+===== fgtB : 0
+===== fstA : 0
+===== v7aim1 : 0
+===== v7curri2 : 0
+===== v7fix1 : 1
+IXHqdQ6165","name":"bash","arguments":"{\"command\": \"cd /d/code/Epirus-Web\
+node --check tools/probe-g-collapse.mjs && echo \\\"syntax ok\\\"\
+echo \\\"=== 补跑之前失败的 8 粒 ===\\\"\
+timeout 1200 node tools/probe-g-collapse.mjs --games=120 --reach-games=60 --packs=docs/artifacts/r61fix-82.bak,docs/artifacts/v7c-41.bak,docs/artifacts/v7expo-31.bak,docs/artifacts/v7fix1-82.bak,docs/artifacts/v7l7-36.bak,docs/artifacts/v7r3-42.bak,docs/artifacts/v7role1w-82.bak,docs/artifacts/v7soft-36.bak 2>&1 | head -14\", \"description\": \"Re-run the previously failed packs\", \"timeoutMs\": 1300000}"}],"source":{"kind":"model","pro
+---
+===== v7iso1 : 0
+===== v7new1 : 0
+===== v7new4 : 2
+ the final 20). Let me adjust to the final sample's facts: `v7new4-82` 50.0%、`v7xfer44c12-band2` 25.5%、`long-34` 19.9%、`v7r3-52` 14.3%. Let me fix that line.
+
+Then write the CHANGELOG.
+
+Let me apply the METHODOLOGY entry with the fix."},{"type":"text","text":"最终数（去重后 20 粒）：**① 34.6%→100.0%、中位 58.4%、9/20 超线**（现役 45.9% 安全）；**② 1~12 种、中位 5**（旧线从不触发）；**③ 成交率最高的几粒：`v7new4-82` 50.0%、`v7xfer44c12-band2` 25.5%、`long-34` 19.9%**。写入 METHODOLOGY 第 66 条："},{"type":"tool-call","id":"call_00_aq7q39e6C4JRvcePux9p6994","name":"bash","arguments":"{\"command\": \"cd /d/code/Epirus-Web\
+node -e '\
+const fs=require(\\\"fs\\\");\
+/* 
+---
+e":"tool-call","id":"call_00_aq7q39e6C4JRvcePux9p6994","name":"bash","arguments":"{\"command\": \"cd /d/code/Epirus-Web\
+node -e '\
+const fs=require(\\\"fs\\\");\
+/* 先按最终实测修掉草稿里两处数字，再追加到 METHODOLOGY 末尾 */\
+let e=fs.readFileSync(\\\"C:/Users/14765/AppData/Local/Temp/meth66.md\\\",\\\"utf8\\\").split(\\\"\\\\\\
+\\\").join(\\\"\\\
+\\\");\
+e=e.replace(\\\"只有少数非零（`v7new4-82` 50.0% / `v7l7-36` 40.0% / `long-34` 19.9%）\\\",\
+            \\\"只有少数非零（`v7new4-82` 50.0% / `v7xfer44c12-band2` 25.5% / `long-34` 19.9% / `v7r3-52` 14.3%）\\\");\
+e=e.replace(\\\"34.6% → 100.0%、中位 ~58%、**9/20 超 60%**\\\",\\\"34.6% → 100.0%、中位 **58.
+---
+===== v7new5_01 : 0
+===== v7new6 : 0
+===== v7noteach1 : 0
+===== v7ringA1 : 0
+===== v7ringT3 : 0
+===== v7role1w : 1
+--check tools/probe-g-collapse.mjs && echo \\\"syntax ok\\\"\
+echo \\\"=== 补跑之前失败的 8 粒 ===\\\"\
+timeout 1200 node tools/probe-g-collapse.mjs --games=120 --reach-games=60 --packs=docs/artifacts/r61fix-82.bak,docs/artifacts/v7c-41.bak,docs/artifacts/v7expo-31.bak,docs/artifacts/v7fix1-82.bak,docs/artifacts/v7l7-36.bak,docs/artifacts/v7r3-42.bak,docs/artifacts/v7role1w-82.bak,docs/artifacts/v7soft-36.bak 2>&1 | head -14\", \"description\": \"Re-run the previously failed packs\", \"timeoutMs\": 1300000}"}],"source":{"kind":"model","provider":"deepseek-official","model":"deepseek-flash","replayState":{"response":{"kin
+---
+===== v7role5 : 0
+===== v7stock1 : 0
+===== v7sub1 : 0
+===== v7w3r1 : 0
+===== v7gf1 : 0
+===== v7seat2 : 0
+===== v7tgt4 : 0
+===== v7aim1f : 0
+===== v7aim2 : 0
+===== v7bead100 : 0
+===== v7bead15 : 0
+===== v7bead2 : 0
+===== v7bead25 : 0
+===== v7catE5 : 0
+===== v7cur : 0
+===== v7cur2 : 0
+===== v7cur3 : 0
+===== v7densE : 0
+===== v7expo : 2
+d":"call_00_ET_bz0bolsPBJ2trFIXHqdQ6165","name":"bash","arguments":"{\"command\": \"cd /d/code/Epirus-Web\
+node --check tools/probe-g-collapse.mjs && echo \\\"syntax ok\\\"\
+echo \\\"=== 补跑之前失败的 8 粒 ===\\\"\
+timeout 1200 node tools/probe-g-collapse.mjs --games=120 --reach-games=60 --packs=docs/artifacts/r61fix-82.bak,docs/artifacts/v7c-41.bak,docs/artifacts/v7expo-31.bak,docs/artifacts/v7fix1-82.bak,docs/artifacts/v7l7-36.bak,docs/artifacts/v7r3-42.bak,docs/artifacts/v7role1w-82.bak,docs/artifacts/v7soft-36.bak 2>&1 | head -14\", \"description\": \"Re-run the previously failed packs\", \"timeoutMs\": 1300000}"}],
+---
+ + '/' + all[i]);
+  packs.unshift('js/bundled-champion-3p.js');   // 现役永远在第一位
+}
+
+const pct = function (a, b) { return (b > 0 ? (100 * a / b).toFixed(1) : 'n/a') + '%'; };","newText":"
+let packs = String(arg('packs', '')).split(',').filter(Boolean);
+if (!packs.length) {
+  /* ?? METHODOLOGY 第 62 条（千问 09-25）：**按文件名等距抽样会系统漏掉整棵树**，而且 `.bak` 里
+   * 大量\"同实不同名\"（我这版样本里 `v7expo-31`/`v7r3-42`/`v7soft-36` 三行读数逐字相同就是它）。
+   * ? 先**按内容去重**（同一份冠军参数只留一个名字），再从**等价类**里等距抽，并**报覆盖率**。
+   * 这样得到的比例才谈得上\"档案里的比例\"；否则只能说\"我抽到的这些粒\"。 */
+  const idOf = function (f) {
+    const s = readFileSync(f, 'utf8');
+    const m = /window\\.EPIRUS_CH
+---
+===== v7f2b : 0
+===== v7f3 : 0
+===== v7l2o : 0
+===== v7protoE : 0
+===== v7r3 : 2
+d /d/code/Epirus-Web\
+node --check tools/probe-g-collapse.mjs && echo \\\"syntax ok\\\"\
+echo \\\"=== 补跑之前失败的 8 粒 ===\\\"\
+timeout 1200 node tools/probe-g-collapse.mjs --games=120 --reach-games=60 --packs=docs/artifacts/r61fix-82.bak,docs/artifacts/v7c-41.bak,docs/artifacts/v7expo-31.bak,docs/artifacts/v7fix1-82.bak,docs/artifacts/v7l7-36.bak,docs/artifacts/v7r3-42.bak,docs/artifacts/v7role1w-82.bak,docs/artifacts/v7soft-36.bak 2>&1 | head -14\", \"description\": \"Re-run the previously failed packs\", \"timeoutMs\": 1300000}"}],"source":{"kind":"model","provider":"deepseek-official","model":"deepseek-flash","rep
+---
+[i]);
+  packs.unshift('js/bundled-champion-3p.js');   // 现役永远在第一位
+}
+
+const pct = function (a, b) { return (b > 0 ? (100 * a / b).toFixed(1) : 'n/a') + '%'; };","newText":"
+let packs = String(arg('packs', '')).split(',').filter(Boolean);
+if (!packs.length) {
+  /* ?? METHODOLOGY 第 62 条（千问 09-25）：**按文件名等距抽样会系统漏掉整棵树**，而且 `.bak` 里
+   * 大量\"同实不同名\"（我这版样本里 `v7expo-31`/`v7r3-42`/`v7soft-36` 三行读数逐字相同就是它）。
+   * ? 先**按内容去重**（同一份冠军参数只留一个名字），再从**等价类**里等距抽，并**报覆盖率**。
+   * 这样得到的比例才谈得上\"档案里的比例\"；否则只能说\"我抽到的这些粒\"。 */
+  const idOf = function (f) {
+    const s = readFileSync(f, 'utf8');
+    const m = /window\\.EPIRUS_CHAMPION_3P = 
+---
+===== v7rb1 : 0
+===== v7rb2 : 0
+===== v7role12 : 0
+===== v7roleC2 : 0
+===== v7s4 : 0
+===== v7s5 : 0
+===== v7s6 : 0
+===== v7s7 : 0
+===== v7s8 : 0
+===== v7s9 : 0
+===== v7seat24b : 0
+===== v7tgt5 : 0
+===== v7attr : 0
+===== v7divK2 : 0
+===== v7anneal : 0
+===== v7f2 : 0
+===== v7f80 : 0
+===== v7g : 0
+===== v7l2a : 0
+===== v7m2_noTarget : 0
+===== v7new3 : 0
+===== v7ring : 0
+===== v7salt : 0
+===== v7seat : 0
+===== v7smoke : 0
+===== v7teach : 2
+CHAMPION_3P, true) || P.unpack(sb.EPIRUS_CHAMPION, true);
+  if (!params) return { error: '读不出包' };
+  const mh = sb.EpirusTrainer.mirrorHealth(params, GAMES, 5, 'multi');
+  const R = sb.EpirusRules;
+  /* 归属一律走 `audit-lib.landShareOf`（单一来源）——
+   * ?? 别自己写 `max(landByKey)/landedTotal`：`landByKey` 含**非卡键**（\"终局收缩\"…）而 landedTotal 是过滤后的，
+   *    我第一版就这么算出过 **44900%**（`v7teach-32`）。 */
+  const ls = landShareOf(sb, mh);
+  const by = mh.landByKey || {};
+  const keys = Object.keys(by).filter(function (k) { return R.byKey[k]; })
+    .sort(function (a, c) { return by[c] - by[a]; });
+  const tot = mh.landedTotal || 0;
+  cons
+---
+/Epirus-Web\
+sed -i \\\"s|^import { build } from './probe-layer-caliber.mjs';|import { build } from './probe-layer-caliber.mjs';\\\
+import { landShareOf } from './audit-lib.mjs';|\\\" tools/probe-g-collapse.mjs\
+node --check tools/probe-g-collapse.mjs && echo \\\"ok\\\"\
+grep -n \\\"landShareOf\\\" tools/probe-g-collapse.mjs | head -3\
+echo \\\"=== 补测刚才那个荒谬粒（v7teach-32）现在读多少 ===\\\"\
+timeout 600 node tools/probe-g-collapse.mjs --games=120 --reach-games=40 --packs=docs/artifacts/v7teach-32.bak 2>&1 | tail -5\", \"description\": \"Verify the share fix on the pathological pack\", \"timeoutMs\": 700000}"}],"source":{
+---
+===== v7teach2 : 0
+===== v7tgt : 0
+===== v7l2f : 0
+===== v13 : 0
+===== v17 : 0
+===== v15 : 0
+===== v16 : 0
+===== v7l2s : 0
+===== v7l2h : 0
