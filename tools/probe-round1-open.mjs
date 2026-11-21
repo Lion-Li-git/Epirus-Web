@@ -94,7 +94,7 @@ if (INSTR) {
 const sb = { console, Math, JSON, Object, Array, Number, String, Error, Infinity, isNaN, parseInt, parseFloat, Date, window: {} };
 sb.globalThis = sb;
 for (const f of ['js/core/rules.js', 'js/core/state.js', 'js/core/resolve.js', 'js/core/play.js',
-  'js/train/bots.js', 'js/train/policy.js', 'js/train/evo.js']) {
+  'js/train/bots.js', 'js/train/policy2.js', 'js/train/policy.js', 'js/train/evo.js']) {
   let srcTxt = readFileSync(f, 'utf8');
   if (f === 'js/train/evo.js' && PATCHES.length) {
     for (const p of PATCHES) {

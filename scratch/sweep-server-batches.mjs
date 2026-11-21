@@ -20,7 +20,7 @@ const head = lines[0].split('\t');
 const ix = Object.fromEntries(head.map((h, i) => [h, i]));
 const jobs = lines.slice(1).map((l) => {
   const c = l.split('\t');
-  return { batch: c[ix.batch], fam: c[ix.fam], era: c[ix.era], arm: c[ix.arm], seeds: (c[ix.seeds] || '').split(','), opps: c[ix.opps], mode: c[ix.mode], ids: (c[ix.ids] || '').split(','), paths: (c[ix.paths] || '').split(','), targets: (c[ix.targets] || '').split(','), calibSeed: c[ix.calibSeed] || '', calibWid: c[ix.calibWid] || '', calibPath: c[ix.calibPath] || '' };
+  return { batch: c[ix.batch], fam: c[ix.fam], era: c[ix.era], arm: c[ix.arm], seeds: (c[ix.seeds] || '').split(','), opps: c[ix.opps], mode: c[ix.mode], ids: (c[ix.ids] || '').split(','), paths: (c[ix.paths] || '').split(','), targets: (c[ix.targets] || '').split(','), calibSeed: c[ix.calibSeed] || '', calibWid: c[ix.calibWid] || '', calibPath: c[ix.calibPath] || '', env: (c[ix.env] !== undefined ? c[ix.env] : '') };
 }).filter((j) => j.era && j.batch);
 const mine = jobs.filter((_, k) => k % TOTAL === SHARD);
 console.log(`分片 ${SHARD}/${TOTAL}：${mine.length} 批（校准 ${mine.filter((j) => j.calibWid).length}）`);
@@ -68,6 +68,11 @@ function runBatch(j, era, seeds, force) {
     EPIRUS_ALLOW_HEALTH_FAIL: '1',
     RING2_FORCE: force ? '1' : '',
   };
+  /* 11-22：批级 env 精配列（KEY=VAL;KEY=VAL）——会话原文挖掘的旋钮覆写注入（fgt 系 EPIRUS_FIGHT_WHISTLE 等） */
+  for (const kv of (j.env || '').split(';')) {
+    const i2 = kv.indexOf('=');
+    if (i2 > 0 && kv.slice(0, i2).trim()) env[kv.slice(0, i2).trim()] = kv.slice(i2 + 1).trim();
+  }
   console.log(`  ▶ ${j.batch}@${era} seeds=${seeds}`);
   const r = spawnSync(process.execPath, ['tools/ring2-run.mjs'], { cwd: wt, env, encoding: 'utf8', timeout: 60 * 60000, maxBuffer: 1 << 28 });
   if (r.status !== 0 || r.error) {

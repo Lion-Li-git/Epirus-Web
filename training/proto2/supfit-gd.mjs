@@ -211,6 +211,20 @@ const rodPick = (state, pid, cs) => {
   if (!threat) return null;
   return pickKey(cs, R.SK.ROD) || null;
 };
+/* 11-21 通宵班 armorPick（gemini A1 交接配方）：藤甲=双面（resolve.js:1152 目标吃 fireWeakNow+Next、
+ * 施放者自进 guardSet 反弹族）——仅键道触发：对最高 HP 活敌贴藤甲（已 fireWeak 的不重贴），
+ * 其余局面返回 null 交主教师保底；上限 2 次（与 ration6 DOSE.armor 同量级）。 */
+const armorPick = (state, pid, cs) => {
+  if (castCount(state, pid, R.SK.ARMOR) >= 2) return null;
+  let best = null;
+  for (const c of cs) {
+    if (!c || c.key !== R.SK.ARMOR || c.affordable === false) continue;
+    const o = state.p[c.target];
+    if (!o || o.hp <= 0 || o.fireWeakNow || o.fireWeakNext) continue;
+    if (!best || o.hp > state.p[best.target].hp) best = c;
+  }
+  return best || null;
+};
 const mirrorPick = (state, pid, cs, legal) => {
   if (castCount(state, pid, R.SK.MIRROR) >= 2) return null;
   const lg = (legal && legal.length >= 2) ? legal : cs.map((c) => ({ key: c.key, affordable: c.affordable !== false }));
@@ -847,6 +861,8 @@ function buildTeacherPick(name) {
     ? (state, pid, cs) => tauntPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'rod'
     ? (state, pid, cs) => rodPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
+  : name === 'armor'
+    ? (state, pid, cs) => armorPick(state, pid, cs) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'mirror'
     ? (state, pid, cs, legal) => mirrorPick(state, pid, cs, legal) || cs.find((c) => c.key === R.SK.JI) || cs[0]
   : name === 'drain'
@@ -968,7 +984,7 @@ const teacherPick = (state, pid, cs, legal) => {
   return cs.find((c) => _DEFK.has(c.key) && c.affordable !== false) || a;
 };
 /* ⛔ 教师名单响亮闸（11-01 千问）：写错名字原先会**静默落回默认 chain** ⇒ "我换了教师"是假读数。 */
-const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'purify', 'taunt', 'rod', 'mirror', 'drain', 'transfer2', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
+const TEACHER_KNOWN = ['oracleDef', 'chain', 'v7mix', 'toolkit', 'chainmix', 'minit', 'bigt', 'lasereye', 'detonate', 'rationdet', 'rationdet2', 'ration6b', 'ration6t', 'cannon', 'transfer', 'ring', 'ringEcon', 'charge', 'purify', 'taunt', 'rod', 'armor', 'mirror', 'drain', 'transfer2', 'ringchain', 'ration', 'ration2', 'ration3', 'ration4', 'ration5', 'ration6', 'allround', 'antiReflect', 'breakAll'];
 if (TEACHER_KNOWN.indexOf(TEACHER) < 0 && TEACHER.indexOf('pack:') !== 0) { console.error('⛔ --teacher 只认 ' + TEACHER_KNOWN.join('|') + ' 或 pack:<路径>（收到 ' + TEACHER + '）'); process.exit(2); }
 /* `--teacher2=<名> --teacher2frac=<0..1>`（ZCode · 11-13 凌晨）：**双教师轮替采集**——组级交错（精确 frac 份额），
  *   动机 = GD7/GD8 实测（STATUS-2026-11-13-night4 §三）：ration 靶向三线但"被围殴不还手"，toolkit 行为广（14 键）
