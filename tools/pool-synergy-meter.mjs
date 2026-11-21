@@ -53,7 +53,10 @@ const B = mkTable(TABLE_B, 'T2-混风格');
 
 function play(roster, tag) {
   const N = roster.length;
-  const per = { games: 0, focusFire: 0, tauntGames: 0, tauntLinked: 0, emptyTouch: 0, rounds: 0, casts: {}, emptyCasts: {} };
+  /* v1（11-22 夜）：① 集中火率在 FFA 实测 100% 饱和不判别 ⇒ 补集中度两轴：
+   *   ①a fire3 = 「同一受害者被 ≥3 个不同 source 打过」的局占比（三方围殴率，比 ≥2 严一档）
+   *   ①b dmgHHI = 逐局受害者伤害份额的 HHI（Σsᵢ²，0=全桌均摊、1=全打一人），取全桌均值 */
+  const per = { games: 0, focusFire: 0, fire3: 0, hhiSum: 0, tauntGames: 0, tauntLinked: 0, emptyTouch: 0, rounds: 0, casts: {}, emptyCasts: {} };
   const pairs = {}; const winBy = {};
   for (const seed of SEEDS) {
     for (const mode of MODES) {
@@ -84,6 +87,13 @@ function play(roster, tag) {
           (srcBy[e.to] = srcBy[e.to] || new Set()).add(e.source);
         }
         if (Object.values(srcBy).some((s) => s.size >= 2)) per.focusFire++;
+        if (Object.values(srcBy).some((s) => s.size >= 3)) per.fire3++;
+        { /* ①b 伤害集中度 HHI（按受害者份额） */
+          const dmgBy = {};
+          for (const e of st.events || []) if (e.type === 'damage' && e.to != null && e.amt > 0) dmgBy[e.to] = (dmgBy[e.to] || 0) + e.amt;
+          const totD = Object.values(dmgBy).reduce((a, b) => a + b, 0);
+          if (totD > 0) per.hhiSum += Object.values(dmgBy).reduce((a, b) => a + (b / totD) * (b / totD), 0);
+        }
         /* ② 挑衅联动：挨打最多的目标 = taunter 自己 */
         const taunters = new Set(casts.filter((a) => a.key === 'taunt').map((a) => a.pid));
         if (taunters.size) {
@@ -124,22 +134,22 @@ function summarize(tag, x) {
   const topPairs = Object.entries(x.pairs).sort((a, b) => b[1] - a[1]).slice(0, 10);
   console.log('\n== ' + tag + ' == 桌员: ' + x.roster.map((r) => r.name).join(' | '));
   console.log('局数 ' + per.games + ' ‖ 平均回合 ' + (per.rounds / n).toFixed(1));
-  console.log('① 集中火率 ' + (per.focusFire / n * 100).toFixed(1) + '%');
+  console.log('① 集中火率 ' + (per.focusFire / n * 100).toFixed(1) + '% ‖ ①a 三方围殴率 ' + (per.fire3 / n * 100).toFixed(1) + '% ‖ ①b 伤害HHI ' + (per.hhiSum / n).toFixed(3));
   console.log('② 挑衅联动 ' + per.tauntLinked + '/' + per.tauntGames + ' 局（taunt 局占比 ' + (per.tauntGames / n * 100).toFixed(1) + '%）');
   console.log('③ 空轴触达率 ' + (per.emptyTouch / n * 100).toFixed(1) + '% ‖ 空轴出卡 ' + JSON.stringify(per.emptyCasts));
-  console.log('⑤ 用卡熵 ' + H.toFixed(3) + ' nats ‖ 胜者分布 ' + JSON.stringify(x.winBy));
+  console.log('⑤ 用卡熵 ' + H.toFixed(3) + ' nats ‖ 胜者分布 ' + JSON.stringify(s.winBy));
   console.log('④ 跨席共现对 top10: ' + topPairs.map(([p, c]) => p + '(' + c + ')').join(' '));
-  return { per, H, n };
+  return { per, H, n, winBy: x.winBy };
 }
 void loadChamp;
 const sa = summarize('T1 hard核', play(A, 'T1'));
 const sb = summarize('T2 混风格', play(B, 'T2'));
 
 console.log('\n== 配对差（T2 − T1，同 seed 同桌形） ==');
-console.log('集中火率 ' + (sb.per.focusFire / sb.n * 100 - sa.per.focusFire / sa.n * 100).toFixed(1) + 'pt ‖ 空轴触达 ' + (sb.per.emptyTouch / sb.n * 100 - sa.per.emptyTouch / sa.n * 100).toFixed(1) + 'pt ‖ 用卡熵 ' + (sb.H - sa.H).toFixed(3) + ' nats');
+console.log('集中火率 ' + (sb.per.focusFire / sb.n * 100 - sa.per.focusFire / sa.n * 100).toFixed(1) + 'pt ‖ 三方围殴率 ' + (sb.per.fire3 / sb.n * 100 - sa.per.fire3 / sa.n * 100).toFixed(1) + 'pt ‖ 伤害HHI ' + (sb.per.hhiSum / sb.n - sa.per.hhiSum / sa.n).toFixed(3) + ' ‖ 空轴触达 ' + (sb.per.emptyTouch / sb.n * 100 - sa.per.emptyTouch / sa.n * 100).toFixed(1) + 'pt ‖ 用卡熵 ' + (sb.H - sa.H).toFixed(3) + ' nats');
 if (OUT) {
-  const row = ['table', 'games', 'focusFire%', 'tauntLinked/tauntGames', 'emptyTouch%', 'entropy', 'winnerDist', 'emptyCasts'].join('\t');
-  const line = (tag, x, s) => [tag, x.per.games, (x.per.focusFire / s.n * 100).toFixed(1), x.per.tauntLinked + '/' + x.per.tauntGames, (x.per.emptyTouch / s.n * 100).toFixed(1), s.H.toFixed(3), JSON.stringify(x.winBy), JSON.stringify(x.per.emptyCasts)].join('\t');
+  const row = ['table', 'games', 'focusFire%', 'fire3%', 'dmgHHI', 'tauntLinked/tauntGames', 'emptyTouch%', 'entropy', 'winnerDist', 'emptyCasts'].join('\t');
+  const line = (tag, x, s) => [tag, x.per.games, (x.per.focusFire / s.n * 100).toFixed(1), (x.per.fire3 / s.n * 100).toFixed(1), (x.per.hhiSum / s.n).toFixed(3), x.per.tauntLinked + '/' + x.per.tauntGames, (x.per.emptyTouch / s.n * 100).toFixed(1), s.H.toFixed(3), JSON.stringify(s.winBy), JSON.stringify(x.per.emptyCasts)].join('\t');
   writeFileSync(OUT, row + '\n' + line('T1-hard核', sa, sa) + '\n' + line('T2-混风格', sb, sb) + '\n');
   console.log('写 ' + OUT);
 }
