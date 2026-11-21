@@ -18,7 +18,7 @@ import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
 
 const argv = process.argv.slice(2);
-rejectUnknownFlags(argv, ['up', 'upstream', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'snapEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
+rejectUnknownFlags(argv, ['up', 'upstream', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'snapEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klCand', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
 const arg = (k, d) => { const a = argv.find((x) => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const UP = String(arg('up', arg('upstream', 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak')));
 const OBS_SPEC = String(arg('obs', '')).trim();
@@ -71,6 +71,13 @@ const SHAPE_W = Number(arg('shapeW', 0)) || 0;
  *   逐决策优势分量挂不上未采样键；CE 锚是**全键同时拉**（mode-covering），不依赖键被采样。
  *   0 = 关（旧调用逐字不变）。代价：每决策多一次 tapeForward（起点参数）。 */
 const KL_W = Number(arg('klW', 0)) || 0;
+/* `--klCand=<w>`（11-22 凌夜 · ZCode · C3 判例的下一级锚）：**候选级 CE 锚**——klW 只锚键级分布
+ *   （t0.kProb），键内的候选结构（珠种/目标 = cand 伪类）没人锚 ⇒ C3 网格实测残余腐烂住这一层
+ *   （klW=1.0 锚 L1 0.030 仍流到 -42）。本锚把目标抬到全候选分布：−Σ_i probs0[i]·log π(i)，
+ *   probs0 = 冻结前向（klW 已付费的那次 tapeForward）的 probs[i]，梯度 = dLogPi(i) 逐候选累加。
+ *   0 = 关（旧调用逐字不变）。 */
+const KL_CAND = Number(arg('klCand', 0)) || 0;
+if (KL_CAND < 0) { console.error('⛔ --klCand 需 ≥ 0（收到 ' + arg('klCand', '') + '）'); process.exit(2); }
 /* `--klTilt=k1,k2,… --klTiltMul=<m>`（11-14 晚 · ZCode · 补课 breadth-multi）：锚目标的**弱键倾斜**——
  *   把 tilt 表里的键在锚目标里 ×m 再全键归一（m>1 = 抬弱键份额的拉力）。A4.seg1000 的 G_eff≈2.8 骑线
  *   （ji/guard/tank 三键占 95%），倾斜锚直接把 breadth 门要的小键（sword/bagua/ring）顶上去。 */
@@ -149,7 +156,7 @@ const PG_SHAPES = shapesFromArg(arg('arenaShapes', ''), 'pg-train');
  *   当场拒；要 long 专项就 klModes 里放 long，要么去掉桌形限制。 */
 if (PG_SHAPES) {
   const sm = new Set(PG_SHAPES.map((s) => s.mode));
-  if (KL_W > 0 && KL_MODES.size && ![...KL_MODES].some((m) => sm.has(m))) {
+  if ((KL_W > 0 || KL_CAND > 0) && KL_MODES.size && ![...KL_MODES].some((m) => sm.has(m))) {
     console.error('⛔ pg-train：--arenaShapes 桌形模式 [' + [...sm].join(',') + '] 与 --klModes [' + [...KL_MODES].join(',') + '] 无交集 ⇒ KL 锚零触发（空转）。把 klModes 对上桌形模式，或去掉 arenaShapes。');
     process.exit(2);
   }
@@ -504,30 +511,45 @@ while (games < GAMES) {
     const g = dLogPi(d.idx, act.logits, tp.keys, TEMP, t);
     for (let j = 0; j < g.length; j++) g[j] *= A;
     tapeBackward(tp, pv, ly, act, g, grad);
-    if (KL_W > 0 && inKl) {
-      /* 批级键频锚：对**全键**同时拉向冻结起点的键分布（CE，mode-covering）——不依赖键被采样
-       *   （第二轮 --shapeKey 的死因就是采样塌缩）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
+    if ((KL_W > 0 || KL_CAND > 0) && inKl) {
+      /* 锚共用一次冻结前向（klW/klCand 同一次 act0，不双付费）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */
       const act0 = tapeForward(d.tape, pv0, ly);
       const t0 = tailOf(act0.logits, d.tape.keys, TEMP);
-      /* 倾斜：tilt 表里的键 ×m，负塑形键在 KL 目标中置 0（防把已知废招/孤儿贴符锚回来） */
-      const q0 = {};
-      let q0sum = 0;
-      for (const k of new Set(d.tape.keys)) {
-        const mul = NEG_SHAPE_KEYS.has(k) ? 0 : (KL_TILT.indexOf(k) >= 0 ? KL_TILT_MUL : 1);
-        q0[k] = (t0.kProb[k] || 0) * mul;
-        q0sum += q0[k];
+      if (KL_W > 0) {
+        /* 批级键频锚：对**全键**同时拉向冻结起点的键分布（CE，mode-covering）——不依赖键被采样
+         *   （第二轮 --shapeKey 的死因就是采样塌缩）。 */
+        const q0 = {};
+        let q0sum = 0;
+        for (const k of new Set(d.tape.keys)) {
+          const mul = NEG_SHAPE_KEYS.has(k) ? 0 : (KL_TILT.indexOf(k) >= 0 ? KL_TILT_MUL : 1);
+          q0[k] = (t0.kProb[k] || 0) * mul;
+          q0sum += q0[k];
+        }
+        if (q0sum > 0) for (const k of Object.keys(q0)) q0[k] /= q0sum;
+        const acc = new Float64Array(act.logits.length);
+        for (const k of new Set(d.tape.keys)) {
+          const u = dLogKeyP(k, act.logits, tp.keys, TEMP, t);
+          const qk = q0[k] || 0;
+          for (let j = 0; j < u.length; j++) acc[j] -= qk * u[j];
+          klL1 += Math.abs((t.kProb[k] || 0) - qk);
+        }
+        for (let j = 0; j < acc.length; j++) acc[j] *= KL_W;
+        tapeBackward(tp, pv, ly, act, acc, grad);
+        klN++;
       }
-      if (q0sum > 0) for (const k of Object.keys(q0)) q0[k] /= q0sum;
-      const acc = new Float64Array(act.logits.length);
-      for (const k of new Set(d.tape.keys)) {
-        const u = dLogKeyP(k, act.logits, tp.keys, TEMP, t);
-        const qk = q0[k] || 0;
-        for (let j = 0; j < u.length; j++) acc[j] -= qk * u[j];
-        klL1 += Math.abs((t.kProb[k] || 0) - qk);
+      if (KL_CAND > 0) {
+        /* 候选级 CE 锚：目标 = 冻结策略在本决策的全候选分布 probs0[i]（键级 × 键内 within 的乘积，
+         *   tailOf 已给全量），梯度 = −Σ_i probs0[i]·dLogPi(i)（CE 与 KL 梯度同形，klW 同款证法）。 */
+        const acc2 = new Float64Array(act.logits.length);
+        for (let i = 0; i < act.logits.length; i++) {
+          const p0 = t0.probs[i] || 0;
+          if (!(p0 > 0)) continue;
+          const u = dLogPi(i, act.logits, tp.keys, TEMP, t);
+          for (let j = 0; j < u.length; j++) acc2[j] -= p0 * u[j];
+        }
+        for (let j = 0; j < acc2.length; j++) acc2[j] *= KL_CAND;
+        tapeBackward(tp, pv, ly, act, acc2, grad);
       }
-      for (let j = 0; j < acc.length; j++) acc[j] *= KL_W;
-      tapeBackward(tp, pv, ly, act, acc, grad);
-      klN++;
     }
   }
   { let mx = 0; for (let q = 0; q < DIM; q++) { if (segMask && !segMask[q]) continue; const a = Math.abs(grad[q]); if (a > mx) mx = a; }
@@ -599,7 +621,7 @@ savePack(OUT);
 const packed = P.pack(pv);   /* 容器形状从**产物自己**读，不在 meta 里写死代/v（Stage A 之后 91/92 两代同时在盘上） */
 writeFileSync(OUT + '.meta.json', JSON.stringify({
   tool: 'pg-train', tag: TAG || null, parent: UP, seed: SEED, games, batch: BATCH, lr: LR, temp: TEMP,
-  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, dmgW: DMG_W || null, beadSpendW: BEAD_SPEND_W || null, defTax: DEF_TAX || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, shapeModes: SHAPE_MODES_RAW || null, klModes: KL_MODES_RAW || null, onlySeg: ONLY_SEG_RAW || null, klW: KL_W || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
+  lamC: LAMC, lamF: LAMF, lamExp: LAM_EXP || null, penDeadElec: PEN_DEAD_ELEC || null, dmgW: DMG_W || null, beadSpendW: BEAD_SPEND_W || null, defTax: DEF_TAX || null, shapeKey: SHAPE_KEY || null, shapeW: SHAPE_W || null, shapeModes: SHAPE_MODES_RAW || null, klModes: KL_MODES_RAW || null, onlySeg: ONLY_SEG_RAW || null, klW: KL_W || null, klCand: KL_CAND || null, klTilt: KL_TILT.length ? KL_TILT.join(',') : null, klTiltMul: KL_TILT.length ? KL_TILT_MUL : null, klL1Final: KL_W > 0 ? +(klL1 / Math.max(1, klN)).toFixed(4) : null, cur: 'net', updates: upd, wallSecs: Math.round(secs),
   baseline: BASELINE, ridgeFeat: BASELINE === 'ridge' ? RFEAT : null, ridgeFitN: BASELINE === 'ridge' ? XsN : null, valueCapacityR2: CAPR2, ridgeL2: BASELINE === 'ridge' ? RL2 : null, ridgeDim: BASELINE === 'ridge' ? (RFIT ? RFIT.m : 0) : null, probe: PROBE || null, rollbackTol: RBTOL,
   rollbackCount: rbCount, probeGames, bestProbeScore: Number.isFinite(bestProbe) ? +bestProbe.toFixed(4) : null,
   lastR2: BASELINE === 'mean' ? null : +lastR2.toFixed(4),
