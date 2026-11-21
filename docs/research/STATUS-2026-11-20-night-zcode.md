@@ -174,3 +174,9 @@
 2. 驱动已备好：盲扫批单 era（ed6a82c0）；jobs 分片 parity k%2。
 3. 20 对手名单（v7big1/v7press1/2）仍缺——e68ffc09 只有 16/17/18，22 名单在 7134b299。
 4. 与 gemini 白班正交确认：fam7（e35prod807/814、seed81）/fam9 不在盲扫表内，gemini 并行复刻零冲突。
+
+## 十一、傍晚番外：DS rod（避雷针）线闭案（20:2x-21:5x）
+
+- DS 晚五臂全败（rm/rb9/rb9-pg/ring/ring2）的根因双判例：①**底座选择**——RINGB9 有 ring 习惯但清不了龟壳（G5 61%）；TZT2D=11-18 普测 G5 **0%** 清场型 ALL-GATE；②**ring 剂量**——ring 0.20 对无 ring 习惯的底座是行为改写过量（反弹墙 14.5→0.00、连狙击枪 290→0），**减半到 0.10 行为存活**。rod 标签采样结构（rareOnly=rod,ring 0.45、无 arenaPool）照抄 rod-ring，rod 标签 233/4800 有效注入。
+- **第 7 臂 nov21-rod-tzt2d-r10 promote 0 阻断**（F 20.1%、反弹墙 14.75、G4[multi] 49.7 余 10pt、G5 全 0%）→ 用户 21:1x 点名入池（人席 2 格原话在案：multi 只枪压制 76.5/70.5、只防御 43.5/37.5 对基准 +44/+30，与 G4[multi] 骑线同弱点三量具互证）→ **池 26→27（soft），rod 覆盖 0→1**。前线 -30.4 落册；measure-point 图节点 + skill-report 22 技 + bundle/图重烘同笔（b331ce31，gate-all --auto 6 道全绿）。
+- 留观项：multi 被人形玩家克制（G4 骑线+人席 2 格同源）——若实战读数差，`pool-add --retire` 随时撤；下一臂若要修，方向是 TZT2D 底 + steps/lr 减剂量（机制未证，先记档不跑）。
