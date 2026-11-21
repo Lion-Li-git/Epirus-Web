@@ -12,8 +12,8 @@
 ## 完成定义（DoD）
 
 1. **池账一致**：`page/pool-members.tsv` = bundle = 图上成员；`map-audit` 无红条。
-2. **覆盖补齐**：全池仍 0 的三张卡（`rod` / `purify` / `mirror`）各至少 1 枚**过线**载体；
-   `taunt` 已有 1 枚 hard 载体，保持不退化。hard 带仍 0 的 armor/rod/firestorm/mine/cannon/purify/mirror
+2. **覆盖补齐**：全池仍 0 的 `rod` 补至少 1 枚**过线**载体；`mirror` 已书面裁定"可没有"；
+   `taunt` / `purify` 已有 hard 载体，保持不退化。hard 带仍 0 的 armor/rod/firestorm/mine/cannon
    补到有覆盖，或给出"不做"的书面裁定。
 3. **负资产替换**：`night2-S6` 已于 v2.1.11 退役；`night2-X2b-fuse`（-87.2pt，0/671）仍需被过线包替换，
    或用户明确裁定保留。
@@ -30,8 +30,8 @@
 ## 当前状态（2026-11-21 19:20）
 
 - 池：**26 枚（hard 13 / soft 13）**；v2.1.11；DS-P0 `purify` / `taunt` 双将入 hard，`night2-S6` 退役；图 1002 点。
-- 覆盖（Stage 1 `pool-skill-report`，26 枚 ×120 格）：全池 `rod / purify / mirror` **仍为 0**；`taunt` 1 枚（hard）；`armor` 1、`firestorm` 2、`mine` 2、`cannon` 1（均在 soft）；`dualGun` 1、`miniT` 1（hard）。
-  - 关键：`nov21-purify-dsp0` 虽已入池，但观察层 `purify` 使用数为 **0**，不能算覆盖；`nov21-taunt-dsp0b` 是 hard 唯一的 `taunt` 载体。
+- 覆盖（Stage 1 `pool-skill-report`，26 枚 ×120 格）：`taunt` **95/120 格**（hard 主力）；`purify` 默认夹具少咒源，条件化对活咒源 **0.27/局**（Stage 2 forced 为负 ⇒ 有载体但强度待提）；全池活跃仍 0 的是 `rod`（`anyUse=1/26`，候选 `nov21-rod-rm` 条件 `8/100`、`arenaB=-1.86pt`）与 `mirror`（已有"可没有"裁定）。
+  - `armor` 1、`firestorm` 2、`mine` 2、`cannon` 1（均在 soft）；`dualGun` 1、`miniT` 1（hard）。hard 带的 armor/firestorm/mine/cannon 仍为 0。
 - 负资产：`night2-S6` 已退役；`night2-X2b-fuse` 仍在 soft，尚未替换。
 - 人席：**26 枚全部量过（0 枚 -1）**；8 枚 `seatKill>0`：OBS6P9-S4000=3、RING-MINIT-CONT=2、MX5-GD-LE40=2、RINGB9=2、TZT2D=2、DEF-s16=1、MX8-R6B-KL=1、night2-E1-det-strong=1；7 枚 `invited=0` 待逐枚裁定。
 - 权重重：11-19 清理后仍缺 **416**（400 枚早期 1.8 `server` 批：fam4 109 / fam6 107 / fam5 94 / fam3 43 / fam1 28 / fam2 19；16 枚 2.0 未播种随机根链 fam19 14 / fam20 2，已证死）；lineage 冻结（`rebuild-map` ③ 跳过）。
@@ -39,7 +39,7 @@
 
 ### 下一步训练排期（覆盖优先）
 
-1. `purify`：先复核 DS-P0 包为何 0 使用（特征/代价/可达性），再训 1 枚能在 hard 过线的载体；`rod`、`mirror` 同批排。
+1. `rod`：先把 `nov21-rod-rm` 走 `promote --dry --support=2` / PG 提强，目标把条件 `rod` 从 8/100 提到过线；若失败换高 `ep` 底座再训。`mirror` 不排（已裁定可没有）。
 2. hard 弱覆盖：`armor` / `firestorm` / `mine` / `cannon` 各补 1 枚 hard 载体，或书面裁定不做。
 3. `night2-X2b-fuse` 用覆盖优先的过线包替换，或用户裁定保留。
 4. 训练后走 `promote --dry --support=2` → `measure-point --bake` → `pool-add` → `gate-all --auto`，并在提交信息引用本文件。
