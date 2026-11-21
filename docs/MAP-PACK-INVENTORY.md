@@ -1,0 +1,115 @@
+# 全图谱冠军包盘存总表（Champion Map Pack Inventory）
+
+> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,003` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行）为真源，于 `2026-11-21` 实盘核验。  
+> 相关文档：[`docs/ARTIFACT-LOSS-1119.md`](ARTIFACT-LOSS-1119.md) ‖ [`docs/GOAL-2026-11-19-ruler-resolution.md`](GOAL-2026-11-19-ruler-resolution.md) ‖ [`docs/POOL-CONTRACT.md`](POOL-CONTRACT.md) ‖ [`docs/research/STATUS-2026-11-21-fam7-fam9-complete.md`](research/STATUS-2026-11-21-fam7-fam9-complete.md)
+
+---
+
+## 一、全局盘存总览
+
+| 口径 | 数量 | 说明 |
+|---|---:|---|
+| **图谱在册总数** | **1,003** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **172** 枚 |
+| 无路径记录（`no-path`） | **19** | 仅见于 `fam=11`（4）、`fam=13`（14）、`fam=19`（1） |
+| 有路径记录（`hasPath`） | **984** | 以下盘面状态均基于此 984 枚 |
+| **实际在盘（可用）** | **568** | 原封 `sha256` 一致 **482** 枚（含失落表后新增 `night2-E1-det-strong`）+ 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
+| **盘上仍缺失（`missing`）** | **416** | `400` 枚早期 `v1.5.x` `server` 盲扫尾批（`fam=1..6`）+ `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
+| **现役产品冠军池** | **25** | **`hard` 11 枚 / `soft` 14 枚**，**`25/25` 全员在盘（0 缺失）** |
+| **现役 B 轴 24 锚联盟** | **24** | [`arena-league-1118-page.tsv`](../champion-map/data/arena-league-1118-page.tsv)，**`24/24` 全员在盘（0 缺失）** |
+
+> 缺失台账分目录剩余（共 `416` 枚）：`docs/artifacts/*.bak` 根目录 **401** 枚、`docs/artifacts/night-adapt/` **14** 枚、`scratch/arms/` **1** 枚（`GD6b-TILT-3p.bak`）。
+
+---
+
+## 二、26 个谱系家族全量分布（`fam=0..25`）
+
+> 家族聚类由 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv) 的 `fam` / `fam_label` 定义；其中 **`19` 个家族已实现 `missing = 0`（全部 `2.0` 小族可复现部分与 `fam=0, 7..18, 21..25` 已清零）**。
+
+| `fam` | 网络线 | 在册 | 在盘 | `shaOk` | `shaDiff` | 缺失 | 无路径 | 家族语义 / 定位 | 盘存状态 |
+|---:|:---:|---:|---:|---:|---:|---:|---:|---|---|
+| **0** | `1.8` | 16 | 16 | 16 | 0 | **0** | 0 | 旧槽位冠军（`SLOT-*` 等 40 段历史槽位） | 已清零（11-20 `87f2c849` 全清） |
+| **1** | `1.8` | 47 | 19 | 17 | 2 | **28** | 0 | 珠价 / 代数步进 B2（09-12 → 09-16） | 部分缺失（早期 `server` 批，需配对 `EPIRUS_*` 重跑） |
+| **2** | `1.8` | 55 | 36 | 35 | 1 | **19** | 0 | 历史配方步进 A（09-12 → 09-13：`mix`/`sty`/早期池） | 部分缺失（早期 `server` 批） |
+| **3** | `1.8` | 97 | 54 | 38 | 16 | **43** | 0 | 对手池步进 B1（09-13 → 09-15：对手池 1→77） | 部分缺失（早期 `server` 批） |
+| **4** | `1.8` | 128 | 19 | 9 | 10 | **109** | 0 | 对手池步进 C2（09-16 → 09-19：对手池 16/19 + 小类） | 缺失主力区（早期 `server` 批） |
+| **5** | `1.8` | 137 | 43 | 36 | 7 | **94** | 0 | 多样性步进 C1（09-16 → 09-18：多样性 5→30） | 缺失主力区（早期 `server` 批） |
+| **6** | `1.8` | 133 | 26 | 19 | 7 | **107** | 0 | 对手池 / 珠价步进 C3（09-19 → 09-21：对手池 14→22） | 缺失主力区（早期 `server` 批） |
+| **7** | `1.8` | 7 | 7 | 6 | 1 | **0** | 0 | 旧生产对照（09-25 → 09-27：`e35`/`e39`/`seed80`/`seed81`/`cal-ctl`/`E51`） | 已清零（11-21 `seed81` + `e35prod807` 归位） |
+| **8** | `1.8` | 7 | 7 | 3 | 4 | **0** | 0 | 早期 `env` 臂（16 轴全空，09-27 → 10-15） | 已清零 |
+| **9** | `1.8` | 110 | 110 | 87 | 23 | **0** | 0 | 现代基线与 `Ldemo`/`e234` 大批（09-27 → 10-17） | 已清零（11-21 最后 34/34 归位） |
+| **10** | `1.8` | 6 | 6 | 6 | 0 | **0** | 0 | 融合与续训（10-08） | 已清零 |
+| **11** | `1.8` | 51 | 47 | 41 | 6 | **0** | 4 | 臂线 · `env` 实验（`COUNTER_OPPS` / 纯续训 + T8/snipe + E1/E2） | 有路径者已清零（4 枚历史无路径） |
+| **12** | `1.8` | 13 | 13 | 13 | 0 | **0** | 0 | 臂线 · `COUNTER_OPPS=guardSpam`（10-08） | 已清零 |
+| **13** | `1.8` | 18 | 4 | 4 | 0 | **0** | 14 | 激光眼线（`g12→g18` · 冷启破零 / 破密 / 珠闭环，10-23 → 10-27） | 有路径者已清零（14 枚历史无路径） |
+| **14** | `2.0` | 25 | 25 | 25 | 0 | **0** | 0 | 2.0 蒸馏根与 `L5`/`CB`/`D` 产线 | 已清零（11-20 补齐最后 5/5） |
+| **15** | `2.0` | 31 | 31 | 31 | 0 | **0** | 0 | `gen-3` 实验臂 ∪ `v7` 面 GA 对照臂（`T8-s114` 热启动） | 已清零 |
+| **16** | `2.0` | 9 | 9 | 9 | 0 | **0** | 0 | `KD` 蒸馏链（种子与克隆 · `v7` 教师全模型） | 已清零（`KD-V7/KDFULL2/KD-K2/KD-K2-l/KD-Qg` 全归位） |
+| **17** | `2.0` | 14 | 14 | 7 | 7 | **0** | 0 | 2.0 GA 强化线（11-08 → 09：集火 / 清场 / 宽包 / `SEL_CARDS`） | 已清零 |
+| **18** | `2.0` | 4 | 4 | 2 | 2 | **0** | 0 | 2.0 行为课程线（11-09：破防与还手） | 已清零 |
+| **19** | `2.0` | 24 | 9 | 9 | 0 | **14** | 1 | 2.0 `obs5` 课程链（`MSB*` 反墙 / 配给教师，11-09 → 11） | **永久阻断**（受单一未播种 `KDO5-seed` 随机根链锁定） |
+| **20** | `2.0` | 4 | 2 | 2 | 0 | **2** | 0 | `GD6` 蒸馏多线（11-12：`GD6b-TILT-3p` / `MSB18`） | **永久阻断**（上游挂 `fam=19` 的 `MSB8-charge`） |
+| **21** | `2.0` | 8 | 8 | 8 | 0 | **0** | 0 | 2.0 `obs6` 无教师冷启动（11-14：`OBS6A4/W2/A5` 等） | 已清零 |
+| **22** | `2.0` | 13 | 13 | 13 | 0 | **0** | 0 | 2.0 `obs6` `v7` 蒸馏（11-14） | 已清零 |
+| **23** | `2.0` | 19 | 19 | 19 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16：`OBS6-UNIFIED-*`、`EQ-*`） | 已清零（11-20 补齐最后 10/10） |
+| **24** | `2.0` | 7 | 7 | 7 | 0 | **0** | 0 | 2.0 `obs6` `V3` 融合 / 路由（11-16） | 已清零（B 轴缺锚与 `V3H3` 全归位） |
+| **25** | `2.0` | 20 | 20 | 20 | 0 | **0** | 0 | 2.0 `obs6.5` 键道 / 覆盖训练（11-17） | 已清零 |
+| **合计** | — | **1,003** | **568** | **482** | **86** | **416** | **19** | 全谱系（`1.8` `831` + `2.0` `172`） | `19` 族清零；余 `400` 早期 `server` + `16` 不可复根链 |
+
+---
+
+## 三、现役产品冠军池（25 枚 · 全员在盘）
+
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 11 / soft 14`，全部满足 `promoteVerdict=pass`）。
+
+| # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
+|---:|---|---|---|---:|---:|---|---|
+| 1 | `EQ-S4-E9` | `hard` | `a847eb3a41a160bb` | 1 | 0 | `docs/artifacts/obs6-coldstart/EQ-S4-E9.bak` | 当前推荐 `PG`/蒸馏强基座与主教师（2P 强，珠经济 0） |
+| 2 | `EQ-S4-GD6ATEACH` | `hard` | `72abddc710e6252b` | 1 | 0 | `docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak` | `GD6A` 教师臂（珠经济 77.4% 闭环） |
+| 3 | `MX1-GD-EQ` | `hard` | `c4fa2576f9700b39` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX1-GD-EQ.bak` | `GD` 底座 + `EQ` 均衡配方（`gen1` 长榜强包） |
+| 4 | `MX3-GDEQ-GD` | `hard` | `3e9799402f0b37c1` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX3-GDEQ-GD.bak` | `GD` 链续代高综合读数 |
+| 5 | `MX5-GD-T2STR` | `hard` | `2648c67284ab8936` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX5-GD-T2STR.bak` | `hard` 带高综合主将 |
+| 6 | `MX6-GD-TF15` | `hard` | `95940870c4b8d16e` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak` | `transfer` + `railgun` + `bigT`（5P 原生强） |
+| 7 | `MX6-GD-TF20` | `hard` | `bab64e2b297b1e68` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak` | `transfer` + `miniT` + `railgun` + `bigT` |
+| 8 | `MX8-TN25-KL` | `hard` | `0940f463c2ac8966` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak` | `KL-PG` 收官（`drain` + `railgun`） |
+| 9 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | 强宽六轴全持代表 |
+| 10 | `OBS6P9-S4000` | `hard` | `cfb62c2c977897fd` | 1 | 3 | `docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak` | 高 `bpM` 真伤双穿 + `holo` 线（现役 `B` 榜高位） |
+| 11 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 唯一载体（11-19 点名保留） |
+| 12 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
+| 13 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
+| 14 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
+| 15 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
+| 16 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
+| 17 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
+| 18 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
+| 19 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
+| 20 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | **-1** | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（待补 `seat-rule`） |
+| 21 | `night2-S6` | `soft` | `d12c18baca6c1eab` | 1 | 8 | `docs/artifacts/night2-S6.bak` | 双教师过渡载体（天火 0/315，`arenaB=-104.8pt`，待替换议案） |
+| 22 | `night2-X2b-fuse` | `soft` | `629d4ae567266821` | 1 | 0 | `docs/artifacts/night2-X2b-fuse.bak` | 双父系融合代锚（废贴 0/671，`arenaB=-87.2pt`，待替换议案） |
+| 23 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
+| 24 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
+| 25 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
+
+> 现役池结构性短板（待后续训练补齐）：  
+> 1. 全池镜像 `4` 项技能为 `0/25` 灭绝态：`rod` / `taunt` / `purify` / `mirror`（`hard` 带 `8` 项 `0/11`）；  
+> 2. `night2-E1-det-strong` 已入 `soft` 但 `seatKill=-1`，待补跑一次 `champion-map/seat-rule.mjs`；  
+> 3. 软带负资产 `night2-S6` / `night2-X2b-fuse` 留待有替代过线包时按流程 `--retire`。
+
+---
+
+## 四、剩余 416 枚缺失的可复现边界结论
+
+1. **不可复现红线（`16` 枚：`fam=19` 14 枚 + `fam=20` 2 枚）**：
+   - `KDO5-seed.bak` 由 `make-seed5.mjs` 调用未播种 `Math.random()` 生成，经 `KDO5C` → `MSB2×3` → `MSB4-R1S1928336850` → `K2-def-o5` (`23a782cb`) → `ADAPT-DEF-O5-s916` → `S916/S916R2B/MSB6..12/GD6b-TILT/MSB18` 全链盘上/隔离区/worktree/git 均零留存。**逐位复现数学上不可达，不再追查日志。**
+2. **仅余的未闭环空间（`400` 枚：`fam=1..6` 早期 `v1.8` `server` 批次）**：
+   - 上游统一根包 `champion-5p-v1.3.58.bak`（`e379c62ccd2648fa`）与 `slot-timeline.tsv` 全部 `16` 枚 `SLOT` 已在盘，且 `ring2-run` 回放管道已打通；
+   - 两轮裸盲扫已证伪「仅靠阶梯推断对手池」的打法——后续若继续抢救，必须基于幸存者 `META` 与配方台账（`COMMAND-CHECKUP` / `session-records-2026-11-20`）逐批精配 `EPIRUS_*` 环境变量覆写再重放；夹在会话未提交编辑态中间的少数分支（如 `v7l2c` / `v7w3c` / `v7seat24`）则依赖按时间回放会话 `Write/Edit` 的会话树重构。
+
+---
+
+## 五、日常运维核验命令
+
+```bash
+node tools/map-audit.mjs          # 核对 registry / loss / alias / stale / orphan 完整账
+node tools/pool-skill-report.mjs  # 复测现役池技能覆盖观察层与强度层
+node tools/gate-all.mjs --auto    # 提交前门禁自检
+```

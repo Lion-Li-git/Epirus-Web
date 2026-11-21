@@ -2,7 +2,7 @@
 
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）实现的网页版：2–8 人对局 + 可选的自训练冠军 AI。
 
-> **当前版本：v2.1.9** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
+> **当前版本：v2.1.10** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），单包回退使用 `v7` 容器（`FEAT_S=213` ‖ 5689 参数）
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；版本历史与实验记录见 [`CHANGELOG.md`](CHANGELOG.md) 与 `docs/research/`。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。
@@ -100,6 +100,8 @@ Epirus-Web/
 │   ├─ POOL-CONTRACT.md              ★ 冠军池抽签与降级契约
 │   ├─ METHODOLOGY.md                ★ 评测方法学与口径规范
 │   ├─ GATE-SHIFTS.md                ★ 门禁分组表
+│   ├─ MAP-PACK-INVENTORY.md         ★ 全图谱 1003 枚冠军包盘存与家族分布总表
+│   ├─ TRAINING-RUN-LOG.md           ★ 训练参数固定台账（每臂超参 / 上游 / 读数流水）
 │   └─ research/                     交接状态、发现记录与待办（如 TODO-2026-11-13-repo-audit.md）
 ├─ results/                      个人对局记录（不入仓）
 └─ .github/workflows/            CI（gates.yml ‖ pages.yml）
@@ -162,7 +164,7 @@ node training/train.mjs --mode=fuse --a=<包A> --b=<包B> --t=0.5 --out=scratch/
 
 - **`v7` 导入旧包限 `2–5` 人**：旧版 `v7` 策略在 `6–8` 人桌被 `V7_MAX_PLAYERS = 5` 锁定禁用，`6–8` 人局只由 `2.0` 冠军池或 `2.0` 策略装配。
 - **蓄能兜底选珠仅用于脚本或旧包**：`v7` 与 `2.0`（`keySplit=1`）网络已直接对蓄电/蓄爆两个候选分别打分选珠，`js/ui/bead-choice.js` 仅作为脚本对手或未显式指定珠种旧包的兜底。
-- **训练暗键清理持续收口**：当前训练/工具全集共有 40 个 `EPIRUS_*` 键（在用 19 ‖ 待清理暗键 21），`pg-train` 与 `supfit-gd` 已统一改走 CLI `--flag`。
+- **训练暗键清理持续收口**：`pg-train` 与 `supfit-gd` 已统一改走 CLI `--flag`，遗留 `EPIRUS_*` 环境变量全集与在用/暗键状态以 [`training/TRAINING-KNOBS.md`](training/TRAINING-KNOBS.md) 为单一真源。
 - **多把评测尺不可混减**：按档位装配量、单枚镜像探测与 `results/` 真机日志三者分母与采样对象不同，只可并排对照。
 
 ## 免责声明

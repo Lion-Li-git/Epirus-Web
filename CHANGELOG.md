@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.10 — 11-21（全图谱包盘存总表 + 固定训练参数台账 + 历史缺件抢救里程碑）
+
+**这一版是什么**：整理并固化全谱系冠军包的盘存与可复现边界总文档，建立后续所有训练臂共用的固定训练参数流水台账，并同步纳入 `fam=7` / `fam=9`（`36/36`）及 `2.0` 小族（`24/40`）逐位抢救落仓成果（全图缺失由 `668 → 416`）。
+
+- **新增长期文档**：
+  - [`docs/MAP-PACK-INVENTORY.md`](docs/MAP-PACK-INVENTORY.md)：汇总 `champion-map/data/registry.tsv` 全图 **1,003** 枚在册包（`568` 在盘、`416` 缺失、`19` 无路径）、`26` 个谱系家族明细、现役池 **25** 枚（`hard 11 / soft 14` 全员在盘）与 B 轴 **24** 锚（`24/24` 在盘），并划定 `fam=19..20`（`16` 枚）由未播种 `KDO5-seed` 永久阻断及 `fam=1..6`（`400` 枚）早期 `server` 批边界。
+  - [`docs/TRAINING-RUN-LOG.md`](docs/TRAINING-RUN-LOG.md)：后续每次训练均需登记的固定参数台账与标准实验卡片模板（只记非默认 `--flag` / 环境变量 / 上游与三尺读数，旋钮全集单源仍引用 [`training/TRAINING-KNOBS.md`](training/TRAINING-KNOBS.md)）。
+- **历史包恢复归档汇总**：`fam=7`（`seed81` + `docs/artifacts/E35-prod-807.bak`）与 `fam=9`（`L/R/09-28/e234` 共 `34` 枚）整族清零，连同 `2.0` 小族 `24` 枚逐位复现并同步台账，`19` 个家族已清零。
+- **版本与门禁**：`v2.1.9 → v2.1.10`（`README.md` / `index.html` / `CHANGELOG.md` 三方同步）。
+
 ## v2.1.9 — 11-19 晚（人席复测：day1119-cannon-pg 退役，RING-MINIT-CONT 点名保留 ‖ 池 25 → 24）
 
 **这一版是什么**：补测 7 枚 seatKill=-1 成员的人席读数后，按用户裁定执行 B 方案：day1119-cannon-pg（seatKill=4、arenaB -82pt）退役；RING-MINIT-CONT（hard 带 ring/miniT 唯一载体）点名保留并记录 seatKill=2（band provisional）。池 25 → **24 枚**（hard 11 / soft 13）。
