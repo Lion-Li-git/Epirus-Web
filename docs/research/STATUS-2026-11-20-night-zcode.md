@@ -159,3 +159,18 @@
 - jobs 重建：109 批（mix/sty 移交专用驱动；带校准 34 批），双 shard 杀旧重启——**从此所有后台长任务带 harness 标记**（run_in_background），退出自动注入通知，不再有 windowless 进程（用户点名纠正过两次的坑，本次起根除）。
 - **二阶坑（06:00-09:4x 白磨一轮的根因）**：config 表的 ts_min/ts_max 是**分钟精度**（无秒位）——utc_to_local 的 strptime('%H:%M:%S') 对 '14:35' 静默 ValueError 走 except 原样返回 ⇒ +8h 一行都没生效，115/115 批全中招（v9 的 9 枚命中来自硬编码 era 特例，不是时区修正）。修复：秒位补 `:00` 再解析，**解析失败改 fail-fast SystemExit**（禁静默回退，AGENTS #3）。v7gf1 era 首选随之修正为 c7076ac9（gunfocus 提交本体——「聚焦枪手进池跑了一臂」就是 v7gf1 本批，批时 22:35-22:47 +0800，提交 22:59）；此前 era 树无 gunfocus bot ⇒ server「未知/缺失对手」error ⇒ runner 233 行炸批（46 枚「产物未落」的主因之一）。
 - **队列收束裁定（13:0x，用户采纳 gemini 建议）**：校准批跑完即停；74 个盲扫批拆出到 `scratch/v7-mined/server-jobs-blind.tsv` **移交通宵班**（下午不做盲扫）。盲扫批下一班的正确打法不是继续盲——按幸存者 META / 配方账（RECIPE-BOOK-1119 + TRAINING-RECORDS）把每批的 EPIRUS_* env 覆写精配进 RING2 驱动 env 再扫，盲扫两 era 0 命中已证明阶梯猜测不够。
+
+## 十、下午班收尾（13:0x-14:4x，会话连续跨夜+下午）
+
+### 10.1 校准段收官（32 批跑完即停，用户裁定采纳 gemini 建议）
+
+- **5 枚入账**：eco-32/36、def-32（09-13 四批正主补齐——eco/def/long/v7b 四批的 missing 由此清完）、**v7divK-81/82**（v7 系校准路径首个战果：幸存者探针过 ⇒ 整批连中）。台账 457→**452**（本会话累计 53 枚：505→452；全 campaign 605→452）。
+- 校准 miss 记档：v7w3c、v7seat24、v7u1 等——幸存者探针全候选不中 = 会话编辑中态/配置缺失家族，归考古线。
+- **边缘案例留观**：v7wall-34 校准过但产物 wid=BASE 本体（e379c62c）——疑似 era 落盘被拦后 runner 仍拷槽（槽未变=BASE）。下一班遇「产物=BASE」字样直接判该 seed 无效，别当命中。
+
+### 10.2 给通宵班的主攻项（74 盲扫批 = server-jobs-blind.tsv）
+
+1. **别裸盲扫**（今晚两 era 0 命中已证伪）：逐批从幸存者 META / 配方账（RECIPE-BOOK-1119、TRAINING-RECORDS、COMMAND-CHECKUP）把 `EPIRUS_*` env 覆写（ECO_TARGET/CAP/DIVW/DIV_K/ROLEW/CATW/WALL_FILTER/GAMES…）精配进 sweep 驱动的 runBatch env 再扫。
+2. 驱动已备好：盲扫批单 era（ed6a82c0）；jobs 分片 parity k%2。
+3. 20 对手名单（v7big1/v7press1/2）仍缺——e68ffc09 只有 16/17/18，22 名单在 7134b299。
+4. 与 gemini 白班正交确认：fam7（e35prod807/814、seed81）/fam9 不在盲扫表内，gemini 并行复刻零冲突。
