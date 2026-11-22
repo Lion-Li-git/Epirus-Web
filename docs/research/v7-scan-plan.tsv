@@ -1,0 +1,75 @@
+batch	tier	packs	rootBatch	rootState	seeds	oppsN	knobUniform	knobs	probeFirst	ids
+v7l2c	T1根已在盘	20	SLOT-e379c62c	ok	102 103 111 114 124 141 142 143 144 145 146 147 148 149 150 151 152 31 82 93	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7l2c-102@102	v7l2c-102 v7l2c-103 v7l2c-111 v7l2c-114 v7l2c-124 v7l2c-141 v7l2c-142 v7l2c-143 v7l2c-144 v7l2c-145 v7l2c-146 v7l2c-147 v7l2c-148 v7l2c-149 v7l2c-150 v7l2c-151 v7l2c-152 v7l2c-31 v7l2c-82 v7l2c-93
+v7l2f	T1根已在盘	18	SLOT-e379c62c	ok	101 102 106 141 142 143 144 145 146 147 148 149 150 151 152 31 81 82	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7l2f-101@101	v7l2f-101 v7l2f-102 v7l2f-106 v7l2f-141 v7l2f-142 v7l2f-143 v7l2f-144 v7l2f-145 v7l2f-146 v7l2f-147 v7l2f-148 v7l2f-149 v7l2f-150 v7l2f-151 v7l2f-152 v7l2f-31 v7l2f-81 v7l2f-82
+v7aim1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|6	v7aim1-31@31	v7aim1-31 v7aim1-81 v7aim1-82 v7aim1-91 v7aim1-92 v7aim1-93
+v7big1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	v7big1-31@31	v7big1-31 v7big1-81 v7big1-82 v7big1-91 v7big1-92 v7big1-93
+v7curri2	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7curri2-31@31	v7curri2-31 v7curri2-81 v7curri2-82 v7curri2-91 v7curri2-92 v7curri2-93
+v7fix1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7fix1-31@31	v7fix1-31 v7fix1-81 v7fix1-82 v7fix1-91 v7fix1-92 v7fix1-93
+v7iso1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7iso1-31@31	v7iso1-31 v7iso1-81 v7iso1-82 v7iso1-91 v7iso1-92 v7iso1-93
+v7new1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.3|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7new1-31@31	v7new1-31 v7new1-81 v7new1-82 v7new1-91 v7new1-92 v7new1-93
+v7new4	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new4-31@31	v7new4-31 v7new4-81 v7new4-82 v7new4-91 v7new4-92 v7new4-93
+v7new5_01	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new5_01-31@31	v7new5_01-31 v7new5_01-81 v7new5_01-82 v7new5_01-91 v7new5_01-92 v7new5_01-93
+v7new6	T1根已在盘	6	SLOT-e379c62c	ok	94 95 96 97 98 99	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new6-94@94	v7new6-94 v7new6-95 v7new6-96 v7new6-97 v7new6-98 v7new6-99
+v7noteach1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7noteach1-31@31	v7noteach1-31 v7noteach1-81 v7noteach1-82 v7noteach1-91 v7noteach1-92 v7noteach1-93
+v7press1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	v7press1-31@31	v7press1-31 v7press1-81 v7press1-82 v7press1-91 v7press1-92 v7press1-93
+v7press2	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	v7press2-31@31	v7press2-31 v7press2-81 v7press2-82 v7press2-91 v7press2-92 v7press2-93
+v7ringA1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7ringA1-31@31	v7ringA1-31 v7ringA1-81 v7ringA1-82 v7ringA1-91 v7ringA1-92 v7ringA1-93
+v7ringT3	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7ringT3-31@31	v7ringT3-31 v7ringT3-81 v7ringT3-82 v7ringT3-91 v7ringT3-92 v7ringT3-93
+v7role1w	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|1|1|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7role1w-31@31	v7role1w-31 v7role1w-81 v7role1w-82 v7role1w-91 v7role1w-92 v7role1w-93
+v7role5	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0.5|0.5|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7role5-31@31	v7role5-31 v7role5-81 v7role5-82 v7role5-91 v7role5-92 v7role5-93
+v7stock1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7stock1-31@31	v7stock1-31 v7stock1-81 v7stock1-82 v7stock1-91 v7stock1-92 v7stock1-93
+v7sub1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7sub1-31@31	v7sub1-31 v7sub1-81 v7sub1-82 v7sub1-91 v7sub1-92 v7sub1-93
+v7w3r1	T1根已在盘	6	SLOT-e379c62c	ok	31 81 82 91 92 93	16	uniform	0.3|6|1|1|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7w3r1-31@31	v7w3r1-31 v7w3r1-81 v7w3r1-82 v7w3r1-91 v7w3r1-92 v7w3r1-93
+r61fix	T1根已在盘	5	SLOT-e379c62c	ok	31 81 82 91 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	r61fix-31@31	r61fix-31 r61fix-81 r61fix-82 r61fix-91 r61fix-93
+v7f2t	T1根已在盘	5	SLOT-e379c62c	ok	31 81 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7f2t-31@31	v7f2t-31 v7f2t-81 v7f2t-91 v7f2t-92 v7f2t-93
+v7f5div3	T1根已在盘	5	SLOT-e379c62c	ok	31 81 82 91 92	16	uniform	0.3|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7f5div3-31@31	v7f5div3-31 v7f5div3-81 v7f5div3-82 v7f5div3-91 v7f5div3-92
+v7gf1	T1根已在盘	5	SLOT-e379c62c	ok	31 82 91 92 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|6	v7gf1-31@31	v7gf1-31 v7gf1-82 v7gf1-91 v7gf1-92 v7gf1-93
+v7l2s	T1根已在盘	5	SLOT-e379c62c	ok	111 115 82 91 93	17	uniform	0.06|6|0|0|17|0.15|0.12|0.01|0|0|0|250|multi|6	v7l2s-111@111	v7l2s-111 v7l2s-115 v7l2s-82 v7l2s-91 v7l2s-93
+v7wall1	T1根已在盘	5	SLOT-e379c62c	ok	81 82 91 92 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7wall1-81@81	v7wall1-81 v7wall1-82 v7wall1-91 v7wall1-92 v7wall1-93
+v7wall2	T1根已在盘	5	SLOT-e379c62c	ok	94 95 96 98 99	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7wall2-94@94	v7wall2-94 v7wall2-95 v7wall2-96 v7wall2-98 v7wall2-99
+v7ws2	T1根已在盘	5	SLOT-e379c62c	ok	31 82 91 92 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	v7ws2-31@31	v7ws2-31 v7ws2-82 v7ws2-91 v7ws2-92 v7ws2-93
+v7blk1	T1根已在盘	4	SLOT-e379c62c	ok	31 81 82 93	20	uniform	0.3|6|0|0|20|0.05|0.12|0.01|0|0|0|250|multi|6	v7blk1-31@31	v7blk1-31 v7blk1-81 v7blk1-82 v7blk1-93
+v7f5t	T1根已在盘	4	SLOT-e379c62c	ok	81 82 91 93	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7f5t-81@81	v7f5t-81 v7f5t-82 v7f5t-91 v7f5t-93
+v7new5_005	T1根已在盘	4	SLOT-e379c62c	ok	82 91 92 93	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new5_005-82@82	v7new5_005-82 v7new5_005-91 v7new5_005-92 v7new5_005-93
+v7ringB1	T1根已在盘	4	SLOT-e379c62c	ok	31 82 91 92	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7ringB1-31@31	v7ringB1-31 v7ringB1-82 v7ringB1-91 v7ringB1-92
+v7w3c	T1根已在盘	4	SLOT-e379c62c	ok	31 81 91 92	16	uniform	0.3|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7w3c-31@31	v7w3c-31 v7w3c-81 v7w3c-91 v7w3c-92
+v7aim1f	T1根已在盘	3	SLOT-e379c62c	ok	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|6	v7aim1f-31@31	v7aim1f-31 v7aim1f-82 v7aim1f-93
+v7aim2	T2父仍在缺件	3	v7aim1-82	v7aim1-82	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7aim1-82	v7aim2-31 v7aim2-82 v7aim2-93
+v7bead100	T1根已在盘	3	v7n1-93	ok	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead100-31@31	v7bead100-31 v7bead100-82 v7bead100-93
+v7bead15	T1根已在盘	3	v7n1-93	ok	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead15-31@31	v7bead15-31 v7bead15-82 v7bead15-93
+v7bead2	T1根已在盘	3	v7n1-93	ok	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead2-31@31	v7bead2-31 v7bead2-82 v7bead2-93
+v7bead25	T1根已在盘	3	v7n1-93	ok	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead25-31@31	v7bead25-31 v7bead25-82 v7bead25-93
+v7catE5	T1根已在盘	3	SLOT-e379c62c	ok	31 81 82	16	uniform	0.06|6|-|0.5|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7catE5-31@31	v7catE5-31 v7catE5-81 v7catE5-82
+v7cur	T2父仍在缺件	3	v7aim2-82	v7aim2-82	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7aim2-82	v7cur-31 v7cur-82 v7cur-93
+v7cur2	T2父仍在缺件	3	v7aim1f-31	v7aim1f-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7aim1f-31	v7cur2-31 v7cur2-82 v7cur2-93
+v7cur3	T2父仍在缺件	3	v7cur2-31	v7cur2-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7cur2-31	v7cur3-31 v7cur3-82 v7cur3-93
+v7densE	T1根已在盘	3	SLOT-e379c62c	ok	31 81 82	17	uniform	0.06|6|-|-|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7densE-31@31	v7densE-31 v7densE-81 v7densE-82
+v7l2h	T1根已在盘	3	SLOT-e379c62c	ok	106 81 93	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7l2h-106@106	v7l2h-106 v7l2h-81 v7l2h-93
+v7l2o	T1根已在盘	3	SLOT-e379c62c	ok	91 92 93	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7l2o-91@91	v7l2o-91 v7l2o-92 v7l2o-93
+v7protoE	T1根已在盘	3	SLOT-e379c62c	ok	31 81 82	18	uniform	0.06|6|-|-|18|0.05|0.12|0.01|0|0|0|250|multi|6	v7protoE-31@31	v7protoE-31 v7protoE-81 v7protoE-82
+v7rb1	T1根已在盘	3	SLOT-e379c62c	ok	31 82 92	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|6	v7rb1-31@31	v7rb1-31 v7rb1-82 v7rb1-92
+v7rb2	T1根已在盘	3	v7press3-91	ok	31 82 92	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7rb2-31@31	v7rb2-31 v7rb2-82 v7rb2-92
+v7role1	T1根已在盘	3	SLOT-e379c62c	ok	81 92 93	16	uniform	0.06|6|1|1|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7role1-81@81	v7role1-81 v7role1-92 v7role1-93
+v7role12	T1根已在盘	3	SLOT-e379c62c	ok	94 95 96	16	uniform	0.06|6|1|1|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7role12-94@94	v7role12-94 v7role12-95 v7role12-96
+v7roleC2	T1根已在盘	3	SLOT-e379c62c	ok	94 95 96	16	uniform	0.06|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7roleC2-94@94	v7roleC2-94 v7roleC2-95 v7roleC2-96
+v7s4	T2父仍在缺件	3	v7cur2-31	v7cur2-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7cur2-31	v7s4-31 v7s4-82 v7s4-93
+v7s5	T2父仍在缺件	3	v7s4-31	v7s4-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s4-31	v7s5-31 v7s5-82 v7s5-93
+v7s6	T2父仍在缺件	3	v7s5-31	v7s5-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s5-31	v7s6-31 v7s6-82 v7s6-93
+v7s7	T2父仍在缺件	3	v7s6-31	v7s6-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s6-31	v7s7-31 v7s7-82 v7s7-93
+v7s8	T2父仍在缺件	3	v7s7-31	v7s7-31	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s7-31	v7s8-31 v7s8-82 v7s8-93
+v7s9	T2父仍在缺件	3	v7s8-82	v7s8-82	31 82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s8-82	v7s9-31 v7s9-82 v7s9-93
+v7seat24b	T1根已在盘	3	SLOT-e379c62c	ok	91 92 93	16	uniform	0.3|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7seat24b-91@91	v7seat24b-91 v7seat24b-92 v7seat24b-93
+v7aim3	T2父仍在缺件	2	v7aim1-82	v7aim1-82	31 82	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7aim1-82	v7aim3-31 v7aim3-82
+v7bead3	T1根已在盘	2	v7n1-93	ok	31 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead3-31@31	v7bead3-31 v7bead3-93
+v7beadseed	T1根已在盘	2	v7n1-93	ok	31 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7beadseed-31@31	v7beadseed-31 v7beadseed-93
+v7divK2	T1根已在盘	2	SLOT-e379c62c	ok	81 82	13	uniform	0.3|6|-|-|13|0.05|0.12|0.01|0|0|0|250|multi|6	v7divK2-81@81	v7divK2-81 v7divK2-82
+v7seat24	T1根已在盘	2	SLOT-e379c62c	ok	81 82	16	uniform	0.3|6|0|0|16|0.05|0.12|0.01|0|0|0|250|multi|6	v7seat24-81@81	v7seat24-81 v7seat24-82
+v7t1	T1根已在盘	2	v7n1-93	ok	82 93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7t1-82@82	v7t1-82 v7t1-93
+v7bead1	T1根已在盘	1	v7n1-93	ok	31	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7bead1-31@31	v7bead1-31
+v7cmin4	T1根已在盘	1	v7cmin3-82	ok	93	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7cmin4-93@93	v7cmin4-93
+v7l2a	T1根已在盘	1	SLOT-e379c62c	ok	81	17	uniform	0.06|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7l2a-81@81	v7l2a-81
+v7n1	T2父仍在缺件	1	v7s8-82	v7s8-82	82	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	先复现父：v7s8-82	v7n1-82
+v7new2	T1根已在盘	1	SLOT-e379c62c	ok	31	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new2-31@31	v7new2-31
+v7new3	T1根已在盘	1	SLOT-e379c62c	ok	31	17	uniform	0.3|6|0|0|17|0.05|0.12|0.01|0|0|0|250|multi|6	v7new3-31@31	v7new3-31
+v7t2	T1根已在盘	1	v7n1-93	ok	82	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7t2-82@82	v7t2-82
+v7u1	T1根已在盘	1	v7n1-93	ok	31	22	uniform	0.3|6|0|0|22|0.05|0.12|0.01|0|0|0|250|multi|-	v7u1-31@31	v7u1-31

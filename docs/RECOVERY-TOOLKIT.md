@@ -84,3 +84,28 @@ COPY-FAIL-DEAD-KEY / NEED-PREREQ / UNREADABLE-FRAGMENT / NOT-TRAINER`。判据�
 结论与判语见 [research/COMMAND-CHECKUP-2026-11-20.md](research/COMMAND-CHECKUP-2026-11-20.md)：
 **对 505 枚缺件有用的老命令，0 条能原样照抄**，其中一半只欠一个路径名（`tools/train-3p.mjs`→`training/train-3p.mjs`）；
 暗键高度集中在 v7 奖励族 ⇒ **该换 era worktree，不该改键名**。
+
+## 8. `anchor-recover` 的源清单盲区（11-22 · Qoder）
+
+`--sources=` 的缺省只有两个隔离区 + 4 个 `wt-repro-*`，**不含 11-20/21 为 era 重放建的 182 个 `D:/code/srv-wt-*` / `wt-*` 工作树**
+——那些树里躺着历届重放的产物（`.bak` 与训练暂存槽），是"仓外源"最大的一块。把源指过去再跑：
+
+```bash
+cd /d/code && ls -d srv-wt-s0-* srv-wt-s1-* wt-* | sed 's|^|D:/code/|' | paste -sd, - > "$TEMP/srcs-dcode.txt"
+cd /d/code/Epirus-Web && node tools/anchor-recover.mjs --sources="$(cat "$TEMP/srcs-dcode.txt")"
+```
+
+11-22 实测：源文件 12,977 ‖ 唯一 wid 1,276 ‖ **可恢复 5**（`%TEMP%` 下 510 个 `epirus-*` 目录另扫，0 命中）。
+清单、逐枚 wid 复核与"其中一枚躺在 `.training-out-3p.js` 暂存槽里、再跑一次训练就没了"的警示见
+[research/HANDOFF-2026-11-22-night-for-glm.md](research/HANDOFF-2026-11-22-night-for-glm.md) §一。
+**别把这块源写进缺省**——那些树是复现过程的中间态，改名/清理都在动；要固化就先按 §24 挪进隔离区。
+
+## 9. `tools/v7-scan-plan.mjs` —— 早期 server 缺件的复现队列（11-22 · Qoder）
+
+吃 `page/lineage.tsv` 的 `parent`/`parentOf`/`metaSeed` + 16 列表内配方 + 台账态，输出"每批先跑 1 枚探针"的队列 TSV
+（缺省落 `docs/research/v7-scan-plan.tsv`，`--out=` 可改，`--fams=` 可换族）。
+存在的理由：`lineage` 此前只被当身份账（`wid`）和画图账（`fam`/`ts`）用，
+而**根与 seed 一直都在表里**（fam4/5/6 的 310 枚缺件 310/310 有值）⇒ 扫描不该从"猜 env 阶梯"起步。
+自带进出对账：读不到缺件行就 exit 2，不出口径不明的半张表。算法与收益排序见
+[research/HANDOFF-2026-11-22-night-for-glm.md](research/HANDOFF-2026-11-22-night-for-glm.md) §二。
+
