@@ -116,15 +116,23 @@ function packDims(txt) {
 }
 const PACK_DIMS = packDims(packText) || {};
 /* 11-17：按 id 前缀与观测面分代归族；仅 obs6 包允许进 obs6/obs6.5 家族，防 obs3b/obs5 混入。 */
-function autoFamLabel(id, dims) {
+function autoFamLabel(id, dims, m) {
   if (dims.input === 'obs6') {
-    if (/^(MX[1-8]-|RING|TZ)/.test(id)) return '2.0 obs6.5 键道/覆盖训练（11-17）';
     if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
-    if (dims.modeBias === 1) return '2.0 obs6.5 统一单包（11-16）';
+    if (/^(OBS6-UNIFIED-|EQ-|BASE-)/.test(id)) return '2.0 obs6.5 统一单包（11-16）';
+    if ((m && (m.tool === 'pg-train' || (m.games && !m.teacher))) || /-(pg|kl|klcand|kw\d+|s\d+k)$/i.test(id)) {
+      return '2.0 obs6.5 PG / KL 强化续训';
+    }
+    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|nov2\d-(?:armor|rod|c4|tzt2d))/.test(id) || (m && (m.rareOnly || m.teacher2keys))) {
+      return '2.0 obs6.5 键道/覆盖与协同蒸馏';
+    }
+    if (/^(night2-|nov2\d-.*dsp0)/.test(id) || dims.modeBias === 1) {
+      return '2.0 obs6.5 DS-P0 强锚补盲与融合重馏';
+    }
   }
   return '';
 }
-const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS);
+const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS, meta);
 function famRows() {
   /* 11-17 家族号单源化：唯一真源是 `data/registry.tsv`（sidecar 的 fam/famLabel 两列已删）。
    *   lineage.tsv 一并扫只为本它的 1.8 老行兜底（它是 registry+sidecar 的生成物，正常两处一致）。 */
@@ -193,20 +201,16 @@ if (!FAM) {
     process.exit(2);
   }
 } else {
-  if (AUTO_FAM_LABEL) {
-    const ex = findFamByNum(FAM);
-    if (ex && ex.label !== AUTO_FAM_LABEL) {
-      console.error('⛔ 架构=FAM' + FAM + '（' + ex.label + '）与 modeBias=1 期望族「' + AUTO_FAM_LABEL + '」不符；不许把 obs6.5 混进旧族'); process.exit(2);
+  const ex = findFamByNum(FAM);
+  if (ex) {
+    if (FAMLAB && ex.label !== FAMLAB) {
+      console.error('⛔ --fam=' + FAM + ' 在册标签为「' + ex.label + '」，与传入 --fam-label=「' + FAMLAB + '」冲突'); process.exit(2);
     }
-    if (!ex && FAMLAB && FAMLAB !== AUTO_FAM_LABEL) {
-      console.error('⛔ --fam=' + FAM + ' --fam-label=' + FAMLAB + ' 与 modeBias=1 期望族「' + AUTO_FAM_LABEL + '」不符'); process.exit(2);
-    }
-    FAMLAB = FAMLAB || AUTO_FAM_LABEL;
+    FAMLAB = ex.label;
   } else if (!FAMLAB) {
-    const ex = findFamByNum(FAM);
-    if (ex) FAMLAB = ex.label;
+    if (AUTO_FAM_LABEL) FAMLAB = AUTO_FAM_LABEL;
+    else { console.error('⛔ --fam=' + FAM + ' 未在册且未传 --fam-label=<label>；拒绝静默新建'); process.exit(2); }
   }
-  if (!FAMLAB) { console.error('⛔ --fam=' + FAM + ' 在册但找不到 famLabel；拒绝静默新建'); process.exit(2); }
 }
 if (VER === '2.0' && PACK_DIMS.input) {
   const fn = Number(FAM);

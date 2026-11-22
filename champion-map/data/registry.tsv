@@ -973,40 +973,43 @@ EQ-S4-GD6ATEACH	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	2.0	23	2.0 obs
 EQ-S3-E9	docs/artifacts/obs6-coldstart/EQ-S3-E9.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T16:09:56.918Z	41ed353c85fee6cb3c46f02bc6e9cff1826f80f7e51cde4f1b34c8de03f06524	active																
 BASE-E9-MB5	docs/artifacts/obs6-coldstart/BASE-E9-MB5.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T16:11:46.510Z	3224d5ab523cbd1526d36331f27e39ccd44369ed670badff54ed89e5ed79788f	active																
 BASE-P9-MB5	docs/artifacts/obs6-coldstart/BASE-P9-MB5.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-16T16:13:38.834Z	16f9d12e86dd1a9369a32a0c10afa9442f5795975781dd5911fdf5795a21643d	active																
-MX1-E9-GD	docs/artifacts/obs6-coldstart/MX1-E9-GD.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T17:05:58.698Z	ed9558c6f126b010471caa69d17bb8df3ab27910d230eb1cf28b21be08388105	active																
-MX1-GD-EQ	docs/artifacts/obs6-coldstart/MX1-GD-EQ.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T17:08:24.947Z	da6f97e6e3cc67050c885f5d9ca841467eb0f394da943a39fd9c6a45cffe95f5	active																
-MX2-U4-EQ	docs/artifacts/obs6-coldstart/MX2-U4-EQ.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T17:15:43.479Z	fbb4fbee953493576755534dec50f30ec0c8efd85af478fa744d0f42cf23f934	active																
-MX3-GDEQ-GD	docs/artifacts/obs6-coldstart/MX3-GDEQ-GD.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T17:48:26.279Z	764a7bc4d581aa23258fb6071a0aa733b01b995cea2e60747b5c421aca145dd6	active																
-MX4-GD-T4	docs/artifacts/obs6-coldstart/MX4-GD-T4.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T18:11:00.863Z	00cac7c59037784b4536c30f877b3e752fbd5c9b525fa89101cdddec2915aace	active																
-MX5-GD-T2STR	docs/artifacts/obs6-coldstart/MX5-GD-T2STR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T18:30:03.343Z	b226ef79cc11b67703e39d2971b676ccf5f4e43c1822bf1534aaf56ea33eb65b	active																
-MX5-GD-LE40	docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T18:39:52.030Z	4249eabdd3950a915bf0aa96c500124cd1ea67194de4c0fb4feb8662210fb834	active																
-MX7-T2-R	docs/artifacts/obs6-coldstart/MX7-T2-R.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T21:08:02.600Z	9dbd06ecfa272bbb8fd95590bd796394ecc65902a98dbc89a3dcead0951e88b3	active																
-MX8-R6B-KL	docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T21:30:41.259Z	a125676d65ca3a9d8040160634ed41bb75f086951d26beeb1377d3b73f134352	active																
-MX8-CN-M	docs/artifacts/obs6-coldstart/MX8-CN-M.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T22:07:58.381Z	7a800ee63413ca423efe02b583f9bc1f386e34938bb47957df9ba94a1d96e70b	active																
-MX8-R6C-KL	docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-16T22:24:21.942Z	48359b87fcd9570dffe6b6d6f5494ee46857df26229aa6d07821f8bf972542a6	active																
-MX6-GD-TF15	docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T03:50:49.146Z	d909b1de6478159bc827862319cea18bd1c90109fe604875340aba828eb2ac67	active																
-MX6-GD-TF20	docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T03:54:32.126Z	1f4a97c0268c610b9a3ea11f4189c6439e71840ae009caf138d36b41f9192afb	active																
-MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T03:58:38.261Z	de3f866fd83cf53416493c337966e54f3aa3d8ccb42276394ac8076a2497b10e	active																
-MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T04:03:24.216Z	f2e46cc2737b2490feb468f6d8d24e26981e13029468f578f0a6ab7da5ca15ee	active																
-RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:21:40.047Z	af676b7b054672066f1d75e31cfdebbcfcb1e3d13f4ddcc5451f521f30b6d596	active																
-TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:23:15.709Z	59233bc5409af50ec8fc536e7a9ebbcfe2e4f39837a205388bb66eb632068f93	active																
-TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:24:44.651Z	ae4de3f691a3823ca59f0a3a9ad275e90d777908b97cd7d295a570c307b82dc9	active																
-TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active																
+MX1-E9-GD	docs/artifacts/obs6-coldstart/MX1-E9-GD.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T17:05:58.698Z	ed9558c6f126b010471caa69d17bb8df3ab27910d230eb1cf28b21be08388105	active																
+MX1-GD-EQ	docs/artifacts/obs6-coldstart/MX1-GD-EQ.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T17:08:24.947Z	da6f97e6e3cc67050c885f5d9ca841467eb0f394da943a39fd9c6a45cffe95f5	active																
+MX2-U4-EQ	docs/artifacts/obs6-coldstart/MX2-U4-EQ.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T17:15:43.479Z	fbb4fbee953493576755534dec50f30ec0c8efd85af478fa744d0f42cf23f934	active																
+MX3-GDEQ-GD	docs/artifacts/obs6-coldstart/MX3-GDEQ-GD.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T17:48:26.279Z	764a7bc4d581aa23258fb6071a0aa733b01b995cea2e60747b5c421aca145dd6	active																
+MX4-GD-T4	docs/artifacts/obs6-coldstart/MX4-GD-T4.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T18:11:00.863Z	00cac7c59037784b4536c30f877b3e752fbd5c9b525fa89101cdddec2915aace	active																
+MX5-GD-T2STR	docs/artifacts/obs6-coldstart/MX5-GD-T2STR.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T18:30:03.343Z	b226ef79cc11b67703e39d2971b676ccf5f4e43c1822bf1534aaf56ea33eb65b	active																
+MX5-GD-LE40	docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T18:39:52.030Z	4249eabdd3950a915bf0aa96c500124cd1ea67194de4c0fb4feb8662210fb834	active																
+MX7-T2-R	docs/artifacts/obs6-coldstart/MX7-T2-R.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T21:08:02.600Z	9dbd06ecfa272bbb8fd95590bd796394ecc65902a98dbc89a3dcead0951e88b3	active																
+MX8-R6B-KL	docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T21:30:41.259Z	a125676d65ca3a9d8040160634ed41bb75f086951d26beeb1377d3b73f134352	active																
+MX8-CN-M	docs/artifacts/obs6-coldstart/MX8-CN-M.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T22:07:58.381Z	7a800ee63413ca423efe02b583f9bc1f386e34938bb47957df9ba94a1d96e70b	active																
+MX8-R6C-KL	docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-16T22:24:21.942Z	48359b87fcd9570dffe6b6d6f5494ee46857df26229aa6d07821f8bf972542a6	active																
+MX6-GD-TF15	docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T03:50:49.146Z	d909b1de6478159bc827862319cea18bd1c90109fe604875340aba828eb2ac67	active																
+MX6-GD-TF20	docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T03:54:32.126Z	1f4a97c0268c610b9a3ea11f4189c6439e71840ae009caf138d36b41f9192afb	active																
+MX8-TN25-KL	docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T03:58:38.261Z	de3f866fd83cf53416493c337966e54f3aa3d8ccb42276394ac8076a2497b10e	active																
+MX8-TN35-KL3	docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T04:03:24.216Z	f2e46cc2737b2490feb468f6d8d24e26981e13029468f578f0a6ab7da5ca15ee	active																
+RINGB9	docs/artifacts/obs6-coldstart/RINGB9.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T23:21:40.047Z	af676b7b054672066f1d75e31cfdebbcfcb1e3d13f4ddcc5451f521f30b6d596	active																
+TZ2C	docs/artifacts/obs6-coldstart/TZ2C.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T23:23:15.709Z	59233bc5409af50ec8fc536e7a9ebbcfe2e4f39837a205388bb66eb632068f93	active																
+TZPUR	docs/artifacts/obs6-coldstart/TZPUR.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T23:24:44.651Z	ae4de3f691a3823ca59f0a3a9ad275e90d777908b97cd7d295a570c307b82dc9	active																
+TZT2D	docs/artifacts/obs6-coldstart/TZT2D.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-17T23:26:12.459Z	833bea038269579a1c8cbb3ff101137806bf5d873c9f65d007fb94cab73e37b8	active																
 RINGB11	docs/artifacts/obs6-coldstart/RINGB11.bak	2.0	14	2.0 蒸馏根与 L5/CB/D 产线		2026-11-17T23:42:26.400Z	7fab176c216212d7ab1e60bf91346a76e6066a62c2a9e2845a3b36a2bb7b6a34	active																
 DIV-V3-PRESSURE-S2	docs/artifacts/obs6-coldstart/DIV-V3-PRESSURE-S2.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-18T08:20:58.429Z	65acb22aaa84acb191bc82597deef0007d6a82a1fe50cf0fb6769a9c17c6f74d	active																
 DIV-V3-ANTIDEF	docs/artifacts/obs6-coldstart/DIV-V3-ANTIDEF.bak	2.0	24	2.0 obs6 V3 融合/路由（11-16）		2026-11-18T08:27:17.043Z	351b43455e3e52b2695a2bba11b46df34afd950694bd358e783e953bc49948e3	active																
 DIV-LH6-HEAVY-S2	docs/artifacts/obs6-coldstart/DIV-LH6-HEAVY-S2.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-18T08:33:23.921Z	7664e98d9c3344ea69f8b0f2867114ca6ef00caafa7ed464630117baa8eab8a2	active																
-RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	2.0	25	2.0 obs6.5 键道/覆盖训练（11-17）		2026-11-18T08:38:33.905Z	5c0ed7bd5209cad303c7eafbb5d1181d45e8d924b67cb76513eb1d97fa93b1fd	active																
+RING-MINIT-CONT	docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-18T08:38:33.905Z	5c0ed7bd5209cad303c7eafbb5d1181d45e8d924b67cb76513eb1d97fa93b1fd	active																
 P9-CN-MINI-CONT	docs/artifacts/obs6-coldstart/P9-CN-MINI-CONT.bak	2.0	22	2.0 obs6 v7 蒸馏（11-14）		2026-11-18T08:44:12.326Z	cd6d6dcc34072747058add3804004d5a766af759a1ae2df9717fb5f0698a1438	active																
-night2-S6	docs/artifacts/night2-S6.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-18T23:20:41.127Z	a403c7637fdd8931800e75bf222730f9413eaa4e68eacac7a637309e59b70f62	active																
-night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-18T23:44:33.492Z	476ad887f7f866a0abb78552a5e28fc335ec93013e34744097c1b85b25a3b9c5	active																
-day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-19T04:46:43.833Z	0b1ed8569cc17d677cb4006dd2320fadb92f9482fbf8a6760d809b11d1a5569b	active																
-night2-E1-det-strong	docs/artifacts/night2-E1-det-strong.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-19T16:49:21.486Z	ea4b9b23dfd7410713273ede53b8402d20bf49cade5536a55bb9915484fcde0f	active																
-nov21-purify-dsp0	docs/artifacts/nov21-purify-dsp0.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-21T08:46:36.210Z	dc14a364207781d38091496e3cab4a0d3dc201f70b643c30c11fc29c98fbedbe	active																
-nov21-taunt-dsp0b	docs/artifacts/nov21-taunt-dsp0b.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-21T09:06:29.056Z	2107f21e2e845646d4143f535cc92fc8efecd3f03dd55ddcbf33123fe4180f8e	active																
-nov21-rod-tzt2d-r10	scratch/arms/nov21-rod-tzt2d-r10.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-21T13:24:51.726Z	3e2e8c1c6f9f3adf09932971aa90d3d10fab38448e433362c3fe2b484504931c	active																
-nov22-tzt2d-stab	docs/artifacts/nov22-tzt2d-stab.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-21T19:13:42.831Z	ccb24128e63f24451ba57f82788b84d17c9343c48ac1bc7742b023d2cd0f17f6	active																
-nov21-armor-tzt2d	docs/artifacts/nov21-armor-tzt2d.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-22T04:02:27.265Z	b4f2081558e032fb3231a94c879a074b64ff15a5030becffe6081ea887d0cbdc	active																
-nov22-c3g-s300k	docs/artifacts/nov22-c3g-s300k.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-22T04:10:09.441Z	7463b63a1d8e85ec4ce0aad04804aebbeb0d2d1a85f5aa46b08d74a04a6e3645	active																
-nov22-c4c-t20	docs/artifacts/nov22-c4c-t20.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-22T04:22:30.170Z	36be3c928c8eef8055f564b59f9d02adeae0174e0da437909cd4a60acffffac0	active																
-R-GD12	docs/artifacts/R-GD12.bak	2.0	23	2.0 obs6.5 统一单包（11-16）		2026-11-22T06:30:14.060Z	cbdf500e82028c25f79b98bb325bad029e9c83557863dacdfcf40776281dbbfb	active																
+night2-S6	docs/artifacts/night2-S6.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-18T23:20:41.127Z	a403c7637fdd8931800e75bf222730f9413eaa4e68eacac7a637309e59b70f62	active																
+night2-X2b-fuse	docs/artifacts/night2-X2b-fuse.bak	2.0	26	2.0 obs6.5 DS-P0 强锚补盲与融合重馏		2026-11-18T23:44:33.492Z	476ad887f7f866a0abb78552a5e28fc335ec93013e34744097c1b85b25a3b9c5	active																
+day1119-cannon-pg	docs/artifacts/day1119-cannon-pg.bak	2.0	27	2.0 obs6.5 PG / KL 强化续训		2026-11-19T04:46:43.833Z	0b1ed8569cc17d677cb4006dd2320fadb92f9482fbf8a6760d809b11d1a5569b	active																
+night2-E1-det-strong	docs/artifacts/night2-E1-det-strong.bak	2.0	26	2.0 obs6.5 DS-P0 强锚补盲与融合重馏		2026-11-19T16:49:21.486Z	ea4b9b23dfd7410713273ede53b8402d20bf49cade5536a55bb9915484fcde0f	active																
+nov21-purify-dsp0	docs/artifacts/nov21-purify-dsp0.bak	2.0	26	2.0 obs6.5 DS-P0 强锚补盲与融合重馏		2026-11-21T08:46:36.210Z	dc14a364207781d38091496e3cab4a0d3dc201f70b643c30c11fc29c98fbedbe	active																
+nov21-taunt-dsp0b	docs/artifacts/nov21-taunt-dsp0b.bak	2.0	26	2.0 obs6.5 DS-P0 强锚补盲与融合重馏		2026-11-21T09:06:29.056Z	2107f21e2e845646d4143f535cc92fc8efecd3f03dd55ddcbf33123fe4180f8e	active																
+nov21-rod-tzt2d-r10	scratch/arms/nov21-rod-tzt2d-r10.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-21T13:24:51.726Z	3e2e8c1c6f9f3adf09932971aa90d3d10fab38448e433362c3fe2b484504931c	active																
+nov22-tzt2d-stab	docs/artifacts/nov22-tzt2d-stab.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-21T19:13:42.831Z	ccb24128e63f24451ba57f82788b84d17c9343c48ac1bc7742b023d2cd0f17f6	active																
+nov21-armor-tzt2d	docs/artifacts/nov21-armor-tzt2d.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-22T04:02:27.265Z	b4f2081558e032fb3231a94c879a074b64ff15a5030becffe6081ea887d0cbdc	active																
+nov22-c3g-s300k	docs/artifacts/nov22-c3g-s300k.bak	2.0	27	2.0 obs6.5 PG / KL 强化续训		2026-11-22T04:10:09.441Z	7463b63a1d8e85ec4ce0aad04804aebbeb0d2d1a85f5aa46b08d74a04a6e3645	active																
+nov22-c4c-t20	docs/artifacts/nov22-c4c-t20.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-22T04:22:30.170Z	36be3c928c8eef8055f564b59f9d02adeae0174e0da437909cd4a60acffffac0	active																
+R-GD12	docs/artifacts/R-GD12.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-22T06:30:14.060Z	cbdf500e82028c25f79b98bb325bad029e9c83557863dacdfcf40776281dbbfb	active																
+AR-TK2	docs/artifacts/AR-TK2.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-22T10:44:13.931Z	6c7602296a711045f72a979b9478da6327af81b9654b51a056cbca8ae269f6ee	active																
+AR-TK3	scratch/arms/AR-TK3.bak	2.0	25	2.0 obs6.5 键道/覆盖与协同蒸馏		2026-11-22T11:31:35.336Z	8ed55899da27feaa521c5af1109e4c2d0c8a33aab9abc6e20c3f2d764ea88734	active																
+nov22-c3b-kw100	scratch/arms/nov22-c3b-kw100.bak	2.0	27	2.0 obs6.5 PG / KL 强化续训		2026-11-22T11:57:39.966Z	3f939831510992be59cf215cfe5ebb9a9228b3b0027a11263f258ba4dccad5e8	active																

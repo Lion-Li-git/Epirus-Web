@@ -4,6 +4,39 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.15 — 11-22（玩家向文案与移动端/日志 UI 修正 ‖ 冠军池 HTTP 懒加载：3P 默认从 4.49MB gzip 降到约 304KB）
+
+**这一版是什么**：修掉上一轮复核里发现的玩家向文案错误与版式问题，并把冠军池从“整表 9.6MB 全量下发”改成“清单 + 本局抽到的 N−1 枚分片懒加载”。规则引擎、抽签算法与池成员（31 枚，hard 15 / soft 16）一字未动；v2.1.14 的 AR-TK2 随本版一并提交。
+
+- **玩家向文案修正**（[js/ui/rules-panel.js](js/ui/rules-panel.js)）：
+  - 小雷 FAQ 改为引擎真实口径：**只有防御/反弹/原型制御免疫**；蓄能、聚能环、ジ、摄魂、全息都会被作废且花费照扣。旧文案写“不含蓄能/聚能环/全息”与 MINI_T_IMMUNE 矛盾；
+  - 大雷的格挡清单补全（防御/反弹/藤甲/原型可挡，八卦/金刚盾按判定）；
+  - 全息屏障补上“激光眼打施放者或被套盾者都能拆”；挑衅由“指定攻击类技能”改为“任意攻击类技能”（引擎 TAUNT_SATISFY 本来就是任意攻击）。
+- **对局 UI**：
+  - 日志改为视口底部固定抽屉：收起 84px / 展开 42vh，1440×900 与 1366×768 下最新一行不再落到折叠线以下；
+  - 手机端新增粘性对手 HP 速览条（#quickopps），选招时不必滚到技能区下方看对手血量；390×844 实测速览条 0–36、技能区 44–678、日志抽屉 728–844，同屏可见；
+  - 1024×768 窄桌面技能格压缩到 84px/50px（10 行 → 8 行，底边 930 → 784）。
+- **终局收缩日志**：不再冒用“触发隐藏技能【终局收缩】”，改为“场地效果【终局收缩】启动”（[js/ui/ui.js](js/ui/ui.js) 的 evText）。
+- **冠军池 HTTP 懒加载**：
+  - [tools/build-pool-bundle.mjs](tools/build-pool-bundle.mjs) 新增 --split：同时生成 js/pool-manifest.js（约 5KB）与 js/pool-packs/ 下的 31 枚分片，原整表照写；
+  - [js/pool-loader.js](js/pool-loader.js) 按本局 draw.seats 注入分片（script 标签，不是 fetch，file:// 也能用）；本地无分片或 HTTP 分片 404 时回退整表并响亮说明；
+  - [index.html](index.html) 改读清单 + loader；[.github/workflows/pages.yml](.github/workflows/pages.yml) 在 Pages 构建时跑 --split --ver=p1122d；.gitignore 排除 js/pool-packs/（构建产物，不入库）；
+  - 实测 3P 普通 = 清单 1,548B + 2 枚分片 150,616/151,795B ≈ **304KB**（整表 gzip 4,487,656B，约 −93%）；8P 为 6 枚包 + 1 席脚本；同 seed 下整表与懒加载 10 回合 transcript 逐字相同。
+- **验证**：np 166/166（243.9s） · spec 81/81 · smoke OK · battle OK · map OK；另测分片全 404 回退整表、file:// 双击回退整表、中途切难度加载新分片均正常。
+- **版本与缓存戳**：v2.1.14 → v2.1.15；index.html 的 ?v=mwm11sbr → mwm11sbs、?v=p1122c → p1122d，CSS 加同一缓存戳。
+
+## v2.1.14 — 11-22（`AR-TK2` 正式入池 `hard` 带 · 池 `30 → 31` ‖ 坦克×藤甲线 `reflect` 误读修正与 `rareFrac` 切分机制定论）
+
+**这一版是什么**：复核 DS 的 `AR-TK3/4` 判例并完成 `AR-TK5–AR-TK8` 受控对比实验，厘清 `probe-human-seat` `全程刷反弹` 指标含义、发现 `supfit-gd.mjs` `rareFrac` 与 `splitByShape` 的 `75%/25%` 切分边界、核实 `seat-rule.mjs` 带内参照下 **`AR-TK2`** 全部五道门全绿（`seatKill = 0`），正式将其入库合入 **`hard` 带**（全池 `30 → 31`，`hard 15 / soft 16`），使 `hard` 带首次同时具备 `armor`（`120/120` 格）与 `tank`（`26/120` 格）条件协同覆盖。
+
+- **新入池 `hard` 强将 [`AR-TK2`](docs/artifacts/AR-TK2.bak)**（`wid=b5d4cbc6af57bbdd`，`hard 14 → 15` / 全池 `30 → 31`）：
+  - **配方**：`TZT2D` 起步 + `nov21-armor-tzt2d` 单主教师 + `tkWeak@0.20`（`--teacher2keys=tank --rareOnly=tank --rareFrac=0.35 --groups=2400 --steps=450 --lr=0.002 --objective=cand --dagger=1`）；
+  - **三轴与体检读数**（`champ=bundled-champion-3p` / `24 锚`）：**A 轴** `a-multi x5=0.2466 / a-long x5=0.2399`、`考卷 54.5%`、`ruler H=51.9 / S=2.01`；**B 轴** `arenaB` 6 种子中位 **`+10.3588pt`**（极差 `53.42pt`，`arR=+0.0036`、`arL=+0.0586`）；**C 轴** `C5R=+0.0826 / C5RL=+0.1752`；`selftest3` **6/6 全绿（`0.00e+0`）**；`promote --dry --support=2` **0 阻断**（`G_eff=7.54/8.25`、`G4=6.3%/18.7%`、`G5=7%/5%`、`反弹墙 10.30/局`、`场A 12.2%/含反弹触发 28.6%`）；
+  - **人席与普查**：按 `seat-rule.mjs` 官方 `hard` 带内参照（`90210/90211` 允许上限 `<25.25% / <24.25%`），`AR-TK2` `long 全程刷反弹 = 25.0% / 25.0%` 不满足两批同号 `≥20pt` 否决，**`pool-add --tier=hard` 判定 `seatKill = 0`**；Stage 1 胜率 `40.75%`（`并集 16/30`、`armor 120/120` 格 **`5,205` 手**、`tank 26/120` 格 **`212` 手**、`sword 80/120` 格 `770` 手、`snipe 54/120` 格 `1,815` 手），Stage 2 强度 `22` 技（消融 `9`）。
+- **坦克×藤甲线实验机制定论（`AR-TK3..AR-TK8` 留档 `scratch/arms/`，详见 [`STATUS-2026-11-22-tank-armor.md`](docs/research/STATUS-2026-11-22-tank-armor.md)）**：
+  - **指标误读澄清**：`probe-human-seat` 的 `全程刷反弹` 是 1 席反弹脚本人对阵 4 席 AI 的夺冠率（非 AI 自身按 `reflect`）。`AR-TK3` 降到 `6.7%` 是因为退回 `TZT2D` 恢复了破反 `sword`（`62 → 214`），并非摘 `reflect` 键生效；三教师拼盘导致 `AR-TK3/4` `arenaB` 崩盘至 `-41.40pt / -25.05pt`；
+  - **`rareFrac` 切分边界**：`supfit-gd.mjs` 中 `inRare` 在每形后 `rareFrac` 段启用，而 `splitByShape` 固定前 `75%` 进 `train`、后 `25%` 进 `test`，故 `--rareFrac=0.25`（`AR-TK5`）使稀有样本 100% 落入测试集、`tank` 条件响应归零；`AR-TK6`（`-18.25pt`）、`AR-TK7`（`-2.37pt` / `反弹墙 0` / `multi 只枪压制 41%/48%`）、`AR-TK8`（`-11.54pt` / `long 反弹 36.5%`）均未全面超越 `AR-TK2`。
+
 ## v2.1.13 — 11-22（`R-GD12` 携 `聚能环` 高分入池 `hard` 带 · 池 `29 → 30` ‖ `tkWeak` 条件藤甲×坦克配合实证）
 
 **这一版是什么**：在 `EQ-S4-GD6ATEACH` 底座上通过低学习率长程定向蒸馏合入 **`R-GD12`**，首次实现在不触发 `selftest3` 数值饱和与 `seatKill=0` 的前提下以 `arenaB = +15.89pt` 正式入池 `hard` 带并把 `hard` 带聚能环载体从 `2/13` 推升至 `3/14`；同时新增可选条件教师 `tkWeak` 完成 **`藤甲 → 坦克`** 因果协同与 6 万局 RL 留存实验。

@@ -973,31 +973,31 @@ EQ-S4-GD6ATEACH	23	2.0 obs6.5 统一单包（11-16）	2026-11-16T13:51:10	202611
 EQ-S3-E9	23	2.0 obs6.5 统一单包（11-16）	2026-11-16T06:51:48	2026111642	E9	EQ-E9-A1	EQ-E9-A1	EQ-E9-A1	b610d2d50782b0e1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 BASE-E9-MB5	23	2.0 obs6.5 统一单包（11-16）	2026-11-14T18:33:31	20261031	MB5	OBS6E9	OBS6E9	OBS6E9	20b109fef11eed33	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 BASE-P9-MB5	23	2.0 obs6.5 统一单包（11-16）	2026-11-14T18:55:40	7	MB5	OBS6P9-S4000	OBS6P9-S4000	OBS6P9-S4000	81783b74662084e3	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX1-E9-GD	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T16:34:36	2026111703	GD	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	72abddc710e6252b	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX1-GD-EQ	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T16:39:13	2026111705	EQ	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	c4fa2576f9700b39	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX2-U4-EQ	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T16:53:45	2026111713	EQ	OBS6-UNIFIED-U4	OBS6-UNIFIED-U4	OBS6-UNIFIED-U4	b78f6c7a34bcb654	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX3-GDEQ-GD	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T17:24:17	2026111703	GD	MX1-GD-EQ	MX1-GD-EQ	MX1-GD-EQ	3e9799402f0b37c1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX4-GD-T4	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T18:02:10	2026111805	T4	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	6f74ca5880f517a5	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX5-GD-T2STR	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T18:13:36	2026112001	T2STR	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	2648c67284ab8936	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX5-GD-LE40	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T18:30:44	2026112102	LE40	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	de7d0db32467c3c1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX7-T2-R	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T21:06:18	2026112601	R	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	27224033f4ed932d	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-MX8-R6B-KL	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T21:22:00	2026112801	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	eb5f0460834e3974	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-MX8-CN-M	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T21:55:21	2026113101	M	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	6e4c165da007a6a4	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-MX8-R6C-KL	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T22:16:06	2026112801	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	ece05168351625a9	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-MX6-GD-TF15	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T19:17:33	2026112502	TF15	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	95940870c4b8d16e	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX6-GD-TF20	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-16T19:17:34	2026112503	TF20	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	bab64e2b297b1e68	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-MX8-TN25-KL	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T03:18:27	2026113501	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	0940f463c2ac8966	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-MX8-TN35-KL3	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T03:29:34	2026113505	KL3	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	137f584ec08418b2	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-RINGB9	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T20:38:16	2026112409	RINGB9	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	313a5f6ae837c0db	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-TZ2C	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T18:20:24	2026112703	TZ2C	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	f5776ccecb333168	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-TZPUR	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T18:07:49	2026112801	TZPUR	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	a222b68348f41260	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-TZT2D	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-17T19:22:52	2026112615	TZT2D	MX7-T2-R	MX7-T2-R	MX7-T2-R	91645cf8499737b1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX1-E9-GD	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T16:34:36	2026111703	GD	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	72abddc710e6252b	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX1-GD-EQ	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T16:39:13	2026111705	EQ	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	c4fa2576f9700b39	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX2-U4-EQ	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T16:53:45	2026111713	EQ	OBS6-UNIFIED-U4	OBS6-UNIFIED-U4	OBS6-UNIFIED-U4	b78f6c7a34bcb654	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX3-GDEQ-GD	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T17:24:17	2026111703	GD	MX1-GD-EQ	MX1-GD-EQ	MX1-GD-EQ	3e9799402f0b37c1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX4-GD-T4	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T18:02:10	2026111805	T4	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	6f74ca5880f517a5	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX5-GD-T2STR	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T18:13:36	2026112001	T2STR	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	2648c67284ab8936	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX5-GD-LE40	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T18:30:44	2026112102	LE40	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	de7d0db32467c3c1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX7-T2-R	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T21:06:18	2026112601	R	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	27224033f4ed932d	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX8-R6B-KL	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T21:22:00	2026112801	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	eb5f0460834e3974	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX8-CN-M	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T21:55:21	2026113101	M	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	6e4c165da007a6a4	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX8-R6C-KL	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T22:16:06	2026112801	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	ece05168351625a9	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX6-GD-TF15	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T19:17:33	2026112502	TF15	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	95940870c4b8d16e	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX6-GD-TF20	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-16T19:17:34	2026112503	TF20	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	bab64e2b297b1e68	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+MX8-TN25-KL	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T03:18:27	2026113501	KL	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	0940f463c2ac8966	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+MX8-TN35-KL3	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T03:29:34	2026113505	KL3	MX1-E9-GD	MX1-E9-GD	MX1-E9-GD	137f584ec08418b2	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+RINGB9	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T20:38:16	2026112409	RINGB9	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	313a5f6ae837c0db	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+TZ2C	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T18:20:24	2026112703	TZ2C	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	f5776ccecb333168	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+TZPUR	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T18:07:49	2026112801	TZPUR	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	a222b68348f41260	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+TZT2D	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-17T19:22:52	2026112615	TZT2D	MX7-T2-R	MX7-T2-R	MX7-T2-R	91645cf8499737b1	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
 RINGB11	14	2.0 蒸馏根与 L5/CB/D 产线	2026-11-17T23:23:52	2026112902	RINGB11	DEF-s16	DEF-s16	DEF-s16	764f0b92c696fc62	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 DIV-V3-PRESSURE-S2	24	2.0 obs6 V3 融合/路由（11-16）	2026-11-18T06:04:19	11181	S2	OBS6-SHAPEDIST-V3S2	OBS6-SHAPEDIST-V3S2	OBS6-SHAPEDIST-V3S2	1c726b7bfaf2f345	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 DIV-V3-ANTIDEF	24	2.0 obs6 V3 融合/路由（11-16）	2026-11-18T06:18:41	11186	ANTIDEF	DIV-V3-PRESSURE-S2	DIV-V3-PRESSURE-S2	DIV-V3-PRESSURE-S2	0c31e13f5ab6ba9c	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 DIV-LH6-HEAVY-S2	22	2.0 obs6 v7 蒸馏（11-14）	2026-11-18T06:04:27	11182	S2	OBS6-LH6P	OBS6-LH6P	OBS6-LH6P	6b7b5fc2dcba1834	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-RING-MINIT-CONT	25	2.0 obs6.5 键道/覆盖训练（11-17）	2026-11-18T06:37:29	11189	CONT	RINGB9	RINGB9	RINGB9	225404c8e4454cf0	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+RING-MINIT-CONT	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-18T06:37:29	11189	CONT	RINGB9	RINGB9	RINGB9	225404c8e4454cf0	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
 P9-CN-MINI-CONT	22	2.0 obs6 v7 蒸馏（11-14）	2026-11-18T08:12:38	77206	CONT	OBS6P9-S4000	OBS6P9-S4000	OBS6P9-S4000	70a2a6bc27cc64c7	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-night2-S6	23	2.0 obs6.5 统一单包（11-16）	2026-11-18T19:27:55	20261031	S6	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	d12c18baca6c1eab	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
-night2-X2b-fuse	23	2.0 obs6.5 统一单包（11-16）	2026-11-18T23:20:27	20261122	fuse	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	629d4ae567266821	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
-day1119-cannon-pg	23	2.0 obs6.5 统一单包（11-16）	2026-11-19T03:47:18	7	pg	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	ae28c0aaf8bf6098	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+night2-S6	25	2.0 obs6.5 键道/覆盖与协同蒸馏	2026-11-18T19:27:55	20261031	S6	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	d12c18baca6c1eab	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash			
+night2-X2b-fuse	26	2.0 obs6.5 DS-P0 强锚补盲与融合重馏	2026-11-18T23:20:27	20261122	fuse	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	629d4ae567266821	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			
+day1119-cannon-pg	27	2.0 obs6.5 PG / KL 强化续训	2026-11-19T03:47:18	7	pg	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	ae28c0aaf8bf6098	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid			

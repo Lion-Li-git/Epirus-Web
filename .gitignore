@@ -168,3 +168,8 @@ champion-map/data/page/*.bak-*
 
 # 批1 清理（2026-11-19）：scratch 本地保留、不再跟踪（先归位了 ladder-anchor/bp 表/exam4 夹具，见 PLAN-2026-11-18-late 批3）
 scratch/
+
+# 2026-11-22：冠军池懒加载分片是**构建产物**（31 个文件合计约 9.6MB，与整表重复）。
+#   Pages 构建时由 tools/build-pool-bundle.mjs --split 生成；本地 file:// 回退 js/bundled-champion-pool.js 整表。
+#   清单 js/pool-manifest.js（约 5KB）要入库；分片不进库。
+js/pool-packs/

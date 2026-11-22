@@ -167,6 +167,7 @@
     B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null; B.resolvePending = false;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
     B.roundStartSnapshot = null; B.roundStartRngState = null; B.warnedChampNoTrain = false; B.undoUsed = false;
+    B.packsReady = true; B.packLoadError = null;
     closeOverlay();
     buildSkillGrid();
     renderSide(0); renderSide(1);
@@ -176,6 +177,8 @@
     B.oppInfo = oppInfo.source;
     B.oppSeats = seatOppLabel(oppInfo);
     B.oppMid = null;
+    /* 懒加载：本局抽到的席位分片开始注入；加载完成前技能格置灰（startPoolPackLoad 内部会 rebuild）。 */
+    if (oppInfo && oppInfo.poolDraw) startPoolPackLoad(oppInfo.poolDraw);
     B.diffLabel = diffName(B.diff);            /* 与 `对手=` 同一时刻的快照：中途换档时这两格必须说的是同一档 */
     logClear('新对局：' + n + ' 人 · ' + (MODE_NM[B.modeKey] || B.modeKey) + ' · 难度=' + diffName(B.diff) +
       ' · 对手AI=' + B.oppInfo + ' · 每人初始 ' + B.state.mode.hp + ' 血');
@@ -188,10 +191,10 @@
       if (!t0 || !t0.pool) return;
       const pst = POOLS.p3.st.status;
       if (pst === 'ok' || !pst || pst === 'init') return;
-      log('⚠ 冠军池还没就绪（' + (pst === 'not-yet' ? 'bundle 还没执行到，脚本顺序问题' : pst === 'no-bundle' ? 'bundle 未加载/形状不对' : pst) +
-        '）⇒ **本局对手是回退装配**（' + B.oppInfo + '）。池就绪后新开一局即恢复池装配。');
+      addLog('div', 'ev dim', '⚠ 冠军池还没就绪（' + (pst === 'not-yet' ? 'bundle 还没执行到，脚本顺序问题' : pst === 'no-bundle' ? 'bundle 未加载/形状不对' : pst) +
+        '）⇒ 本局对手是回退装配（' + esc(B.oppInfo) + '）。池就绪后新开一局即恢复池装配。');
     })();
-    hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
+    hint(B.packsReady === false ? '本局冠军包加载中…（技能格暂时置灰）' : '请选择技能出招 —— 双方同时出手，按优先级结算。');
   }
 
   function diffName(d) {
@@ -241,7 +244,25 @@
       '<div class="badges">' + (badges.map(function (bd) { return '<span class="badge ' + bd[1] + '">' + bd[0] + '</span>'; }).join('') || '<span class="dim" style="font-size:11px">无状态</span>') + '</div>';
   }
 
+  /* 手机端速览条：只读公共信息（名字/HP/淘汰），不碰隐藏的珠类型。 */
+  function renderQuickOpps() {
+    const el = $('quickopps');
+    if (!el) return;
+    const st = B.state;
+    if (!st || !st.p) { el.innerHTML = ''; return; }
+    let h = '';
+    for (let i = 1; i < st.p.length; i++) {
+      const p = st.p[i];
+      const dead = p.hp <= 0;
+      const low = !dead && p.hp <= 1;
+      h += '<span class="qo' + (dead ? ' dead' : '') + (low ? ' low' : '') + '">' +
+        '<b>' + esc(p.name) + '</b> ' + (dead ? '已淘汰' : '♥' + p.hp) + '</span>';
+    }
+    el.innerHTML = h;
+  }
+
   function renderSide(pid) {
+    renderQuickOpps();
     if (B.multi) {
       if (pid === 0) { $('side-0').innerHTML = panelHtml(0); return; }
       /* v1.8.45（11-06 晨，用户报"8 人局把窗口挤到下面了"）：≥6 人时对手栏改**双列网格** + 战场加宽
@@ -317,8 +338,10 @@
        * ⇒ HP 2 上格子按规则**应该亮**（也确实亮），提示却说 1 ⇒ 玩家读出来就是"血回上去了摄魂还能用"。
        * **引擎没错（实测 HP4/5 一律拒），错在那句话。**组装放在 `js/ui/skill-tip.js`（纯函数、单一来源，
        * 且 `rules.js` 是指纹五件套之一、不能为一个显示字符串换代），这样门 D131 能 headless 直接跑它。 */
+      const loadingPacks = (B.packsReady === false);
       btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + Tip.of(R, st, s);
-      btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable;
+      btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable || loadingPacks;
+      if (loadingPacks) btn.title += '\n（本局冠军包加载中…）';
       if (multiOnly) btn.title += multiOnlyResidual
         ? '\n（多人专用卡在残局（存活 ≤2）不可用，见 docs/RULES-NP.md N14）'
         : '\n（多人专用（2 人局不开放），见 docs/RULES-NP.md N14）';
@@ -398,6 +421,7 @@
 
   function pickSkill(key) {
     if (B.state.over) return;
+    if (B.packsReady === false) { hint('冠军包加载中，请稍候…'); return; }
     /* v1.5.80（第八轮复核 §5-②，tools/ui-probe.mjs 复现）：结算期间（B.locked）点击被**静默丢弃**。
      * 现在明确告知。**不做排队**：排队会引入"迟到的动作"这类新状态，风险大于收益。 */
     if (B.locked) { hint('本回合正在结算，请等对手出手完再出招 —— 你刚才的点击没有生效。'); return; }
@@ -503,6 +527,13 @@
     p3: { g: 'EPIRUS_CHAMPION_POOL', st: { members: null, params: {}, bad: [], status: 'init' }, name: '池' },
   };
   const POOL = POOLS.p3.st;                      /* 旧引用（`POOL.bad` 等）继续指向 3P 那一份 */
+  /* 2026-11-22：清单成员可能只有元数据（懒加载），权重由 EpirusPoolLoader 按本局席位注入。
+     兼容三种形状：① 旧整表 bundle 的 m.pack；② 已加载进分片注册表的 m.id；③ 尚未加载 ⇒ 只登记元数据。 */
+  function packOfMember(m) {
+    if (m && m.pack) return m.pack;
+    const L = (typeof window !== 'undefined') ? window.EpirusPoolLoader : null;
+    return (L && typeof L.get === 'function' && m && m.id) ? L.get(m.id) : null;
+  }
   function loadPoolOf(k, force) {
     const slot = POOLS[k], S = slot.st;
     if (S.members !== null && !force) return S.members;
@@ -526,8 +557,14 @@
      *   `allowLegacy=true`：池成员跨代（3P 侧 `K2`/`SHIPPED-Ldemo` 是 v6 形状、`T8-s114` 是 v7；
      *   2P 侧是 2P 原生形状）⇒ 与 `tools/*` 侧同一口径；权重身份已由 `tools/build-pool-bundle.mjs` 逐条重算 wid 与表对账过。 */
     for (const m of raw.members) {
+      const pack = packOfMember(m);
+      if (!pack) {
+        /* 懒加载清单：先只登记 id/wid/tier；开局后 startPoolPackLoad 按抽到的席位注入权重。 */
+        S.members.push({ id: m.id, wid: m.wid, tier: m.tier });
+        continue;
+      }
       let p = null;
-      try { p = P.unpack(m.pack, true); } catch (e) { p = null; }
+      try { p = P.unpack(pack, true); } catch (e) { p = null; }
       if (!p) { S.bad.push(m.id); continue; }                    /* 契约 §4：解不出的整枚出局并点名，不许拿 null 顶上 */
       S.members.push({ id: m.id, wid: m.wid, tier: m.tier });
       S.params[m.id] = p;
@@ -562,6 +599,47 @@
     if (draw && R.note) draw.bandNote = R.note;           /* 这张池表还没拆带 ⇒ 必须说出来，不许静默退回 mid */
     return draw;
   }
+  /** 懒加载：本局抽到的包分片按 id 注入，解包进 POOL.params；加载完成前技能格置灰。
+   *   token 防止"旧局加载在换局后回来"把新局状态改掉（与 doPickMulti 的 myState 同一族纪律）。 */
+  function startPoolPackLoad(draw) {
+    B.packToken = (B.packToken | 0) + 1;
+    const token = B.packToken;
+    const L = (typeof window !== 'undefined') ? window.EpirusPoolLoader : null;
+    B.packsReady = true; B.packLoadError = null;
+    if (!L || !draw || !draw.seats || !draw.seats.length) return Promise.resolve();
+    const ids = [];
+    for (const s of draw.seats) {
+      if (s && s.kind !== 'script' && s.id && ids.indexOf(s.id) < 0) ids.push(s.id);
+    }
+    if (!ids.length) return Promise.resolve();
+    B.packsReady = false;
+    hint('本局冠军包加载中…（技能格暂时置灰）');
+    buildSkillGrid();
+    const done = L.ensure(ids).then(function () {
+      if (B.packToken !== token) return;
+      for (const id of ids) {
+        if (POOL.params[id]) continue;
+        const pack = L.get(id);
+        if (!pack) { if (POOL.bad.indexOf(id) < 0) POOL.bad.push(id); continue; }
+        try { POOL.params[id] = P.unpack(pack, true); } catch (e) { if (POOL.bad.indexOf(id) < 0) POOL.bad.push(id); }
+      }
+      B.packsReady = true;
+      if (L.fellBack && L.fellBack()) addLog('div', 'ev dim', '⚠ 冠军包分片加载失败，本局已回退整表；详情见浏览器 console');
+      buildSkillGrid(); renderSide(0); renderSide(1);
+      if (POOL.bad.length) addLog('div', 'ev dim', '⚠ 冠军包分片解不开：' + POOL.bad.join('、') + ' ⇒ 对应席位回退单包');
+      if (B.state && !B.state.over && !B.locked) hint('请选择技能出招 —— 双方同时出手，按优先级结算。');
+    }).catch(function (e) {
+      if (B.packToken !== token) return;
+      B.packsReady = true;
+      B.packLoadError = (e && e.message) ? e.message : String(e);
+      addLog('div', 'ev dim', '⚠ 冠军包分片加载失败（' + esc(B.packLoadError) + '）⇒ 本局对应席位回退单包');
+      buildSkillGrid(); renderSide(0); renderSide(1);
+      if (B.state && !B.state.over && !B.locked) hint('冠军包加载失败，已回退单包；可以先出招。');
+    });
+    B.packsLoad = done;
+    return done;
+  }
+
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
   /* §E599（10-12）：`n<=2` **不再**短路 —— 2P 也走池，但走的是**2P 原生**那一份（用户裁定：每局一个对手、成员不必多）。
    *   老注释那句"3P 包在 1v1 上是分布外（§E286）⇒ 把池搬到 2 人桌等于造一个假档"**仍然成立**，
@@ -1032,6 +1110,7 @@
 
   function doPickMulti(key, bead, target, target2) {
     if (B.locked || B.state.over) return;
+    if (B.packsReady === false) { hint('冠军包加载中，请稍候…'); return; }
     const def = R.byKey[key];
     if (target === undefined) {
       const opps = S.opponentsOf(B.state, 0);
@@ -1325,7 +1404,11 @@
       }
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
       case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（基础防御/反弹/金刚盾/ジ/吸除外）' };
-      case 'hidden': return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
+      case 'hidden':
+        /* 终局收缩是**场地效果**，不是隐藏技能；此前所有 hidden 事件共用一句"触发隐藏技能【…】"，
+           玩家会以为第 45 回合开场触发了某个隐藏技。其余 hidden（回魂/梦魇/聚光炮…）保持原样。 */
+        if (e.name === '终局收缩') return { cls: 'ev pur', html: '🌑 场地效果【终局收缩】启动：此后每回合末所有存活者 -1 血' };
+        return { cls: 'ev pur', html: '🌑 触发隐藏技能【' + e.name + '】' + (e.pid != null ? '（' + nm(e.pid) + '）' : '') + (e.to != null ? ' → ' + nm(e.to) : '') };
       /* v1.5.253：不再硬编码"受 2 点电伤" —— 是否真打中要按同回合的连带伤害事件反推（见 `bigTChainText`）。 */
       case 'bigTChain': return bigTChainText(e, roundEvents);
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】' + (e.to != null ? '→ ' + nm(e.to) : '') };
@@ -1376,6 +1459,7 @@
 
   /* ---------- Tab ---------- */
   function showTab(which) {
+    document.body.classList.toggle('battle-tab', which === 'battle');
     $('tab-battle').classList.toggle('on', which === 'battle');
     if ($('tab-train')) $('tab-train').classList.toggle('on', which === 'train');
     $('tab-rules').classList.toggle('on', which === 'rules');
@@ -1788,6 +1872,16 @@
     $('tab-rules').onclick = function () { showTab('rules'); };
     applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
+    /* 日志抽屉：默认收起（84px），展开 42vh；按钮文案/aria 同步。 */
+    const dock = $('logdock'), logBtn = $('btn-logdock'), logBox = $('logbox');
+    if (logBtn && dock && logBox) {
+      logBtn.onclick = function () {
+        const open = dock.classList.toggle('open');
+        logBtn.textContent = open ? '收起' : '展开';
+        logBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        logBox.scrollTop = logBox.scrollHeight;
+      };
+    }
     /* v1.6.5：两根轴各自的重开逻辑一样（换局），差别只在 `newGame` 里查出来的 modeKey 不同。 */
     $('sel-players').onchange = function () { newGame(); };
     $('sel-hp').onchange = function () { newGame(); };
@@ -1800,6 +1894,14 @@
         hint('已切换为 ' + diffName(B.diff) + '（v7 包上限 ' + V7_MAX_PLAYERS + ' 人，已同步降回 ' + B.players + ' 人重开）');
         return;
       }
+      /* 懒加载：换档不换局，但新档的池组成可能不同 ⇒ 先把这个档本局的席位分片加载完，再让玩家出招。 */
+      if (B.state && B.state.p) {
+        const nt = tierOf(B.diff);
+        if (nt && nt.pool) {
+          const np = poolPlan(B.state, nt, B.players || 2);
+          if (np.on && np.draw) startPoolPackLoad(np.draw);
+        }
+      }
       /* §E667：换档**不换局**（这条本来就写着"对局中即时生效"）⇒ 一局可能是两档拼的。
        *   导出的头部若只写开局对手就把"前面 K 回合由 A 打、之后由 B 打"说成"全程由 A 打"，
        *   所以这里当场把换档后的逐席也记一行（开局那一格不动，它记的是开局）。 */
@@ -1811,7 +1913,9 @@
         B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? (B.resolvePending ? B.state.round + 1 : B.state.round) : B.state.round + 1) +
           ' 回合起改 ' + diffName(B.diff) + '：' + seatOppLabel(oi) + dose]);
       }
-      hint('难度已切换：' + diffName(B.diff) + '（对局中即时生效）');
+      hint(B.packsReady === false
+        ? ('难度已切换：' + diffName(B.diff) + '；本档冠军包加载中…')
+        : ('难度已切换：' + diffName(B.diff) + '（对局中即时生效）'));
     };
     $('btn-newgame').onclick = newGame;
     /* v1.5.10（用户要求）：清掉本机冠军、改回内置冠军 */

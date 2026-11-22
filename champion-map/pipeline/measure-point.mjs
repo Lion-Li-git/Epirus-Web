@@ -23,6 +23,7 @@ const REUSE = process.argv.includes('--reuse');
 const BAKE = process.argv.includes('--bake');
 const SKIP_LONG = process.argv.includes('--skip-long');
 const SKIP_B = process.argv.includes('--skip-b');
+const SKIP_MX = process.argv.includes('--skip-mx');
 const SKIP_FEAS = process.argv.includes('--skip-feas');
 const SKIP_PROJ = process.argv.includes('--skip-proj');
 const AUDIT = process.argv.includes('--audit');
@@ -189,6 +190,41 @@ if (!FROM_STAGING) {
         console.log('—— arena-b —— arS=' + metaAr.arS + ' arL=' + metaAr.arL + ' arR=' + metaAr.arR);
       });
     }
+    if (!SKIP_MX && (!REUSE || !hasFile(join(ST, ID + '-mx.json')))) {
+      tasks.push(async () => {
+        const mxChamp = 'MSB15R-HITMIX,GD6a-TILT,Q-s47,OBS6E9,OBS6P4-S4000';
+        const mxChampLabel = 'MSB15R-HITMIX+GD6a-TILT+Q-s47+OBS6E9+OBS6P4-S4000x1';
+        const modes = SKIP_LONG ? ['multi'] : ['multi', 'long'];
+        const mxOut = {};
+        const mxRows = {};
+        for (const mode of modes) {
+          const { stdout } = await execFileP('node', ['tools/exam-4n.mjs', '6', '77000', rel, '--exam=both', '--mode=' + mode, '--dose=exam', '--champ=' + mxChamp, '--champn=1'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
+          const line = stdout.split('\n').filter((l) => l.startsWith('[冠军4N-v2]')).pop();
+          if (!line) throw new Error('mixedfix 无 [冠军4N-v2] 行：' + mode);
+          const get = (k) => { const m = line.match(new RegExp('(?:^|\\s)' + k + '=([^\\s]+)')); return m ? m[1] : ''; };
+          const xs = ['x2', 'x3', 'x5', 'x8'].map((k) => Number(get(k)));
+          const cMean = xs.every(Number.isFinite) ? (xs.reduce((a, b) => a + b, 0) / 4).toFixed(4) : '';
+          const skU = get('skU'), skE = get('skE');
+          mxOut[mode] = { C: cMean, skU, skE };
+          mxRows[mode] = [ID, get('h2'), get('h3'), get('h5'), get('h8'), get('x2'), get('x3'), get('x5'), get('x8'),
+            get('n2'), get('n3'), get('n5'), get('n8'), '77000', '6', mode, 'exam', 'both(v2)', '', mxChampLabel, get('sec'), skU, skE].join('\t');
+          if (!NO_ADD) {
+            const mf = join(HERE, 'data/exam4n-mixedfix-1116-' + mode + '.tsv');
+            if (existsSync(mf)) {
+              const rawMf = readFileSync(mf, 'utf8');
+              const crlf = rawMf.includes('\r\n');
+              const linesMf = rawMf.replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').filter((l) => l && !l.startsWith(ID + '\t'));
+              writeFileSync(mf, linesMf.concat([mxRows[mode]]).join(crlf ? '\r\n' : '\n') + (crlf ? '\r\n' : '\n'), 'utf8');
+            }
+          }
+        }
+        const m = mxOut.multi, g = mxOut.long;
+        const maxStr = (a, b) => (a || b) ? String(Math.max(Number(a || 0), Number(b || 0))) : '';
+        const mxSummary = { MxC: m ? m.C : '', MxCL: g ? g.C : '', MxSkU: maxStr(m && m.skU, g && g.skU), MxSkE: maxStr(m && m.skE, g && g.skE) };
+        writeFileSync(join(ST, ID + '-mx.json'), JSON.stringify(mxSummary) + '\n', 'utf8');
+        console.log('—— mixedfix —— MxC=' + mxSummary.MxC + ' MxCL=' + mxSummary.MxCL + ' MxSkU=' + mxSummary.MxSkU + ' MxSkE=' + mxSummary.MxSkE);
+      });
+    }
   } else console.log('↷ 复用外部 readings：' + basename(EXT_READINGS));
   if (!EXT_DISPLAY) {
     if (REUSE && hasFile(featOut)) console.log('↷ 复用已测：' + basename(featOut));
@@ -322,6 +358,11 @@ if (EXT_DISPLAY) {
   if (hasFile(bpJson)) {
     const bpObj = JSON.parse(readFileSync(bpJson, 'utf8'));
     for (const [k, v] of Object.entries(bpObj)) setD(k, v);
+  }
+  const mxJson = join(ST, ID + '-mx.json');
+  if (hasFile(mxJson)) {
+    const mxObj = JSON.parse(readFileSync(mxJson, 'utf8'));
+    for (const [k, v] of Object.entries(mxObj)) setD(k, v);
   }
   /* 新点不写 H5/F/rank：H5 是冻结旧尺，F/rank 是旧尺出厂账；
    *   当前页面名次由 viewer 按 C·R 重算，新点没有“旧尺出厂名次”。旧 926 行保留历史值。 */

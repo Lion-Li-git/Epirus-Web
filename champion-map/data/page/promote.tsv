@@ -1,4 +1,5 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
+AR-TK2	pass	—			
 D4a	pass	—			
 day1119-cannon-pg	pass	—			
 DAY1119-PURIFY-T2B	pass	—			
@@ -11,7 +12,6 @@ nov21-rod-tzt2d-r10	pass	—
 nov22-c3g-s300k	pass	—			
 nov22-c4c-t20	pass	—			
 nov22-tzt2d-stab	pass	—			
-R-GD12	pass	—			
 R-s123	pass	—			
 S-s120	pass	—			
 T8-s114	pass	—			
@@ -22,6 +22,7 @@ night2-S6	block	G5/long 清不了防席（它夺冠 26%）		26
 night2-X5-cannonT	block	F 被集火还手率 2.2% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕 · 行为门未过：G4[scratch/arms/night2-X5-cannonT/long] 无一行脚本能以 >60% 击 · G4/multi 被一行脚本打穿 94%	94		
 nov21-mirror-dsp0	block	行为门未过：G4[scratch/arms/nov21-mirror-dsp0/multi] 无一行脚本能以 >60%  · G5/long 清不了防席（它夺冠 50%）		50	
 nov21-taunt-dsp0b	block	G5/long 清不了防席（它夺冠 29%）		29	
+R-GD12	pass	—			
 B5-10-31	pass	—			
 blk0t40-s31	pass	—			
 E59-land-902	pass	—			
@@ -289,4 +290,6 @@ DIV-V3-PRESSURE-S2	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate
 DIV-V3-ANTIDEF	block	behavior-gate,behavior-gate,behavior-gate,behavior-gate			
 DIV-LH6-HEAVY-S2	block	field-a,breadth-multi,behavior-gate			
 RING-MINIT-CONT	pass	—			
-P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate
+P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate			
+AR-TK3	pass	—			
+nov22-c3b-kw100	block	behavior-gate			

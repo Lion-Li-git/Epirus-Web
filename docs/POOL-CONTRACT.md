@@ -29,19 +29,30 @@
 - 页面现在的取包路径本来就是"全局变量 + localStorage"：`js/ui/ui.js:317 loadMultiChamp()` 读
   `localStorage['epirus.champion3p']`，取不到再回退内嵌全局 `window.EPIRUS_CHAMPION_3P`（由 `index.html:149` 的 script 标签带来）。
 
-⇒ **契约决定**：池 = 一个 committed 的 `<script>` 文件 `js/bundled-champion-pool.js`，把成员包**内嵌**进去。
+⇒ **契约决定（file:///tools 口径）**：池 = 一个 committed 的 `<script>` 文件 `js/bundled-champion-pool.js`，把成员包**内嵌**进去。
+> HTTP 页面自 2026-11-22 起改走清单 + 分片懒加载，见本节末修订。
 体积账（11-11 新池）：多人池 14 枚 = **2.47 MB**（`js/bundled-champion-pool.js` 2,468,xxx 字节；11-09 曾 22 枚 / 3.54 MB；11-07 曾 23 枚 / 3.71 MB ‖ 一枚 ≈160 KB，2.0 代 3 的 7993 参数比 v7 的 5689 大一档）‖ 旧 2P 原生池 bundle（960 KB）**已随 11-13 统一池裁定删除**（体积账只剩多人池一份）。缓解：
 ① 独立 `<script defer>`，不阻塞首屏；② `?v=` 缓存戳由 `bumpChampionVersion()`（`server/train-server.mjs:110-121`）
 统一刷新（它把 index.html 里**所有**脚本引用的 `?v=` 换成同一个构建标记 ⇒ 新标签自动被覆盖，不必另写机制）；
 ③ 池成员少而精：两带 `hard` 5 ‖ `soft` 9（11-11 12 线重排；11-09 曾 9/13；11-07 曾 10/13）。2P 桌已统一用这张表（11-13 裁定，见 §9）。
 
+> **2026-11-22 修订：HTTP 路线改懒加载（本节的"必须一个整表"只对 file:// 与 tools/gates 仍成立）。**
+> 页面一局只抽 N−1 枚（2P 1 / 3P 2 / 5P 4 / 8P 7），旧整表让所有人下 9.6MB（gzip 4.4MB）。
+> 现在 `index.html` 只挂 `js/pool-manifest.js`（约 5KB，id/wid/tier/file）+ `js/pool-loader.js`；
+> `newGame` 抽完席位后按 id 用 `<script>` 注入 `js/pool-packs/<file>.js`（**不是 fetch** ⇒ file:// 也能用），
+> 本地双击若没有分片文件则回退整表 `js/bundled-champion-pool.js`；HTTP 分片 404 也回退整表并 console 响亮说明。
+> 抽签仍是 `js/pool-draw.js` 的 `compose`，manifest 的元数据与整表成员逐条同源；分片是**构建产物**，Pages 构建时由
+> `tools/build-pool-bundle.mjs --split --ver=<构建标记>` 生成（`.gitignore` 排除 `js/pool-packs/`），清单入库。
+
 ## 2. 真源与派生物（派生物不许手改）
 
 ```
 champion-map/pool-members.tsv        ← 真源（人读机写；由 tools/pool-add.mjs 维护）
-        │  tools/build-pool-bundle.mjs
+        │  tools/build-pool-bundle.mjs [--split]
         ▼
-js/bundled-champion-pool.js          ← 派生物（committed；文件头写"由谁生成，不要手改"，沿用 writeBundle 的同一句话风格）
+js/pool-manifest.js                  ← 派生物（committed，约 5KB；只有元数据，页面默认读它）
+js/pool-packs/<id>.js                ← 派生物（构建产物，不进 git；Pages 构建时生成；页面按本局席位懒加载）
+js/bundled-champion-pool.js          ← 派生物（committed；file:// 回退 + tools/gates 整表读，文件头写"由谁生成，不要手改"）
 ```
 
 ### `pool-members.tsv` 的列
@@ -120,7 +131,8 @@ js/bundled-champion-pool.js          ← 派生物（committed；文件头写"�
 
 | 情形 | 行为 |
 |---|---|
-| `js/bundled-champion-pool.js` 缺失/解析失败 | 退回 `js/bundled-champion-3p.js` 单包 + 页面打印降级原因（沿用 `champForCount` 现有的"回退并明说"写法） |
+| `js/pool-manifest.js` / `js/pool-loader.js` 缺失或分片加载失败 | HTTP：先回退整表 `js/bundled-champion-pool.js`（console 响亮说明），仍失败才退回 `js/bundled-champion-3p.js` 单包 + 页面打印降级原因 |
+| `js/bundled-champion-pool.js` 缺失/解析失败（file:// 或回退路径） | 退回 `js/bundled-champion-3p.js` 单包 + 页面打印降级原因（沿用 `champForCount` 现有的"回退并明说"写法） |
 | 表里某枚的 pack 文本解不出（`js/champion-pack.js` 的 `P.unpack` 返回 null） | **该枚整枚出局**，不参与本局抽签，并打印 id；不许用 null 顶上 |
 | 某档成员数 = 0 | 退回单包语义 + 打印 |
 | 本机导入/自训过 3P 冠军（`localStorage['epirus.champion3p']` 有可用包） | **池不生效**，四席都用用户那一枚 + 打印"本机导入优先"（契约 §3.6） |

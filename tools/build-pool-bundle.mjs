@@ -13,7 +13,7 @@
  *
  * 用法：node tools/build-pool-bundle.mjs [--out=js/bundled-champion-pool.js] [--allow-empty] [--dry]
  */
-import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { braceObj, widOfArr } from '../champion-map/pack-id.mjs';
@@ -23,7 +23,7 @@ import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：只在**本文件是入口**时校验 —— 量具既可能被当 CLI 跑，也可能被别的门 `import` 当模块用；
  *   后者时 `process.argv` 是**调用方**的 argv（例如 gate runner 的 `--part=`），无条件校验会把整轮门禁打红。 */
 if (process.argv[1] && process.argv[1].endsWith("build-pool-bundle.mjs")) {
-  rejectUnknownFlags(process.argv.slice(2), ['allow-empty', 'dry', 'global', 'key', 'out', 'srcKey', 'table'], "build-pool-bundle");
+  rejectUnknownFlags(process.argv.slice(2), ['allow-empty', 'dry', 'global', 'key', 'out', 'srcKey', 'table', 'split', 'manifest', 'packdir', 'ver'], "build-pool-bundle");
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -51,6 +51,14 @@ const SRCKEY = arg('srcKey', KEY);
  *   抓到它的是**真页面**（`tools/battle-test.mjs` 的 `[对手AI=…]` 标签），不是 code review。 */
 const GLOBAL = arg('global', 'EPIRUS_CHAMPION_POOL');
 const OUT = arg('out', 'js/bundled-champion-pool.js');
+/* 2026-11-22：懒加载分片（页面只抽 N−1 枚，却要下 9.6MB 全表）。
+ *   --split = 同时产出 `js/pool-manifest.js`（只含 id/wid/tier/file）与 `js/pool-packs/<id>.js`
+ *   （每枚一份权重）；单文件 bundle 仍照写，供 tools/gates/file:// 的整表路径与回退使用。
+ *   Pages 构建时跑 --split 生成分片；本地 file:// 若没有分片，pool-loader 会回退到单文件 bundle。 */
+const SPLIT = process.argv.includes('--split');
+const MANIFEST = arg('manifest', 'js/pool-manifest.js');
+const PACKDIR = arg('packdir', 'js/pool-packs');
+const VER = arg('ver', 'p1122c');
 
 if (!existsSync(MAP)) { console.error('⛔ 真源表不在：' + MAP + '（先用 tools/pool-add.mjs 加成员）'); process.exit(2); }
 const L = readFileSync(MAP, 'utf8').replace(/\r/g, '').replace(/\n+$/, '').split('\n');
@@ -95,6 +103,38 @@ for (const r of rows) {
 const byTier = {};
 for (const m of members) byTier[m.tier] = (byTier[m.tier] || 0) + 1;
 
+/* ===== 懒加载分片（--split）===== */
+let splitInfo = null;
+if (SPLIT) {
+  const safeFile = (id) => String(id).replace(/[^A-Za-z0-9._-]/g, '_') + '.js';
+  const manMembers = members.map((m) => ({
+    id: m.id, wid: m.wid, tier: m.tier, invited: m.invited,
+    promoteVerdict: m.promoteVerdict, seatKill: m.seatKill, file: safeFile(m.id),
+  }));
+  const man = { built: new Date().toString(), lazy: true, ver: VER, members: manMembers };
+  const manHead = '/* Epirus 冠军池清单（懒加载）：由 tools/build-pool-bundle.mjs --split 生成（真源 ' +
+    arg('table', 'champion-map/data/page/pool-members.tsv') + '）。不要手改。\n' +
+    ' * 这里只有 id/wid/tier/file，没有权重；权重在各 js/pool-packs/<id>.js 里，由 js/pool-loader.js 按本局抽到的席位加载。\n' +
+    ' * 本地 file:// 若没有分片文件，loader 会回退到 js/bundled-champion-pool.js 整表。\n' +
+    ' * 成员 ' + manMembers.length + ' 枚 ' + JSON.stringify(byTier) + ' ‖ 生成于 ' + new Date().toString() + ' */\n';
+  const manBody = manHead + '(function (global) {\n  \'use strict\';\n  global.' + GLOBAL + ' = ' +
+    JSON.stringify(man) + ';\n})(typeof window !== \'undefined\' ? window : globalThis);\n';
+  const packBodies = members.map((m) => {
+    const file = safeFile(m.id);
+    return { file, body: '/* Epirus 冠军池分片：' + m.id + '（wid ' + m.wid + '）由 tools/build-pool-bundle.mjs --split 生成。不要手改。 */\n' +
+      '(function (global) {\n  \'use strict\';\n  var R = global.EPIRUS_POOL_PACKS = global.EPIRUS_POOL_PACKS || {};\n  R[' +
+      JSON.stringify(m.id) + '] = ' + JSON.stringify(m.pack) + ';\n})(typeof window !== \'undefined\' ? window : globalThis);\n' };
+  });
+  let packBytes = 0;
+  for (const p of packBodies) packBytes += p.body.length;
+  splitInfo = { manBody, packBodies, packBytes };
+  if (!process.argv.includes('--dry')) {
+    mkdirSync(join(ROOT, PACKDIR), { recursive: true });
+    writeFileSync(join(ROOT, MANIFEST), manBody);
+    for (const p of packBodies) writeFileSync(join(ROOT, PACKDIR, p.file), p.body);
+  }
+}
+
 const body = '/* Epirus 冠军池：由 tools/build-pool-bundle.mjs 生成（真源 ' + arg('table', 'champion-map/data/page/pool-members.tsv') + '）。不要手改。\n' +
   ' * 成员 ' + members.length + ' 枚 ' + JSON.stringify(byTier) + ' ‖ 源文件合计 ' + (bytes / 1024).toFixed(0) + ' KB ‖ 生成于 ' + new Date().toString() + '\n' +
   ' * 契约（装配语义 / 抽签 / 降级）见 docs/POOL-CONTRACT.md —— 本页与量具、门禁 D234 必须逐字对齐那份契约。 */\n' +
@@ -116,7 +156,17 @@ if (不足.length) console.log('   ⚠ 这些档成员数 < 4 席 ⇒ 抽签必�
 const 刚好 = Object.keys(byTier).filter(t => byTier[t] === 4);
 if (刚好.length) console.log('   ⚠ 这些档成员数 **正好等于 4 席** ⇒ 每枚每场都上场、阵容不会变（只有席位在换）：' + 刚好.join(' ‖ ') +
   ' ⇒ 要阵容多样性得补到 ≥5 枚（见 docs/POOL-CONTRACT.md §3.7）');
-if (process.argv.includes('--dry')) { console.log('（--dry：没写文件）将写 ' + OUT + '，' + (body.length / 1024).toFixed(0) + ' KB'); process.exit(0); }
+if (splitInfo) {
+  console.log('   --split 清单：' + MANIFEST + '（' + (splitInfo.manBody.length / 1024).toFixed(1) + ' KB）');
+  console.log('   --split 分片：' + PACKDIR + '/（' + splitInfo.packBodies.length + ' 个，合计 ' +
+    (splitInfo.packBytes / 1024).toFixed(0) + ' KB）');
+}
+if (process.argv.includes('--dry')) {
+  console.log('（--dry：没写文件）将写 ' + OUT + '，' + (body.length / 1024).toFixed(0) + ' KB' +
+    (splitInfo ? '；分片清单 + ' + splitInfo.packBodies.length + ' 个分片' : ''));
+  process.exit(0);
+}
 writeFileSync(join(ROOT, OUT), body);
 console.log('✔ 已写 ' + OUT + '（' + (body.length / 1024).toFixed(0) + ' KB）');
-console.log('   下一步：把这枚 bundle 作为 <script defer> 挂进 index.html（?v= 由 bumpChampionVersion 统一刷），并跑 `node tools/probe-pool.mjs`');
+if (splitInfo) console.log('✔ 已写 ' + MANIFEST + ' 与 ' + PACKDIR + '/');
+console.log('   下一步：分片模式把清单与 loader 挂进 index.html；单文件 bundle 留给 tools/gates/file:// 回退。跑 `node tools/probe-pool.mjs` 对账。');

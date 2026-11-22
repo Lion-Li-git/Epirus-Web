@@ -37,6 +37,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 2026-11-22：懒加载分片不在仓库里提交（整表 9.6MB，31 个分片又一份），
+      #   由构建器从真源表现场生成；页面只下本局抽到的 N−1 枚。
+      - name: 生成冠军池懒加载分片
+        run: |
+          set -euo pipefail
+          node tools/build-pool-bundle.mjs --split --ver=p1122d
+          test -s js/pool-manifest.js
+          test -d js/pool-packs
+          test "$(find js/pool-packs -type f | wc -l)" -ge 1
+
       - name: 组装站点产物（只拷白名单）
         run: |
           set -euo pipefail

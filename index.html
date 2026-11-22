@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Epirus 拍手游戏 — 2~8 人对战（3/4/5 血）</title>
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=mwm11sbs">
 </head>
-<body>
+<body class="battle-tab">
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.13 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.15 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -74,12 +74,23 @@
         <!-- 2026-11-19：导入控件同时挂在对局区与 2.0 训练场，共用 #file-import -->
       </div>
       <div class="hint" id="battle-hint">点击下方一个技能出招（与电脑同时行动）。首次使用需确认能量珠的：蓄能 / 电磁炮 / 激光眼 会弹窗选择。</div>
+      <!-- 手机端速览条：技能区可能很长，选招时靠它把对手 HP 留在视口内（桌面端隐藏，右侧已有完整面板）。 -->
+      <div class="quickopps" id="quickopps" aria-label="对手状态速览"></div>
       <div class="skillgrid" id="skillgrid"></div>
     </div>
     <div class="side" id="side-1"></div>
-    <!-- v2.1.1（用户裁定 2026-11-18）：≥6 人桌的对手栏在 CSS 里压紧并与技能列等高，
-         日志仍是这里的全宽 grid 行（不塞进窄侧栏、也不给对手栏加滚轮）；2~5 人桌不变。 -->
-    <div class="logbox" id="logbox"></div>
+    <!-- v2.1.1（用户裁定 2026-11-18）：≥6 人桌的对手栏在 CSS 里压紧并与技能列等高；
+         日志自 2026-11-22 修复起移出 grid，改为下面的视口底部固定抽屉（不再占一行）。 -->
+    <!-- 日志改为视口底部固定抽屉：1440×900 / 1366×768 下旧的全宽 330px 日志会把最新一行顶到折叠线以下。
+         收起时只占约 110px，展开时 42vh；#logbox 的 id 与既有探针/清空逻辑保持同一份。 -->
+    <div class="logdock" id="logdock">
+      <div class="logdock-bar">
+        <span class="logdock-title">战斗日志</span>
+        <span class="logdock-sub">最新一行自动滚动到底</span>
+        <button type="button" class="logdock-btn" id="btn-logdock" aria-expanded="false">展开</button>
+      </div>
+      <div class="logbox" id="logbox"></div>
+    </div>
   </section>
 
   <!-- ============ 训练场（2.0 obs6 统一训练） ============ -->
@@ -173,29 +184,31 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=mwm11sbr"></script>
-<script src="js/core/state.js?v=mwm11sbr"></script>
-<script src="js/core/resolve.js?v=mwm11sbr"></script>
-<script src="js/core/play.js?v=mwm11sbr"></script>
-<script src="js/train/bots.js?v=mwm11sbr"></script>
-<script src="js/train/policy.js?v=mwm11sbr"></script>
-<script src="js/train/policy2.js?v=mwm11sbr"></script>
-<script src="js/train/evo.js?v=mwm11sbr"></script>
-<script src="js/train/trainer.js?v=mwm11sbr"></script>
-<script src="js/bundled-champion.js?v=mwm11sbr"></script>
-    <script src="js/bundled-champion-3p.js?v=mwm11sbr"></script>
-<script src="js/champion-pack.js?v=mwm11sbr"></script>
-<script src="js/pool-draw.js?v=mwm11sbr"></script>
-<script src="js/ui/skill-tip.js?v=mwm11sbr"></script>
-<script src="js/ui/bead-choice.js?v=mwm11sbr"></script>
-<script src="js/ui/rules-panel.js?v=mwm11sbr"></script>
-<!-- 冠军池：成员权重表，defer（不挡首屏；第一次 AI 决策前必然已执行）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs 生成，不要手改。 -->
-<script defer src="js/bundled-champion-pool.js?v=p1122b"></script>
-<!-- 2026-11-13 用户裁定「2p 直接切到统一池」：旧 2P 池 bundle（bundled-champion-pool-2p.js）退役删除——两桌读同一份 js/bundled-champion-pool.js；旧 v7 包（pool-members-2p.tsv 名册）转任 2P 训练对手，不再上页面桌 -->
-<!-- v1.8.45（11-06 晨，用户报"刚进入时 3P 未加载静默回退"）：ui.js 也改 defer，且**排在两份池 bundle 之后** ——
-     defer 脚本按文档序执行、全部先于 DOMContentLoaded ⇒ 事件绑定发生时池必然已就位，
-     "首屏点击赶在 3MB 池 bundle 解析完之前"的竞态窗口从结构上关死（旧窗口内开局 = 池静默回退成单包）。
-     降级提示（万一还有别的路能碰上）在 newGame 的开局日志里响亮记一笔，契约 §4。 -->
-<script defer src="js/ui/ui.js?v=mwm11sbr"></script>
+<script src="js/core/rules.js?v=mwm11sbs"></script>
+<script src="js/core/state.js?v=mwm11sbs"></script>
+<script src="js/core/resolve.js?v=mwm11sbs"></script>
+<script src="js/core/play.js?v=mwm11sbs"></script>
+<script src="js/train/bots.js?v=mwm11sbs"></script>
+<script src="js/train/policy.js?v=mwm11sbs"></script>
+<script src="js/train/policy2.js?v=mwm11sbs"></script>
+<script src="js/train/evo.js?v=mwm11sbs"></script>
+<script src="js/train/trainer.js?v=mwm11sbs"></script>
+<script src="js/bundled-champion.js?v=mwm11sbs"></script>
+    <script src="js/bundled-champion-3p.js?v=mwm11sbs"></script>
+<script src="js/champion-pack.js?v=mwm11sbs"></script>
+<script src="js/pool-draw.js?v=mwm11sbs"></script>
+<script src="js/ui/skill-tip.js?v=mwm11sbs"></script>
+<script src="js/ui/bead-choice.js?v=mwm11sbs"></script>
+<script src="js/ui/rules-panel.js?v=mwm11sbs"></script>
+<!-- 冠军池：懒加载清单（只有 id/wid/tier/file，约 5KB）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs --split 生成，不要手改。
+     分片权重在 js/pool-packs/<id>.js，由 pool-loader 按本局抽到的 N−1 席注入；HTTP 下不再下 9.6MB 整表。
+     本地 file:// 若无分片文件，loader 会回退到 js/bundled-champion-pool.js（整表留给 tools/gates 与双击入口）。 -->
+<script defer src="js/pool-manifest.js?v=p1122d"></script>
+<script defer src="js/pool-loader.js?v=p1122d"></script>
+<!-- 2026-11-13 用户裁定「2p 直接切到统一池」：旧 2P 池 bundle（bundled-champion-pool-2p.js）退役删除——两桌读同一份池；旧 v7 包（pool-members-2p.tsv 名册）转任 2P 训练对手，不再上页面桌 -->
+<!-- ui.js 也 defer，且排在清单/loader 之后：defer 按文档序执行 ⇒ 绑定事件时清单已就位。
+     权重分片是**开局后才异步注入**的：newGame 会按本局抽到的席位调 EpirusPoolLoader.ensure()，
+     加载完成前技能按钮置灰并提示"冠军包加载中"；失败则回退整表/单包并在开局日志响亮记一笔（契约 §4）。 -->
+<script defer src="js/ui/ui.js?v=mwm11sbs"></script>
 </body>
 </html>

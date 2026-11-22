@@ -328,7 +328,7 @@ if (arg('retire', '')) {
     rawNote = '（已删 raw：曾测于 ' + at + ' · 并集 ' + union + '/30；纯数字留在图列）';
   }
   console.log('✔ 退役 ' + rid + '（tier=' + row[3] + '，wid=' + String(row[1] || '').slice(0, 16) + '）已摘出池表；skill-report raw ' + rawNote);
-  console.log('   下一步：node tools/build-pool-bundle.mjs ‖ node champion-map/rebuild-map.mjs');
+  console.log('   下一步：node tools/build-pool-bundle.mjs --split ‖ node champion-map/rebuild-map.mjs');
   process.exit(0);
 }
 
@@ -393,7 +393,7 @@ if (has('run-promote')) {
   if (ps.status === 0) console.log('   ✔ 已同步 champion-map/data/page/promote.tsv');
   else console.error('   ⚠ promscan 同步失败：' + String(ps.stderr || '').slice(0, 160));
 }
-console.log('   下一步：node tools/build-pool-bundle.mjs（把表派生成浏览器读的 js/bundled-champion-pool.js）');
+console.log('   下一步：node tools/build-pool-bundle.mjs --split（整表 + 页面懒加载清单/分片）');
 /* 入池触发强度层（用户 11-18 裁定「要进池的时候再跑后面的强度层等东西」）：
  * 先 Stage 1 观察层（Stage 2 的技能选择门依赖它）再 Stage 2 强度层，产物 = data/skill-report/<id>.json。
  * --no-census 跳过（离线补测场景）；跑失败**不阻断入池**（入池判据在 promote/seat 闸，普查是证据不是闸）但必须吼。 */
