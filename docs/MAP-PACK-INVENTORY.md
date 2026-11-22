@@ -1,6 +1,6 @@
 # 全图谱冠军包盘存总表（Champion Map Pack Inventory）
 
-> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,010` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行历史对照）为真源，于 `2026-11-22 12:28`（合入 36 枚 `v1.8` `server` 恢复件、`nov22-tzt2d-stab` 及本次 `nov21-armor-tzt2d` / `nov22-c3g-s300k` / `nov22-c4c-t20` 入池与 `night2-X2b-fuse` 退役后）实盘核验。  
+> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,011` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行历史对照）为真源，于 `2026-11-22 14:36`（合入 `R-GD12` 至 `hard` 带后）实盘核验。  
 > 相关文档：[`docs/ARTIFACT-LOSS-1119.md`](ARTIFACT-LOSS-1119.md) ‖ [`docs/GOAL-2026-11-19-ruler-resolution.md`](GOAL-2026-11-19-ruler-resolution.md) ‖ [`docs/POOL-CONTRACT.md`](POOL-CONTRACT.md) ‖ [`docs/TRAINING-RUN-LOG.md`](TRAINING-RUN-LOG.md)
 
 ---
@@ -9,12 +9,12 @@
 
 | 口径 | 数量 | 说明 |
 |---|---:|---|
-| **图谱在册总数** | **1,010** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **179** 枚（含 `nov22-tzt2d-stab` 与 `nov21-armor-tzt2d` / `nov22-c3g-s300k` / `nov22-c4c-t20`） |
+| **图谱在册总数** | **1,011** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **180** 枚（含 **`R-GD12`** 及 `nov21–nov22` 新入图批） |
 | 无路径记录（`no-path`） | **19** | 仅见于 `fam=11`（4）、`fam=13`（14）、`fam=19`（1） |
-| 有路径记录（`hasPath`） | **991** | 以下盘面状态均基于此 991 枚 |
-| **实际在盘（可用）** | **611** | 原封 `sha256` 一致 **525** 枚 + 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
+| 有路径记录（`hasPath`） | **992** | 以下盘面状态均基于此 992 枚 |
+| **实际在盘（可用）** | **612** | 原封 `sha256` 一致 **526** 枚 + 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
 | **盘上仍缺失（`missing`）** | **380** | `364` 枚早期 `v1.5.x` `server` 盲扫尾批（`fam=1..6`）+ `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
-| **现役产品冠军池** | **29** | **`hard` 13 枚 / `soft` 16 枚**，**`29/29` 全员在盘（0 缺失、`seatUnknown=0`、`arenaUnknown=0`）** |
+| **现役产品冠军池** | **30** | **`hard` 14 枚 / `soft` 16 枚**，**`30/30` 全员在盘（0 缺失、`seatUnknown=0`、`arenaUnknown=0`）** |
 | **现役 B 轴 24 锚联盟** | **24** | [`arena-league-1118-page.tsv`](../champion-map/data/arena-league-1118-page.tsv)，**`24/24` 全员在盘（0 缺失）** |
 
 > 缺失台账分目录剩余（共 `380` 枚）：`docs/artifacts/*.bak` 根目录 **365** 枚、`docs/artifacts/night-adapt/` **14** 枚、`scratch/arms/` **1** 枚（`GD6b-TILT-3p.bak`）。
@@ -50,16 +50,16 @@
 | **20** | `2.0` | 4 | 2 | 2 | 0 | **2** | 0 | `GD6` 蒸馏多线（11-12：`GD6b-TILT-3p` / `MSB18`） | **永久阻断**（上游挂 `fam=19` 的 `MSB8-charge`） |
 | **21** | `2.0` | 8 | 8 | 8 | 0 | **0** | 0 | 2.0 `obs6` 无教师冷启动（11-14：`OBS6A4/W2/A5` 等） | 已清零 |
 | **22** | `2.0` | 13 | 13 | 13 | 0 | **0** | 0 | 2.0 `obs6` `v7` 蒸馏（11-14） | 已清零 |
-| **23** | `2.0` | 26 | 26 | 26 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16 起，含 `nov21`–`nov22` 新入图 7 枚） | 已清零 |
+| **23** | `2.0` | 27 | 27 | 27 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16 起，含 `nov21`–`nov22` 新入图及 `R-GD12` 共 8 枚） | 已清零 |
 | **24** | `2.0` | 7 | 7 | 7 | 0 | **0** | 0 | 2.0 `obs6` `V3` 融合 / 路由（11-16） | 已清零（B 轴缺锚与 `V3H3` 全归位） |
 | **25** | `2.0` | 20 | 20 | 20 | 0 | **0** | 0 | 2.0 `obs6.5` 键道 / 覆盖训练（11-17） | 已清零 |
-| **合计** | — | **1,010** | **611** | **525** | **86** | **380** | **19** | 全谱系（`1.8` `831` + `2.0` `179`） | `19` 族清零；余 `364` 早期 `server` + `16` 不可复根链 |
+| **合计** | — | **1,011** | **612** | **526** | **86** | **380** | **19** | 全谱系（`1.8` `831` + `2.0` `180`） | `19` 族清零；余 `364` 早期 `server` + `16` 不可复根链 |
 
 ---
 
-## 三、现役产品冠军池（29 枚 · 全员在盘）
+## 三、现役产品冠军池（30 枚 · 全员在盘）
 
-> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 13 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 14 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
 
 | # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
 |---:|---|---|---|---:|---:|---|---|
@@ -75,28 +75,29 @@
 | 10 | `nov21-taunt-dsp0b` | `hard` | `db7883520de2e2fe` | 0 | 0 | `docs/artifacts/nov21-taunt-dsp0b.bak` | **11-21 DS-P0 挑衅补盲**（`arenaB=+17.92pt` / `arR=+35.83pt`，Stage1 **`taunt` 95/120 格 · 1,822 次**） |
 | 11 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | 强宽六轴全持代表 |
 | 12 | `OBS6P9-S4000` | `hard` | `cfb62c2c977897fd` | 1 | 3 | `docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak` | 高 `bpM` 真伤双穿 + `holo` 线（现役 `B` 榜高位） |
-| 13 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 唯一载体（11-19 点名保留） |
-| 14 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
-| 15 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
-| 16 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
-| 17 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
-| 18 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
-| 19 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
-| 20 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
-| 21 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
-| 22 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | 1 | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（11-21 已补测 `seatKill=1`） |
-| 23 | `nov21-armor-tzt2d` | `soft` | `7819b2196ba23fca` | 0 | 0 | `docs/artifacts/nov21-armor-tzt2d.bak` | **11-22 `armor` 强接盘**：`TZT2D` 底 + `armor@0.30`，新场A 32.5% 0 阻断，`arenaB=-12.20pt`，Stage1 **`armor 5,228` 次** |
-| 24 | `nov21-rod-tzt2d-r10` | `soft` | `da2981d21406ca06` | 1 | 2 | `docs/artifacts/nov21-rod-tzt2d-r10.bak` | **11-21 `rod` 避雷针首枚覆盖**：`TZT2D` 底 + `rod@0.25/ring@0.10`，Stage1 `rod 17/120` 格（`151` 次），`arenaB=-30.4pt`（留观 `multi` 人席 2 格） |
-| 25 | `nov22-c3g-s300k` | `soft` | `39f605c3f8b9a62c` | 0 | 0 | `docs/artifacts/nov22-c3g-s300k.bak` | **11-22 `klCand=1.0` 长程 PG 强节点（300k）**：`arenaB=-27.55pt`（超 `E1` +2.8pt），珠经济 75%/0% 闭环，Stage1 `curse 1,370 / firestorm 851` |
-| 26 | `nov22-c4c-t20` | `soft` | `e658497a05bf30b2` | 1 | 2 | `docs/artifacts/nov22-c4c-t20.bak` | **11-22 `tank` 接盘替代 `X2b-fuse`**：`TZT2D` 底 + `X2b@0.20(tank)`，`promote` 0 阻断，`arenaB=-34.72pt`（较 `X2b-fuse` +52.5pt），Stage1 **`tank 2,528` 次**（点名越 `long` 人席 2 格） |
-| 27 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
-| 28 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
-| 29 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
+| 13 | **`R-GD12`** | `hard` | `7e55abc3894ca3e2` | 0 | 0 | [`docs/artifacts/R-GD12.bak`](artifacts/R-GD12.bak) | **11-22 午 `hard` 带聚能环新强将**（`GD6ATEACH` + 长程 `ringEcon@0.12`，`arenaB=+15.89pt`，`seatKill=0`，Stage1 `ring 28/120` 格 `1,046` 手 / 胜率 `47.0%`） |
+| 14 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 载体 |
+| 15 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
+| 16 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
+| 17 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
+| 18 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
+| 19 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
+| 20 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
+| 21 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
+| 22 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
+| 23 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | 1 | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（11-21 已补测 `seatKill=1`） |
+| 24 | `nov21-armor-tzt2d` | `soft` | `7819b2196ba23fca` | 0 | 0 | `docs/artifacts/nov21-armor-tzt2d.bak` | **11-22 `armor` 强接盘**：`TZT2D` 底 + `armor@0.30`，新场A 32.5% 0 阻断，`arenaB=-12.20pt`，Stage1 **`armor 5,228` 次** |
+| 25 | `nov21-rod-tzt2d-r10` | `soft` | `da2981d21406ca06` | 1 | 2 | `docs/artifacts/nov21-rod-tzt2d-r10.bak` | **11-21 `rod` 避雷针首枚覆盖**：`TZT2D` 底 + `rod@0.25/ring@0.10`，Stage1 `rod 17/120` 格（`151` 次），`arenaB=-30.4pt`（留观 `multi` 人席 2 格） |
+| 26 | `nov22-c3g-s300k` | `soft` | `39f605c3f8b9a62c` | 0 | 0 | `docs/artifacts/nov22-c3g-s300k.bak` | **11-22 `klCand=1.0` 长程 PG 强节点（300k）**：`arenaB=-27.55pt`（超 `E1` +2.8pt），珠经济 75%/0% 闭环，Stage1 `curse 1,370 / firestorm 851` |
+| 27 | `nov22-c4c-t20` | `soft` | `e658497a05bf30b2` | 1 | 2 | `docs/artifacts/nov22-c4c-t20.bak` | **11-22 `tank` 接盘替代 `X2b-fuse`**：`TZT2D` 底 + `X2b@0.20(tank)`，`promote` 0 阻断，`arenaB=-34.72pt`（较 `X2b-fuse` +52.5pt），Stage1 **`tank 2,528` 次**（点名越 `long` 人席 2 格） |
+| 28 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
+| 29 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
+| 30 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
 
-> 现役池状态（`2026-11-22 12:28`）：  
-> 1. **池内唯一非 `mirror` 技能 29/29 全活跃**：原残障融合包 `night2-X2b-fuse`（`-87.2pt`）已正式退役，由 **`nov21-armor-tzt2d`**（`-12.20pt`，`armor 5,228` 次，`seatKill=0`）与 **`nov22-c4c-t20`**（`-34.72pt`，`tank 2,528` 次，`promote` 0 阻断）彻底接盘，全池前线地板大幅抬升；  
-> 2. **PG 长程闭环代表入池**：`nov22-c3g-s300k`（`-27.55pt`）兼具 `curse/firestorm/railgun` 与珠经济闭环（`花珠率 75% / 浪费率 0%`），`promote` 0 阻断 + `seatKill=0`；  
-> 3. **后续可继续推进**：`hard` 带 `armor / firestorm / mine / cannon / rod` 活跃仍为 `0/13`；`nov21-rod-tzt2d-r10` 与 `nov22-c4c-t20` 因在 `multi`/`long` 单人席各有 `2` 格踩线，仍可作为下一阶段 `selftest` + 减剂量定向优化目标。
+> 现役池状态（`2026-11-22 14:38`）：  
+> 1. **`hard` 带聚能环载体增至 `3/14`**：[`R-GD12`](artifacts/R-GD12.bak)（`arenaB=+15.89pt`，`seatKill=0`，Stage1 跨环境胜率 `47.0%`，`ring 28/120` 格 `1,046` 手）正式合入 `hard` 带；  
+> 2. **池内唯一非 `mirror` 技能 29/29 全活跃**；  
+> 3. **后续可继续推进**：`hard` 带 `armor / tank / firestorm / mine / cannon / rod` 仍需补强（当前实验已验证单轮 `AR-TK2` 达成 `arenaB=+10.36pt` + `tkWeak` 因果追打 `+13.69pt` 并在 `--klCand=1.0` PG 下稳定留存，仅余 `long` 全程刷反弹格待压低至 `<20pt`）。
 
 ---
 

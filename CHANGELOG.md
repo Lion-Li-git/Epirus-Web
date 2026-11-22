@@ -4,6 +4,19 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.13 — 11-22（`R-GD12` 携 `聚能环` 高分入池 `hard` 带 · 池 `29 → 30` ‖ `tkWeak` 条件藤甲×坦克配合实证）
+
+**这一版是什么**：在 `EQ-S4-GD6ATEACH` 底座上通过低学习率长程定向蒸馏合入 **`R-GD12`**，首次实现在不触发 `selftest3` 数值饱和与 `seatKill=0` 的前提下以 `arenaB = +15.89pt` 正式入池 `hard` 带并把 `hard` 带聚能环载体从 `2/13` 推升至 `3/14`；同时新增可选条件教师 `tkWeak` 完成 **`藤甲 → 坦克`** 因果协同与 6 万局 RL 留存实验。
+
+- **新入池 `hard` 强将 [`R-GD12`](docs/artifacts/R-GD12.bak)**（`wid=7e55abc3894ca3e2`，`hard 13 → 14` / 全池 `29 → 30`）：
+  - **配方**：`EQ-S4-GD6ATEACH.bak` 底 + `--teacher2=ringEcon --teacher2keys=ring --teacher2Shapes=5:long,8:long --teacher2frac=0.12 --rareOnly=ring --rareFrac=0.35 --groups=2400 --steps=250 --lr=0.0004 --objective=cand --dagger=1`（控制步数与学习率以避开 `nov22-r2-gd6a-ring` 在 `lr=0.001 / steps=450` 时的 `π=NaN` 过饱和）；
+  - **读数**：6 种子 `arenaB = +15.89pt`（全部 6 粒为正，`+46.88/+11.53/+6.43/+20.24/+11.47/+26.26`，超底座 `GD6ATEACH` `+3.5pt`）、`arR = +0.4688`、`ruler H=58.2, S=1.62`、`promote --dry` **0 阻断**（`考卷 57.7%` · `G4=0%/0.3%` · `G5=0%/0%` · `场A 35.0%/含反弹 47.4%` · `墙 21.35/局` · 珠经济 `50%` 闭环 · 安全开环 `19.2%`）、人席 `90210/90211` **`seatKill=0`**（`multi ≤3.0% / long ≤2.5%`）、Stage 1 跨环境胜率 **`47.0%`**（`ring 28/120` 格 **`1,046` 手** · `railgun 24` · `bigT 17` · `sword 88` · `snipe 83`）。
+- **`坦克 + 藤甲` 配合机制实证（新增 opt-in 教师 `tkWeak`，结果保留于 `scratch/arms/`）**：
+  - [training/proto2/supfit-gd.mjs](training/proto2/supfit-gd.mjs)：新增可选教师 `tkWeak`（仅当目标已挂 `fireWeakNow` 且上一手非反弹/藤甲/制御时教 `tank` 追打 `2` 火伤，零新旋钮、默认路径不变）；
+  - 单轮 joint 臂 **`AR-TK2`**（`TZT2D` 起步 + `nov21-armor-tzt2d` 主教师 + `tkWeak@0.20`）达成 `selftest3` **6/6 全绿（`0.00e+0`）**、`arenaB = +10.36pt`、`promote` **0 阻断**（`G_eff = 7.54/8.25`），109 局中盘反事实因果探针测得目标翻为 `fireWeakNow=true` 时 `P(tank→target)` 从 `2.09%` 跃升至 **`15.78%`（`+13.69pt`，`argmax 2→18`）**；
+  - 接续 60,000 局 `--klCand=1.0` 纯胜负 `pg-train`（`AR-TK2-PG`）后，该因果增益 **`+13.66pt`（`2.09% → 15.75%`）几乎无损留存**（`arenaB = -5.71pt`）；因 `AR-TK2` 在 `long` 全程刷反弹格为 `25.0%`（相对基线贴 `20–21pt` 边界），按自动入池红线暂不推自动席、留 `scratch/arms/AR-TK2.bak` 供点名研究对照。
+- 同期聚能环对照组 **`nov22-r1-ringb9-klcand.seg90000`**（`RINGB9 + klCand=1.0 PG @90k`）：`arenaB` 从 `-10.65pt` 抬至 `-4.11pt`（`promote` 0 阻断、60 局长程 `ring=297`），因人席 `multi` 只防御格触红留档不入池。
+
 ## v2.1.12 — 11-22（场A 反弹触发计入阻断而不换历史尺 ‖ `armor` / `klCand-PG` / `tank` 三将入 `soft` 带 ‖ `night2-X2b-fuse` 退役 ‖ 池 27 → 29）
 
 **这一版是什么**：落实用户对任务 1 与任务 2 的裁定——保持图谱历史 `fieldA.atk` / `feasibility.tsv` 尺列逐位不变，将 `promote` 与筛选器的 `F 场A` 阻断改按「主动攻击或触发反弹」计算；随后将 `armor` 强载体 `nov21-armor-tzt2d`、`--klCand=1.0` 长程 PG 强节点 `nov22-c3g-s300k` 及降剂量 `supfit` `tank` 新将 `nov22-c4c-t20` 走完整测点与人席流程并入池 `soft` 带，正式退役池底最后一枚残障融合包 `night2-X2b-fuse`（池 `27 → 29`，`hard 13 / soft 16`）。
