@@ -52,7 +52,7 @@
 |---|---|---|---|
 | `nov23-fs-c3g-tzt2d` | c4 tank 并入路线平移：TZT2D 底 + c3g 的 curse,firestorm 双键道 | `arenaB=-91.2`（spread 82.6）+ `promote --dry` 2 阻断（**G4[multi] 只枪 65.7%>60% 稳赢它**）+ defense 1.7%（底座防御被冲掉） | **淘汰+判例**：tank 单键路线不可平移到 offense-economy 键；形状正好踩全池弱点格被放大利用 |
 | `nov23-fs-hard-klcand` | 对带练 × klCand（C2c 失败时 klCand 未出生的未测格子） | seg50k `arenaB=-49.3` vs 底座 -27.55（50k 局掉 22pt） | **50k 淘汰**：C2c 失败形状复现，**候选级锚也止不住对带练流失** |
-| `nov23-fs-single-tzt2d` | 单键消融（curse 是不是毒药？） | 见 RUN-LOG（本文件写就时在跑/已落） | — |
+| `nov23-fs-single-tzt2d` | 单键消融（curse 是不是毒药？） | **作废**：`t2 命中键道 0`——c3g 的天火出手与 curse 路径状态纠缠，纯 firestorm 键道采样采不到它（教师标签只剩 ジ/蓄能/电磁炮） | 机制注记：双键天火/咒在 c3g 里是一体的，拆键消融此路不通 |
 
 **留给下一班的机制方向**（按证据排序）：
 1. **反只枪压制 × 天火双持**：既然并入臂与整池都死在只枪压制格，教师栈加一路反只枪成分
