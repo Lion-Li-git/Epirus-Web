@@ -98,6 +98,13 @@
 | 2026-11-19 白班 | `day1119-det-gd` | `MX8-R6C-KL` + `toolkit + detonate(0.35)` 打通 2.0 天火贴爆闭环 | `v2.1.8` 时期 | `supfit` | `MX8-R6C-KL.bak` (`ece05168`) | `toolkit` + `detonate@0.35` | `detonate` 份额 `0.35` + `closeCurseStorm` | `scratch/arms/` | `arenaB=-88.85pt`；引爆率 **`123%/158%`**；`firestorm 16%/19%` | **作 PG/咒源上游** |
 | 2026-11-19 白班 | `day1119-cannon-pg` | `day1119-cannon` 系列入池试水 | `v2.1.8` | `pg` | `day1119-cannon-gd` 链路 | 混合真包 PG | — | `ae28c0aaf8bf6098`（`v2.1.9` 已退役并删） | `arenaB=-82.28pt`；`P2=+0.4077 / P3=+0.1677 / P5L=+0.0828`；复测 `seatKill=4` | **`v2.1.9` 已退役** |
 
+## 三·补、2026-11-22 15:xx 坦克藤甲线：反射键手术判例
+
+- **AR-TK3**（armor 只教 armor 键）：promote 0 阻断、seat long 反射 6.7%，但 arenaB med **-41.40pt** ⇒ 淘汰。
+- **AR-TK4**（armor 恢复除 reflect 外全部键，0.50）：arenaB med **-25.05pt** ⇒ 未跑 promote，淘汰。
+- 判例：reflect 与 armor 包强度绑定，教师层摘键不可行；AR-TK2 保留为 scratch 机制资产，不入池。
+- 完整命令与读数见 [STATUS-2026-11-22-tank-armor.md](research/STATUS-2026-11-22-tank-armor.md)。
+
 ---
 
 ## 四、单次新实验登记卡片模板（每次新建实验复制到本节顶部并填写）
