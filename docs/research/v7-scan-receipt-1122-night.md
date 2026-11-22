@@ -36,7 +36,18 @@
 | **wave4 归档** | ~60 | ✗ | D/G 猜测行（ringA1/bead15·25·100/bead2/bead3/catE5/protoE/rb1/rb2/new5 系/noteach1 旧版/press2 旧版/ws2 旧版/role12/divK2/t1/seat24b…） | recipe 待修的 5 批走 wave4fix2 |
 | **wave4fix2** | 27 | 进行中 | 全量块挖掘纠偏：**w3r1 ✅ 6/6**（POOL16+ROLEW=1，Detached 驱动幸存注册）；noteach1=IMIT_FRAC 0 真相；ws2/role1/press2 带 era 漂移候选 | 台账 06:3x：missing 207→~180 |
 
-**台账口径**（对用户报数只许用这两个）：`missing` 剩余（今夜 375 → 207+，还在降）+ 今夜恢复增量（至 06:3x = 168+）。
+**台账口径**（对用户报数只许用这两个）：`missing` 剩余（今夜 375 → ~186，还在降）+ 今夜恢复增量（至 07:0x = 189+）。
+
+## wave5 探针补记（07:0x）
+
+- **v7catE5 ✅ 命中**（DIV_CATW=0.5——wave4 M 行挖到的是兄弟批 catE1 的 env，全量组合挖掘纠偏）；catE5 全批 81/82 在跑。
+- **bead 系（1/2/3/15/25/100）真池 = 22 名（含 gunfocus,gunfocus）**，wave4 全灭的原因（我发的是 20 名）；产物能落但
+  era 漂移未解（bead1 的 era 估计 85fd1eee 早于 gunfocus 进码 c7076ac9——与 gf1 同款未提交工作树病）。下一班铺
+  era 候选扫描（c7076ac9 → 5c880c63 → …）。
+- **protoE 真组合** = DIV_W 0.06 + DIV_K 6 + DIV_FORCE_GENS 60 + WALL_FILTER 1（wave4 发的是 DIV_W=0.3）；densE 真池 16 名。
+  两者探针也漂移 miss，同入 era 扫描队列。
+- wave5 踩坑续：**TOTAL=1 时 SHARD 必须 0**（k%1===1 过滤所有行——本夜第三次踩）；**SWEEP_PORT env 已加**（驱动端口可覆写，
+  多驱动并行不再互踩 8906）。
 
 ## 教训（本轮踩过的 · 含深夜新增）
 
