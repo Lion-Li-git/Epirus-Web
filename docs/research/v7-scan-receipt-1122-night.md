@@ -23,19 +23,20 @@
 5. **登记口径**：重放件与当年原件字节异（wid 逐位同）⇒ 台账记 `sha-diff-wid-same` + 第 4 列盘上实际 sha；
    `registry.sha256` 永不动（sweep-server-batches.mjs 已改此口径，:156 一带）。
 
-## 按批回执（11-23 深夜更新）
+## 按批回执（11-23 深夜更新 → 06:3x 续账）
 
 | 批 | 枚数 | 判 | 配方来源 | 备注 |
 |---|---:|---|---|---|
-| v7l2c | 20 | **✅ 20/20 逐位** | era 407d2c6c `tools/l2-arms.mjs` ARMS['c'] 零 env | 已登记推送 7e453ba4 |
-| v7l2f | 18 | **✅ 18/18 逐位** | 同表 ARMS['f'] | 已登记推送 573b0e5b |
-| v7l2o | 3 | **✅ 3/3 逐位** | 同表 ARMS['o']（era 5e4bee75） | 驱动自登记 |
-| r61fix | 5 | **✅ 命中中**（91/93 确认） | era c2e02d70 标准模板（BUNDLE_IN 死重见下） | s1 跑完随批登记 |
-| v7l2s / v7l2h | 5/3 | 跑批中 | 同表 ARMS['s']/['h'] | s1 |
-| v7curri2 / v7wall1 | 6/5 | 跑批中（s0） | DSH 真命令：IMIT_PLAN `pickDeepSaver:0.5,pickRingSpam:0.5:ring` / wall1=WALL_FILTER=1 | wave3 |
-| v7aim1 | 6 | ✗→已修复待跑 | teacher 须用**完整函数名 `pickAimDefender`**（era runner 对错名 fail-fast 拒跑） | wave2fix |
-| v7gf1 | 5 | ✗→已修复待跑 | 包 ts(+8h)=22:35 **早于 gunfocus 进主线 c7076ac9(22:59)** ⇒ 当年在未提交工作树训的；era 候选 c7076ac9→5c880c63 | wave2fix |
-| 其余 50 批 | ~140 | jobs 已备 | 33 族挖到 DSH 真命令（命令级置信）+ 16 文档派生 + 1 猜测；`server-jobs-cli-wave4.tsv` + `-wave4-probe.tsv` | 排队 |
+| v7l2c/l2f/l2o/l2s/l2h | 20/18/3/5/3 | ✅ 全中 | era `tools/l2-arms.mjs` ARMS 表逐字 | 已推送 |
+| r61fix | 5 | ✅ 全中 | era c2e02d70 标准模板 | 已推送 |
+| v7wall1 / v7sub1 | 5/6 | ✅ 全中 | DSH 真命令（WALL_FILTER=1 ‖ curri2+SUB_ONLY） | 已推送 |
+| v7aim1 / v7gf1 | 6/5 | ✅ 全中（修复后） | teacher 完整函数名 `pickAimDefender` ‖ era=c7076ac9 未提交工作树裁定 | 已推送 |
+| v7curri2 | 6 | ✗ 0/6 归档 | 差一维待探针 | — |
+| **wave4 全中** | ~80 | ✅ 全 6/6 或近全 | big1/iso1/new1/new4/new6/press1/fix1/ringT3/role1w/role5/stock1 6/6；f2t 5、wall2 5、f5div3 5、f5t 4、blk1 3/4、w3c 3/4、new2 起 | 6397182d + b54ae0f9 |
+| **wave4 归档** | ~60 | ✗ | D/G 猜测行（ringA1/bead15·25·100/bead2/bead3/catE5/protoE/rb1/rb2/new5 系/noteach1 旧版/press2 旧版/ws2 旧版/role12/divK2/t1/seat24b…） | recipe 待修的 5 批走 wave4fix2 |
+| **wave4fix2** | 27 | 进行中 | 全量块挖掘纠偏：**w3r1 ✅ 6/6**（POOL16+ROLEW=1，Detached 驱动幸存注册）；noteach1=IMIT_FRAC 0 真相；ws2/role1/press2 带 era 漂移候选 | 台账 06:3x：missing 207→~180 |
+
+**台账口径**（对用户报数只许用这两个）：`missing` 剩余（今夜 375 → 207+，还在降）+ 今夜恢复增量（至 06:3x = 168+）。
 
 ## 教训（本轮踩过的 · 含深夜新增）
 
