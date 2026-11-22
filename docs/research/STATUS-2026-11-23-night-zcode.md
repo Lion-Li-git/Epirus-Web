@@ -7,23 +7,18 @@
 
 ## 一、v7 回收扫批战役（主线）
 
-**10 批 76 枚逐位命中（wid 全对），唯一失手 curri2 0/6 已归档**；台账 `sha-diff-wid-same` 91 → 167（missing 357 → 319）。
+**今夜找回 194 枚（missing 375 → 181）**，分四波；全部 `land-recovered --do` 自证登记（wid 逐位、§7.1 口径、registry 零改动）。
 
-| 批 | 枚数 | 判 | 关键配方事实 |
-|---|---:|---|---|
-| v7l2c / v7l2f / v7l2o / v7l2s / v7l2h | 20/18/3/5/3 | ✅ 全中 | era `tools/l2-arms.mjs` ARMS 表逐字（l2o/l2s/l2h 换 era 各自候选首中） |
-| r61fix | 5 | ✅ 全中 | 标准模板（era c2e02d70）；`EPIRUS_BUNDLE_IN` 是死重（ring2-run:85 无条件覆写） |
-| v7wall1 / v7sub1 | 5/6 | ✅ 全中 | DSH 真命令：`WALL_FILTER=1` ‖ curri2 配方 + `IMIT_SUB_ONLY=1` |
-| v7aim1 | 6 | ✅ 全中（修复后） | **教师名须完整函数名 `pickAimDefender`**（era runner fail-fast 拒错名；RESEARCH-LOG 写"注册名 aimdefender"是松话） |
-| v7gf1 | 5 | ✅ 全中（修复后） | **era=未提交工作树裁定**：包 ts(+8h)=22:35 早于 gunfocus 进主线 c7076ac9(22:59)，era 取 c7076ac9 起 |
-| v7curri2 | 6 | ✗ 0/6 归档 | 产物落但 wid 全异——配方有（IMIT_PLAN `pickDeepSaver:0.5,pickRingSpam:0.5:ring` FRAC 0.7）但差一维，待下一班探针 |
+| 波 | 批数 | 命中 | 内容 |
+|---|---:|---:|---|
+| 前半（wave1-3 + wave2fix） | 10 批 | 76 | l2c 20 / l2f 18 / sub1 6 / aim1 6 / r61fix·l2s·wall1·gf1 各 5 / l2o·l2h 各 3（唯一失手 curri2 0/6 归档） |
+| wave4 双 shard（50 行/140 枚） | 24 批 | 98 | 全 6/6：big1·iso1·new1·new4·new6·press1·fix1·ringT3·role1w·role5·stock1；近全：f2t 5、wall2 5、f5div3 5、f5t 4、seat24b 3、blk1 3、w3c 3、seat24 2、new2·new3 各 1 |
+| wave4fix2（5 批歧义行重修） | 3 批 | 13 | **w3r1 6/6**（POOL16+ROLEW=1）· **noteach1 6/6**（IMIT_FRAC=0=无教师真相）· ws2-81（era 漂移候选 6345caee）；press2 在飞 |
+| wave5 探针（真组合纠偏） | 1 批 | 3 | **catE5 3/3**（DIV_CATW=0.5——wave4 挖到的是兄弟批 catE1 的 env）；bead 系 22 名池真相已挖到但 era 漂移未解 |
 
-- 全部经 `tools/land-recovered.mjs --do` 自证登记（wid 逐位、§7.1 口径、registry 零改动）。
-- **地雷清单**（全写在回执"教训"节）：jobs 文件 paths/targets 列空 = 驱动静默 0 登记（l2c/l2f 双中招，
-  靠 worktree 产物手动核验补救）‖ 单行 jobs × SHARD 过滤（第二次踩）‖ 同 era 并发须分 shard ‖
-  gunfocus/池名单以 era SSE 报错清单为准。
-- **wave4 在飞**（`scratch/v7-mined/server-jobs-cli-wave4.tsv` 50 行/140 枚：33 族 DSH 真命令级 +
-  16 文档派生 + 1 猜测）：双 shard 到收工预计落 ~70 枚，余量下一班续（驱动按台账 skip 自动续跑）。
+关键配方纠偏（全量组合挖掘 = 取全部组合不取第一块）：bead 系真池 22 名（含 gunfocus×2）‖ noteach1 = IMIT_FRAC 0 ‖
+catE5 = CATW 0.5 ‖ protoE = DIV_W 0.06 + FORCE_GENS 60 + WALL_FILTER 1 ‖ densE 真池 16 名 ‖ w3r1 真池 16 名。
+**era 未提交工作树漂移**是残余主敌（gf1→c7076ac9、ws2-81→6345caee 已证；bead/protoE/densE/press2/role1 待漂移扫描）。
 
 ## 二、C 线重测（口径 v2 量测协议第 1 条，Qoder handoff §5.4 —— 已跑完）
 
