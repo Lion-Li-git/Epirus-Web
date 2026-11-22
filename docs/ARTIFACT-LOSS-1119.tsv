@@ -168,12 +168,12 @@ R311	docs/artifacts/eval-out/win-R311.bak	ok
 R351	docs/artifacts/eval-out/win-R351.bak	ok	
 R391	docs/artifacts/eval-out/win-R391.bak	ok	
 R431	docs/artifacts/eval-out/win-R431.bak	ok	
-r61fix-31	docs/artifacts/r61fix-31.bak	missing	
-r61fix-81	docs/artifacts/r61fix-81.bak	missing	
-r61fix-82	docs/artifacts/r61fix-82.bak	missing	
-r61fix-91	docs/artifacts/r61fix-91.bak	missing	
+r61fix-31	docs/artifacts/r61fix-31.bak	sha-diff-wid-same	44f5ca8986fc917bf344ebcd532c4c7b6220c1366abeabfab6a67a75db2bab1e
+r61fix-81	docs/artifacts/r61fix-81.bak	sha-diff-wid-same	d9847abb5ea54dacaeff4997c94018c0bc071fab2a43cfc487c586dfacc41f1f
+r61fix-82	docs/artifacts/r61fix-82.bak	sha-diff-wid-same	d91a678fb8ad7afb82ec1326e9f683215fffe8265cd8979e15c84334b1fc3093
+r61fix-91	docs/artifacts/r61fix-91.bak	sha-diff-wid-same	6d47c791b9069e410b7578e24fded2b677235243eeae7d0b7bfad4e7aeb0ba7b
 r61fix-92	docs/artifacts/r61fix-92.bak	ok	
-r61fix-93	docs/artifacts/r61fix-93.bak	missing	
+r61fix-93	docs/artifacts/r61fix-93.bak	sha-diff-wid-same	6628ab56138f2bcc8d044b9f98d274cc098b97c9a782d32c1f66100a3ec7a47a
 RG1-31	docs/artifacts/e127-out/RG1-31.bak	ok	
 RG1-71	docs/artifacts/e127-out/RG1-71.bak	ok	
 rwd0-31	docs/artifacts/rwd0-31.bak	ok	
