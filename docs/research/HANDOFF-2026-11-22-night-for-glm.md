@@ -33,7 +33,13 @@ cd /d/code/Epirus-Web && node tools/anchor-recover.mjs --sources="$(cat "$TEMP/s
 不是身份可疑——本仓铁律"身份按权重"。
 
 - ⚠ **`v7f3-93` 那枚躺在训练暂存槽 `.training-out-3p.js` 里**：谁在 `srv-wt-s0-3242a160` 再跑一次训练它就没了。**今晚别拿这棵树跑东西。**
-- 我没有执行 `--do`：它会把文件拷进主树 `docs/artifacts/` 并要求 `git add -f` + 刷新 `registry`/台账——那是进仓面，等用户点名。
+- ✅ **11-22 深夜已执行 `--do` 并登记完（用户点名）**：5 枚拷回台账原路径、`git add -f` 入库，台账态 `missing → sha-diff-wid-same`（**380 → 375**，`sha-diff` 86 → 91），
+  `map-audit` 结构全过、`--group=ship` 47/47 绿（定向，不是整轮）。
+  **为什么不记成 `ok`**：这 5 份不是当年原件，而是 11-21 重放留在 era 工作树里的产物（META ts 是 11 月的），
+  只有**权重逐位同**、字节不同；在册约定是"`ok` = 字节逐位等于 `registry.sha256`"，所以只能落 `sha-diff-wid-same` 这一类（与在册 86 枚同类）。
+  ⚠ **`registry.tsv` 的 `sha256`/`ts` 一律没动**——那是当年入库的历史指纹；恢复件的实际字节记在台账第 4 列（64 位全 sha）。
+- ⚠ 台账 `missing` 行的第 4 列**本来就是空的** ⇒ 任何"拿 `missing.sha256` 去比盘上文件"的扫描都是**空转**（我今天第一版就这么跑了个"0 命中"，是假阴性）。
+  身份判据只有一个：`champion-map/pack-id.mjs` 的 `widOf()`。
 - 顺带一条待核：`v7densE-31` 的原件是别人跑 `v7l2c-31` 时产的 ⇒ **这两批的配方可能本来就同一份**，
   而两者在谱系表里的 `divRoleW/divCatW` 一个记 0/0、一个记空（见下节的列口径问题）。
 

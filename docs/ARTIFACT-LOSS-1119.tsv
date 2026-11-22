@@ -335,7 +335,7 @@ v7aim3-31	docs/artifacts/v7aim3-31.bak	missing
 v7aim3-82	docs/artifacts/v7aim3-82.bak	missing	
 v7aim3-93	docs/artifacts/v7aim3-93.bak	ok	
 v7anneal-34	docs/artifacts/v7anneal-34.bak	missing	
-v7attr-31	docs/artifacts/v7attr-31.bak	missing	
+v7attr-31	docs/artifacts/v7attr-31.bak	sha-diff-wid-same	d3e9b4c59bbb0298d94c2eff242b8b9f58999a61e0c4f60e1a09e2b56467e1b8
 v7attr-33	docs/artifacts/v7attr-33.bak	missing	
 v7b-37	docs/artifacts/v7b-37.bak	sha-diff-wid-same	39c972629535189409b5f47a73459466c39bb64594bbf1d4aa08e857d317faf1
 v7b-38	docs/artifacts/v7b-38.bak	sha-diff-wid-same	95e6609551eb87f7a0cd533965c27ce5b63c1a6c6a70d94bf7e7644ac1fd4445
@@ -420,9 +420,9 @@ v7curri2-82	docs/artifacts/v7curri2-82.bak	missing
 v7curri2-91	docs/artifacts/v7curri2-91.bak	missing	
 v7curri2-92	docs/artifacts/v7curri2-92.bak	missing	
 v7curri2-93	docs/artifacts/v7curri2-93.bak	missing	
-v7densE-31	docs/artifacts/v7densE-31.bak	missing	
-v7densE-81	docs/artifacts/v7densE-81.bak	missing	
-v7densE-82	docs/artifacts/v7densE-82.bak	missing	
+v7densE-31	docs/artifacts/v7densE-31.bak	sha-diff-wid-same	7802a9e558f9df8be9a0e229c7ec08af240e2ba500e7123e931ed1f20c103b94
+v7densE-81	docs/artifacts/v7densE-81.bak	sha-diff-wid-same	25d20c0fb76e25437fa20d8450891bdc3f07730294541f602c091147f5cc9c18
+v7densE-82	docs/artifacts/v7densE-82.bak	sha-diff-wid-same	aa8ee5604618b4b3752e02aea6eed2711436a4a5d395af8481e82449be56022c
 v7divK-31	docs/artifacts/v7divK-31.bak	ok	
 v7divK-81	docs/artifacts/v7divK-81.bak	ok	
 v7divK-82	docs/artifacts/v7divK-82.bak	ok	
@@ -443,7 +443,7 @@ v7f2t-91	docs/artifacts/v7f2t-91.bak	missing
 v7f2t-92	docs/artifacts/v7f2t-92.bak	missing	
 v7f2t-93	docs/artifacts/v7f2t-93.bak	missing	
 v7f3-91	docs/artifacts/v7f3-91.bak	missing	
-v7f3-93	docs/artifacts/v7f3-93.bak	missing	
+v7f3-93	docs/artifacts/v7f3-93.bak	sha-diff-wid-same	3333bfde35ab882770abebdb4899dc02094b8d16ce54b9f37d53ceb9e4b2a658
 v7f3-94	docs/artifacts/v7f3-94.bak	missing	
 v7f35b-94	docs/artifacts/v7f35b-94.bak	ok	
 v7f35b-95	docs/artifacts/v7f35b-95.bak	ok	
