@@ -95,7 +95,7 @@ cd /d/code/Epirus-Web && node tools/anchor-recover.mjs --sources="$(cat "$TEMP/s
 
 ---
 
-## 四、F 门口径改动的牙（②，等用户裁，本班未动门）
+## 四、F 门口径改动的牙（已补数值锚，见 PR #9）
 
 11-22 12:35（`03732ec9`，v2.1.12）把 promote 与筛选器的 F 阻断从 `fieldA.atk` 改为含反弹触发的
 `atkWithReflect`（历史尺列逐位不动）。**这是 armor 通路的承重改动**：`nov21-armor-tzt2d` 的旧尺 14.5% / 含反弹 32.5%。
@@ -187,3 +187,37 @@ Arena B 轴 6 粒种子的批间 σ，我今天按 [arena-noise-floor-1118.tsv](
 每臂登记 [TRAINING-RUN-LOG.md](../TRAINING-RUN-LOG.md)；入池走完整链 `promote --dry --support=2 → measure-point --bake →
 pool-add → build-pool-bundle → pool-skill-report --bake`；**别跑整轮门禁**（`node tools/gate-all.mjs --auto` 按改动面挑，引用绿要标"定向不是整轮"）；
 `main`/`tag`/别人的分支等点名。
+
+---
+
+## 七、登记口径改口 + 一处在册缺陷（`tools/land-recovered.mjs`，11-22 深夜追加）
+
+### 7.1 本笔作废 11-21 handoff §三.3 的后半句
+
+那句写的是"命中真 wid 后：…同步更新 `registry.tsv` 的 `sha256` 与 `docs/ARTIFACT-LOSS-1119.tsv`"。
+**前半句（归一 `ts`、`git add -f`）没问题，后半句是错的。** 现读在册约定：
+
+| 情形 | 台账 `state` | 台账第 4 列 | `registry.sha256` |
+|---|---|---|---|
+| 字节逐位等于 `registry.sha256` | `ok` | **留空** | 不动 |
+| 权重逐位同（`widOf`）但字节不同 | `sha-diff-wid-same` | **写盘上实际 sha** | **不动**（那是当年入库的历史指纹） |
+
+⇒ **登记步永远不改 `registry.tsv`**。照旧说明做，会把 91 枚漂移件的出处指纹逐个抹掉。
+`anchor-recover --do` 之后走：`node tools/land-recovered.mjs`（只报告）→ `--do`（逐枚自证 wid，任何一枚不过 ⇒ 整批不落盘；写完自证"行数没变 + registry 字节未改动"）。
+
+`--check` 跑遍全表的实测底数（11-22）：`ok` 516 枚**全部**字节相符、`sha-diff-wid-same` 91 枚**全部**第 4 列等于盘上实际 sha ⇒ 状态与哈希列**零违例**，上表不是我编的口径。
+
+### 7.2 顺手量到一处在册缺陷：`EFFG-s41` 的 lineage wid 指向一个不存在的权重
+
+`--check` 报出的唯一一条 wid 违例，逐层查过：
+
+- 盘上 `docs/artifacts/2p0-pool/EFFG-s41.bak` 的 wid = `cdeb5f7c18e336ba`；
+- `registry.sha256` **等于该文件字节**、台账标 `ok`、`ts` 也一致 ⇒ 文件与图谱账彼此自洽；
+- 但 [lineage.tsv](../../champion-map/data/page/lineage.tsv) 给它的 `wid` 是 `21f5f4fee00f711a`，而这个值**在表里独一份、且不等于仓库里任何文件的 wid**；
+- 全表可比对 608 枚（`1.8` 线 454/454 符 ‖ `2.0` 线 153/154 符）**只有这一处不符**；`archived-pack-meta.tsv` 里没有这一枚 ⇒ 不是 11-17 那种"sidecar 把空值当权威广播"的串味，是这一行自身带着一个已不存在的权重哈希（该行最后被写是 11-17 `dae2f5d6`，而该文件自 11-06 `47e28ebc` 起没动过）。
+
+**为什么要管**：`lineage` 的 `wid` 正是恢复链的身份账（`anchor-recover` 与本工具都拿它当目标）
+⇒ 谁真复现出 `EFFG-s41` 会被判"不对"，而谁想"把它改对"可能反过来覆盖掉盘上这枚好件。
+**修法本笔没做**：正解是跑 `champion-map/lineage.mjs` 重新生成后比对这一行，**不是手改一个格子**（手改表正是 11-17 事故的形状）。等用户点名，或下一班带着这条去核。
+在它修掉之前 `node tools/land-recovered.mjs --check` **会一直红——那是它应该红**，别为了让它绿去动文件。
+

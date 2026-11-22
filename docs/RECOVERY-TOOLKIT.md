@@ -109,3 +109,23 @@ cd /d/code/Epirus-Web && node tools/anchor-recover.mjs --sources="$(cat "$TEMP/s
 自带进出对账：读不到缺件行就 exit 2，不出口径不明的半张表。算法与收益排序见
 [research/HANDOFF-2026-11-22-night-for-glm.md](research/HANDOFF-2026-11-22-night-for-glm.md) §二。
 
+## 10. `tools/land-recovered.mjs` —— `anchor-recover --do` 之后的登记步（11-22 · Qoder）
+
+**它替掉一个错说法**：11-21 通宵班交接 §三.3 让恢复件"同步更新 `registry.tsv` 的 `sha256`"——**别照做**。
+在册约定是（`--check` 跑遍全表实测：状态列与哈希列零违例）：
+
+- 字节逐位等于 `registry.sha256` ⇒ 台账 `state=ok`、第 4 列留空；
+- `widOf` 逐位同但字节不同 ⇒ `state=sha-diff-wid-same`、第 4 列写**盘上实际 sha**；
+- **`registry.tsv` 任何情况下都不由登记步改动**（它是当年入库字节的历史指纹）。
+
+```bash
+node tools/land-recovered.mjs --check   # 验上面三条跑遍全表（有违例 exit 1）
+node tools/land-recovered.mjs           # 只报告"文件已回到原路径但仍标 missing"的待登记件
+node tools/land-recovered.mjs --do --ids=v7attr-31,...   # 逐枚自证 wid 后才落盘
+```
+
+自证三件：任何一枚 wid 不过 ⇒ **整批不落盘**；写完复核行数没变；写完复核 `registry.tsv` 字节未改动。
+⚠ 已知 `--check` 当前会红：`EFFG-s41` 的 lineage `wid` 与任何盘上文件都不符（608 枚可比对里唯一一处），原因与处置见
+[research/HANDOFF-2026-11-22-night-for-glm.md](research/HANDOFF-2026-11-22-night-for-glm.md) §7.2 —— 那是要修的账，不是要绕的门。
+
+
