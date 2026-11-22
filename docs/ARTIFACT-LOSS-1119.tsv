@@ -485,12 +485,12 @@ v7gf1-82	docs/artifacts/v7gf1-82.bak	sha-diff-wid-same	4f45960a9b3738be1639b3735
 v7gf1-91	docs/artifacts/v7gf1-91.bak	sha-diff-wid-same	038ebf697330cd6fc399fb48fc68f2cc3ce6c7f53cadd7882b98132e0eb8d2fa
 v7gf1-92	docs/artifacts/v7gf1-92.bak	sha-diff-wid-same	6b5beb27705fe8ef1fcdaa586871a65d4e7dc86b293ad148edec4b28770baf8f
 v7gf1-93	docs/artifacts/v7gf1-93.bak	sha-diff-wid-same	b826a444fe1dcda5b21d2ffdb2b63147aafbc3d69974ecdceae32b29001e0bec
-v7iso1-31	docs/artifacts/v7iso1-31.bak	missing	
-v7iso1-81	docs/artifacts/v7iso1-81.bak	missing	
-v7iso1-82	docs/artifacts/v7iso1-82.bak	missing	
-v7iso1-91	docs/artifacts/v7iso1-91.bak	missing	
-v7iso1-92	docs/artifacts/v7iso1-92.bak	missing	
-v7iso1-93	docs/artifacts/v7iso1-93.bak	missing	
+v7iso1-31	docs/artifacts/v7iso1-31.bak	sha-diff-wid-same	b50f7d367b427e5315f6e0d8704df950d02d6cd59d8106ead05a557ad23bd6b2
+v7iso1-81	docs/artifacts/v7iso1-81.bak	sha-diff-wid-same	5646569cb259cf26fc41512d00f5169526bd7f3232579ef38ad333eb7d8b2f36
+v7iso1-82	docs/artifacts/v7iso1-82.bak	sha-diff-wid-same	f7a84cd555eca2974f34beda1d6814e19bcadbd6155dae2c7fd3bbf17a8ba146
+v7iso1-91	docs/artifacts/v7iso1-91.bak	sha-diff-wid-same	88b209e47841959727e65a5ebf81e964c8ac6fb59ebc7a8e8c3aee5e2918c9fa
+v7iso1-92	docs/artifacts/v7iso1-92.bak	sha-diff-wid-same	2f1e3e9078f7248fa6c947068e0d714e008ce22ca9d71e9de21aedf709692436
+v7iso1-93	docs/artifacts/v7iso1-93.bak	sha-diff-wid-same	78c77f8e7ac2b1b4bb98953ea424c4c733cb0396644cbe28fc0aa5f0e5d36ccc
 v7l2a-81	docs/artifacts/v7l2a-81.bak	missing	
 v7l2c-101	docs/artifacts/v7l2c-101.bak	ok	
 v7l2c-102	docs/artifacts/v7l2c-102.bak	sha-diff-wid-same	4260ede62ca84e28ad105d7872101cb36c1696e2e646c3d9044e4463cf7b393b
