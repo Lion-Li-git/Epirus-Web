@@ -137,7 +137,7 @@ function summarize(tag, x) {
   console.log('① 集中火率 ' + (per.focusFire / n * 100).toFixed(1) + '% ‖ ①a 三方围殴率 ' + (per.fire3 / n * 100).toFixed(1) + '% ‖ ①b 伤害HHI ' + (per.hhiSum / n).toFixed(3));
   console.log('② 挑衅联动 ' + per.tauntLinked + '/' + per.tauntGames + ' 局（taunt 局占比 ' + (per.tauntGames / n * 100).toFixed(1) + '%）');
   console.log('③ 空轴触达率 ' + (per.emptyTouch / n * 100).toFixed(1) + '% ‖ 空轴出卡 ' + JSON.stringify(per.emptyCasts));
-  console.log('⑤ 用卡熵 ' + H.toFixed(3) + ' nats ‖ 胜者分布 ' + JSON.stringify(s.winBy));
+  console.log('⑤ 用卡熵 ' + H.toFixed(3) + ' nats ‖ 胜者分布 ' + JSON.stringify(x.winBy));
   console.log('④ 跨席共现对 top10: ' + topPairs.map(([p, c]) => p + '(' + c + ')').join(' '));
   return { per, H, n, winBy: x.winBy };
 }

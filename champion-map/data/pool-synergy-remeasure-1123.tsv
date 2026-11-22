@@ -1,0 +1,3 @@
+table	games	focusFire%	fire3%	dmgHHI	tauntLinked/tauntGames	emptyTouch%	entropy	winnerDist	emptyCasts
+T1-hard核	900	100.0	82.8	0.214	0/0	5.8	1.736	{"pack:nov21-taunt-dsp0b":247,"pack:OBS6P9-S4000":124,"pack:AR-TK2":117,"pack:MX1-GD-EQ":218,"draw":8,"pack:nov22-ring3-gd6a18":186}	{"tank":13,"bigT":9,"transfer":29,"curse":1}
+T2-混风格	900	100.0	87.4	0.215	2/5	4.0	1.593	{"pack:nov22-ring3-gd6a18":186,"pack:nov21-taunt-dsp0b":248,"pack:nov22-c3g-s300k":136,"pack:OBS6P9-S4000":151,"draw":27,"pack:night2-E1-det-strong":152}	{"bigT":12,"curse":22,"ring":2}
