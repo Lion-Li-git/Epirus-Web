@@ -532,17 +532,17 @@ v7l2f-152	docs/artifacts/v7l2f-152.bak	sha-diff-wid-same	2696d8182667f5a6615b610
 v7l2f-31	docs/artifacts/v7l2f-31.bak	sha-diff-wid-same	fc03915ab5345bc5b8efffc071e7f814ebaf98f16291b7d64eed85a1dc7529af
 v7l2f-81	docs/artifacts/v7l2f-81.bak	sha-diff-wid-same	62ee47c8d6cfd3824e1bc65c65c2b5252200357ee21ce3a769e428fd23ef378c
 v7l2f-82	docs/artifacts/v7l2f-82.bak	sha-diff-wid-same	9857a1e4094bd8ac2341e64171335426b1281b195de38ef9a776dec255bc04f5
-v7l2h-106	docs/artifacts/v7l2h-106.bak	missing	
-v7l2h-81	docs/artifacts/v7l2h-81.bak	missing	
-v7l2h-93	docs/artifacts/v7l2h-93.bak	missing	
+v7l2h-106	docs/artifacts/v7l2h-106.bak	sha-diff-wid-same	6825b62ed5a6734a8dfe6b4506c71885cbe67da9333f29acb362b10a8039ed6a
+v7l2h-81	docs/artifacts/v7l2h-81.bak	sha-diff-wid-same	972e0224f982b06031e579b43bc08f9257595ea848910f965a71346a1be17438
+v7l2h-93	docs/artifacts/v7l2h-93.bak	sha-diff-wid-same	4cc2bde089954c0d1dfee996b1f311d55329522ba1718ff2869b56ddf557aaeb
 v7l2o-91	docs/artifacts/v7l2o-91.bak	sha-diff-wid-same	af3037e4e94197b1798467263ab778bf5ec401185a4ce3c7dd7a06b002bc060a
 v7l2o-92	docs/artifacts/v7l2o-92.bak	sha-diff-wid-same	bd92509e598d481347c6a3ddeed1d8e0db0b1e8e1df2142811c15d9752e51d2b
 v7l2o-93	docs/artifacts/v7l2o-93.bak	sha-diff-wid-same	c5863d113e4c2933d7edbdac36a75ff32630851816cbdc13d6d74c103bd1e598
-v7l2s-111	docs/artifacts/v7l2s-111.bak	missing	
-v7l2s-115	docs/artifacts/v7l2s-115.bak	missing	
-v7l2s-82	docs/artifacts/v7l2s-82.bak	missing	
-v7l2s-91	docs/artifacts/v7l2s-91.bak	missing	
-v7l2s-93	docs/artifacts/v7l2s-93.bak	missing	
+v7l2s-111	docs/artifacts/v7l2s-111.bak	sha-diff-wid-same	046aaf967205f986361fad3c85798b817af7e27bac209eef7e2f191c38c036e0
+v7l2s-115	docs/artifacts/v7l2s-115.bak	sha-diff-wid-same	5a78bd46fede343a8513218450fd3e590fe1ef16b35080c51df936737f116adc
+v7l2s-82	docs/artifacts/v7l2s-82.bak	sha-diff-wid-same	ec436ad01e60488ebda8f4e5d0dd219ff4e616e9b284c3d61ff7ae6b412ea6ce
+v7l2s-91	docs/artifacts/v7l2s-91.bak	sha-diff-wid-same	787d3b2734fc0243902296002602d6eeec5aae442364ab57988258993f006af1
+v7l2s-93	docs/artifacts/v7l2s-93.bak	sha-diff-wid-same	35666dc6b47c298beccb872adc94241eac9ef64fd094cc2083d809d7f5885760
 v7l7-31	docs/artifacts/v7l7-31.bak	ok	
 v7m_noBead-31	docs/artifacts/v7m_noBead-31.bak	sha-diff-wid-same	fa88781167c803b71241f895a196e2cc45794eed26da9e3508a4e530be3eba4c
 v7m_noBead-32	docs/artifacts/v7m_noBead-32.bak	ok	
