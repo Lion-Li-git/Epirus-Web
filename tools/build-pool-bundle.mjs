@@ -119,10 +119,11 @@ if (SPLIT) {
     ' * 成员 ' + manMembers.length + ' 枚 ' + JSON.stringify(byTier) + ' ‖ 生成于 ' + new Date().toString() + ' */\n';
   const manBody = manHead + '(function (global) {\n  \'use strict\';\n  global.' + GLOBAL + ' = ' +
     JSON.stringify(man) + ';\n})(typeof window !== \'undefined\' ? window : globalThis);\n';
+  /* 注册表名不要改成 EPIRUS_ 前缀：training/knobs.mjs 会把任何 EPIRUS_* 字面量扫进 TRAINING-KNOBS.md（2026-11-22 CI 红）。 */
   const packBodies = members.map((m) => {
     const file = safeFile(m.id);
     return { file, body: '/* Epirus 冠军池分片：' + m.id + '（wid ' + m.wid + '）由 tools/build-pool-bundle.mjs --split 生成。不要手改。 */\n' +
-      '(function (global) {\n  \'use strict\';\n  var R = global.EPIRUS_POOL_PACKS = global.EPIRUS_POOL_PACKS || {};\n  R[' +
+      '(function (global) {\n  \'use strict\';\n  var R = global.EpirusPoolPacks = global.EpirusPoolPacks || {};\n  R[' +
       JSON.stringify(m.id) + '] = ' + JSON.stringify(m.pack) + ';\n})(typeof window !== \'undefined\' ? window : globalThis);\n' };
   });
   let packBytes = 0;

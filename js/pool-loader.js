@@ -12,7 +12,8 @@
  */
 (function (global) {
   'use strict';
-  var REG = global.EPIRUS_POOL_PACKS = global.EPIRUS_POOL_PACKS || {};
+  /* 不要改成 EPIRUS_ 前缀：training/knobs.mjs 会把它误扫成环境旋钮（2026-11-22 CI 红）。 */
+  var REG = global.EpirusPoolPacks = global.EpirusPoolPacks || {};
   var pending = {};
   var failed = {};
   var monoPromise = null;
