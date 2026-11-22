@@ -384,7 +384,7 @@ v7blk1-93	docs/artifacts/v7blk1-93.bak	sha-diff-wid-same	676f39cca54eb8d660c1ee5
 v7catE1-31	docs/artifacts/v7catE1-31.bak	ok	
 v7catE1-81	docs/artifacts/v7catE1-81.bak	ok	
 v7catE1-82	docs/artifacts/v7catE1-82.bak	ok	
-v7catE5-31	docs/artifacts/v7catE5-31.bak	missing	
+v7catE5-31	docs/artifacts/v7catE5-31.bak	sha-diff-wid-same	6cc0ac1c9acad9dceb58a56d4019fe93b3a40a918d265d2da7589b29bb8009d7
 v7catE5-81	docs/artifacts/v7catE5-81.bak	missing	
 v7catE5-82	docs/artifacts/v7catE5-82.bak	missing	
 v7clear2-31	docs/artifacts/v7clear2-31.bak	ok	
@@ -773,12 +773,12 @@ v7wall2-97	docs/artifacts/v7wall2-97.bak	ok
 v7wall2-98	docs/artifacts/v7wall2-98.bak	sha-diff-wid-same	42929a78d6313f422dcbaa66f383d4cb1ac8d9a587f56b2a78ddd90543a4de69
 v7wall2-99	docs/artifacts/v7wall2-99.bak	sha-diff-wid-same	637018b4782fcf4c360ce62a421deb2097f951e3b75eafd3adc0c2c4aa624d1f
 v7ws1-31	docs/artifacts/v7press3-31.bak	sha-diff-wid-same	9d5587446332410c0d74dbeac3eaa60c475d1052c290fff0fa44ee20931ea3cb
-v7ws2-31	docs/artifacts/v7ws2-31.bak	missing	
+v7ws2-31	docs/artifacts/v7ws2-31.bak	sha-diff-wid-same	4340ba01d0162a585c1dc87f71888919fa01e2edf1c2014811c5865ec39357f4
 v7ws2-81	docs/artifacts/v7ws2-81.bak	sha-diff-wid-same	734a6e22ef1effda0d70d38cb52ab949abfda8bd001412b9252679dbcc81c030
-v7ws2-82	docs/artifacts/v7ws2-82.bak	missing	
-v7ws2-91	docs/artifacts/v7ws2-91.bak	missing	
-v7ws2-92	docs/artifacts/v7ws2-92.bak	missing	
-v7ws2-93	docs/artifacts/v7ws2-93.bak	missing	
+v7ws2-82	docs/artifacts/v7ws2-82.bak	sha-diff-wid-same	6d58244f4d6355b55a3af24f02859f26977ea704c7e3dc8e55bd35b269ddd34c
+v7ws2-91	docs/artifacts/v7ws2-91.bak	sha-diff-wid-same	7f426f0210f4f72a2ac307b838b0380947d7fa999850db16f3983732e0be4d38
+v7ws2-92	docs/artifacts/v7ws2-92.bak	sha-diff-wid-same	7e888e7580e4c1e2f52978e23487528f6a1bf7f40a20f5cf8211b396961c9642
+v7ws2-93	docs/artifacts/v7ws2-93.bak	sha-diff-wid-same	13007d346fae8bf63435a7e48379ac6b65c95e63a86b1a951ab42d7858a043f1
 v9-31	docs/artifacts/v9-31.bak	sha-diff-wid-same	a8db9d2e9370cb20c61fd177f09418885f883a63215b0843475af869d65e9aa3
 v9-32	docs/artifacts/v9-32.bak	ok	
 v9-33	docs/artifacts/v9-33.bak	ok	
