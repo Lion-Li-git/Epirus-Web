@@ -480,11 +480,11 @@ v7fix1-93	docs/artifacts/v7fix1-93.bak	missing
 v7force-32	docs/artifacts/v7force-32.bak	missing	
 v7force-34	docs/artifacts/v7force-34.bak	ok	
 v7g-35	docs/artifacts/v7g-35.bak	missing	
-v7gf1-31	docs/artifacts/v7gf1-31.bak	missing	
-v7gf1-82	docs/artifacts/v7gf1-82.bak	missing	
-v7gf1-91	docs/artifacts/v7gf1-91.bak	missing	
-v7gf1-92	docs/artifacts/v7gf1-92.bak	missing	
-v7gf1-93	docs/artifacts/v7gf1-93.bak	missing	
+v7gf1-31	docs/artifacts/v7gf1-31.bak	sha-diff-wid-same	a6d0ffeb8a39916c44d24530dc5e4c641916f93c5f0c037ef3c76748aef655e6
+v7gf1-82	docs/artifacts/v7gf1-82.bak	sha-diff-wid-same	4f45960a9b3738be1639b3735d4451e2ad6aa24c73f39a5cabc5a1770f1ab172
+v7gf1-91	docs/artifacts/v7gf1-91.bak	sha-diff-wid-same	038ebf697330cd6fc399fb48fc68f2cc3ce6c7f53cadd7882b98132e0eb8d2fa
+v7gf1-92	docs/artifacts/v7gf1-92.bak	sha-diff-wid-same	6b5beb27705fe8ef1fcdaa586871a65d4e7dc86b293ad148edec4b28770baf8f
+v7gf1-93	docs/artifacts/v7gf1-93.bak	sha-diff-wid-same	b826a444fe1dcda5b21d2ffdb2b63147aafbc3d69974ecdceae32b29001e0bec
 v7iso1-31	docs/artifacts/v7iso1-31.bak	missing	
 v7iso1-81	docs/artifacts/v7iso1-81.bak	missing	
 v7iso1-82	docs/artifacts/v7iso1-82.bak	missing	
