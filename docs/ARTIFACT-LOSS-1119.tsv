@@ -369,12 +369,12 @@ v7bead3-93	docs/artifacts/v7bead3-93.bak	missing
 v7beadseed-31	docs/artifacts/v7beadseed-31.bak	missing	
 v7beadseed-82	docs/artifacts/v7beadseed-82.bak	ok	
 v7beadseed-93	docs/artifacts/v7beadseed-93.bak	missing	
-v7big1-31	docs/artifacts/v7big1-31.bak	missing	
-v7big1-81	docs/artifacts/v7big1-81.bak	missing	
-v7big1-82	docs/artifacts/v7big1-82.bak	missing	
-v7big1-91	docs/artifacts/v7big1-91.bak	missing	
-v7big1-92	docs/artifacts/v7big1-92.bak	missing	
-v7big1-93	docs/artifacts/v7big1-93.bak	missing	
+v7big1-31	docs/artifacts/v7big1-31.bak	sha-diff-wid-same	ad5d0a3716eba4622b7f0edf53a2185c4a0a48282b6210e474164fd3a8ffb7b4
+v7big1-81	docs/artifacts/v7big1-81.bak	sha-diff-wid-same	b7be6902f327c18fc133c8c95c3702702b1e6e894f65cb8b056dbda7f3906dd9
+v7big1-82	docs/artifacts/v7big1-82.bak	sha-diff-wid-same	5dd61013fd1c463b037fcd5a485f4f35fc1e55033834c7e779c26ecd078ed4ea
+v7big1-91	docs/artifacts/v7big1-91.bak	sha-diff-wid-same	4a6c124062de5921712edce0d0fe66837f1887cec648f808f2acfc40ffce1bd8
+v7big1-92	docs/artifacts/v7big1-92.bak	sha-diff-wid-same	0ec63188d74d1887de16300ecb01ff9b0f4aea15419f9633c316545ebf7e4735
+v7big1-93	docs/artifacts/v7big1-93.bak	sha-diff-wid-same	2f578fd18bc1b6411467d6f228e8d40ca1dfd3032e7a9f15ee5bbea5e3314de8
 v7blk1-31	docs/artifacts/v7blk1-31.bak	missing	
 v7blk1-81	docs/artifacts/v7blk1-81.bak	missing	
 v7blk1-82	docs/artifacts/v7blk1-82.bak	missing	
