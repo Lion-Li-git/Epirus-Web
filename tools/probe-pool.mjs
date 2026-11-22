@@ -603,6 +603,8 @@ for (const mode of MODES) {
   console.log('   ⚑ 四席全同的场数 = ' + allSameGames + ' / ' + totalGames + '（用户裁定不许全同 ⇒ 不为 0 就要查抽签）');
   console.log('   ⚑ 平均每场不同枚数 = ' + (distinctSum / Math.max(1, totalGames)).toFixed(2) + ' / 4');
   console.log('   逐枚夺冠率：' + lite.map(m => m.id + ' ' + ((memberWins[m.id] || 0) / Math.max(1, memberGames[m.id]) * 100).toFixed(1) + '%(上场 ' + (memberGames[m.id] || 0) + ')').join(' ‖ '));
+  /* 11-23：逐枚夺冠率同步落 tsv（此前只在 stdout 打，批一长就被截）——受文件头②条独立组成折扣约束，同口径同条款 */
+  for (const m of lite) rows.push({ mode: mode, cell: '__win:' + m.id, seedVals: (memberWins[m.id] || 0) + '/' + (memberGames[m.id] || 0), mean: memberGames[m.id] ? ((memberWins[m.id] || 0) / memberGames[m.id] * 100).toFixed(2) : '' });
   /* §E600-B（10-13）：脚本席**也上场、也被上面那个循环记了账**，但它不在 `lite` 里 ⇒ 那行永远不报它
    *   ⇒ "掺进来的脚本席自己有多强"这条是**问得出、报不出**（用户要"脚本有基础强度"，先得看得见它）。
    *   同口径（同一场、同一座位轮换）；⚠ 也受文件头第 ② 条那个"独立组成少"的折扣，不许拿来排名次。 */
