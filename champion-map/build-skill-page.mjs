@@ -198,7 +198,7 @@ export function bake(opts = {}) {
   const builtAt = new Date().toISOString();
   let html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
   html += '<title>Epirus 池级 Skill-Report</title><style>';
-  html += 'body{background:#0b0e14;color:#dfe3ec;font:13px/1.55 system-ui,"Microsoft YaHei",sans-serif;margin:0;padding:22px 26px}';
+  html += 'body{background:#0b0e14;color:#dfe3ec;font:13px/1.55 system-ui,"Microsoft YaHei",sans-serif;margin:0;padding:22px 26px}a{color:#9fc3ff;text-decoration:none}a:hover{text-decoration:underline}';
   html += 'h1{font-size:19px;margin:0 0 2px}h2{font-size:15px;margin:0;color:#e8ecf5}.sub{color:#7f879b;font-size:12px;margin:2px 0 14px}';
   html += '.stamp{display:inline-block;background:#141926;border:1px solid #232b3d;border-radius:6px;padding:3px 9px;margin:0 6px 6px 0;font-size:11px;color:#9aa3ba}.stamp b{color:#cfd6e6}';
   html += '.bhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:26px 0 10px;border-bottom:1px solid #1d2433;padding-bottom:8px}.bn{font-weight:400;color:#7f879b;font-size:12px;margin-left:10px}';
@@ -219,7 +219,7 @@ export function bake(opts = {}) {
   html += 'footer{margin-top:26px;color:#5b6377;font-size:11px}';
   html += '</style></head><body>';
   html += '<h1>Epirus 池级 Skill-Report</h1>';
-  html += '<div class="sub">困难 / 简单两带逐包的跨环境覆盖（观察层）与分层强度（强度层）。数据真源 <code>data/skill-report/&lt;id&gt;.json</code>；本页为烘焙产物，不许手改。</div>';
+  html += '<div class="sub">困难 / 简单两带逐包的跨环境覆盖（观察层）与分层强度（强度层）。数据真源 <code>data/skill-report/&lt;id&gt;.json</code>；本页为烘焙产物，不许手改。· <a href="index.html">← 返回冠军演化图</a> · <a href="trends.html">A/B 趋势 ↗</a></div>';
   html += '<div>'
     + '<span class="stamp">fixture <b>' + esc((docs[0] && docs[0].fixtureKey) || '—') + '</b></span>'
     + '<span class="stamp">规则指纹 <b>' + esc(bundleFp || '—') + '</b></span>'
