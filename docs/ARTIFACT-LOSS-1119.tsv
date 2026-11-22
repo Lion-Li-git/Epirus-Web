@@ -703,9 +703,9 @@ v7seat2-51	docs/artifacts/v7seat2-51.bak	missing
 v7seat24-31	docs/artifacts/v7seat24-31.bak	ok	
 v7seat24-81	docs/artifacts/v7seat24-81.bak	missing	
 v7seat24-82	docs/artifacts/v7seat24-82.bak	missing	
-v7seat24b-91	docs/artifacts/v7seat24b-91.bak	missing	
-v7seat24b-92	docs/artifacts/v7seat24b-92.bak	missing	
-v7seat24b-93	docs/artifacts/v7seat24b-93.bak	missing	
+v7seat24b-91	docs/artifacts/v7seat24b-91.bak	sha-diff-wid-same	c2bca6e8d6251217a06af7aff59f6faf79167054e86f57371366b4eef2dba5b4
+v7seat24b-92	docs/artifacts/v7seat24b-92.bak	sha-diff-wid-same	5319991d0dd952c96d39d2e4e4f50d67987c991493944d5747161f127a773d6b
+v7seat24b-93	docs/artifacts/v7seat24b-93.bak	sha-diff-wid-same	12643228d8fdf28f829f340c56f60023465da866ad663b0317660ef25b08d168
 v7smoke-31	docs/artifacts/v7smoke-31.bak	missing	
 v7stock1-31	docs/artifacts/v7stock1-31.bak	sha-diff-wid-same	075dd411cdaf74dd53e40b190f382a4f9a6905884ce3d5da2cc4fe126e1fd846
 v7stock1-81	docs/artifacts/v7stock1-81.bak	sha-diff-wid-same	c4ba0ad3c855c0972c12b5c0ed3c2279d6b65409a1d0ba18dd52da9acc5c1702
