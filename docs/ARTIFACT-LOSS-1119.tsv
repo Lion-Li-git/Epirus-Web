@@ -385,8 +385,8 @@ v7catE1-31	docs/artifacts/v7catE1-31.bak	ok
 v7catE1-81	docs/artifacts/v7catE1-81.bak	ok	
 v7catE1-82	docs/artifacts/v7catE1-82.bak	ok	
 v7catE5-31	docs/artifacts/v7catE5-31.bak	sha-diff-wid-same	6cc0ac1c9acad9dceb58a56d4019fe93b3a40a918d265d2da7589b29bb8009d7
-v7catE5-81	docs/artifacts/v7catE5-81.bak	missing	
-v7catE5-82	docs/artifacts/v7catE5-82.bak	missing	
+v7catE5-81	docs/artifacts/v7catE5-81.bak	sha-diff-wid-same	6a83bd3a8912ae75e8db65acb90d11e0c2129f244adb1e041ba3be345b92353e
+v7catE5-82	docs/artifacts/v7catE5-82.bak	sha-diff-wid-same	305ae6b52130b362f9e7df1d6b695c096948c583a0e1ef3f17fd92229b79f2d4
 v7clear2-31	docs/artifacts/v7clear2-31.bak	ok	
 v7clear2-81	docs/artifacts/v7clear2-81.bak	ok	
 v7clear2-82	docs/artifacts/v7clear2-82.bak	ok	
