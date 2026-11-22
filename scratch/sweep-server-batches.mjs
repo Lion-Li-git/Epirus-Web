@@ -7,6 +7,7 @@
  *       无校准的批——整批按 era 候选扫（0 命中换下一候选）。
  */
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { widOf } from '../champion-map/pack-id.mjs';
@@ -151,9 +152,12 @@ for (const j of mine) {
           const p = 'docs/ARTIFACT-LOSS-1119.tsv';
           const ls = readFileSync(p, 'utf8').split('\n');
           const si = ls[0].split('\t').indexOf('state');
+          /* 11-22 深夜登记口径改口（HANDOFF-2026-11-22 §7.1）：重放件与当年原件字节不同（wid 逐位同）
+           *   ⇒ 记 sha-diff-wid-same + 第 4 列写盘上实际 sha；registry.sha256 是历史指纹永不动。 */
+          const sha = createHash('sha256').update(readFileSync(ledger)).digest('hex');
           for (let i2 = 1; i2 < ls.length; i2++) {
             const c = ls[i2].split('\t');
-            if (c.length && c[0] === id && c[si] === 'missing') { c[si] = 'ok'; ls[i2] = c.join('\t'); }
+            if (c.length && c[0] === id && c[si] === 'missing') { c[si] = 'sha-diff-wid-same'; while (c.length < 4) c.push(''); c[3] = sha; ls[i2] = c.join('\t'); }
           }
           writeFileSync(p, ls.join('\n'));
           spawnSync('git', ['add', '-f', ledger], { encoding: 'utf8' });
