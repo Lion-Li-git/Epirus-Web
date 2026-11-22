@@ -4,6 +4,18 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.16 — 11-22（`nov22-ring3-gd6a18` 入 `hard`：5P long 三连 30.1% / 8P 27.2%，`arenaB=+20.40pt`，`seatKill=0` ‖ 池 31 → 32）
+
+**这一版是什么**：把 `ringEcon` 的 long 剂量从 `0.12` 提到 `0.18`，在 fresh `EQ-S4-GD6ATEACH` 上训出 `nov22-ring3-gd6a18`：5P/8P long 的环链首次稳定越过 3 连，同时 `arenaB` 和 `selftest3` 都不掉；池从 31 枚增到 **32 枚**（`hard 16 / soft 16`）。
+
+- **新入池 `hard` 强将 `nov22-ring3-gd6a18`**（[`docs/artifacts/nov22-ring3-gd6a18.bak`](docs/artifacts/nov22-ring3-gd6a18.bak)，`wid=a64b53c90367221a`，`v:92 / S1o / 16,561`）：
+  - **配方**：`EQ-S4-GD6ATEACH.bak` 起点 + `ringEcon@0.18`，仅 `5:long,8:long` 形态；`--rareOnly=ring --rareFrac=0.35 --groups=2400 --steps=250 --lr=0.0004 --objective=cand --dagger=1 --shapeBal=1 --classPow=0.5 --classCap=6`；相对 `R-GD12` 只改 `ringEcon` 剂量 `0.12 → 0.18`；
+  - **环链（100 局 headless，ε=0.15）**：5P long 链长 `1/28 · 2/23 · 3/20 · 4/2`，**三连 22/73 = 30.1%**；8P long `1/57 · 2/34 · 3/28 · 4/4 · 5/2`，**三连 34/125 = 27.2%**、最长 5 连；R-GD12 基线为 5P `0%` / 8P `7.0%`；
+  - **强度与门禁**：`arenaB=+20.401pt`（6/6 种子正，spread `24.28`）；`selftest3` **6/6 全绿**；`promote --dry --support=2` **0 阻断**（A 57.9%、场A 还手 32.1%/含反弹 47.0%、场B 30%、珠经济闭环 66.7%）；`seatKill=0`（人席 90210/90211 multi≤2.5% / long 最高 7.0%）；
+  - **训练对照**：`nov22-ring3-rgd12`（从 R-GD12 再蒸一轮）行为上也能把三连推到 13%/20%，但 `selftest3` 腿 C 红（第二轮过饱和），已作为淘汰臂留在 TRAINING-RUN-LOG；本版只收 fresh 单变量成功臂。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 31 → **32**；`champion-map/pool-seat-90210.tsv` / `pool-seat-90211.tsv` 补入正式人席行；重烘 32 枚整表 / 清单 / 32 个分片、演化图（1015 行，100 PASS）与 `skill-report`（32 枚，missing=0）；池缓存戳 `p1122d → p1122e`。
+- **验证**：`np 166/166（291.2s） · spec 81/81 · smoke OK · battle OK · map OK`；`pool-add --audit` = `members=32 / hard=16 / seatUnknown=0 / dupWid=0 / blockedAuto=0 / bad=[]`。
+
 ## v2.1.15 — 11-22（玩家向文案与移动端/日志 UI 修正 ‖ 冠军池 HTTP 懒加载：3P 默认从 4.49MB gzip 降到约 304KB）
 
 **这一版是什么**：修掉上一轮复核里发现的玩家向文案错误与版式问题，并把冠军池从“整表 9.6MB 全量下发”改成“清单 + 本局抽到的 N−1 枚分片懒加载”。规则引擎、抽签算法与池成员（31 枚，hard 15 / soft 16）一字未动；v2.1.14 的 AR-TK2 随本版一并提交。

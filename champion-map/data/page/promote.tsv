@@ -11,6 +11,7 @@ nov21-purify-dsp0	pass	—
 nov21-rod-tzt2d-r10	pass	—			
 nov22-c3g-s300k	pass	—			
 nov22-c4c-t20	pass	—			
+nov22-ring3-gd6a18	pass	—			
 nov22-tzt2d-stab	pass	—			
 R-s123	pass	—			
 S-s120	pass	—			
@@ -292,4 +293,4 @@ DIV-LH6-HEAVY-S2	block	field-a,breadth-multi,behavior-gate
 RING-MINIT-CONT	pass	—			
 P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate			
 AR-TK3	pass	—			
-nov22-c3b-kw100	block	behavior-gate			
+nov22-c3b-kw100	block	behavior-gate
