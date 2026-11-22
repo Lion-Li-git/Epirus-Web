@@ -493,27 +493,27 @@ v7iso1-92	docs/artifacts/v7iso1-92.bak	missing
 v7iso1-93	docs/artifacts/v7iso1-93.bak	missing	
 v7l2a-81	docs/artifacts/v7l2a-81.bak	missing	
 v7l2c-101	docs/artifacts/v7l2c-101.bak	ok	
-v7l2c-102	docs/artifacts/v7l2c-102.bak	missing	
-v7l2c-103	docs/artifacts/v7l2c-103.bak	missing	
-v7l2c-111	docs/artifacts/v7l2c-111.bak	missing	
-v7l2c-114	docs/artifacts/v7l2c-114.bak	missing	
-v7l2c-124	docs/artifacts/v7l2c-124.bak	missing	
-v7l2c-141	docs/artifacts/v7l2c-141.bak	missing	
-v7l2c-142	docs/artifacts/v7l2c-142.bak	missing	
-v7l2c-143	docs/artifacts/v7l2c-143.bak	missing	
-v7l2c-144	docs/artifacts/v7l2c-144.bak	missing	
-v7l2c-145	docs/artifacts/v7l2c-145.bak	missing	
-v7l2c-146	docs/artifacts/v7l2c-146.bak	missing	
-v7l2c-147	docs/artifacts/v7l2c-147.bak	missing	
-v7l2c-148	docs/artifacts/v7l2c-148.bak	missing	
-v7l2c-149	docs/artifacts/v7l2c-149.bak	missing	
-v7l2c-150	docs/artifacts/v7l2c-150.bak	missing	
-v7l2c-151	docs/artifacts/v7l2c-151.bak	missing	
-v7l2c-152	docs/artifacts/v7l2c-152.bak	missing	
-v7l2c-31	docs/artifacts/v7l2c-31.bak	missing	
-v7l2c-82	docs/artifacts/v7l2c-82.bak	missing	
+v7l2c-102	docs/artifacts/v7l2c-102.bak	sha-diff-wid-same	4260ede62ca84e28ad105d7872101cb36c1696e2e646c3d9044e4463cf7b393b
+v7l2c-103	docs/artifacts/v7l2c-103.bak	sha-diff-wid-same	a1571237e91f5c7c832dec2fe56756335d7e16c3603bb0c46cf5c465c98baef3
+v7l2c-111	docs/artifacts/v7l2c-111.bak	sha-diff-wid-same	52a62b9c4765fdca1ee3f0cbfb74c92a585ff3744acd60a0c7d45c57b2e6ef85
+v7l2c-114	docs/artifacts/v7l2c-114.bak	sha-diff-wid-same	c151f18fec4a3ebea1913b52a87a175c26c27703716bf036af9d0c63b3a05076
+v7l2c-124	docs/artifacts/v7l2c-124.bak	sha-diff-wid-same	cc55bb89652890d6eaa4d07edea22f9c6ef1468170ca3a252a28c380a05c7cdb
+v7l2c-141	docs/artifacts/v7l2c-141.bak	sha-diff-wid-same	a5260c4d4c0ac39cd41d25350e43d3a57cf35fd827f61419370325010ad1a2d3
+v7l2c-142	docs/artifacts/v7l2c-142.bak	sha-diff-wid-same	7e6d7479897dfd272122b89fd7076b9ef4c24149941f08824e2efed88fe5cea4
+v7l2c-143	docs/artifacts/v7l2c-143.bak	sha-diff-wid-same	732eb163ccd77e4a4fd60d42383c38e466443f4f047750b9d9ae540cfa458233
+v7l2c-144	docs/artifacts/v7l2c-144.bak	sha-diff-wid-same	c38de9a632a97aeeb5ba26fc1d90944e96a7fb99e5b944e42220b1366b6aa9f4
+v7l2c-145	docs/artifacts/v7l2c-145.bak	sha-diff-wid-same	84a098b2dec587690583014a36ca9b5eb8f6d725183d332f50626455c06df873
+v7l2c-146	docs/artifacts/v7l2c-146.bak	sha-diff-wid-same	b21aa7275a1ca66d3cdbff38c352edaa8125c16447b6d755e6bf3b889c46a99f
+v7l2c-147	docs/artifacts/v7l2c-147.bak	sha-diff-wid-same	224db67719556ae5a3e6e19a31e7b72bf0a553ec0083398268daeda5619fd563
+v7l2c-148	docs/artifacts/v7l2c-148.bak	sha-diff-wid-same	1c1df61dfd297c675ef7387e89f10edde717b7b98ef06f060edbd53f19b4baae
+v7l2c-149	docs/artifacts/v7l2c-149.bak	sha-diff-wid-same	24f1c9d0bef6563f6e55efe4baf0970c8e90d9885d5c1a97e4354e8389e705a5
+v7l2c-150	docs/artifacts/v7l2c-150.bak	sha-diff-wid-same	961792876f04c3448c6523a6c24ba080ad837948b4fc08eee83f5e65bbfa3159
+v7l2c-151	docs/artifacts/v7l2c-151.bak	sha-diff-wid-same	748175e37838815074a7b8921356703e5a69306f6b76e14759a0ab9643ffef26
+v7l2c-152	docs/artifacts/v7l2c-152.bak	sha-diff-wid-same	8d05397a4a0128b5115a01cd1b718ca19e1a62d37987db68448edafbb6dd1a88
+v7l2c-31	docs/artifacts/v7l2c-31.bak	sha-diff-wid-same	672d7bfb0821acaba6c565f46796695a6a6e8775cbe46b659a5fee1852803f8d
+v7l2c-82	docs/artifacts/v7l2c-82.bak	sha-diff-wid-same	246036176dd1e5f813ba1f2c782777e59eeb27503d44cced34db7579d735a7bd
 v7l2c-91	docs/artifacts/v7l2c-91.bak	sha-diff-wid-same	abba5dc9d00d2ce2d66d9169910f4e6ca1e7216da3d2bb33b5da511afdcdf145
-v7l2c-93	docs/artifacts/v7l2c-93.bak	missing	
+v7l2c-93	docs/artifacts/v7l2c-93.bak	sha-diff-wid-same	b33511d0e74a42916e91b04896dd4b0d5fec333e2abb61c920da512f79c2ff9f
 v7l2f-101	docs/artifacts/v7l2f-101.bak	sha-diff-wid-same	b7eb5f9dcbdae78ff243a778254ad3ebfb7dcd78cfa6b9e3f07b6ebf470defd4
 v7l2f-102	docs/artifacts/v7l2f-102.bak	sha-diff-wid-same	fb197dd2a59f4dbe342209ac88b5db3165eb4ed48ae2711909a4aefa92ea4e03
 v7l2f-106	docs/artifacts/v7l2f-106.bak	sha-diff-wid-same	1b9f4899f0f3b4428b14328d4834d656f3e499e92e82aed8868466485c177430
