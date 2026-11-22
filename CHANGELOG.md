@@ -39,6 +39,9 @@
 
 ## v2.1.14 — 11-22（`AR-TK2` 正式入池 `hard` 带 · 池 `30 → 31` ‖ 坦克×藤甲线 `reflect` 误读修正与 `rareFrac` 切分机制定论）
 
+> ⚠ **记账重复的版本号，无对应发布点（11-22 深夜核）**：本节描述的 `AR-TK2` 入池实际随 `2c6ba531`（标题记为 `release(v2.1.15)`）落盘，
+> `index.html` 的程序版本戳从 `v2.1.13` 直接跳到 `v2.1.15`、从未出现 `v2.1.14` ⇒ 补打的 tag 只有 `v2.1.13` 与 `v2.1.15`，**没有 `v2.1.14` 这个 tag**。
+
 **这一版是什么**：复核 DS 的 `AR-TK3/4` 判例并完成 `AR-TK5–AR-TK8` 受控对比实验，厘清 `probe-human-seat` `全程刷反弹` 指标含义、发现 `supfit-gd.mjs` `rareFrac` 与 `splitByShape` 的 `75%/25%` 切分边界、核实 `seat-rule.mjs` 带内参照下 **`AR-TK2`** 全部五道门全绿（`seatKill = 0`），正式将其入库合入 **`hard` 带**（全池 `30 → 31`，`hard 15 / soft 16`），使 `hard` 带首次同时具备 `armor`（`120/120` 格）与 `tank`（`26/120` 格）条件协同覆盖。
 
 - **新入池 `hard` 强将 [`AR-TK2`](docs/artifacts/AR-TK2.bak)**（`wid=b5d4cbc6af57bbdd`，`hard 14 → 15` / 全池 `30 → 31`）：
