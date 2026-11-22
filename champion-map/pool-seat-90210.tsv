@@ -85,3 +85,9 @@ nov21-rod-tzt2d-r10	docs/artifacts/nov21-rod-tzt2d-r10.bak	multi	200	90210	2.5	4
 nov21-rod-tzt2d-r10	docs/artifacts/nov21-rod-tzt2d-r10.bak	long	200	90210	0	22.5	0	50	14	0	0	12.36	50	只枪压制
 nov22-tzt2d-stab	docs/artifacts/nov22-tzt2d-stab.bak	multi	200	90210	20.0	31.0	3.5	76.0	40.0	20.0	20.0	30.07	76.0	只枪压制
 nov22-tzt2d-stab	docs/artifacts/nov22-tzt2d-stab.bak	long	200	90210	0	24.0	1.0	51.0	11.0	0	0	12.43	51.0	只枪压制
+nov21-armor-tzt2d	docs/artifacts/nov21-armor-tzt2d.bak	multi	200	90210	3.0	2.0	0.5	8.5	1.5	3.0	3.0	3.07	8.5	只枪压制	12
+nov21-armor-tzt2d	docs/artifacts/nov21-armor-tzt2d.bak	long	200	90210	12.0	4.0	0.0	2.5	0.5	12.0	12.0	6.14	12.0	全程刷反弹	4.142857142857143
+nov22-c3g-s300k	docs/artifacts/nov22-c3g-s300k.bak	multi	200	90210	0.0	41.0	4.5	57.5	45.5	0.0	0.0	21.21	57.5	只枪压制	8.571428571428571
+nov22-c3g-s300k	docs/artifacts/nov22-c3g-s300k.bak	long	200	90210	0.5	6.0	0.5	13.0	0.0	0.5	0.5	3.00	13.0	只枪压制	3.4285714285714284
+nov22-c4c-t20	docs/artifacts/nov22-c4c-t20.bak	multi	200	90210	12.5	22.5	0.5	56.0	25.0	12.5	12.5	20.21	56.0	只枪压制	6.571428571428571
+nov22-c4c-t20	docs/artifacts/nov22-c4c-t20.bak	long	200	90210	58.5	19.0	0.5	42.5	16.0	58.5	58.5	36.21	58.5	全程刷反弹	3.142857142857143

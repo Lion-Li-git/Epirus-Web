@@ -64,12 +64,14 @@ t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），
   const al = readFileSync('tools/audit-lib.mjs', 'utf8');
   ok(al.indexOf('export function aggressionProfile') >= 0, 'audit-lib 必须导出 aggressionProfile（单一真源）');
   ok(al.indexOf('e.source === me') >= 0, '伤害归因必须用事件真字段 source（不是 from）');
+  ok(al.indexOf("e.type === 'reflect' && e.to === me") >= 0, '反弹触发必须认事件真字段 e.type=reflect & e.to=me');
+  ok(al.indexOf('atkWithReflect') >= 0, 'audit-lib 必须同时算出含反弹触发的 atkWithReflect（不改历史 fieldA.atk 尺列）');
   ok(al.indexOf("me = g % 5") >= 0, '冠军座位必须逐局轮换（避免座位相位污染）');
   const pc = readFileSync('tools/promote-champion.mjs', 'utf8');
-  ok(pc.indexOf('agg.fieldA.atk < 0.20') >= 0, '上线体检的 F 判据必须是场 A 的 >=20%');
+  ok(pc.indexOf('atkWithReflect') >= 0 && pc.indexOf('faEff < 0.20') >= 0, '上线体检的 F 阻断必须用含反弹触发的场 A >=20%');
   ok(pc.indexOf('fAct.atk < 0.25') < 0, '旧的"活跃场进攻率 < 25%"判据必须已移除');
   const sc = readFileSync('tools/screen-champ.mjs', 'utf8');
-  ok(sc.indexOf('agg.fieldA.atk < 0.20') >= 0, '筛选器必须同步用场 A');
+  ok(sc.indexOf('atkWithReflect') >= 0 && sc.indexOf('faEff < 0.20') >= 0, '筛选器必须同步用含反弹触发的场 A');
   /* 行为断言：两场必须真的不同构造 —— 场 A 的对手出手次数应远多于场 B（B 场对手只ジ） */
   const Wl = { EpirusRules: R, EpirusState: S, EpirusTrainer: T, EpirusPlay: Play };
   Pol.setRng(T.mulberry32(31337));
@@ -78,6 +80,7 @@ t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），
   ok(agg.fieldA.oppAtkPerGame > agg.fieldB.oppAtkPerGame + 1,
     '场 A 的对手必须真的在进攻（A=' + agg.fieldA.oppAtkPerGame.toFixed(1) + ' vs B=' + agg.fieldB.oppAtkPerGame.toFixed(1) + '）');
   ok(agg.fieldA.atk >= 0 && agg.fieldA.atk <= 1 && agg.fieldB.atk >= 0 && agg.fieldB.atk <= 1, '两场都必须返回合法比率');
+  ok(agg.fieldA.atkWithReflect >= agg.fieldA.atk && agg.fieldA.atkWithReflect <= 1, '含反弹触发还手率必须合法且 >= 主动 atk');
   /* v1.5.65：终局收缩的伤 source=null（不可格挡）⇒ 场 B 里冠军仍会掉血，必须按"对手造成的伤"判。 */
   ok(agg.fieldB.takenByOpponentPerGame === 0,
     '场 B（对手只ジ）里冠军不该被**对手**打（实测 ' + agg.fieldB.takenByOpponentPerGame.toFixed(2) + '/局）');

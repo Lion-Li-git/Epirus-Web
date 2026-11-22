@@ -20,17 +20,18 @@ for (const f of files) {
     const fa = fieldRate(W, params, 'active', 'multi', Math.min(SG, 40));   // 旧口径：仅打印，不再用于判据
     const agg = aggressionProfile(W, params, Math.min(SG, 40));               // v1.5.62：F 的判据改用场 A
     const sp = W.EpirusTrainer.mirrorHealth(params, 20, 5, 'multi');
+    const faEff = isFinite(agg.fieldA.atkWithReflect) ? agg.fieldA.atkWithReflect : agg.fieldA.atk;
     const bad = [];
     if (ss.verdict === 'biased') bad.push('偏座');
     if (!(rw.dmgPerGame > 0.5)) bad.push('反弹墙瘫');
-    if (agg.fieldA.atk < 0.20) bad.push('被集火不还手');
+    if (faEff < 0.20) bad.push('被集火不还手');
     if (sp.effSkills < 3) bad.push('G<3');
     console.log(f.replace('docs/artifacts/', '').replace('js/', '').padEnd(38) +
       (ss.spread.toFixed(0) + 'pt').padStart(8) +
       (Math.round(ss.decisiveRate * 100) + '%').padStart(7) +
       rw.dmgPerGame.toFixed(2).padStart(14) +
       String(rw.pierceLand).padStart(10) +
-      ((agg.fieldA.atk * 100).toFixed(0) + '%').padStart(11) +
+      ((agg.fieldA.atk * 100).toFixed(0) + '%/' + (faEff * 100).toFixed(0) + '%').padStart(11) +
       sp.effSkills.toFixed(2).padStart(7) + '  ' + (bad.length ? '✗ ' + bad.join('+') : '✅ 通过'));
   } catch (e) {
     console.log(f.padEnd(38) + ' 读失败: ' + String(e && e.message || e).slice(0, 60));

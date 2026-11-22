@@ -223,15 +223,18 @@ if (fPass.noThreatStanceRate > 0.6) fails.push('E 无威胁时摆架势 ' + (fPa
 *   33.1%（n=40）‖ 33.3%（n=400），而它今天真的在槽里（`promote --dry` 对自己判 ✅ 五道全过）。
 *   假口径宁删不留：那句话等于在说「出厂包过不了自己的门」。 */
 const agg = aggressionProfile(W, params, FEAS_N.aggr);
+const faEff = isFinite(agg.fieldA.atkWithReflect) ? agg.fieldA.atkWithReflect : agg.fieldA.atk;
 /* §E481：这一栏必须**带着分辨率**印。`FEAS_N.aggr` 默认 40 局 ⇒ 20% 量级的率 1.96SE≈12.4pt，而阈值就压在 20% 上
  *   ⇒ 只印点估计会诱导读者把「19.8 与 20.6」当成能分开的两件事（实测不能：见 `docs/artifacts/e470-out/fielda-margin.mjs`
- *     的 n=40/100/200/400 阶梯，同一份实现、同一串种子）。抬样本会改判定（属换口径，等用户裁），这里先把噪声印出来。 */
+ *     的 n=40/100/200/400 阶梯，同一份实现、同一串种子）。抬样本会改判定（属换口径，等用户裁），这里先把噪声印出来。
+ * 2026-11-22 用户裁定：不改 `feasibilityOf` / 地图旧尺 `fieldA.atk`，仅 promote 阻断改为含反弹触发 `atkWithReflect`。 */
 const FA_SE95 = 1.96 * Math.sqrt(Math.max(agg.fieldA.atk * (1 - agg.fieldA.atk), 1e-9) / (FEAS_N.aggr || 40)) * 100;
-console.log('  〔被围殴时会不会还手 → 场A〕被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(1) + '% ±' + FA_SE95.toFixed(1) + 'pt(n=' + (FEAS_N.aggr || 40) + ', 1.96SE)（造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) +
-  '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
+console.log('  〔被围殴时会不会还手 → 场A〕被集火还手率 = ' + (agg.fieldA.atk * 100).toFixed(1) + '% ±' + FA_SE95.toFixed(1) + 'pt(n=' + (FEAS_N.aggr || 40) + ', 1.96SE)' +
+  '（含反弹触发 ' + (faEff * 100).toFixed(1) + '%，反弹回合 ' + (agg.fieldA.reflActs || 0) + '/触发 ' + (agg.fieldA.reflHits || 0) +
+  '；造成伤害 ' + agg.fieldA.dealtPerGame.toFixed(2) + '/局，承受 ' + agg.fieldA.takenPerGame.toFixed(2) + '/局，胜率 ' + (agg.fieldA.winRate * 100).toFixed(0) + '%）' +
   '  〔对面只攒钱不动 → 场B〕无压进攻 = ' + (agg.fieldB.atk * 100).toFixed(0) + '%（伤害 ' + agg.fieldB.dealtPerGame.toFixed(2) + '/局）' +
   '  [旧口径 F=' + (fAct.atk * 100).toFixed(0) + '%，仅作历史对照]');
-if (agg.fieldA.atk < 0.20) fails.push('F 被集火还手率 ' + (agg.fieldA.atk * 100).toFixed(1) + '% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕');
+if (faEff < 0.20) fails.push('F 被集火还手率 ' + (faEff * 100).toFixed(1) + '% < 20%（主动 ' + (agg.fieldA.atk * 100).toFixed(1) + '% + 反弹触发；被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕');
 /* v1.5.57（第五轮复核 §6）：**座位对称性**必须进上线体检。
  * 实测：上线包（v7wall-31）5 席同策略时 long 0 号座 84%、multi 58%（极差 82pt/51pt）——
  * 玩家真正遇到的对手严重偏座；而此前所有体检项都看不见这件事。

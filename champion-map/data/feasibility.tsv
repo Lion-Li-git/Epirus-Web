@@ -1015,3 +1015,6 @@ nov21-purify-dsp0			4.36		1		1		add-point
 nov21-taunt-dsp0b			5.62		1		1		add-point
 nov21-rod-tzt2d-r10			6.36		1		1		add-point
 nov22-tzt2d-stab			5.4		1		1		add-point
+nov21-armor-tzt2d			7.78		0	场A 还手 10.3% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕	0	场A 还手 14.5% < 20%（被四席围殴时的还手率） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还〕	add-point
+nov22-c3g-s300k			5.74		1		1		add-point
+nov22-c4c-t20			5.45		1		1		add-point

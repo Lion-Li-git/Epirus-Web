@@ -918,7 +918,7 @@ export function aggressionProfile(W, params, GAMES, opts) {
   const isDmg = function (k) { const d = R.byKey[k]; return !!(d && d.dmg && d.dmg.amt); };
   function run(kind) {
     let atkOld = 0, atkNew = 0, acts = 0, dealt = 0, taken = 0, takenOpp = 0, wins = 0, draws = 0, rounds = 0, oppAtk = 0, cleared = 0;
-    let forced = 0, jiActs = 0;
+    let forced = 0, jiActs = 0, reflActs = 0, reflHits = 0;
     for (let g = 0; g < G; g++) {
       const me = g % 5;
       /* §E616 `HOOK.mode`（默认 `'multi'` ⇒ 在册读数**逐位不变**，与上面 `seatAct`/`forceAttack` 同一规矩）：
@@ -951,14 +951,22 @@ export function aggressionProfile(W, params, GAMES, opts) {
       for (let i = 0; i < 5; i++) ch.push(i === me ? champ : scripted);
       Play.autoGameN(st, ch);
       rounds += st.round;
+      let roundMeNonDmg = false;
       for (const e of st.events) {
         if (e.type === 'action' && e.outcome === 'ok') {
           if (e.pid === me) {
             acts++;
             if (e.key === R.SK.JI) jiActs++;
             if (OLD.indexOf(e.key) >= 0) atkOld++;
-            if (isDmg(e.key)) atkNew++;
+            const dmgCard = isDmg(e.key);
+            if (dmgCard) atkNew++;
+            roundMeNonDmg = !dmgCard;
           } else if (kind === 'aggr' && OLD.indexOf(e.key) >= 0) oppAtk++;
+        } else if (e.type === 'reflect' && e.to === me) {
+          /* 2026-11-22 用户裁定：F 阻断允许将「反弹触发」计入还手率，而不改历史 fieldA.atk 尺列；
+           * 回合内多次反弹最多按 1 手计入 reflActs（防率 > 1.0 且不与主动伤害卡同回合重复记）。 */
+          reflHits++;
+          if (roundMeNonDmg) { reflActs++; roundMeNonDmg = false; }
         } else if (e.type === 'damage') {
           /* v1.5.66: 清场数才是诚实判据 —— 新规则下打 1 点就在全灭判胜里赢，严格胜率变得太容易
            * （线上包场 B 已 100%）=> 改量收缩开始前真的死了几个。收缩的伤 source==null（不可格挡）；
@@ -985,6 +993,7 @@ export function aggressionProfile(W, params, GAMES, opts) {
     }
     return {
       games: G, actsPerGame: acts / G, atk: acts ? atkNew / acts : 0, atkOldWhitelist: acts ? atkOld / acts : 0,
+      reflActs: reflActs, reflHits: reflHits, atkWithReflect: acts ? (atkNew + reflActs) / acts : 0,
       dealtPerGame: dealt / G, takenPerGame: taken / G, takenByOpponentPerGame: takenOpp / G, winRate: wins / G, drawRate: draws / G,
       clearedPerGame: cleared / G, clearedTotal: cleared,
       forced: forced, jiActs: jiActs, jiShare: acts ? jiActs / acts : 0,

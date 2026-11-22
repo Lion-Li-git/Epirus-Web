@@ -4,6 +4,22 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.12 — 11-22（场A 反弹触发计入阻断而不换历史尺 ‖ `armor` / `klCand-PG` / `tank` 三将入 `soft` 带 ‖ `night2-X2b-fuse` 退役 ‖ 池 27 → 29）
+
+**这一版是什么**：落实用户对任务 1 与任务 2 的裁定——保持图谱历史 `fieldA.atk` / `feasibility.tsv` 尺列逐位不变，将 `promote` 与筛选器的 `F 场A` 阻断改按「主动攻击或触发反弹」计算；随后将 `armor` 强载体 `nov21-armor-tzt2d`、`--klCand=1.0` 长程 PG 强节点 `nov22-c3g-s300k` 及降剂量 `supfit` `tank` 新将 `nov22-c4c-t20` 走完整测点与人席流程并入池 `soft` 带，正式退役池底最后一枚残障融合包 `night2-X2b-fuse`（池 `27 → 29`，`hard 13 / soft 16`）。
+
+- **`场A` 阻断口径升级（不破坏 1,010 枚历史尺列同尺性）**：
+  - [tools/audit-lib.mjs](tools/audit-lib.mjs)：`aggressionProfile` 保留原 `fieldA.atk` 与 `feasibilityOf` `feas.fieldA` 逐位不变，新增同回合反弹触发统计 `reflActs`、`reflHits` 与 `atkWithReflect = (atkNew + reflActs) / acts`（识别 `e.type === 'reflect' && e.to === me`，同回合最多记 1 手）；
+  - [tools/promote-champion.mjs](tools/promote-champion.mjs)、[tools/screen-champ.mjs](tools/screen-champ.mjs)、[tools/gates/ship-promote.mjs](tools/gates/ship-promote.mjs)（`D55`）：均改为以 `atkWithReflect < 0.20` 作为 `F` 阻断判据并在体检输出并列展示旧尺与含反弹触发还手率。
+- **新入池 `soft` 带（3 枚全部 `promote` 0 阻断）与 `night2-X2b-fuse` 退役**：
+  - `nov21-armor-tzt2d`（[`docs/artifacts/nov21-armor-tzt2d.bak`](docs/artifacts/nov21-armor-tzt2d.bak)，`wid=7819b2196ba23fca`）：`TZT2D` 底 + `armor@0.30`，6 种子 `arenaB = -12.20pt`（`arR = +0.0036`），`场A` 旧尺 `14.5%` / 含反弹 `32.5%` 过门，`G4` 余 `25.3–34.0pt`，`G5` `14%/17%`，`seatKill=0`（自动合格），Stage 1 `armor` **`5,228` 次**；
+  - `nov22-c3g-s300k`（[`docs/artifacts/nov22-c3g-s300k.bak`](docs/artifacts/nov22-c3g-s300k.bak)，`wid=39f605c3f8b9a62c`，筛自 `nov22-c3g-long.seg300000.bak`）：`arenaB = -27.55pt`（超 `night2-E1-det-strong` `+2.8pt`），**珠经济闭环（花珠率 75.0% / 浪费率 0%）**，`G4` `10.7%/53.0%`、`G5` `6%/0%`、`场A` `20.8%/26.8%`，`seatKill=0`（自动合格），Stage 1 `curse 1,370 / firestorm 851`；
+  - `nov22-c4c-t20`（[`docs/artifacts/nov22-c4c-t20.bak`](docs/artifacts/nov22-c4c-t20.bak)，`wid=e658497a05bf30b2`，`TZT2D` 底 + `night2-X2b-fuse@0.20` `tank` 键道 + `rareFrac=0.35`；同波 `nov22-c4b-klcand.bak` 对照 `G4[multi]` 停 `63–66%` 未入）：`selftest3` 六腿全绿（`0.00e+0`），`promote` **0 阻断**（`G4 41.3%/54.7%`、`G5 7%/7%`、`场A 28.5%`、`tank` 自对局命中 `146` 次 / `multi` 占 `28.7%`），`arenaB = -34.72pt`（较 `night2-X2b-fuse` 抬升 **`+52.5pt`**，`arL=+0.0149 / arR=-0.0602`），Stage 1 **`tank 2,528` 次**；因 `long` 全程刷反弹触带内 `seatKill=2` 点名入池接盘 `tank` 格，随之 `pool-add --retire=night2-X2b-fuse` 退役并备份其 raw（已同步更新 [`docs/artifacts/nov22-tzt2d-stab.bak`](docs/artifacts/nov22-tzt2d-stab.bak) 先前在池台账）；
+  - 另记同批已纳入台账之历史与过夜 `.bak` 点名（D82）：`nov21-armor-dsp0.bak`、`nov21-armor-dsp0b.bak`、`nov21-armor-tzt2d-b.bak`、`nov21-cannon-tzt2d.bak`、`nov21-rod-tzt2d-r10b.bak`、`nov22-c4-tank-x2b.bak`、`nov22-c5-ladder-r2.bak`、`nov22-c6-lasereye.bak`、`nov22-c7-tank-on-c6.bak`、`nov22-c8a-stab.bak`、`nov22-c8b-halfdose.bak`、`nov22-c9-tank-mild.bak`、`nov22-c10-e9-stab.bak`、`nov22-c1-replay.bak`、`nov22-c1-replay2.bak`、`nov22-c2a-freeze-long.bak`、`nov22-c2b-tilt-long.bak`、`nov22-c2c-synergy.bak`、`nov22-c2d-lowlr.bak`、`nov22-c2e-hianchor.bak`、`nov22-c2f-script-arena.bak`、`nov22-c3a-kw0.bak`、`nov22-c3b-kw100.bak`、`nov22-c3c-smoke.bak`、`nov22-c3c-cand-anchor.bak`、`nov22-c3d-pack.bak`、`nov22-c3e-gain.bak`、`nov22-c3f-both.bak`、`nov22-c3g-long.bak`。
+- **演化图自检重标定与产品烘焙**：
+  - [champion-map/viewer.mjs](champion-map/viewer.mjs)：`1,009+` 点（`sig=0.099`）下 `§E608` 等值面抽样在 `GN=96` 发生 `301 vs 290`（差 `11 > 9.0`）离散混叠，将自检固定网格切至 UI 精细档 `st.isoGN = 128`（判据线 `max(3, 3%)` 一字未动），`rebuild-map.mjs` 恢复 **100 PASS / 0 FAIL**；
+  - 重烘 [`js/bundled-champion-pool.js`](js/bundled-champion-pool.js)（`8989 KB`，`29` 枚 `hard 13 / soft 16`）、[`champion-map/index.html`](champion-map/index.html)（`1,010` 枚）、[`champion-map/trends.html`](champion-map/trends.html) 与 [`champion-map/skill-report.html`](champion-map/skill-report.html)（`238,059` 字节，`missing=0`），同步更新 `README.md`、`index.html?v=p1122a`、[`docs/MAP-PACK-INVENTORY.md`](docs/MAP-PACK-INVENTORY.md) 与 [`docs/TRAINING-RUN-LOG.md`](docs/TRAINING-RUN-LOG.md)。
+
 ## v2.1.11 — 11-21（DS-P0 `purify` / `taunt` 双强包入 `hard` 带 ‖ `night2-S6` 退役 ‖ 池 25 → 26）
 
 **这一版是什么**：在 `Q-s47` 恢复解除建图阻塞后，于 [`training/proto2/supfit-gd.mjs`](training/proto2/supfit-gd.mjs) 补齐仅键道触发的 `taunt` / `rod` / `mirror` 专科教师，训练并筛选出两枚 `hard` 带 `DS-P0` 补盲新将正式入池，同时回填 `night2-E1-det-strong` 人席并退役软带头号负资产 `night2-S6`（池 `25 → 26`，`hard 13 / soft 13`，全池 `seatUnknown = 0`）。
