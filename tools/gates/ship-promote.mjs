@@ -81,6 +81,14 @@ t('D55 F 的口径必须是"场 A 被集火还手率"（考核依据修正），
     '场 A 的对手必须真的在进攻（A=' + agg.fieldA.oppAtkPerGame.toFixed(1) + ' vs B=' + agg.fieldB.oppAtkPerGame.toFixed(1) + '）');
   ok(agg.fieldA.atk >= 0 && agg.fieldA.atk <= 1 && agg.fieldB.atk >= 0 && agg.fieldB.atk <= 1, '两场都必须返回合法比率');
   ok(agg.fieldA.atkWithReflect >= agg.fieldA.atk && agg.fieldA.atkWithReflect <= 1, '含反弹触发还手率必须合法且 >= 主动 atk');
+  /* 数值锚（11-22 夜班复盘补，门数不变）：上面那条 `>=` 在 `reflActs ≡ 0` 时取等号恒真 ⇒ 关死反弹计数它不响。
+   *   夹具=seed 31337 + makePolicy(0.25) + 8 局，两次实跑逐位同；该夹具 `atk` 恒 0 ⇒ **19 手还手全部来自反弹**，
+   *   所以把"主动率 / reflActs / 含反弹率"三个数合成一格钉住：读数变了就红，无论变的是分子来源还是分母。
+   *   牙（11-22 在独立克隆里实测两支变异，都红）：
+   *     M1 把 `tools/audit-lib.mjs:968` 的 `reflHits++/reflActs++` 用 `if (0)` 包起来 ⇒ got=0/0/0
+   *     M2 拆掉"同回合最多记 1 手"的 `roundMeNonDmg` 守卫              ⇒ got=0/21/0.1346153846153846 */
+  eq([agg.fieldA.atk, agg.fieldA.reflActs, agg.fieldA.atkWithReflect].join('/'), '0/19/0.12179487179487179',
+    'F 口径数值锚：夹具的含反弹还手读数必须逐位复现（变了就说明反弹统计被改坏或夹具构造变了，需重登记并说明理由）');
   /* v1.5.65：终局收缩的伤 source=null（不可格挡）⇒ 场 B 里冠军仍会掉血，必须按"对手造成的伤"判。 */
   ok(agg.fieldB.takenByOpponentPerGame === 0,
     '场 B（对手只ジ）里冠军不该被**对手**打（实测 ' + agg.fieldB.takenByOpponentPerGame.toFixed(2) + '/局）');
