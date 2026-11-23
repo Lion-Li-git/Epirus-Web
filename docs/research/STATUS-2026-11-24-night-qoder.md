@@ -1,0 +1,150 @@
+# 通宵班日志 · 2026-11-24（Qoder，23:10 → 09:00）
+
+> 基线：`4c4f4daf`（`v2.1.22` + N5 规则换代，规则指纹 `11bb29db` 已在两枚 bundle；池 25 = `hard 13 / soft 12`）。
+> 本班计划是对 [PLAN-2026-11-23-overnight.md](PLAN-2026-11-23-overnight.md) 的**改道执行**——用户 23:0x 直接下了新指令，本文是实际执行口径，冲突处以本文为准。
+> 旋钮一律引用 [`training/TRAINING-KNOBS.md`](../../training/TRAINING-KNOBS.md)，本文不复抄键表。
+
+---
+
+## 〇、用户指令（原文要点，2026-11-23 23:0x）
+
+1. **训出时间那条不用追**：`ts` 不一致是刚被 `7457e99d` 修掉的，"现在查不出不一致"不构成证据 ⇒ **自动工具必须自带牙**（变异必红），不许拿"当前 0 违例"当已核。
+2. **不单独训 2P 包**：把 `2P` 当作**普通包训练里的一格剂量**。用户早先定过方向：跨环境适应力要**人数 × 血量矩阵都参与训练**，只是各格剂量不同。
+3. **考古线尽管做**：本班不怕耗时——只要把对应参数找出来、摆在那儿扫。
+4. **继续研究天火闭环**：池里"只贴不爆"的还很多，用户裁定「**宁可不贴，也不要不闭环**」。
+5. **更多跨环境风格包**：现在**软带比硬带少一枚技能覆盖**，这形状本身可疑。
+6. 额度紧 ⇒ 少读长上下文；**长程后台扫批/训练要把自动落盘写清楚**；**每做一段就更新本文**，防中断。
+
+---
+
+## 一、接班时已核实的事实（现读，非引用）
+
+- 台账 `docs/ARTIFACT-LOSS-1119.tsv`：`missing 154 ‖ ok 708 ‖ sha-diff-wid-same 121 ‖ no-path 19`，合计 1002 行。
+- `node tools/land-recovered.mjs --check` = **零违例**；上班挂的 `EFFG-s41` wid 已由 `7457e99d` 重生成带正（[lineage 第 856 行](../../champion-map/data/page/lineage.tsv)= `cdeb5f7c18e336ba` = 盘上值）⇒ **#69 结**。
+- 剩余 154 枚的**碎片度**（现算，`scratch/v7-missing-by-batch-1123.tsv`）：**74 批**，其中 **39 批只剩 1 枚**、22 批剩 3 枚、最大单批 6 枚。
+- `tools/v7-scan-plan.mjs`（现账重跑）：`fam4/5/6` → 86 枚/30 批**全 T3（时代槽根查不到）**；`--fams=1,2,3` → 52 枚/28 批**也全 T3**；**T1=0、T2=0** ⇒ 昨晚那种"194 枚/夜"的**探针快路已经见底**，剩下的钱要花在"找根"而不是"再扫一遍"。
+- 夜班计划点名的批**已经不在了**（现账）：`v7curri2` 6 枚已全部 `sha-diff-wid-same`、`v7role12` 剩 0、`v7bead1` 剩 0、`v7divK2` 2、`v7bead2` 3、`v7bead3` 2。
+- `2P` 读数的桌子是对的：`tools/probe-diff-ladder.mjs:205-208` 在 N=2 仍读**统一池**（11-13 裁定），与页面同源。
+- 但 2P 的**档位普查**那张尺指错了表：`docs/debug/tier-census.mjs:61` 在 `--n=2` 时默认仍取已退役的 `champion-map/pool-members-2p.tsv`（`:525`/`index.html:208` 明写它已转任训练对手名册、不再上页面桌）；同一条旧口径还留在 `js/ui/ui.js:645-647` 与 `js/train/bots.js:1600`/`:1630` 的注释里。
+- 训练侧**没有人数旋钮**：`training/proto2/supfit-gd.mjs:1687` 写死 `createState('multi', …, 5)`，`training/**` 全仓搜不到 headcount/血量键 ⇒ "2P 混训"是**接线活**不是配参数。
+- 旧 2P 准入尺已无生产者：`pool-members-2p.tsv` 里那批判词写 `2p-exam`，`tools/` 里 grep 不到任何产出方。
+
+---
+
+## 二、本班计划（按用户指令改道后）
+
+| # | 线 | 干什么 | 落盘物 | 状态 |
+|---|---|---|---|---|
+| T-A | 时间戳护栏 | `land-recovered` 加 `ts` 腿 + `--root=` 可测面；`anchor-recover --do` 在拷贝后回写 `META.ts`（堵住写入口）；**牙用变异夹具证**，不拿"当前 0"当证据 | `tools/land-recovered.mjs`、`tools/anchor-recover.mjs`、`scratch/ts-teeth-fixture/` | DOING |
+| T-B | 考古线 | 派研究批挖 top-20 批的 env/era/seed → 写 jobs TSV → 后台 `sweep-server-batches` 长跑，按批回执落 `docs/research/` | `scratch/v7-mined/*.tsv`、`docs/research/v7-scan-receipt-1123-night.md` | 研究中 |
+| T-C | 跨环境形状矩阵 | 最小 diff 加"加权形状混合"（`multi:5` 为默认逐字不变），留痕进 `.bak.meta.json` 的 recipe；默认档不许改历史可比性 | `training/proto2/supfit-gd.mjs` + `TRAINING-KNOBS.md`（`knobs.mjs --check`） | 研究中 |
+| T-D | 天火闭环 | 先造尺：池 25 枚逐枚"贴 / 爆 / 闭环率"普查（读 `skill-report/*.json`，不整篇读）→ 再谈接进门 | `champion-map/data/firestorm-closure-1124.tsv` | 研究中 |
+| T-E | 软/硬带技能差 | 现算两带并集差集，点名差的是哪张卡、谁在守 | 本文 §四 + `pool-skill-report` 读数 | TODO |
+| T-F | RD-G1 洁净 rod | 前置：旧 `nov21-rod-tzt2d-r10` 是全池 `rod` 唯一在册载体 ⇒ **过线前不 `--retire`** | `scratch/arms/*.bak` | TODO |
+
+**并发纪律**：后台同时跑 ≤2（一路扫批 + 一路训练/评测）；起臂前先 `tasklist` 按 pid 判活，绝不起第二个同型测量实例；所有臂输出钉 `scratch/arms/`，`.bak` 与 `.bak.meta.json` **两半都断言存在**。
+
+**收口**：文档/代码分开提交；**默认不 push**；只在整轮那一次认证时跑 `gate-all --np`，其余一律 `--group=`/`--only=` 并标注"不是整轮"。
+
+---
+
+## 三、DONE / DOING / NEXT（每段更新，中断也接得上）
+
+### DONE（时刻待补，回填用 `date`）
+
+- 接班核实：台账分布、`land --check`、T1/T2/T3 队列、2P 桌子与 `tier-census` 错表、`supfit-gd` 写死 5、`2p-exam` 无生产者（全部现读，见 §一）。
+- 队列落盘：`scratch/v7-missing-by-batch-1123.tsv`（74 批 / 154 枚，按枚数降序，带代表 id）。
+- 派研究批 ×3（后台）：考古配方挖掘 / 训练形状接线 / 天火闭环语义与在册尺。
+
+### DOING
+
+- T-A：`land-recovered` 的 `ts` 腿 + `anchor-recover` 写回 + 变异夹具证牙。
+
+### NEXT
+
+1. 收到研究批结果 → 立刻把 T-B 的 jobs 摆好开后台扫，**不等**其它线。
+2. T-D 普查脚本（脚本自己写文件，我只读汇总行）。
+3. T-C 接线（动 `training/**`，跑 `knobs.mjs --check` 与 `--group=meta`，标"定向非整轮"）。
+4. T-E 一行脚本。
+5. 每小时回来更新本节 + 本地 commit（`git status` 先看清有没有别人的在途改动）。
+
+---
+
+## 四、读数与结论（随做随填）
+
+### 4.1 天火闭环普查（时刻待补 · 新尺 `tools/firestorm-closure.mjs` → `champion-map/data/firestorm-closure-1124.tsv`）
+
+数据源是**在册** `skill-report/<id>.json` 的 `stage1.curseStats`（25/25 全在盘，没重跑一局）。语义：贴 = `resolve.js:1263`（事件 `curse`），爆 = `resolve.js:1268-1282`（事件 `firestorm`，`n` = 本次吃掉的己方符咒数，**`n=0` 即"出手而未爆"**）。
+
+**结论：用户的直觉成立，而且比"很多"更糟。**
+
+| 分母 = 贴手 ≥3 的 16 枚 | 读数 |
+|---|---|
+| 引爆率分布 | **P10 0% ‖ P50 0% ‖ P90 18% ‖ min 0% ‖ max 62%** |
+| 触发"只贴不爆"（沿用 `build-skill-page.mjs:138` 那两条常量 `贴≥3 ∧ 引爆率<25%`） | **14 / 16 枚** |
+| 其中**引爆手 = 0**（贴了 3~40 次、一次都没爆过） | **9 枚**：`AR-TK2`(贴34) `RING-MINIT-CONT`(34) `MX7-T2-R`(40) `RG-CN`(21) `MX8-R6C-KL`(16) `HL-G1`(5) `R-GD12`(3) `MX8-TN35-KL3`(3) `MX6-GD-TF20`(30) |
+| 真闭环的两枚 | `FS-G2` 853贴/524爆 = **61%** ‖ `nov22-c3g-s300k` 1370/851 = **62%**（空爆率各 4%） |
+| 从不碰这套（不贴也不爆，按裁定**不算病**） | 6 枚：`OBS6E9` `RG-MN` `RINGB11` `nov21-rod-tzt2d-r10` `MSB11-R1S130778313` `nov22-ring3-gd6a18` |
+| 按带中位引爆率 | hard **0%** (n=8) ‖ soft **0%** (n=8) |
+
+格级同口径（`stage1.coverage` 在 120 格里数得出）：**hard 13 枚里只有 1 枚出过引爆手，soft 12 枚里 2 枚**。
+
+**两条必须跟着这个数一起说的话：**
+
+1. ⚠ **这批报告是旧引擎烘的**：25/25 的 `rulesFingerprint` 都是 `4fcadaad`，而 N5 已在 22:1x 换代到 `11bb29db`。N5 改的是小雷开链、不碰符咒/天火 ⇒ 这一维**大概率不变**，但要一口干净的账得重跑 `pool-skill-report --bake`（要不要现在重烘，等用户点头：25 枚 × Stage1 不是秒级活）。
+2. **"只贴不爆"有两种病，现在这张表分不开**：`firestormOk = 0` 既可能是"从没学过出这一手"，也可能是**引擎不许出**——R64 合法性门（`state.js:160-176`）要求"场上有己方可引爆符咒（`age<=3`）"才能出天火，贴早了/贴的目标先死了就永久出不了。分清要按局记 `curseLatched && detonated`，那是 `pool-skill-report.mjs` 的 `stage1()` 要补的一维（现字段全是聚合计数）。
+3. 在册只有散文没有尺：`detRate` 只在 `build-skill-page.mjs:111` 行内显示、`:138` 只发告警，**没有任何门消费 `curseStats`**；训练侧 `skill-mastery.mjs:393-404` 的"引爆率≥75%"门只管训练期、不管入池。⇒ 若要按用户裁定立准入腿，形状照**珠闭环 D78 双条件**（`ship-promote.mjs:276-299`：花/得≥20% ∧ 过期≤1，fail-closed）最顺，挂 `pool-add --audit` 由 D234 接住。**这条我没动**：它会把 14 枚现役包判成带伤，是池装配级决定。
+
+剂量账（在册，别重证）：`FINDING-2026-11-14-ksmid-dose-phase-zcode.md:47-52`——dose=1 时引爆率 164.6% 全门过，**超量**（GD16b：1522贴/365引 = 24%）反而绑架行为；`TRAINING-RUN-LOG.md:119-120` 的 `day1119-det-gd`（detonate@0.35）是首次真闭环 123%/158%；单 `firestorm` 键消融**作废**（与 curse 状态纠缠，同文件 :44）。⇒ 补闭环只能 `curse,firestorm` **成对**加剂量。
+
+### 4.2 软/硬带技能覆盖差集（现算，时刻待补）
+
+带内并集 **hard 25 ‖ soft 25**（数量相等）——用户说的"软带少一枚"在**带内并集**这层不成立，真实形状是**两带各守对方没有的卡**：
+
+| 只在一带出现的技能 | 谁在守 |
+|---|---|
+| `taunt` | 仅 hard：`nov21-taunt-dsp0b`（95 格） |
+| `jinshield` | 仅 hard：`OBS6E9`（17 格） |
+| `rod` | 仅 soft：`nov21-rod-tzt2d-r10`（17 格） |
+| `miniT` | 仅 soft：`MX6-GD-TF20`（6 格） |
+
+⚠ 对不上的账：池级并集我现算是 **27 个技能键**，而 `pool-skill-report.mjs:335` 的尺册口径写的是 **`并集 N/30`**，STATUS §1.2 又写"全池 **28** 技能并集 0 缺失"——**三个数三种口径**。别信我这行手算（我按 `coverage` 里 `格数>0` 计的），要定这条账得用 `pool-skill-report --bake` 同一把尺复算。这一条记成待核，不是结论。
+
+### 4.3 时间戳护栏的牙（T-A 完成，时刻待补）
+
+第四条判据进了 `tools/land-recovered.mjs --check`，并**用变异夹具证过牙**（`--root=` 让整棵树可重定位 ⇒ 全程不碰任何在册件）：
+
+| 相位 | 结果 |
+|---|---|
+| A 干净夹具（`scratch/ts-teeth/`） | `扫描时刻残留 0` ‖ **exit 0** |
+| B 只把 `PB` 包内 `META.ts` 换成 `2026-11-23T03:14:15.000Z`（registry 仍 `2026-09-13T10:00:00`），台账第 4 列同步重刷 ⇒ **只坏 ts 这一维** | `标错态 0 ‖ 第 4 列 0 ‖ wid 0 ‖ ⚠ 扫描时刻残留 1`、点名 `PB（Δ1705h）` ‖ **exit 1** |
+| 真账本（1002 行 / 在盘 829 / 有结论 816） | `逐字一致 542 ‖ 钟域/历史差 274 ‖ 残留 0 ‖ 读不到 ts 13` |
+
+夹具的干净相位还顺手证明了**它不冤枉钟域差**：`PB` 的 `…10:00:00Z` vs registry `…10:00:00` 被记进"钟域/历史差（只报不判）"而不是违例。
+
+登记步同时变成**写入端护栏**：`--do` 遇到"包内 ts 落在恢复窗口（`--leakSince=`，默认 2026-11-19 台账开账日）而 registry 更早" ⇒ 按 registry 回写那一个字段（其余字节逐字不动，`wid` 只哈希权重 ⇒ 身份不变），再据**改后**字节算 state 与第 4 列；不给 `--do` 时只打印 `⚑ 回写 …（未写）`。
+
+**我在这条上自己栽了一次，写下来防下一班重复**：我先前口头报的"829 枚零不一致"是**坏脚本**给的假数——它按 `head.indexOf('id')` 取 registry 主键，而 registry 的列名是 `pack_id` ⇒ `iId=-1`、映射表整个建在 `undefined` 上、比较**一次都没发生**，于是"0 不一致"。真相是 274 枚对不齐（其中 P90 正好 8.000h = UTC/本地两个钟域）。**这正是用户点名的那件事**：查不出不一致不等于没有不一致，判据必须自带"该红时红"的夹具。
+
+### 4.4 考古线现状（T-B，在跑）
+
+- 驱动 `scratch/sweep-server-batches.mjs` **单分片**跑（它每次命中会**整表重写台账** ⇒ 两个分片并发会互相吃掉对方的行，这条自己记下来）。日志 `scratch/v7-mined/sweep-1124.log`，台账改动前的 sha 存在 `scratch/v7-mined/ledger-sha-before-1124.txt`。
+- jobs：`scratch/v7-mined/server-jobs-1124.tsv`（生成器 `scratch/v7-jobs-1124.mjs`），**10 批 / 39 枚**，逐批 env 出处已打进生成器注释（commit 正文、`l2-arms.mjs:28-29,54-55`、`RESEARCH-LOG-2026-09-18:149`、`RESEARCH-LOG-2026-09-20-qoder.md:142-146`、`cli-context-e68.txt` 等）。
+- **纠了我自己队列工具的口径**：`v7-scan-plan.mjs` 说的 **T3 = "wid 不在 registry"，不是"时代槽根查不到"**——线谱表本身带着 `parent`+旋钮，多数 T3 批照样能推 era。这条是工具措辞误导，不是事实。
+- **别烧算力**：`fstA` 回执早已判死（两 era 试尽）；`v7s4..s9` 六批锁在 `v7cur2-31` 恢复之后（链式热启动），今晚不发；56 个单枚长尾每枚都要独立 era 考古，性价比最低。
+- 剩余 154 里**只有 3 枚**（`v7rb2-31/82/92`）能靠 `metaSeed` 定 seed——缺件的 `metaSeed` 在表里**是空的**（元数据随 `.bak` 一起丢了），所以本轮 seed 仍是"包名尾数"猜测 + 用 `targets` 列的在册 `wid` 当场否证。⚠ 这条与 §一那句"`metaSeed` 是权威"不冲突：权威**只对有元数据的行**成立。
+
+### 4.5 跨环境形状矩阵：前提被我自己推翻了（T-C，两臂在跑）
+
+研究批报"训练器写死 5 人"，我顺着核到调用端：**采集主路本来就有 n=2 三格**（`training/proto2/arena2.mjs:41-47` 的 11 格 = `{2,3,5}×{multi,multi4,long}` + `{8,10}×multi`，:1687 那句 `createState('multi',…,5)` 只是 `--smoke` 冒烟腿）。再核 `supfit-gd.mjs:101-102`：`--arenaShapes` **确实接进了** `createArena2`（研究批说没接，是它读漏了 :102），而它的"钉在 `3:multi,5:multi`"**只在给了 `--arenaPool` 时**才生效。本日入池的 `FS-G2` 那套参数里**没有** `--arenaPool` ⇒ 它一直在**全 11 格**（含 3/11 ≈ 27% 的 1v1）上采集。
+
+⇒ 结论先改口：**"2.0 成员只在 3–8P 训练"这句不成立**，2P 剂量本来就有。于是真正要量的问题变成"再加 2P 剂量有没有用"，而不是"要不要补 2P 训练"。两臂（都逐字抄 FS-G2 的 `--up/--teacher/--teacher2/--teacher2keys=curse,firestorm@0.12/--rareFrac=0.15/--groups=2400/--steps=250/--lr=0.0004/--dagger=1/--shapeBal=1`，**只差桌形一维**）：
+
+| 臂 | 桌形 | 剂量 | 产物 |
+|---|---|---|---|
+| `nov24-2pdose-a` | `--arenaShapes=2:multi,2:multi4,2:long,3:multi,5:multi,5:multi` | 6 格里 3 格是 1v1 ⇒ **50%** | `scratch/arms/nov24-2pdose-a.bak` |
+| `nov24-2pdose-b` | 不给（缺省 11 格） | **3/11 ≈ 27%** | `scratch/arms/nov24-2pdose-b.bak` |
+
+两臂都要先自证"剂量真落进了采集环"：arena 指纹行会打 `shapes=…`，日志里那行是唯一凭据（覆盖式接线不证自明 = 空转，这坑在册）。评法：`probe-diff-ladder --n=2 --surrogate=rule|legacy` 看 2P 分离度，配 `--n=5` 看有没有把主力桌练坏；`--n=2` 一律用 `--members=champion-map/data/page/pool-members.tsv` 显式覆盖（`tier-census.mjs:61` 那条默认表还指着退役名册，见 §一）。
+
+血量这一维今晚**不动**：初始 HP = `R.MODES[mode].hp`（multi=3 / multi4=4 / long=5），要第三条连续 hp 轴就得动 `js/core/rules.js` ⇒ 撞规则指纹红线；局后改 `st.p[i].hp` 虽有 `coverage-gate.mjs:76` 先例，但那会教出"适应被改写血量"的假能力。现成的 hp 代理就是 `long` 那一格（5 血），两臂里都留了位置。
