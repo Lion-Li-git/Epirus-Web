@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.19 — 11-23（**`MN-G1`** 入 `hard`：P1-2 `hard` 带 `mine` 补盲首破，`arenaB=+10.38pt`、`selftest3` 6/6、`seatKill=0` ‖ 池 34 → 35）
+
+**这一版是什么**：沿用低剂量底座配方（`EQ-S4-GD6ATEACH` + `MSB11-R1S130778313` `mine@0.12`，`--rareOnly=mine --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`MN-G1`**；`hard` 带首次拿到活跃 **`mine`（Stage1 `52/120` 格 / `797` 出手）** 兼 `arenaB=+10.38pt` 低抖动，池增至 **35 枚**（`hard 19 / soft 16`）。
+
+- **新入池 `hard` 成员 `MN-G1`**（[`docs/artifacts/MN-G1.bak`](docs/artifacts/MN-G1.bak)，`wid=79e3b76bbf41c67a`，`v:92 / S1o / 16,561`）：
+  - `selftest3` **6/6 全绿**（`0.00e+0`, `π=0.941`, 腿 F `57/57`）；`promote --dry --support=2` **0 阻断**（`G(multi)=3.98 / G(long)=4.68`、`S=1.543 / G_eff=4.68`，场A `31.3%`、反弹墙 `15.3/局`、座位 `13.3pt`，`G4[long] 10.3% / G4[multi] 16%`、`G5=0%/1%`、珠闭环 `81.8%`）。
+  - **`arenaB=+10.3772pt`**（spread `21.39`，5/6 粒正）；`MxC=0.1929 / MxCL=0.1559`（`MxSkU=12 / MxSkE=11`）；`seatKill=0`（90210/90211 `multi ≤ 1.0% / long ≤ 5.5%`）；Stage 1 `union=12/30`（**`mine 52/120` 格 / `797` 出手**、`railgun 17/120`、`charge 26/120`）。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 34 → **35**（`hard 19 / soft 16`）；重烘整表 / 清单 / 35 个分片、演化图（1018 行，100 PASS / 0 FAIL）与 `skill-report`（35 枚，missing=0）；池缓存戳 `p1123b → p1123c`。
+
 ## v2.1.18 — 11-23（**`CN-G1`** 入 `hard`：P1-2 `hard` 带 `cannon` 补盲首破，`arenaB=-2.46pt`、`G4 只枪 2.7%/60%`、珠闭环 `82.4%`、`seatKill=0` ‖ 池 33 → 34）
 
 **这一版是什么**：沿用 `FS-G2` 低剂量底座配方（`EQ-S4-GD6ATEACH` + `MX8-CN-M` `cannon@0.12`，`--rareOnly=cannon --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`CN-G1`**；`hard` 带首次拿到稳定 **`cannon` 覆盖（Stage1 `10/120` 格 / `88` 出手）** 且全考卷 `cannon` 活跃，池增至 **34 枚**（`hard 18 / soft 16`）。

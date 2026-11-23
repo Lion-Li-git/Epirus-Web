@@ -59,9 +59,9 @@
 
 ---
 
-## 三、现役产品冠军池（34 枚 · 全员在盘）
+## 三、现役产品冠军池（35 枚 · 全员在盘）
 
-> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 18 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 19 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
 
 | # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
 |---:|---|---|---|---:|---:|---|---|
@@ -99,11 +99,12 @@
 | 32 | **`nov22-ring3-gd6a18`** | `hard` | `a64b53c90367221a` | 0 | 0 | [`docs/artifacts/nov22-ring3-gd6a18.bak`](artifacts/nov22-ring3-gd6a18.bak) | **11-22 晚 `hard` 环 3 连载体**（`GD6ATEACH` + `ringEcon@0.18(5:long,8:long)`；5P 三连 30.1% / 8P 27.2%，`arenaB=+20.40pt`，`selftest3` 6/6，`promote` 0 阻断，`seatKill=0`） |
 | 33 | **`FS-G2`** | `hard` | `892ba770d1dfca0b` | 0 | 0 | [`docs/artifacts/FS-G2.bak`](artifacts/FS-G2.bak) | **11-23 `hard` 反只枪×天火低剂量载体**（`GD6ATEACH` + `c3g curse,firestorm@0.12`；`selftest3` 6/6、`promote` 0 阻断、`G4 只枪 14.7%/11.0%`、`G5 0%/0%`、`arenaB=-3.48pt`、`seatKill=0`，Stage1 `firestorm 38/120` 格、`curse 68/120`、`railgun 25/120`） |
 | 34 | **`CN-G1`** | `hard` | `a3f63c60a01e4f35` | 0 | 0 | [`docs/artifacts/CN-G1.bak`](artifacts/CN-G1.bak) | **11-23 `hard` 过载炮低剂量载体**（`GD6ATEACH` + `MX8-CN-M cannon@0.12`；`promote` 0 阻断、`G4 只枪 2.7%/60%`、`G5 0%/0%`、`arenaB=-2.46pt`、`MxC=.218/MxCL=.259`、`seatKill=0`，Stage1 `cannon 10/120` 格/`88` 出手、`railgun 25/120`） |
+| 35 | **`MN-G1`** | `hard` | `79e3b76bbf41c67a` | 0 | 0 | [`docs/artifacts/MN-G1.bak`](artifacts/MN-G1.bak) | **11-23 `hard` 地雷低剂量载体**（`GD6ATEACH` + `MSB11-R1S130778313 mine@0.12`；`selftest3` 6/6、`promote` 0 阻断、`arenaB=+10.38pt`（spread `21.39`）、`seatKill=0`，Stage1 `mine 52/120` 格/`797` 出手、`railgun 17/120`） |
 
 > 现役池状态（`2026-11-23`）：  
 > 1. **`AR-TK2` 正式合入 `hard` 带**（[`docs/artifacts/AR-TK2.bak`](artifacts/AR-TK2.bak)，`wid=b5d4cbc6af57bbdd`，`arenaB=+10.36pt`，`seatKill=0`，Stage1 `armor 120/120` 格 `5,205` 手 + `tank 26/120` 格 `212` 手）；  
-> 2. **`hard` 带聚能环载体 `4/18`**（`R-GD12` / `RING-MINIT-CONT` / `nov22-ring3-gd6a18` / `MX8-TN25-KL` 的零头），`hard` 带同时拥有 `armor + tank`、`FS-G2`（`firestorm + curse + railgun`）与 **`CN-G1`（`cannon + railgun + bigT`）**；  
-> 3. **后续可继续推进**：`hard` 带 `mine / rod`（`purify` 已有 `nov21-purify-dsp0`）与 `long` 简单档倒挂复核。
+> 2. **`hard` 带聚能环载体 `4/19`**（`R-GD12` / `RING-MINIT-CONT` / `nov22-ring3-gd6a18` / `MX8-TN25-KL` 的零头），`hard` 带同时拥有 `armor + tank`、`FS-G2`（`firestorm + curse + railgun`）、`CN-G1`（`cannon + railgun + bigT`）与 **`MN-G1`（`mine + railgun`）**；  
+> 3. **下一阶段重心（用户 15:55 点明）**：**① 困难带多几个用聚能环的长程包（叠加不同风格底座）、② 天火闭环、③ 不同风格包、④ 对局中配合（`holo` 辅助套盾 / `tkWeak` / 协同）**。
 
 ---
 
