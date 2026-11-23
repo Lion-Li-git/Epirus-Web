@@ -32,6 +32,8 @@ const OUT = arg('out', 'champion-map/data/firestorm-closure-1124.tsv');
 const REPORT_DIR = arg('reports', 'champion-map/data/skill-report');
 /* 页面告警那两条常量（build-skill-page.mjs:138）——本工具照抄阈值，但**只报不判**，判它的是门 */
 const CURSE_FLOOR = 3, DET_BAD = 0.25;
+/* 机会口径的两个阈值（先给保守值，等全池分布出来再定线；**别拿单枚的数当线**） */
+const LOOP_FLOOR = 10, TAKE_BAD = 0.30;
 
 const tsv = (f) => readFileSync(f, 'utf8').replace(/\r/g, '').trim().split('\n');
 const P = tsv(POOL);
@@ -54,12 +56,20 @@ for (const l of P.slice(1)) {
   if (!cs) { missing.push(id + '(无 curseStats)'); continue; }
   const detRate = cs.curseOk > 0 ? cs.firestormOk / cs.curseOk : null;
   const dudRate = cs.firestormOk > 0 ? (cs.firestormOk - cs.firestormHits) / cs.firestormOk : null;
+  /* 机会口径（11-24 加）：R64 已把"无可引爆符咒"的天火挡在 legal 外 ⇒ legal 里出现就是"既能出也该出"。
+   *   takeRate = 出手/机会，**这才是裁定要管的那个数**；聚合引爆率(detRate)会把"贴得比爆得多"误读成病。 */
+  const legal = cs.fsLegalDecisions != null ? cs.fsLegalDecisions : null;
+  const taken = cs.fsTakenWhenLegal != null ? cs.fsTakenWhenLegal : null;
+  const takeRate = (legal && legal > 0) ? taken / legal : null;
   const onlyStick = !!(cs.curseOk >= CURSE_FLOOR && detRate !== null && detRate < DET_BAD);
+  const noGrab = !!(legal >= LOOP_FLOOR && takeRate !== null && takeRate < TAKE_BAD);
   rows.push({
     id, tier, fp, measuredAt: (j.measuredAt || '').slice(0, 16),
-    cells: s1.totalCells || 0, cover: (s1.coverage || []).length,
+    cells: s1.totalCells || 0, cover: Object.keys(s1.coverage || {}).filter((k) => (s1.coverage[k] || 0) > 0).length,
     stick: cs.curseOk, land: cs.curseLanded, boom: cs.firestormOk, hit: cs.firestormHits,
-    detRate, dudRate, onlyStick, neverTouched: cs.curseOk === 0 && cs.firestormOk === 0,
+    detRate, dudRate, legal, taken, takeRate, noGrab,
+    loop: (cs.stickGames > 0 ? cs.loopGames / cs.stickGames : null),
+    onlyStick, neverTouched: cs.curseOk === 0 && cs.firestormOk === 0,
   });
 }
 
@@ -67,15 +77,18 @@ rows.sort((a, b) => (a.detRate === null ? 1 : b.detRate === null ? -1 : a.detRat
 say('池表 ' + POOL + ' 成员 ' + (P.length - 1) + ' 枚 ‖ 有 stage1 读数 ' + rows.length + ' ‖ 无报告/无字段 ' + missing.length);
 say('报告指纹分布（' + Object.keys(fpSeen).length + ' 种）：' + Object.entries(fpSeen).map(([k, v]) => k.slice(0, 8) + '=' + v).join(' ‖ '));
 say('');
-say('枚ID'.padEnd(22) + '带'.padEnd(6) + '贴手'.padStart(7) + '落地'.padStart(7) + '爆手'.padStart(7) + '有目标'.padStart(8) + '引爆率'.padStart(9) + '空爆率'.padStart(9) + '  判读');
+say('枚ID'.padEnd(22) + '带'.padEnd(6) + '贴手'.padStart(7) + '爆手'.padStart(7) + '引爆率'.padStart(9) +
+  '机会'.padStart(7) + '出手'.padStart(7) + '抓手率'.padStart(9) + '局闭环'.padStart(9) + '  判读');
 for (const r of rows) {
-  say(r.id.padEnd(22) + r.tier.padEnd(6) + String(r.stick).padStart(7) + String(r.land).padStart(7) +
-    String(r.boom).padStart(7) + String(r.hit).padStart(8) +
-    (r.detRate === null ? '  —' : (100 * r.detRate).toFixed(0) + '%').padStart(8) +
-    (r.dudRate === null ? '  —' : (100 * r.dudRate).toFixed(0) + '%').padStart(9) +
-    '  ' + (r.onlyStick ? '⚠ 只贴不爆（贴≥' + CURSE_FLOOR + ' ∧ 引爆率<' + (100 * DET_BAD) + '%）'
-      : r.neverTouched ? '— 从不碰这套（不贴也不爆，符合"宁可不贴"）'
-        : r.stick === 0 ? '— 只爆不贴（引爆手在无贴状态下打出）' : ''));
+  say(r.id.padEnd(22) + r.tier.padEnd(6) + String(r.stick).padStart(7) + String(r.boom).padStart(7) +
+    (r.detRate === null ? '  —' : (100 * r.detRate).toFixed(0) + '%').padStart(9) +
+    (r.legal === null ? '  未量' : String(r.legal)).padStart(7) + (r.taken === null ? '  未量' : String(r.taken)).padStart(7) +
+    (r.takeRate === null ? '   —' : (100 * r.takeRate).toFixed(0) + '%').padStart(9) +
+    (r.loop === null ? '   —' : (100 * r.loop).toFixed(0) + '%').padStart(9) +
+    '  ' + (r.noGrab ? '⚠ 有机会不抓手（机会≥' + LOOP_FLOOR + ' ∧ 抓手率<' + (100 * TAKE_BAD) + '%）'
+      : r.legal === 0 ? '— 从没造出可引爆局面（要治的是贴的时机，不是闭环）'
+        : r.neverTouched ? '— 从不碰这套（不贴也不爆，符合"宁可不贴"）'
+          : r.onlyStick ? '△ 聚合率低但抓手率不差（贴得比爆得多）' : ''));
 }
 
 const touched = rows.filter((r) => r.stick >= CURSE_FLOOR && r.detRate !== null).map((r) => r.detRate);
@@ -93,11 +106,26 @@ say('只贴不爆 ' + bad.length + ' 枚' + (bad.length ? '：' + bad.map((r) =>
 const hard = rows.filter((r) => r.tier === 'hard'), soft = rows.filter((r) => r.tier === 'soft');
 const med = (a) => { const v = a.filter((r) => r.detRate !== null && r.stick >= CURSE_FLOOR).map((r) => r.detRate).sort((x, y) => x - y); return v.length ? (100 * v[Math.floor((v.length - 1) / 2)]).toFixed(0) + '% (n=' + v.length + ')' : '无'; };
 say('按带中位引爆率：hard ' + med(hard) + ' ‖ soft ' + med(soft));
+/* 机会口径的汇总（11-24 加）：这条才是"宁可不贴也不要不闭环"该看的分母 */
+const meas = rows.filter((r) => r.legal !== null);
+if (meas.length) {
+  const trs = meas.map((r) => r.takeRate).filter((v) => v !== null).sort((a, b) => a - b);
+  const tq = (p) => trs.length ? (100 * trs[Math.min(trs.length - 1, Math.floor(p * (trs.length - 1)))]) : NaN;
+  const zero = meas.filter((r) => r.legal === 0).length;
+  say('=== 机会口径（分母 = 天火在 legal 里出现的决策数；R64 已过滤"无可引爆符咒"）===');
+  say('  有量到的 ' + meas.length + ' 枚 ‖ 抓手率 P10 ' + tq(0.1).toFixed(0) + '% ‖ P50 ' + tq(0.5).toFixed(0) + '% ‖ P90 ' + tq(0.9).toFixed(0) + '% ‖ 从没造出机会的 ' + zero + ' 枚');
+  const ng = rows.filter((r) => r.noGrab);
+  say('  「有机会不抓手」（机会≥' + LOOP_FLOOR + ' ∧ 抓手率<' + (100 * TAKE_BAD) + '%）' + ng.length + ' 枚' +
+    (ng.length ? '：' + ng.map((r) => r.id + '(' + r.tier + ',' + (100 * r.takeRate).toFixed(0) + '%,机会' + r.legal + ')').join(' ‖ ') : ''));
+} else say('  ℹ 这批报告还没有"机会"这一维（Stage1 未重烘）⇒ 抓手率**读不出**，不是"0%"：要跑 node tools/pool-skill-report.mjs --stage=1 --all-pool --out=<目录>');
 if (missing.length) say('⚠ 没读到的枚（不是"干净"，是没结论）：' + missing.join(' ‖ '));
 
-const head = ['pack_id', 'tier', 'rulesFingerprint', 'measuredAt', 'cells', 'skillCover', 'curseOk', 'curseLanded', 'firestormOk', 'firestormHits', 'detRate', 'dudRate', 'onlyStick', 'neverTouched'];
+const head = ['pack_id', 'tier', 'rulesFingerprint', 'measuredAt', 'cells', 'skillCover', 'curseOk', 'curseLanded', 'firestormOk', 'firestormHits', 'detRate', 'dudRate', 'fsLegalDecisions', 'fsTakenWhenLegal', 'takeRate', 'loopRate', 'noGrab', 'onlyStick', 'neverTouched'];
 const out = [head.join('\t')];
 for (const r of rows) out.push([r.id, r.tier, r.fp, r.measuredAt, r.cells, r.cover, r.stick, r.land, r.boom, r.hit,
-  r.detRate === null ? '' : r.detRate.toFixed(6), r.dudRate === null ? '' : r.dudRate.toFixed(6), r.onlyStick ? '1' : '0', r.neverTouched ? '1' : '0'].join('\t'));
+  r.detRate === null ? '' : r.detRate.toFixed(6), r.dudRate === null ? '' : r.dudRate.toFixed(6),
+  r.legal === null ? '' : r.legal, r.taken === null ? '' : r.taken,
+  r.takeRate === null ? '' : r.takeRate.toFixed(6), r.loop === null ? '' : r.loop.toFixed(6),
+  r.noGrab ? '1' : '0', r.onlyStick ? '1' : '0', r.neverTouched ? '1' : '0'].join('\t'));
 writeFileSync(OUT, out.join('\n') + '\n');
 say('已落盘：' + OUT + '（' + rows.length + ' 行 + 表头）');
