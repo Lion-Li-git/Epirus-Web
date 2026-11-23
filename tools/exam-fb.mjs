@@ -15,7 +15,9 @@
  * 退出码：0 = 跑完 ‖ 2 = 读不出包/参数
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import { sandbox, loadChamp, aggressionProfile } from './audit-lib.mjs';
+import { sandbox, loadChamp, aggressionProfile, rejectUnknownFlags } from './audit-lib.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), ['packs', 'games', 'out', 'mode'], 'exam-fb');
 
 const arg = (k, d) => { const a = process.argv.find(x => x.startsWith('--' + k + '=')); return a ? a.slice(k.length + 3) : d; };
 const PACKS = String(arg('packs', '')).split(',').map(s => s.trim()).filter(Boolean);

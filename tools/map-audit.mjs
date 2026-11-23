@@ -13,6 +13,9 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
+import { rejectUnknownFlags } from './audit-lib.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), ['data', 'strict'], 'map-audit');
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));

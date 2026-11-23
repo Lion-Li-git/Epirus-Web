@@ -10,6 +10,9 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rejectUnknownFlags } from './audit-lib.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), ['dose', 'dry'], 'attach-arena');
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '..', '..');
 const DATA = join(ROOT, 'champion-map/data');

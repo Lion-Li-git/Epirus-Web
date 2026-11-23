@@ -26,6 +26,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -143,6 +144,7 @@ function poolPairs() {
 
 /* ---------- CLI ---------- */
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  rejectUnknownFlags(process.argv.slice(2), ['selfcheck', 'selfcheck-n', 'packs', 'seeds', 'out', 'json', 'id', 'pack'], 'arena-noise-floor');
   const pairs = arg('packs', '') ? arg('packs', '').split(',').map(id => {
     const hit = poolPairs().find(p => p[0] === id);
     if (!hit) { console.error('⛔ --packs 里的 ' + id + ' 不在池成员表（要测不在池里的件用 --json --pack=）'); process.exit(2); }

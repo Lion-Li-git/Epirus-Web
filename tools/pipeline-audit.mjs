@@ -20,8 +20,10 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { sandbox } from './audit-lib.mjs';
+import { sandbox, rejectUnknownFlags } from './audit-lib.mjs';
 import * as packLib from '../champion-map/pack-id.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), ['id', 'all', 'out', 'verbose'], 'pipeline-audit');
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');

@@ -21,6 +21,7 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import vm from 'node:vm';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 
 const REPO = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1').replace(/\/$/, '');
 const A = process.argv.slice(2);
@@ -272,4 +273,7 @@ const SAMPLE_BEH_BARE = 'G4/G5 行为门（第七轮复核 §15-1，**只判候�
 const SAMPLE_CELLS_OK = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：.e811-F/long mean=72.3% ‖ 中位 70.0% ‖ >50% 的格 7/8 ‖ 最克「只防御(不还手)」99.7%（n=300）\n      .e811-F/multi mean=41.2% ‖ 中位 38.5% ‖ >50% 的格 2/8 ‖ 最克「激光剑连刺」60.3%（n=300）';
 const SAMPLE_CELLS_UNREAD = '   反制者期望损失（对 8 格一行脚本均匀先验 ‖ **只记录不阻断**）：⛔ **读不出**（没解析到 G4CELLS 行 ⇒ gate-drafts 版本比这行旧或 G4 段没跑；不许当"没问题"）';
 
-if (process.argv[1] && /score13\.mjs$/.test(process.argv[1])) main();
+if (process.argv[1] && /score13\.mjs$/.test(process.argv[1])) {
+  rejectUnknownFlags(A, ['selftest', 'pack', 'promote', 'run', 'no-defq', 'density', 'strength', 'eval', 'rows', 'json'], 'score13');
+  main();
+}

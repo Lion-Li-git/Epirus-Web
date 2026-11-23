@@ -22,7 +22,7 @@
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
+import { sandbox, loadChamp, mulberry32, rejectUnknownFlags } from './audit-lib.mjs';
 /* 11-04 晚（千问）：`coverageOf` 要能读 **2.0（v:92）** 候选 ⇒ 装面的那条路（只在容器版本是 92 时才进，见 :205）。 */
 import { readPack2, packCfgExit, install as installArch2 } from '../training/proto2/arch2.mjs';
 
@@ -337,6 +337,7 @@ const arg = k => { const f = A.find(a => a.startsWith('--' + k + '=')); return f
  *   ⇒ 判语器一声不响地变成登记处自检（实测踩过，10-28）。 */
 const DIRECT = process.argv[1] && /champion-gate\.mjs$/.test(process.argv[1]);
 if (DIRECT) {
+  rejectUnknownFlags(A, ['selftest', 'legend', 'pool', 'games', 'only', 'seats', 'paths'], 'champion-gate');
   if (A.includes('--selftest')) selftest();
   else if (A.includes('--legend')) legend();
   else if (A.includes('--pool')) pool(Number(arg('games', 120)) || 120, (arg('only', '') || '').split(',').filter(Boolean), Number(arg('seats', 5)) || 5, (arg('paths', '') || '').split(',').filter(Boolean));
