@@ -147,13 +147,6 @@ function famRows() {
 function findFamByLabel(label) { return famRows().find((x) => x.label === label) || null; }
 function findFamByNum(fam) { return famRows().find((x) => x.fam === String(fam)) || null; }
 const linMain = readTable(join(DATA, 'page/lineage.tsv'));
-const linG3 = readTable(join(DATA, 'page/lineage-g3.tsv'));
-/* sidecar 只许存血统，不许再存家族号：在注册这一步就拒，别留到烘页面时让 viewer 喊。 */
-if (linG3.ix.fam !== undefined || linG3.ix.famLabel !== undefined) {
-  console.error('⛔ `page/lineage-g3.tsv` 的表头还带 fam/famLabel —— 家族号 11-17 起只在 `data/registry.tsv` 定一份' +
-    '（两处各存过一次事故：align 把 registry 的空值盖掉 sidecar 的真值 ⇒ D234 ⑫ 红在 CI）。请把这两列删掉再注册。');
-  process.exit(2);
-}
 const rootDir = resolve(DATA, '../..');
 const normRel = (p) => {
   const s = String(p || '').trim().replace(/\\/g, '/');
@@ -163,7 +156,7 @@ const normRel = (p) => {
 };
 const wid2id = new Map();
 const id2wid = new Map();
-for (const t of [linMain, linG3]) {
+for (const t of [linMain]) {
   const iw = t.ix.wid, ii = t.ix.id;
   if (iw === undefined) continue;
   for (const r of t.rows) {
@@ -171,6 +164,14 @@ for (const t of [linMain, linG3]) {
       if (!wid2id.has(r[iw])) wid2id.set(r[iw], r[ii]);
       if (!id2wid.has(r[ii])) id2wid.set(r[ii], r[iw]);
     }
+  }
+}
+for (const r of reg.rows) {
+  const iw = reg.ix.wid, ii = reg.ix.pack_id;
+  if (iw === undefined) continue;
+  if (r[iw] && r[ii]) {
+    if (!wid2id.has(r[iw])) wid2id.set(r[iw], r[ii]);
+    if (!id2wid.has(r[ii])) id2wid.set(r[ii], r[iw]);
   }
 }
 const rel2id = new Map();
@@ -226,7 +227,7 @@ if (VER === '2.0' && PACK_DIMS.input) {
 /* 11-15 深夜（ZCode）：lineage 列**不再收族名**——11-07 裁定"血统列不再兼记产物来源"，但这里的缺省把
  *   FAMLAB 写进 lineage ⇒ 11-12/11-14 的进图全部带族名入列，页面 keep 式 `!!d.lin` 钉住把 19 枚 2.0 新点
  *   漏进「1.8 及以前」旧图（用户令"老版本图应冻结"）。族名只住 fam_label（registry 第 5 列）与
- *   lineage-g3 的 famLabel 列；lineage 列只收显式 --lineage= 的真血统声明，缺省留空。 */
+ *   registry 的血统列；lineage 列只收显式 --lineage= 的真血统声明，缺省留空。 */
 if (LINEAGE === 'new') LINEAGE = '';
 const parentWid = String(meta.hotstartFrom || '').trim();
 const startUp = normRel(meta.up || (meta.recipe && meta.recipe.env && meta.recipe.env.EPIRUS_SEEDPACK) || '');
@@ -265,7 +266,7 @@ const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unkno
 const pointWid = widOf(packText);
 const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || statSync(PACK).mtime.toISOString()), metaSeed, nameSeed: '',
   parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };
-const ltab = VER === '2.0' ? linG3 : linMain;
+const ltab = VER === '2.0' ? null : linMain;
 for (const c of ['ruler_id', 'cell', 'horizon', 'value', 'n']) if (readTable(RD).ix[c] === undefined) { console.error('⛔ readings 缺列 ' + c); process.exit(2); }
 const RT = readTable(RD);
 const rulerById = new Map(rulers.rows.map((r) => [r[rulers.ix.ruler_id], r]));
@@ -333,16 +334,20 @@ if (VER !== '2.0') {
   const linSelf = linMain.rows.find((r) => r[linMain.ix.id] === ID || (pointWid && r[linMain.ix.wid] === pointWid));
   if (linSelf) regCfg = REG_CFG_COLS.map((c) => linMain.ix[c] !== undefined ? String(linSelf[linMain.ix[c]] ?? '') : '');
 }
-const newReg = [ID, relPack, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'].concat(regCfg);
+/* registry 2026-11-23 起承接 2.0 血统列；lineage-g3 退役。 */
+const REG_LIN_COLS = ['wid', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'parentSrc', 'tsSrc',
+  'parentOf2', 'parentName2', 'parentSrc2', 'parentOf3', 'parentName3', 'parentSrc3'];
+const regLin = REG_LIN_COLS.map((k) => VER === '2.0' ? String(lrow[k] ?? '') : '');
+const newReg = [ID, relPack, VER, FAM, FAMLAB, LINEAGE, now, sha, 'active'].concat(regCfg, regLin);
 const bid = BATCH || ('add-' + ID + '-' + now.slice(0, 10).replace(/-/g, ''));
 const newBatch = [bid, rd.rows.length ? rd.rows[0][rd.ix.ruler_id] : 'a-v2-page-1109', 'A', FIXTURE, '-', bid, basename(RD), String(RT.rows.length), now, 'add-point'];
 console.log('add-point: ' + ID + ' ‖ pack ' + basename(PACK) + ' ‖ readings ' + newReadings.length + ' ‖ display ' + (dispRow ? '有' : '无') + ' ‖ batch ' + bid);
 if (dispRow && display.ix.lineage !== undefined && (!dispRow[display.ix.lineage] || dispRow[display.ix.lineage] === 'new')) dispRow[display.ix.lineage] = LINEAGE;
 if (DRY) { console.log('--dry：未写文件'); process.exit(0); }
-if (!ltab.rows.some((r) => r[ltab.ix.id] === ID)) {
+if (ltab && !ltab.rows.some((r) => r[ltab.ix.id] === ID)) {
   const row = new Array(ltab.header.length).fill('');
   for (const [k, v] of Object.entries(lrow)) if (ltab.ix[k] !== undefined) row[ltab.ix[k]] = v;
-  writeTable(join(DATA, VER === '2.0' ? 'page/lineage-g3.tsv' : 'page/lineage.tsv'), { header: ltab.header, rows: ltab.rows.concat([row]), backup: false });
+  writeTable(join(DATA, 'page/lineage.tsv'), { header: ltab.header, rows: ltab.rows.concat([row]), backup: false });
 }
 
 const wt = (file, table, rows) => writeTable(join(DATA, file), { header: table.header, rows }, { backup: false });

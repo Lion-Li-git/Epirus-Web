@@ -36,9 +36,9 @@ const say = (...a) => { if (!QUIET) console.log(...a); };
 const sha = (buf) => createHash('sha256').update(buf).digest('hex');
 const tsv = (f) => readFileSync(f, 'utf8').replace(/\r/g, '').trim().split('\n');
 
-/* 身份目标：两张 lineage 表并读（与 anchor-recover 同口径：g3=2.0 节点 ‖ lineage.tsv=1.8 全集） */
+/* 身份目标：lineage.tsv（2026-11-23 起 lineage-g3 退役） */
 const wantWid = new Map();
-for (const f of ['champion-map/data/page/lineage.tsv', arg('g3', 'champion-map/data/page/lineage-g3.tsv')]) {
+for (const f of ['champion-map/data/page/lineage.tsv']) {
   let L; try { L = tsv(f); } catch (e) { continue; }
   const h = L[0].split('\t'), ix = Object.fromEntries(h.map((c, i) => [c, i]));
   for (const l of L.slice(1)) { const c = l.split('\t'); if (c[ix.id] && c[ix.wid] && !wantWid.has(c[ix.id])) wantWid.set(c[ix.id], c[ix.wid]); }

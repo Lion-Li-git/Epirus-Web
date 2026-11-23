@@ -38,6 +38,16 @@ const DUMPDEFS = process.argv.includes('--dumpdefs');
  *   ⇒ `indexOf('path')` 返回 −1（path 恰好就是 coords.tsv 的末列，实测被 git checkout 兜一圈后就是这样）。*/
 const rd = f => readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
 const ids = rd(join(HERE, 'data/page/coords.tsv')).trim().split('\n').slice(1).map(l => l.split('\t')[0]);
+/* 2026-11-23：退役 sidecar 后，1.8 的 wid 仍以现有生成表的身份列兜底；lineage-g3 不再参与。 */
+const OLDWID = {}, OLDTS = {};
+try {
+  const T = rd(join(HERE, 'data/page/lineage.tsv')).trim().split('\n').map(l => l.split('\t'));
+  const h = Object.fromEntries(T[0].map((x, i) => [x, i]));
+  for (const r of T.slice(1)) {
+    if (r[h.id] && r[h.wid]) OLDWID[r[h.id]] = r[h.wid];
+    if (r[h.id] && r[h.ts]) OLDTS[r[h.id]] = r[h.ts];
+  }
+} catch (e) {}
 
 /* ===== §E613 包内没自报 `ts` 时的**补录表**（10-16 早上用户看图抓出来的那条静默病）=====
  *   病：查看器的横轴就是训出时刻，`viewer.mjs:1781` 对 `Date.parse(ts)` 非有限值**直接不定位**（`PT(i)` 返回 null）
@@ -54,30 +64,24 @@ const TSFIX = {};
   if (existsSync(p)) { const T = rd(p).replace(/\n+$/, '').split('\n').map(l => l.split('\t')), th = Object.fromEntries(T[0].map((x, i) => [x, i]));
     for (const r of T.slice(1)) if (r[th.id] && r[th.ts]) TSFIX[r[th.id]] = r[th.ts]; } }
 let nTsFix = 0;
-/* 2026-11-17 统一数据仓接轨：lineage.mjs 负责生成全表 lineage.tsv，其中 1.8 走签名/臂线/SOUP 聚类（fam 0..13），
- *   2.0 / G3 节点不参与 1.8 配置等价类聚类：**家族号与标签只从 `data/registry.tsv` 取**（唯一真源），
- *   sidecar `data/page/lineage-g3.tsv` 只提供血统（parent/parentOf/parentName/wid/parentSrc + 融合的 2/3 组）与训出时刻 ts。
- *   仍跑全库 SOUP/META/TS 审计，保证 D233 幂等通过。 */
+/* 2026-11-23 统一数据仓收口：lineage-g3 已退役，2.0 血统字段全部并进 registry.tsv。
+ *   lineage.mjs 只读 registry（唯一真源）生成 lineage.tsv；不再读 sidecar。
+ *   1.8 仍走签名/臂线/SOUP 聚类；2.0 / G3 节点不参与 1.8 配置等价类聚类。 */
+const REG_LIN_COLS = ['wid', 'metaSeed', 'nameSeed', 'parent', 'parentOf', 'parentName', 'parentSrc', 'tsSrc',
+  'parentOf2', 'parentName2', 'parentSrc2', 'parentOf3', 'parentName3', 'parentSrc3'];
 const REGROW = {};
 { const rp = join(HERE, 'data/registry.tsv');
   if (existsSync(rp)) {
     const T = rd(rp).replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
     const rh = Object.fromEntries(T[0].map((x, i) => [x, i]));
-    for (const r of T.slice(1)) if (r[rh.pack_id]) REGROW[r[rh.pack_id]] = {
-      ver: r[rh.ver] || '', fam: r[rh.fam] ?? '', famLabel: r[rh.fam_label] || '', ts: r[rh.ts] || '' };
-  } }
-const G3ROW = {};
-{ const gp = join(HERE, 'data/page/lineage-g3.tsv');
-  if (existsSync(gp)) {
-    const T = rd(gp).replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
-    const gh = Object.fromEntries(T[0].map((x, i) => [x, i]));
-    for (const r of T.slice(1)) if (r[gh.id]) {
-      const o = {}; for (const [k, idx] of Object.entries(gh)) o[k] = r[idx] ?? '';
-      G3ROW[o.id] = o;
+    for (const r of T.slice(1)) if (r[rh.pack_id]) {
+      const o = { ver: r[rh.ver] || '', fam: r[rh.fam] ?? '', famLabel: r[rh.fam_label] || '', ts: r[rh.ts] || '' };
+      for (const k of REG_LIN_COLS) o[k] = rh[k] === undefined ? '' : (r[rh[k]] ?? '');
+      REGROW[r[rh.pack_id]] = o;
     }
   } }
 const G3SET = {};
-for (const id of ids) if (G3ROW[id] || (REGROW[id] && REGROW[id].ver === '2.0')) G3SET[id] = 1;
+for (const id of ids) if (REGROW[id] && REGROW[id].ver === '2.0') G3SET[id] = 1;
 
 /* `braceObj` / `parseMeta` / `widOf` 住在 `./pack-id.mjs`（§E328 起）—— 那份注释也在那里。 */
 /* §E330：**同一个 id 在盘上可以有两份不同的包**，而血统表过去只按 `docs/artifacts/<id>.bak` 找 ⇒ 读错了文件。
@@ -502,8 +506,8 @@ for (const r of REC) { const m = r.m || {};
     const noEvidence = !m.hotstartFrom && String(ENVX.EPIRUS_HOTSTART || '') !== '1' && !seedpackFile(m);
     ps = (/^SLOT-/.test(r.id) || !Object.keys(m).length) ? 'synthetic' : (noEvidence ? 'cold' : 'unresolved');
     if (ps === 'cold') nCold++; else if (ps === 'unresolved') nUnres++; else nSynthP++; }
-  const g3r = G3ROW[r.id], regr = REGROW[r.id];
-  const TSVAL = m.ts || TSFIX[r.id] || (g3r && g3r.ts) || (regr && regr.ts) || '';
+  const g3r = REGROW[r.id], regr = g3r;
+  const TSVAL = m.ts || TSFIX[r.id] || OLDTS[r.id] || (g3r && g3r.ts) || (regr && regr.ts) || '';
   if (!m.ts && TSFIX[r.id]) nTsFix++;
   const pofVal = G3SET[r.id] && g3r ? (IDSET.has(g3r.parentOf) ? g3r.parentOf : '') : (byHash || byPath || byArm || bySlot || bySlotInfer || sP1);
   const psrcVal = G3SET[r.id] && g3r
@@ -514,9 +518,11 @@ for (const r of REC) { const m = r.m || {};
   ROWS.push({ id: r.id, ts: TSVAL, seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
     /* 2.0 包的权重身份也不在 .bak 的 v7 外壳里 ⇒ 回退到 sidecar。没有这条回退，重生成会把
      * GD6b-TILT / OBS6-SHAPEDIST* 等 2.0 行的 wid 写成空，D234 ⑫c 当场红。 */
-    parentOf: pofVal, wid: r.wid || (g3r && g3r.wid) || '',
+    parentOf: pofVal, wid: (() => { const rw = String((g3r && g3r.wid) || ''), ow = String(OLDWID[r.id] || '');
+      if (rw && ow) return (ow.startsWith(rw) && ow.length > rw.length) ? ow : rw;
+      return ow || rw || r.wid || ''; })(),
     psrc: psrcVal,
-    pof2: sP2, psrc2: sP2 ? 'soup' : '',
+    pof2: (sP2 || (g3r && g3r.parentOf2) || ''), psrc2: (sP2 || (g3r && g3r.parentOf2)) ? 'soup' : '',
     demoted: G3SET[r.id] ? '' : demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
@@ -924,7 +930,7 @@ const out = [COLS.join('\t')];
 const g3Fams = new Map();
 for (const r of ROWS) {
   let d = FAM[r.id] || (SLOTID[r.id] ? SLOTDEF : null);
-  const g3r = G3ROW[r.id], regr = REGROW[r.id];
+  const g3r = REGROW[r.id], regr = g3r;
   if (G3SET[r.id]) {
     /* 家族号只有一个家：`data/registry.tsv`（11-17 单源化）。sidecar 里的 fam/famLabel 两列已删——
      *   它们曾与 registry 各存一份，而 13:59 那次"以 registry 为真源回写"把 registry 的空值盖掉了

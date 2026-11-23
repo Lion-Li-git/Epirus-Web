@@ -6,7 +6,7 @@
 
 | 文件 | 粒度 | 说明 |
 |---|---|---|
-| registry.tsv | 一行 = 一份权重 | id/path/ver/fam/fam_label/lineage/ts/sha256/status ‖ **家族号（fam/fam_label）的唯一真源**：11-17 起 `lineage-g3.tsv` 不再存这两列，`lineage.tsv` 的那一列由 `lineage.mjs` 从本表生成（`D234 ⑫e/⑫f` 两头对账） |
+| registry.tsv | 一行 = 一份权重 | id/path/ver/fam/fam_label/lineage/ts/sha256/status + 血统列（wid/metaSeed/nameSeed/parent/parentOf/parentName/parentSrc/tsSrc/融合 2/3 组）‖ **唯一真源**：家族号与 2.0 血统都只在这里存一份；`lineage.tsv` 由 `lineage.mjs` 从本表生成（`D234 ⑫e/⑫f` 两头对账）。2026-11-23 起 `lineage-g3.tsv` 已退役 |
 | archived-pack-meta.tsv | 一行 = 一枚归档旧包 | 18 枚归档 1.8 包的 wid/ts/gens/seed/hotstartFrom/meta_json（不靠旧 packs/ 或 archive/ 路径重扫） |
 | gate-arms-2026-10-09.tsv | 1.8 臂线批次表 | `lineage.mjs` 拆分 1.8 臂家族（fam 8/11/12）所需配方表 |
 | arm-parents.tsv | 臂级父指针参考表 | `lineage.mjs`/`audit-parent-evidence.mjs` 三级父边参考（原 `_e330-armparent.tsv`） |
@@ -21,8 +21,8 @@
 | fit.tsv | 宽表 | 页面 fit 说明 |
 | exam4n-arena-1118.tsv / exam4n-arena-page-1118.tsv / arena-league-1118.tsv / arena-league-1118-page.tsv | 一行 = 一份权重 ‖ 一枚锚 | **Arena B 轴的测量原件**（11-18 起 B=current=`b-arena-page-1118`）：联盟表存 24 枚锚的 path/era/role 与各向 r，读数表存 2/3/5/8 格 × short/long 与 arS/arL/arR。产=`tools/arena-eval.mjs`（⚠ `--dose` 默认是 exam，不是 page），接=`tools/attach-arena.mjs` |
 | arena-noise-floor-1118.tsv | 一行 = 一份权重 | **Arena 这把尺的种子噪声地板**：6 粒 seedBase（82200 起步、步长 1000）的 `rAll` 中位/极差/逐粒值（pt）。产=`tools/arena-noise-floor.mjs`，它每次先做接线自证（复算对不上在册 `arR` 就直接红）。⚠ 判读用**批间 σ**（由逐粒值现算），不用极差——`docs/POOL-CONTRACT.md` §5.2：极差随批数增大，6 批 E[极差]≈2.33σ，拿它当 σ 会把尺子看粗一倍。冠军池入池的**第三道留痕只存这一份**，`page/pool-members.tsv` 按 id 引用、不复制读数（11-17 家族号那次的教训） |
-| page/lineage.tsv | 一行 = 图上一点（**生成物**） | `lineage.mjs` 从 registry + 下面那张 sidecar 生成；viewer 吃这份上色与画父边。`rebuild-map` **不跑生成器** ⇒ 手改这里或改完 registry 不重生成，由 `D234 ⑫f` 抓 |
-| page/lineage-g3.tsv | 一行 = 2.0 节点的血统 | **只存血统**：ts/metaSeed/nameSeed/parent/parentOf/parentName/wid/parentSrc/tsSrc + 融合的 2/3 组。11-17 起 fam/famLabel 两列已删（曾与 registry 各存一份，被一次"对齐"单向覆盖 ⇒ CI 红）；表头再出现这两列，viewer 与 add-point 都会当场拒。迁移与五组验牙的做法记在 `champion-map/pipeline/migrate-drop-family-from-sidecar.mjs` 头注 |
+| page/lineage.tsv | 一行 = 图上一点（**生成物**） | `lineage.mjs` 只从 registry 生成；viewer 吃这份上色与画父边。`rebuild-map` **不跑生成器** ⇒ 手改这里或改完 registry 不重生成，由 `D234 ⑫f` 抓 |
+| page/lineage-g3.tsv | **已退役（2026-11-23）** | 200 行血统已并入 registry；10 枚无身份孤行归档在 `champion-map/archive/lineage-g3-orphans-2026-11-23.tsv`，不再参与管线 |
 | page/coords.tsv / pool-members.tsv / promote.tsv / ship-times.tsv / slot-*.tsv | 页面元数据 | viewer/slot-identity 的页面输入；P0 从根目录迁入，根目录不再放这些表 |
 | build/exam-view.tsv | 视图 | readings + rulers；与 coords-gen3 逐值对照 |
 | build/coords-view.tsv | 页面视图 | display + canonical 编译；rebuild-map 直接吃 |

@@ -1920,8 +1920,16 @@ try { mkdirSync(join('champion-map', 'data', 'build'), { recursive: true }); } c
   if (unver.length) console.log('   ℹ️ ⑦ pof2 行里 ' + unver.length + ' 枚的包不在盘（11-19 清理）⇒ 不参与上界：' +
     unver.map(c => c[hd.indexOf('id')]).join(' ‖ '));
   const nVerified = pof2Rows.length - unver.length;
-  ok(nVerified <= soupMeta.length, '⑦ 在盘的 pof2 行 ' + nVerified + ' 条多于声明的融合粒数 ' + soupMeta.length +
-    ' ⇒ 边是从别处冒出来的（表被手改或 wid 反查撞了）');
+  /* 2026-11-23 统一数据仓：lineage-g3 退役后 registry 是唯一血统真源。
+   *   V3S2 这类 2.0 融合行的声明只在新 registry 列里，不再有 .bak 的 soup.sources；
+   *   因此上界取「artifact 声明 ∪ registry parentSrc=parentSrc2=soup」而不是只看 artifact。 */
+  const RGT = readFileSync('champion-map/data/registry.tsv', 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n').map(l => l.split('\t'));
+  const rgi = Object.fromEntries(RGT[0].map((x, i) => [x, i]));
+  const soupIds = new Set(soupMeta.map(x => x.id));
+  for (const c of RGT.slice(1)) if ((c[rgi.parentSrc] || '') === 'soup' || (c[rgi.parentSrc2] || '') === 'soup') soupIds.add(c[rgi.pack_id]);
+  const soupDecl = soupIds.size;
+  ok(nVerified <= soupDecl, '⑦ 在盘的 pof2 行 ' + nVerified + ' 条多于声明的融合粒数 ' + soupDecl +
+    '（artifact ' + soupMeta.length + ' ∪ registry ' + (soupDecl - soupMeta.length) + '）⇒ 边是从别处冒出来的（表被手改或 wid 反查撞了）');
 });
 /* ===== D234（§E590 · 千问）冠军池的装配契约不许漂 =====
  * 为什么**立新门**而不是往别处加腿（用户 2026-10-11 23:0x：「不必要死守按照现有的规则」+

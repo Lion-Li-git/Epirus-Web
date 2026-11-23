@@ -338,36 +338,8 @@ if (existsSync(regP)) {
     if (c[iId] && c[iTs]) REGTS[c[iId]] = c[iTs];
   }
 }
-/* ===== §G3（11-05 深夜 · 用户令「2.0 点放进旧演化图」）：2.0 谱系 sidecar 并进 LIN =====
- *   lineage.tsv 由 lineage.mjs 生成，但 `rebuild-map` 不跑那个生成器，而 2.0 接机（add-point）只写
- *   registry + 这张 sidecar ⇒ **本文件的这次 merge 是接机路径的承重墙**，不能删。
- *   sidecar 只提供**血统**（ts/parent/parentOf/parentName/wid/parentSrc + 融合用的 2/3 组）；
- *   **家族号自 11-17 起只在 `data/registry.tsv` 存一份**（`REGFAM`）。
- *   ⚠ 为什么非删掉 sidecar 里的 fam/famLabel 不可（11-17 的实测教训）：这两列曾与 registry 各存一份，
- *     13:59 那次"以 registry 为真源回写"把 registry 里 4 枚 MSB15 的**空值**盖掉了 sidecar 里的真值
- *     ⇒ D234 ⑫ 红在 CI。同一个数存两处，就迟早有一次同步方向选错；这里选"只留一处"而不是"再加一层校验"。
- *   版本判定也不在这里：只读 display 的 `ver` 列（由容器 `"v":92` 判，11-05 上午那次 D4a 误归 2.0 之后定的规矩）。 */
-const g3linP = join(HERE, arg('g3lin', 'data/page/lineage-g3.tsv'));
-let G3IDS = new Set();
-if (existsSync(g3linP)) {
-  const gl = readFileSync(g3linP, 'utf8').replace(/\r\n/g, '\n').trim().split('\n'); const gh = gl[0].split('\t');
-  if (gh.indexOf('fam') >= 0 || gh.indexOf('famLabel') >= 0) {
-    console.error('⛔ ' + g3linP + ' 的表头还带 fam/famLabel —— 家族号自 11-17 起只在 `data/registry.tsv` 定一份，' +
-      '两处各存就是今天那次红（align 把 registry 的空值盖掉 sidecar 的真值）的形状。请把这两列从 sidecar 删掉，别改本判据。');
-    process.exit(2);
-  }
-  const fams = new Set(); let orphan = 0, noFam = 0;
-  for (const l of gl.slice(1)) { const c = l.split('\t'); const o = {}; gh.forEach((k, i) => { o[k] = c[i]; });
-    const rf = REGFAM[o.id];
-    if (rf && rf.fam !== '') { o.fam = rf.fam; o.famLabel = rf.famLabel; }
-    else if (!LIN[o.id]) orphan++;                       /* 父边占位（wid:…）/退役件：只作父边参考，不参与上色 */
-    else if (!LIN[o.id].fam) noFam++;                    /* 在图上有行、但两处都拿不到家族号 ⇒ 会落 fam 0 */
-    LIN[o.id] = Object.assign({}, LIN[o.id] || {}, o); G3IDS.add(o.id);
-    if (o.fam !== '' && o.fam !== undefined) fams.add(Number(o.fam)); }
-  if (noFam) { console.error('⛔ sidecar 里 ' + noFam + ' 枚在 lineage.tsv 有行、却从 registry 拿不到家族号 ⇒ 图上会落 fam 0（等于没家族）。去 registry 补号，别在这里兜底。'); process.exit(2); }
-  console.log('2.0 谱系 sidecar：' + G3IDS.size + ' 枚并进 LIN（家族号取 registry）‖ 族号 ' + [...fams].sort((a, b) => a - b).join(',') +
-    (orphan ? ' ‖ ⚠ ' + orphan + ' 行既不在 registry 也不在 lineage.tsv（父边占位/退役件，只作父边参考）' : ''));
-} else console.log('⚠ 没有 ' + g3linP + ' ⇒ 2.0 点的父边全丢（家族号还在 registry，但血统链断了）');
+/* 2026-11-23：lineage-g3 已退役。2.0 血统字段并入 registry，lineage.tsv 已由 lineage.mjs 直接生成；
+ *   viewer 不再 merge sidecar，版本仍只读 display 的 ver 列。 */
 let OKM = null, G2M = null, POK = 0, OKSRC = '', OKTAG = '';
 if (existsSync(feasP)) {
   const L = readFileSync(feasP, 'utf8').trim().split('\n');

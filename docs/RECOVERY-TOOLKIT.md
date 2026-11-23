@@ -43,7 +43,7 @@ node tools/anchor-recover.mjs --wids=ID=wid,... --sources=D:/x,D:/y --do   # 手
 ```
 
 - 身份判定 = wid 逐位（路径/META.ts 都不算数）。
-- **wid 目标 = 两张 lineage 表并读**（lineage-g3=2.0 ‖ page/lineage.tsv=1.8 全集，11-20 实测 662 枚缺失全部有 wid 判据）——但 wid 只能验身份，**盘上没源就得批量重产**（11-20 实测：3525 个源文件只直接对回 3 枚）。
+- **wid 目标 = page/lineage.tsv**（2026-11-23 起 lineage-g3 退役，2.0 wid 已并入 registry/生成表，1.8 全集仍在此表）——但 wid 只能验身份，**盘上没源就得批量重产**（11-20 实测：3525 个源文件只直接对回 3 枚）。
 - 恢复后必做：`git add -f` ‖ registry sha256 同步 ‖ 台账 `missing→ok` ‖ `node tools/arena-eval.mjs`（静默 exit 0 = 接线自证绿）。
 - ⚠ 新包入账走 `champion-map/pipeline/add-point.mjs`（registry 25 列契约：1.8 从 lineage.tsv 回填 16 列配置、2.0 留空）——手搓 registry 行会对不上表头被 writeTable 咬。
 

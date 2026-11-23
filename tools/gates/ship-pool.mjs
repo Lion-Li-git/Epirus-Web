@@ -497,17 +497,15 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
   }
 
   /* ⑫ 用户 11-12：新点只进地图、不进谱系图 ⇒ 每个 display 点都必须在谱系表里有行。
-   *   谱系表有两份：v7 主表 data/page/lineage.tsv + 2.0 sidecar data/page/lineage-g3.tsv。
+   *   谱系表只有一份：data/page/lineage.tsv（2026-11-23 起 lineage-g3 退役）。
    *   这不是页面生成器能替调用方补的：add-point 只写 registry/display，家族/父边是人工判定；
    *   所以这里钉**覆盖**，漏一枚就红，并点名缺的是谁。 */
   {
     const rd = (f) => readFileSync(f, 'utf8').replace(/\r\n/g, '\n').replace(/\n+$/, '').split('\n');
     const DH = rd('champion-map/data/display.tsv'), did = DH[0].split('\t').indexOf('id');
     const disp = DH.slice(1).map((l) => l.split('\t')[did]).filter(Boolean);
-    /* 11-17 家族号单源化：`registry.fam/fam_label` 是唯一真源，sidecar `lineage-g3.tsv` 从此只存血统、
-     *   不再带 fam/famLabel 两列（两处各存过一次事故：13:59 那次"以 registry 为真源回写"把 registry 的
-     *   空值盖掉了 sidecar 里的真值 ⇒ 本门 ⑫ 当场红在 CI）。
-     *   所以下面查家族号时：表自己带 fam 就用表的（lineage.tsv 是生成物，它空了=过期，要能被抓住），
+    /* 11-17 家族号单源化：`registry.fam/fam_label` 是唯一真源；2026-11-23 起血统列也并入 registry，lineage-g3 退役。
+     *   下面查家族号时：表自己带 fam 就用表的（lineage.tsv 是生成物，它空了=过期，要能被抓住），
      *   不带就回 registry 查 —— ⑫ 的语义一格没松。 */
     const RG = rd('champion-map/data/registry.tsv'), RH = RG[0].split('\t');
     const rId = RH.indexOf('pack_id'), rFam = RH.indexOf('fam'), rLab = RH.indexOf('fam_label');
@@ -516,7 +514,7 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
       if (c[rId]) REGF.set(c[rId], { fam: c[rFam] === undefined ? '' : c[rFam], lab: c[rLab] === undefined ? '' : c[rLab] }); }
     eq(rId >= 0 && rFam >= 0 && rLab >= 0, true, '⑫ registry.tsv 必须带 pack_id/fam/fam_label 三列——家族号的唯一真源');
     const lin = new Set(), famTs = new Map(), newBad = [], stale = [];
-    for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
+    for (const f of ['champion-map/data/page/lineage.tsv']) {
       const R = rd(f), hd = R[0].split('\t');
       const id = hd.indexOf('id'), fam = hd.indexOf('fam'), lab = hd.indexOf('famLabel'), ts = hd.indexOf('ts');
       for (const l of R.slice(1)) { const c = l.split('\t'); if (!c[id]) continue;
@@ -533,7 +531,7 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     }
     const miss = disp.filter((id) => !lin.has(id));
     eq(miss.length, 0, '⑫ display 有 ' + disp.length + ' 枚，谱系表覆盖 ' + lin.size + ' 枚；缺 ' + miss.length + ' 枚：' + miss.slice(0, 8).join(',') +
-      ' ⇒ 这些点只会出现在地图，不会出现在谱系图（家族号补进 registry、父边补进 lineage/lineage-g3，再跑 node champion-map/rebuild-map.mjs）');
+      ' ⇒ 这些点只会出现在地图，不会出现在谱系图（家族号/父边补进 registry，再跑 node champion-map/lineage.mjs && node champion-map/rebuild-map.mjs）');
     /* ⑫e（11-17 新增，随家族号单源化）：每个上图的点都必须在 registry 里有行且带家族号。
      *   判的两种真事故：11-16 那枚池成员压根没进 registry（页面有环、账上没人）‖ 11-17 那 4 枚 MSB15
      *   在 registry 里 fam 是空的（点只出现在地图、不出现在谱系图）。两条都得红，缺一不可。 */
@@ -564,7 +562,7 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     {
       const soupBad = [], soupGap = [], judged = [];
       let soupSeen = 0;
-      for (const f of ['champion-map/data/page/lineage.tsv', 'champion-map/data/page/lineage-g3.tsv']) {
+      for (const f of ['champion-map/data/page/lineage.tsv']) {
         const R2 = rd(f), C2 = R2[0].split('\t');
         const iId = C2.indexOf('id'), iPS = C2.indexOf('parentSrc'), iP = C2.indexOf('parentOf'), iP2 = C2.indexOf('parentOf2');
         const iPS2 = C2.indexOf('parentSrc2'), iPS3 = C2.indexOf('parentSrc3'), iP3 = C2.indexOf('parentOf3');

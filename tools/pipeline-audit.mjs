@@ -76,7 +76,7 @@ const readTsv = (p) => {
 const D = (p) => join(ROOT, 'champion-map/data', p);
 
 const reg = readTsv(D('registry.tsv'));
-const lin = readTsv(D('page/lineage-g3.tsv'));
+const lin = readTsv(D('page/lineage.tsv'));
 const coo = readTsv(D('page/coords.tsv'));
 const rd = readTsv(D('readings/current.tsv'));
 const pool = readTsv(D('page/pool-members.tsv'));
