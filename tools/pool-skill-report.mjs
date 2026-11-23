@@ -107,7 +107,17 @@ function stage1(W, pack, oppDesc, gamesCensus) {
      *   而用户的裁定是「宁可不贴，也不要不闭环」⇒ 这一维必须按局记，不能从次数反推。
      *   stickGames = 本局贴到过（`curse` 事件 owner=被测席）；loopGames = 贴过且本局至少一次引爆真吃到符（`n>0`）；
      *   boomGames = 本局出过引爆手（不管吃没吃到）；emptyBoomGames = 出手引爆但 `n=0`（空转）的次数。 */
-    stickGames: 0, loopGames: 0, boomGames: 0, emptyBoomGames: 0 };
+    stickGames: 0, loopGames: 0, boomGames: 0, emptyBoomGames: 0,
+    /* 机会 vs 出手（11-24 夜班加 · 分两种病的唯一办法）：R64（`js/core/state.js:160-172`）把
+     *   "没有自己贴出的可引爆符咒"的天火**挡在 legal 之外**，所以
+     *     `fsLegalDecisions` = 决策点上天火**可用**（既合法又买得起才算，legal 已过滤）的次数；
+     *     `fsTakenWhenLegal` = 其中真出了天火的次数。
+     *   ⇒ 差值就是「**有机会却没爆**」，它才是裁定要治的那一种；而 `fsLegalDecisions=0` 的包
+     *     是"根本没造出可引爆的局面"，治它得改贴的时机/剂量，不是骂它不闭环。
+     * ⚠ 我差点先加一个 `curseBlocked` 计数，但 `resolve.js:1261` 的 `curseBlock` 是
+     *   "**贴**被对方盾挡"（`pid: t` 是被贴者），与 R64 无关，而且 `curseOk − curseLanded` 已经等于它
+     *   ⇒ 加了只会造出一个看着精确的冗余字段，已撤。 */
+    fsLegalDecisions: 0, fsTakenWhenLegal: 0 };
   const oppChoosers = oppDesc.map(od => {
     if (od.kind === 'script') {
       if (typeof B[od.fn] !== 'function') { console.error('⛔ 脚本对手取不到：' + od.name + '（fn=' + od.fn + '）'); process.exit(2); }
@@ -141,6 +151,11 @@ function stage1(W, pack, oppDesc, gamesCensus) {
     decN++;
     const got = base(state, pid, legal);
     const key = got && (got.key || got);
+    /* 天火机会 vs 出手（定义见 curseStats 处的注）：只在被测席的决策点上数，且照抄别处的 legal 形状 */
+    if (Array.isArray(legal) && legal.some((l) => l && l.key === R.SK.FIRESTORM)) {
+      curseStats.fsLegalDecisions++;
+      if (key === R.SK.FIRESTORM) curseStats.fsTakenWhenLegal++;
+    }
     const bk = bucketOf(state, pid);
     curCell.buckets[bk] = curCell.buckets[bk] || {};
     curCell.buckets[bk][key] = (curCell.buckets[bk][key] || 0) + 1;
