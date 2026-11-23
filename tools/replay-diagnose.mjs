@@ -93,7 +93,11 @@ for (const q of want) {
   let blank = 0;
   if (has(lc[lh.mode])) { if (meta.mode !== lc[lh.mode]) diffs.push('mode 实跑=' + meta.mode + ' / 在册=' + lc[lh.mode]); } else blank++;
   if (has(lc[lh.gens])) { if (String(meta.gens) !== lc[lh.gens]) diffs.push('gens 实跑=' + meta.gens + ' / 在册=' + lc[lh.gens]); } else blank++;
-  if (has(wantOppsN)) { if (String(meta.pop) !== wantOppsN) diffs.push('对手池 **pop 实跑=' + meta.pop + ' / 在册 oppsN=' + wantOppsN + '**（名单里 ' + oppsList.length + ' 个）'); } else blank++;
+  /* ⚠ 口径修正（11-24 夜班自我抓到）：`lineage.tsv` 的 `oppsN` 是**生成器从包内 META 烘出来的 `opps.length`**
+   *   （`champion-map/lineage.mjs:157/492`），拿产物的 `pop`（GA 群体大小）去比它，是把两个不同的量当同一个 ⇒
+   *   上一版因此把 8 枚报成"差对手池 pop（可改 env 救）"，而它们**名单长度本来就和在册一致**（22=22），
+   *   差的是别的维度。⇒ 这里比 `oppsList.length`，`pop` 只作为附加信息印出来，不参与判定。 */
+  if (has(wantOppsN)) { if (String(oppsList.length) !== wantOppsN) diffs.push('对手池 **名单长度 实跑=' + oppsList.length + ' / 在册 oppsN=' + wantOppsN + '**（产物 pop=' + meta.pop + '，pop 不参与判定）'); } else blank++;
   if (has(lc[lh.styleW])) { if (String(meta.styleW || 0) !== lc[lh.styleW]) diffs.push('styleW 实跑=' + meta.styleW + ' / 在册=' + lc[lh.styleW]); } else blank++;
   rows.push({
     id: q.id, prod: hit.p.replace(/\\/g, '/'), stale: hit.stale, pop: meta.pop, oppsLen: oppsList.length,
@@ -110,7 +114,7 @@ for (const r of rows) {
   console.log('    ' + r.verdict);
 }
 const bucket = (r) => r.note ? r.note.replace(/\s*\d+.*$/, '')
-  : /对手池/.test(r.verdict) ? '差对手池 pop（可改 env 救）'
+  : /对手池/.test(r.verdict) ? '差对手池名单长度（可改 opps 名单/env 救）'
     : /mode 实跑|gens 实跑|styleW 实跑/.test(r.verdict) ? '差 mode/gens/styleW（可改参数救）'
       : /全没记/.test(r.verdict) ? '线谱表没记可比列 ⇒ 无从判（别调 env）'
         : '可比列一致仍不等 ⇒ 查热启动件/era 本体';
