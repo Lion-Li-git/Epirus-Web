@@ -42,7 +42,7 @@ jobs:
       - name: 生成冠军池懒加载分片
         run: |
           set -euo pipefail
-          node tools/build-pool-bundle.mjs --split --ver=p1123e
+          node tools/build-pool-bundle.mjs --split --ver=p1123f
           test -s js/pool-manifest.js
           test -d js/pool-packs
           test "$(find js/pool-packs -type f | wc -l)" -ge 1

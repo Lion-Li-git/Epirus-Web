@@ -55,16 +55,10 @@ export const LADDER_CLAIM = {
    *   ⇒ 差一个字符就是永久过期。手打派生值是这个仓最常犯的错之一。
    * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
    *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
-  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:p0.7/s2/min1/st:mix+st:toolkit;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:p0.1/s1/min1/st:toolkit;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
-  source: '§E627（10-15 午 · 用户裁定 **C = `st:toolkit`+`st:mix`** = §E600-B 原装配之后）：node tools/probe-diff-ladder.mjs --pool=1 --tiers=lv:sparring,lv:regular,lv:hard --pairs=1 --games=1000 --seed=77000..77007 --mode=multi|long' +
-    '（跑法与聚合 = `docs/artifacts/e608-out/recheck-mix2.mjs`，日志 `…/recheck-mix2/`、汇总 `…/recheck-mix2-summary.txt`；每跑两条守卫：抽法推导里 regular=按带加权 ‖ 掺席行必须是 `lv:sparring=2 席[st:toolkit,st:mix]`；跑法 = 6 路并发 + 容忍 probe 自带那道 1.5pt 闸 exit 1、只收 stdout 里的机器可读行，底稿 `docs/artifacts/e608-out/ladder-C-8seed-ds.txt`）‖' +
-    '不带 `--pool=1` 的那两行是**故意的负对照**（同 seed 同盐、四席同一枚包、既无池也无掺席）⇒ 它的"不分"是设计，不是产品缺陷。' +
-    '‖ **d = 跨 seed 配对差均值，se = 其标准误 sd/√8**（10-12 那批是单次 1500 局的组内配对 SE ⇒ 两批的 se 不是同一个东西，只比 σ 数）。' +
-    '‖ 上一批（`recheck-mix2/`，掺的是 **2×`st:toolkit`**）已被本批替换：掺席换了 ⇒ 签名换了 ⇒ 那张账过期，不做历史对照列。' +
-    '★ 本批与 **§E610**（同一只 C 形状）**逐字相同**：电平 17.18/15.89/13.43 ‖ 16.39/16.21/13.51，四条 d/se 全等 ⇒ 这把尺跨批没漂（免费闭合检查）。' +
-    '‖ 10-12 那批的原始日志与两次候选分带在 `docs/research/logs/2026-10-12-e596-three-tier.md`，翻序记录在 `…/2026-10-12-e595-ladder-register.md`',
+  sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:p0.35/s1/min1/st:mix+st:toolkit;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:p0.1/s1/min1/st:toolkit;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
+  source: '2026-11-23 全池重平衡（38→25 枚：hard 13 ‖ soft 12）+ lv:sparring 掺席调为 p=0.35/s1 后实测：node tools/probe-diff-ladder.mjs --pool=1 --surrogate=rule --pairs=1 --games=1000 --seed=77000 --mode=multi|long',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
-  measuredAt: '2026-10-21',
+  measuredAt: '2026-11-23',
   /* ===== 10-21 概率掺批次（用户更正：脚本与冠军包一起抽，不是固定 k 席）=====
    * 形状（逐席独立、按声明 seats 封顶）：简单 p=0.7/s2（ids mix+toolkit，一席时给 mix）‖ 普通 p=0.1/s1（toolkit）。
    * 读数（n=5 · 8 seed × 1000 局/档 · 逐局配对）：multi 17.85/15.95/13.89；long 17.57/14.65/13.05。
@@ -153,16 +147,12 @@ export const LADDER_CLAIM = {
    */
   modes: {
     'pool:multi': [
-      { from: "lv:regular", to: "lv:sparring", d: 1.90, se: 0.69, sep: true },
-      { from: "lv:hard", to: "lv:regular", d: 2.06, se: 0.61, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 3.80, se: 1.82, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 14.00, se: 1.51, sep: true }
     ],
     'pool:long': [
-      /* ⚑ §E627（C = `toolkit`+`mix`）：这一对**回到"分不开"**（+0.17 ±0.41 = 0.43σ ⇒ `sep: false`）——
-       *   也就是"**不再翻序，但也仍没有台阶**"。本班复算与 §E610 那一批（同一只 C 形状）**逐字相同**。
-       *   ⚠ 而 §E623 记过跨批漂移 ~1pt ⇒ 幅度 <1pt 的行一律当**批条件读数**引，不许当稳态声称。
-       *   （旧账里这一格曾是 `d: -1.20, sep: true` —— 那是 **A = 2×toolkit** 的形状，随 10-15 12:0x 的裁定一起作废。） */
-      { from: "lv:regular", to: "lv:sparring", d: 2.92, se: 0.67, sep: true },
-      { from: "lv:hard", to: "lv:regular", d: 1.60, se: 0.37, sep: true }
+      { from: "lv:regular", to: "lv:sparring", d: 6.10, se: 2.09, sep: true },
+      { from: "lv:hard", to: "lv:regular", d: 17.50, se: 1.65, sep: true }
     ],
     'single:multi': [
       { from: "lv:regular", to: "lv:sparring", d: 0.06, se: 0.36, sep: false },

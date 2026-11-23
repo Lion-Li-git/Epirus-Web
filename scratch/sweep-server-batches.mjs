@@ -21,7 +21,7 @@ const head = lines[0].split('\t');
 const ix = Object.fromEntries(head.map((h, i) => [h, i]));
 const jobs = lines.slice(1).map((l) => {
   const c = l.split('\t');
-  return { batch: c[ix.batch], fam: c[ix.fam], era: c[ix.era], arm: c[ix.arm], seeds: (c[ix.seeds] || '').split(','), opps: c[ix.opps], mode: c[ix.mode], ids: (c[ix.ids] || '').split(','), paths: (c[ix.paths] || '').split(','), targets: (c[ix.targets] || '').split(','), calibSeed: c[ix.calibSeed] || '', calibWid: c[ix.calibWid] || '', calibPath: c[ix.calibPath] || '', env: (c[ix.env] !== undefined ? c[ix.env] : '') };
+  return { batch: c[ix.batch], fam: c[ix.fam], era: c[ix.era], arm: c[ix.arm], seeds: (c[ix.seeds] || '').split(','), opps: c[ix.opps], mode: c[ix.mode], hot: c[ix.hot] || '', ids: (c[ix.ids] || '').split(','), paths: (c[ix.paths] || '').split(','), targets: (c[ix.targets] || '').split(','), calibSeed: c[ix.calibSeed] || '', calibWid: c[ix.calibWid] || '', calibPath: c[ix.calibPath] || '', env: (c[ix.env] !== undefined ? c[ix.env] : '') };
 }).filter((j) => j.era && j.batch);
 const mine = jobs.filter((_, k) => k % TOTAL === SHARD);
 console.log(`分片 ${SHARD}/${TOTAL}：${mine.length} 批（校准 ${mine.filter((j) => j.calibWid).length}）`);

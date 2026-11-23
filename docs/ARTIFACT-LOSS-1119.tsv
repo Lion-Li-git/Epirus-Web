@@ -349,7 +349,7 @@ v7b-45	docs/artifacts/v7b-45.bak	missing
 v7b-46	docs/artifacts/v7b-46.bak	missing	
 v7b-47	docs/artifacts/v7b-47.bak	ok	
 v7b-48	docs/artifacts/v7b-48.bak	ok	
-v7bead1-31	docs/artifacts/v7bead1-31.bak	missing	
+v7bead1-31	docs/artifacts/v7bead1-31.bak	sha-diff-wid-same	3643daab02f754a1e63b6de6b3ad0a7c00807b412534f72dac276247ac1665d1
 v7bead1-93	docs/artifacts/v7bead1-93.bak	ok	
 v7bead100-31	docs/artifacts/v7bead100-31.bak	missing	
 v7bead100-82	docs/artifacts/v7bead100-82.bak	missing	
@@ -375,7 +375,7 @@ v7big1-82	docs/artifacts/v7big1-82.bak	ok
 v7big1-91	docs/artifacts/v7big1-91.bak	ok	
 v7big1-92	docs/artifacts/v7big1-92.bak	ok	
 v7big1-93	docs/artifacts/v7big1-93.bak	ok	
-v7blk1-31	docs/artifacts/v7blk1-31.bak	missing	
+v7blk1-31	docs/artifacts/v7blk1-31.bak	sha-diff-wid-same	25cb7f648c9aa9c1860e594e2defb3bc5c95ddd28a1ea08347aed5e67de45a0a
 v7blk1-81	docs/artifacts/v7blk1-81.bak	ok	
 v7blk1-82	docs/artifacts/v7blk1-82.bak	ok	
 v7blk1-91	docs/artifacts/v7blk1-91.bak	ok	
@@ -414,12 +414,12 @@ v7curri1-82	docs/artifacts/v7curri1-82.bak	ok
 v7curri1-91	docs/artifacts/v7curri1-91.bak	ok	
 v7curri1-92	docs/artifacts/v7curri1-92.bak	ok	
 v7curri1-93	docs/artifacts/v7curri1-93.bak	ok	
-v7curri2-31	docs/artifacts/v7curri2-31.bak	missing	
-v7curri2-81	docs/artifacts/v7curri2-81.bak	missing	
-v7curri2-82	docs/artifacts/v7curri2-82.bak	missing	
-v7curri2-91	docs/artifacts/v7curri2-91.bak	missing	
-v7curri2-92	docs/artifacts/v7curri2-92.bak	missing	
-v7curri2-93	docs/artifacts/v7curri2-93.bak	missing	
+v7curri2-31	docs/artifacts/v7curri2-31.bak	sha-diff-wid-same	39f9d9e1c6b004db9d81fad6cc9b48bd11096c51fd688b2aee8923351af26f54
+v7curri2-81	docs/artifacts/v7curri2-81.bak	sha-diff-wid-same	5ce23d721f016c1e72d281510b13e7845a90c25fc89e7307ffa59ebd72d01c81
+v7curri2-82	docs/artifacts/v7curri2-82.bak	sha-diff-wid-same	406b52cc8746050459786316f98082097c0e71c83d478682936635574a34d102
+v7curri2-91	docs/artifacts/v7curri2-91.bak	sha-diff-wid-same	36f0c472cebfa2063e18271754fd8e5d495b54c9e762b09e85890cb8b6b132f6
+v7curri2-92	docs/artifacts/v7curri2-92.bak	sha-diff-wid-same	1b10076872c43b3a7d2b8e44370d14b6ee9e8342b837cde8ecab786201f3b6a9
+v7curri2-93	docs/artifacts/v7curri2-93.bak	sha-diff-wid-same	a24ed7460db45a2652dba655934f92f64bc103e45573ba7fc7bb44d816a0f276
 v7densE-31	docs/artifacts/v7densE-31.bak	ok	
 v7densE-81	docs/artifacts/v7densE-81.bak	ok	
 v7densE-82	docs/artifacts/v7densE-82.bak	ok	
@@ -614,9 +614,9 @@ v7press3-82	docs/artifacts/v7press3-82.bak	sha-diff-wid-same	e60dd4a1f1e2d2da13e
 v7press3-91	docs/artifacts/v7press3-91.bak	ok	
 v7press3-92	docs/artifacts/v7press3-92.bak	sha-diff-wid-same	f2d7fb8262590dc8a665bc79f619deda913d2f349e075c84e98d5059697fd578
 v7press3-93	docs/artifacts/v7press3-93.bak	sha-diff-wid-same	06d141345f2ae482df64dbe393cc25525b9ee56654be29fe60728b1949e9a0cd
-v7protoE-31	docs/artifacts/v7protoE-31.bak	missing	
-v7protoE-81	docs/artifacts/v7protoE-81.bak	missing	
-v7protoE-82	docs/artifacts/v7protoE-82.bak	missing	
+v7protoE-31	docs/artifacts/v7protoE-31.bak	sha-diff-wid-same	ac3c05735ba27bf42495e957dddee8602ffe4f5b366162896256a94e106ce83a
+v7protoE-81	docs/artifacts/v7protoE-81.bak	sha-diff-wid-same	2ff0dd8b868ce164e50bb043c13dbc7aa792616870728fc2b55b17d9f37102f6
+v7protoE-82	docs/artifacts/v7protoE-82.bak	sha-diff-wid-same	3b0f9311d896bf7ab0f5e7c1a5fe2f85096b4ee4469978bf4cad4511723bd68c
 v7r2-35	docs/artifacts/v7force2-35.bak	sha-diff-wid-same	26ad558b77bec3f669c932b95611b0d06e441b94a4e8e45fd758b775d40330a9
 v7r3-45	docs/artifacts/v7r3-45.bak	missing	
 v7r3-46	docs/artifacts/v7r3-46.bak	missing	
@@ -654,9 +654,9 @@ v7role1-82	docs/artifacts/v7role1-82.bak	ok
 v7role1-91	docs/artifacts/v7role1-91.bak	ok	
 v7role1-92	docs/artifacts/v7role1-92.bak	sha-diff-wid-same	da4dfd468d91555983391c5e51ab016cda227613e49cea1b8031b452f6d88d5f
 v7role1-93	docs/artifacts/v7role1-93.bak	sha-diff-wid-same	e8ce919139ec5bebf073eeaf7f37e00abbfd178cf330d5db088ec26b0beb2e0a
-v7role12-94	docs/artifacts/v7role12-94.bak	missing	
-v7role12-95	docs/artifacts/v7role12-95.bak	missing	
-v7role12-96	docs/artifacts/v7role12-96.bak	missing	
+v7role12-94	docs/artifacts/v7role12-94.bak	sha-diff-wid-same	afb62e12ed791884d5f1a8434e3fd3b159eea5c93f88f1e2f895c21a923f08dd
+v7role12-95	docs/artifacts/v7role12-95.bak	sha-diff-wid-same	775dc1de2a4f6a74449a1c2c555aaf00a7d7d198ac18af2d61ca14c495e38686
+v7role12-96	docs/artifacts/v7role12-96.bak	sha-diff-wid-same	beaae876fb3c893b8d3d669a1a2f1f3efa2e139819aefa0b9c8a662218b6343e
 v7role1w-31	docs/artifacts/v7role1w-31.bak	ok	
 v7role1w-81	docs/artifacts/v7role1w-81.bak	ok	
 v7role1w-82	docs/artifacts/v7role1w-82.bak	ok	
@@ -725,8 +725,8 @@ v7sub1-91	docs/artifacts/v7sub1-91.bak	ok
 v7sub1-92	docs/artifacts/v7sub1-92.bak	ok	
 v7sub1-93	docs/artifacts/v7sub1-93.bak	ok	
 v7t1-31	docs/artifacts/v7t1-31.bak	ok	
-v7t1-82	docs/artifacts/v7t1-82.bak	missing	
-v7t1-93	docs/artifacts/v7t1-93.bak	missing	
+v7t1-82	docs/artifacts/v7t1-82.bak	sha-diff-wid-same	95fb3b0c2243656fc5d67a8969fb37011e8dcad3e9ea64502a8ad0486fdd7e9c
+v7t1-93	docs/artifacts/v7t1-93.bak	sha-diff-wid-same	f414afd4212ba3a46748a3fee10e9bff238a6a2a3ae44a044208d6e3fcd4076d
 v7t2-31	docs/artifacts/v7t2-31.bak	ok	
 v7t2-82	docs/artifacts/v7t2-82.bak	missing	
 v7t2-93	docs/artifacts/v7t2-93.bak	ok	
@@ -742,10 +742,10 @@ v7tgt4-66	docs/artifacts/v7tgt4-66.bak	missing
 v7tgt5-31	docs/artifacts/v7tgt5-31.bak	missing	
 v7tgt5-62	docs/artifacts/v7tgt5-62.bak	missing	
 v7tgt5-64	docs/artifacts/v7tgt5-64.bak	missing	
-v7u1-31	docs/artifacts/v7u1-31.bak	missing	
+v7u1-31	docs/artifacts/v7u1-31.bak	sha-diff-wid-same	8b47e17ae88757ba6a8c355e2599217874139f1bb670fd51848d000873c11359
 v7u1-82	docs/artifacts/v7u1-82.bak	ok	
 v7u1-93	docs/artifacts/v7u1-93.bak	ok	
-v7w3c-31	docs/artifacts/v7w3c-31.bak	missing	
+v7w3c-31	docs/artifacts/v7w3c-31.bak	sha-diff-wid-same	7f5d85c737c50e7770561c931e0d51940ffdd03d5200db03be2123178d84ab9c
 v7w3c-81	docs/artifacts/v7w3c-81.bak	ok	
 v7w3c-91	docs/artifacts/v7w3c-91.bak	ok	
 v7w3c-92	docs/artifacts/v7w3c-92.bak	ok	

@@ -107,3 +107,5 @@ RG-MN	docs/artifacts/RG-MN.bak	multi	200	90211	0	0	0.5	0.5	0	0	0	0.14	0.5	只枪
 RG-MN	docs/artifacts/RG-MN.bak	long	200	90211	0.5	0.5	0.5	9	0.5	0.5	0.5	1.71	9.0	只枪压制	4.285714285714286
 HL-G1	docs/artifacts/HL-G1.bak	multi	200	90211	0	0	0.5	0.5	0	0	0	0.14	0.5	只枪压制	7.714285714285714
 HL-G1	docs/artifacts/HL-G1.bak	long	200	90211	1	2.5	1	8	0.5	1	1	2.14	8.0	只枪压制	2.4285714285714284
+RG-CN	docs/artifacts/RG-CN.bak	multi	200	90211	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	10.142857142857142
+RG-CN	docs/artifacts/RG-CN.bak	long	200	90211	1.5	6	0	0	0	1.5	1.5	1.50	6.0	全程只防御	3.4285714285714284

@@ -4,6 +4,21 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.22 — 11-23（**`RG-CN`** 入 `hard` + 全场强弱重分层与精简 `38 → 25` + `lv:sparring` `scriptMix` 调降为 `p=0.35/s1`）
+
+**这一版是什么**：新增过载炮 × 长程聚能环强包 **`RG-CN`**（5P 全池均胜 **31.5%**、对规则人类 `0.0%/0.0%`、`G4` 全原型 `0%`）；随后按 **4000 局全场 5P 循环赛 + 逐枚人席强度 + 技能覆盖并集** 将冠军池从臃肿的 `38` 枚精简并重分层为 **`25` 枚（`hard 13 / soft 12`）**，并把简单档脚本席概率由 `p=0.7/s2` 下调至 `p=0.35/s1`（保留 `st:mix` + `st:toolkit`），使 `multi` 与 `long` 四相邻难度台阶全部站上 **`≥ 2.1σ`**。
+
+- **新入池 `hard` 成员 `RG-CN`**（[`docs/artifacts/RG-CN.bak`](docs/artifacts/RG-CN.bak)，`wid=6f926e8b926fa719`，`v:92 / S1o / 16,561`）：
+  - 用 fresh `EQ-S4-GD6ATEACH` 单轮防抖 + `CN-G1` 主教师 + `ringEcon@0.22(5:long,8:long)`（`--rareOnly=ring --rareFrac=0.35 --steps=250 --lr=0.0004`）训出；**`selftest3` 6/6 全绿（`0.00e+0`、`π=0.886`、腿 F `12/12`）**；100g `long` `5P ring=20(3连×4)/cannon=5`，`8P ring=35(3连×8, 4连×1)/cannon=4/bigT=6`。
+  - `promote --dry --support=2` **0 阻断**：`G(long)=5.93 / S=1.818 / G_eff=6.16`、`环@有ep·安全=80%`、`G4[multi/long]` 全原型 **`0%/60%`**、`G5=0%/0%`、场A `37.9%`、墙 `17.15/局`、`arenaB=-1.9914pt`、`MxC=0.1596 / MxCL=0.2403`（`MxSkU=15 / MxSkE=14`）、`seatKill=0`（`multi` 7 格全 `0.0%`、`long ≤ 6.0%`）；Stage1 `ring 27/120 (412)、bigT 11/120 (160)、charge 30/120 (1602)、railgun 7/120 (67)、cannon 4/120 (30)`。
+- **全池重平衡（`38 → 25`：`hard 13 / soft 12`）**：
+  - **跨带重划**：`nov21-armor-tzt2d`（全场均胜 `27.2%`）`soft → hard`；`AR-TK2 / nov21-purify-dsp0 / MX6-GD-TF20`（对规则人类分别给到 `34–41% / 24–28% / 15.5–17.5%` 或全池偏弱）`hard → soft`。
+  - **退役 13 枚冗余 / 劣质克隆**：`EQ-S4-E9`、`EQ-S4-GD6ATEACH`、`MN-G1`、`MX3-GDEQ-GD`、`MX5-GD-T2STR`、`MX6-GD-TF15`、`OBS6P9-S4000`、`DEF-s16`、`MX5-GD-LE40`、`night2-E1-det-strong`、`nov22-c4c-t20`、`RINGB9`（`soft` 中潜伏的 `0%/0%` 强包，已由 `RING-MINIT-CONT` 接续）、`TZT2D`。保留 `MX8-TN35-KL3` 与 `nov21-rod-tzt2d-r10` 分别守 `soft` 带 `dualGun` / `rod` 覆盖，**全池 `28` 技能并集零缺失**（`hard` 中位 `+11.4pt / 25 技`，`soft` 中位 `-16.7pt / 24 技`）。
+  - `probe-pool --tier=hard --games=60`：`multi` 6 格均值 **`0.84%`**、`long` **`4.40%`**（零 `3σ` 漏格）。
+- **难度阶梯与脚本混合重校（[bots.js](js/train/bots.js)）**：
+  - 全池精简后 `lv:sparring` 原 `p=0.7/s2` 下 `long` 已不再倒挂，但与 `lv:regular` 仅差 `+0.80pt (0.4σ)`；将 `lv:sparring.scriptMix` 调为 `{ p: 0.35, seats: 1, min: 1, ids: ['st:mix', 'st:toolkit'] }` 后，`probe-diff-ladder --pool=1 --surrogate=rule --pairs=1 --games=1000` 实测：**`multi`** 困难 `6.2%` → 普通 `20.2%`（`+14.00 ±1.51pt = 9.3σ`）→ 简单 `24.0%`（`+3.80 ±1.82pt = 2.1σ`）；**`long`** 困难 `8.1%` → 普通 `25.6%`（`+17.50 ±1.65pt = 10.6σ`）→ 简单 `31.7%`（`+6.10 ±2.09pt = 2.9σ`）。
+- **池与产物**：重烘 `25` 个分片 / 清单（缓存戳 `p1123e → p1123f`）、演化图（1021 行，100 PASS / 0 FAIL）与 `skill-report`（25 枚，missing=0）；并收口 v7 考古回收对账脚本与账本（`state=ok 708 / sha-diff-wid-same 121 / missing 154 / 0 违规`）。
+
 ## v2.1.21 — 11-23（**`HL-G1`** 入 `hard`：对局中全息套盾配合载体，`holo 35/120` 格、`40g other=56/self=0`、`arenaB=-1.83pt`、`MxC=.255`、`seatKill=0` ‖ 池 36 → 37）
 
 **这一版是什么**：用 fresh `EQ-S4-GD6ATEACH` 底座 + `OBS6E9` `holo@0.15`（`--rareOnly=holo --rareFrac=0.25 --steps=250 --lr=0.0004`）训出对局配合强包 **`HL-G1`**；在 `hard` 带首次打出高覆盖全息均势/队友套盾（**Stage1 `holo 35/120` 格 / `322` 出手**，此前 `hard` 最高仅 `9/120`），同时保住 `railgun 33/120` 格、`bigT 8/120`、`S=1.822` 与 `seatKill=0`，池增至 **37 枚**（`hard 21 / soft 16`）。

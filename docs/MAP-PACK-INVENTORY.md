@@ -102,11 +102,12 @@
 | 35 | **`MN-G1`** | `hard` | `79e3b76bbf41c67a` | 0 | 0 | [`docs/artifacts/MN-G1.bak`](artifacts/MN-G1.bak) | **11-23 `hard` 地雷低剂量载体**（`GD6ATEACH` + `MSB11-R1S130778313 mine@0.12`；`selftest3` 6/6、`promote` 0 阻断、`arenaB=+10.38pt`（spread `21.39`）、`seatKill=0`，Stage1 `mine 52/120` 格/`797` 出手、`railgun 17/120`） |
 | 36 | **`RG-MN`** | `hard` | `7e4628cbec354183` | 0 | 0 | [`docs/artifacts/RG-MN.bak`](artifacts/RG-MN.bak) | **11-23 `hard` 地雷×长程聚能环单轮载体**（`GD6ATEACH` + `MN-G1` + `ringEcon@0.22(5:long,8:long)`；`promote` 0 阻断、`G(long)=5.61 / S=1.803`、`arenaB=+11.38pt`（`arS=.133/arL=.132`）、`MxCL=.257`、`ax-long h2=88.77`、`seatKill=0`，Stage1 `mine 44/120` 格/`710` 出手、`ring 26/120` 格/`1,041` 出手、`bigT 10/120` 格/`125` 出手） |
 | 37 | **`HL-G1`** | `hard` | `803f773db2e563f0` | 0 | 0 | [`docs/artifacts/HL-G1.bak`](artifacts/HL-G1.bak) | **11-23 `hard` 全息套盾配合载体**（`GD6ATEACH` + `OBS6E9 holo@0.15`；40g `self=0/other=56`，`promote` 0 阻断（`套给别人 0.2/局`、`S=1.822/G(long)=5.87`、`珠闭环 83%`）、`arenaB=-1.83pt`、`MxC=.255`、`seatKill=0`，Stage1 **`holo 35/120` 格/`322` 出手**、`railgun 33/120` 格/`582` 出手、`bigT 8/120`） |
+| 38 | **`RG-CN`** | `hard` | `6f926e8b926fa719` | 0 | 0 | [`docs/artifacts/RG-CN.bak`](artifacts/RG-CN.bak) | **11-23 `hard` 过载炮×长程聚能环单轮载体**（`GD6ATEACH` + `CN-G1` + `ringEcon@0.22(5:long,8:long)`；`selftest3` 6/6，`promote` 0 阻断（`G(long)=5.93/S=1.818`、`G4` 全 `0%`、`环@安全 80%`），`arenaB=-1.99pt`，`MxCL=.240`，`seatKill=0`，Stage1 `ring 27/120`、`bigT 11/120`、`cannon 4/120`） |
 
-> 现役池状态（`2026-11-23`）：  
-> 1. **`AR-TK2` 正式合入 `hard` 带**（[`docs/artifacts/AR-TK2.bak`](artifacts/AR-TK2.bak)，`wid=b5d4cbc6af57bbdd`，`arenaB=+10.36pt`，`seatKill=0`，Stage1 `armor 120/120` 格 `5,205` 手 + `tank 26/120` 格 `212` 手）；  
-> 2. **`hard` 带聚能环载体增至 `5/21`**（`R-GD12` / `RING-MINIT-CONT` / `nov22-ring3-gd6a18` / **`RG-MN` (`mine + ring + bigT`)** / `MX8-TN25-KL`），同时拥有 **对局配合 (`AR-TK2` `armor+tank` + `HL-G1` `holo 35/120` 套盾 + `FS-G2` `firestorm+curse`)** 与多风格覆盖（`CN-G1` `cannon` / `MN-G1` `mine`）；  
-> 3. **下一阶段重心（用户 15:55 点明）**：继续补齐 **① `hard` 带长程聚能环载体（`RG-CN`: `CN-G1` 强抗枪底座 × 长程聚能环 等）、② 避雷针等剩余风格与协同**。
+> 现役池状态（`2026-11-23 v2.1.22` 重平衡定稿：共 **`25` 枚 = `hard 13 ‖ soft 12`**，`mid` 空）：  
+> 1. **本轮退役 `13` 枚冗余/被替代成员**：`EQ-S4-E9 / EQ-S4-GD6ATEACH / MN-G1 / MX3-GDEQ-GD / MX5-GD-T2STR / MX6-GD-TF15 / OBS6P9-S4000 / DEF-s16 / MX5-GD-LE40 / night2-E1-det-strong / nov22-c4c-t20 / RINGB9 / TZT2D`；  
+> 2. **跨带重划 `4` 枚**：`nov21-armor-tzt2d`（`27.2%`）升入 `hard`；`AR-TK2 / nov21-purify-dsp0 / MX6-GD-TF20` 调入 `soft`，`hard` 中位 `arenaB=+11.4pt（25 技）`、`soft` `-16.7pt（24 技）`，全池 `28` 技能并集 `0` 缺失；  
+> 3. **后续可继续补盲方向**：① 用洁净低剂量替换 `soft` 带遗留 `sk=2` 避雷针载体 `nov21-rod-tzt2d-r10`（如 `RD-G1`）；② 天火闭环新机制与更多 `hard` 对局中合作载体。
 
 ---
 
