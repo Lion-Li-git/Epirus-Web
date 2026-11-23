@@ -1,5 +1,6 @@
 id	wid	path	tier	invited	promoteVerdict	seatKill	addedAt	note
 AR-TK2	b5d4cbc6af57bbdd	docs/artifacts/AR-TK2.bak	hard	0	pass	0	Sun Nov 22 2026 18:44:48 GMT+0800 (中国标准时间)	TZT2D底+nov21-armor主教+tkWeak@0.20: hard带藤甲×坦克协同载体, arenaB=+10.36pt, seatKill=0
+CN-G1	a3f63c60a01e4f35	docs/artifacts/CN-G1.bak	hard	0	pass	0	Mon Nov 23 2026 15:32:44 GMT+0800 (中国标准时间)	P1-2 hard过载炮低剂量(GD6ATEACH+MX8-CN-M cannon@0.12): arenaB=-2.46pt, MxC=.218/MxCL=.259, promote 0阻断(G4只枪2.7%, 珠闭环82.4%), seatKill=0(90210<=4%,90211<=6.5%)
 EQ-S4-E9	a847eb3a41a160bb	docs/artifacts/obs6-coldstart/EQ-S4-E9.bak	hard	1	pass	0	Mon Nov 16 2026 21:36:58 GMT+0800 (中国标准时间)	11-16 EQ-S4-E9：promote --dry --support=2 全过 0 阻断（G5 16/4 · G4multi 59.3/60 余0.7 · wall17 · 短C .336/长C .2555 · 2P96.8）；珠经济0记录项；人席未量，点名入池
 EQ-S4-GD6ATEACH	72abddc710e6252b	docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak	hard	1	pass	0	Mon Nov 16 2026 22:02:16 GMT+0800 (中国标准时间)	11-16 GD6A 教师臂：promote --dry --support=2 0 阻断（G5 1/0 · G4 13.7/6.3 · wall17.9 · 珠经济77.4%闭环 · 2P93.8 · 长C .2223 · selftest 绿）；强度略降，按用户裁定进 soft，后续补强度；人席未量点名 ‖ 11-17 强度分带重做：C̄=0.2798 soft→hard
 FS-G2	892ba770d1dfca0b	docs/artifacts/FS-G2.bak	hard	0	pass	0	Mon Nov 23 2026 15:00:22 GMT+0800 (中国标准时间)	P1-1 反只枪×天火低剂量(GD6ATEACH+c3g curse,firestorm@0.12): arenaB=-3.48pt, selftest3 6/6, promote 0阻断(G4只枪14.7%/11.0%, G5=0%/0%, 珠闭环80%), seatKill=0

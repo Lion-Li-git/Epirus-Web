@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.18 — 11-23（**`CN-G1`** 入 `hard`：P1-2 `hard` 带 `cannon` 补盲首破，`arenaB=-2.46pt`、`G4 只枪 2.7%/60%`、珠闭环 `82.4%`、`seatKill=0` ‖ 池 33 → 34）
+
+**这一版是什么**：沿用 `FS-G2` 低剂量底座配方（`EQ-S4-GD6ATEACH` + `MX8-CN-M` `cannon@0.12`，`--rareOnly=cannon --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`CN-G1`**；`hard` 带首次拿到稳定 **`cannon` 覆盖（Stage1 `10/120` 格 / `88` 出手）** 且全考卷 `cannon` 活跃，池增至 **34 枚**（`hard 18 / soft 16`）。
+
+- **新入池 `hard` 成员 `CN-G1`**（[`docs/artifacts/CN-G1.bak`](docs/artifacts/CN-G1.bak)，`wid=a3f63c60a01e4f35`，`v:92 / S1o / 16,561`）：
+  - `promote --dry --support=2` **0 阻断**：`G(multi)=4.41 / G(long)=4.95`（`S=1.672, G_eff=5.32`，4/4 类、5/8 角色），场A `33.9%`（含反弹 `44.8%`），反弹墙 `17.10/局`（0 零伤害局），座位 `16.7pt`，`G4[long]` 最克「只枪」`2.7%/60%`（余 `57.3pt`）、`G4[multi]` `18.7%/60%`，`G5` 与带档均 `0%/0%`，珠闭环 `82.4%`（过期 `0.1/局`）。
+  - `arenaB=-2.4571pt`（spread `49.77`，3/6 粒正：最高 `+29.01 / +27.33`）；`MxC=0.2181 / MxCL=0.2586`（`MxSkU=14 / MxSkE=12`）；`seatKill=0`（90210 `multi ≤ 0.5% / long ≤ 4.0%`，90211 `multi ≤ 2.5% / long ≤ 6.5%`）；Stage 1 `union=15/30`（`cannon 10/120` 格/`88` 出手、`railgun 25/120`、`bigT 6/120`、`curse 4/120`、`shift 1/120`）。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 33 → **34**（`hard 18 / soft 16`）；重烘整表 / 清单 / 34 个分片、演化图（1017 行，100 PASS / 0 FAIL）与 `skill-report`（34 枚，missing=0）；池缓存戳 `p1123a → p1123b`。
+
 ## v2.1.17 — 11-23（**`FS-G2`** 入 `hard`：P1-1 反只枪压制 × `curse/firestorm` 低剂量首破，`arenaB=-3.48pt`、`G4 只枪 14.7%/11.0%`、珠闭环 `80%`、`seatKill=0` ‖ 池 32 → 33）
 
 **这一版是什么**：修复 `supfit-gd` `--rareFrac <= 0.25` 切分边界并按单变量控制（`EQ-S4-GD6ATEACH` 底座 + `nov22-c3g-s300k` 的 `curse,firestorm@0.12`、`--rareOnly=firestorm,curse --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`FS-G2`**；`hard` 带首次拿到活跃 **`firestorm`（38/120 格）+ `curse`（68/120 格）+ `railgun`（25/120 格）**，池增至 **33 枚**（`hard 17 / soft 16`）。
