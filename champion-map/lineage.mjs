@@ -512,7 +512,9 @@ for (const r of REC) { const m = r.m || {};
       : (g3r.parentSrc === 'seedpack-wid' ? 'seedpack-wid' : (g3r.parentSrc || 'seedpack')))
     : ps;
   ROWS.push({ id: r.id, ts: TSVAL, seed: m.seed, cfg, sig: AXES.map(k => k + '=' + cfg[k]).join('|'),
-    parentOf: pofVal, wid: r.wid || '',
+    /* 2.0 包的权重身份也不在 .bak 的 v7 外壳里 ⇒ 回退到 sidecar。没有这条回退，重生成会把
+     * GD6b-TILT / OBS6-SHAPEDIST* 等 2.0 行的 wid 写成空，D234 ⑫c 当场红。 */
+    parentOf: pofVal, wid: r.wid || (g3r && g3r.wid) || '',
     psrc: psrcVal,
     pof2: sP2, psrc2: sP2 ? 'soup' : '',
     demoted: G3SET[r.id] ? '' : demoted,
