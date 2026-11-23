@@ -376,6 +376,7 @@ function main() {
    *   为什么必须开：`pickPacks` 原来只认在册池表 id（"候选请先入池"），而闭环这类判据恰恰要在准入判断
    *   **之前**量候选 ⇒ "先入池才能量、量完才知道该不该入池"是死结。
    *   候选只进本次内存表与 `--out=` 指定的目录，**不写任何池表**；与在册枚同名一律拒绝（不许顶掉现役件）。 */
+  const candIds = [];
   for (const cp of (arg('candidate', '') || '').split(',').map((s) => s.trim()).filter(Boolean)) {
     if (!existsSync(cp)) { console.error('⛔ --candidate 件不在盘上：' + cp); process.exit(2); }
     const cid = cp.split(/[\\/]/).pop().replace(/\.bak$/, '');
@@ -383,6 +384,7 @@ function main() {
     let cwid = ''; try { cwid = widOf(readFileSync(cp, 'utf8')); } catch (e) { cwid = ''; }
     if (!cwid) { console.error('⛔ --candidate ' + cp + ' 解不出 wid ⇒ 不是可读的权重件，拒绝'); process.exit(2); }
     pool.push({ id: cid, wid: cwid, path: cp, tier: 'candidate' });
+    candIds.push(cid);
     console.log('# 候选枚（只此一次，不落池表）：' + cid + ' wid=' + cwid);
   }
   if (has('bake')) {
@@ -399,10 +401,21 @@ function main() {
   });
   for (const f of realPackFixtures(pool)) oppDesc.push({ name: f.id, kind: 'real', path: f.path });
   const ids = pickPacks(pool, arg('pack', ''), arg('packs', ''), has('all-pool'));
+  /* 只给 `--candidate=` 而不给 `--pack/--all-pool` 以前是**静默空转**：候选进了内存表、
+   *   `pickPacks` 却不认它 ⇒ `ids=[]`、一个 `runOne` 都不跑、目录都不建、退出码 0。
+   *   11-24 夜班实测（三枚臂喂进去 ⇒ stdout 只有三行"候选枚"横幅，`scratch/skill-report-grid/` 根本不存在）。
+   *   现在：候选本身就是要量的那几枚，并且**跑完必须逐枚见到产物**，否则响亮退出。 */
+  if (!ids.length && candIds.length) {
+    console.log('# 只给了 --candidate ⇒ 就量这 ' + candIds.length + ' 枚候选（不落任何池表）');
+    ids.push(...candIds);
+  }
+  if (!ids.length) { console.error('⛔ 一枚都没挑到（给 --pack= / --all-pool= / --candidate= 三者之一）⇒ 不跑、不写、退出码非 0'); process.exit(2); }
   const jobs = Math.max(1, Math.min(Number(arg('jobs', 1)) || 1, 16));
   console.log('# 落盘目录 = ' + DATA_DIR + (jobs > 1 ? '（并行 ' + jobs + ' 路，旗标逐字转给子进程）' : ''));
   if (ids.length === 1 || jobs === 1) {
     for (const id of ids) runOne(STAGE, pool.find(m => m.id === id), oppDesc);
+    const noArt = ids.filter((id) => !existsSync(join(DATA_DIR, id + '.json')));
+    if (noArt.length) { console.error('⛔ 跑完了却没有产物：' + noArt.join(' ‖ ') + '（该目录 ' + DATA_DIR + '）⇒ 这次测量不算数'); process.exit(3); }
   } else {
     /* 多包并行：按包拆子进程（各自写各自 JSON，无共享状态） */
     let done = 0, fail = 0;
@@ -418,6 +431,9 @@ function main() {
            *   25 枚 `champion-map/data/skill-report/*.json` 就这么被就地重写了）。**下面那行落盘目录横幅就是为这条而加**：
            *   跑了才知道写在哪，别让人去猜。 */
           ...(arg('out', '') ? ['--out=' + arg('out', '')] : []),
+          /* 候选必须一起转：子进程只拿 `--pack=<候选 id>` 会在 `pickPacks` 那里被判"不在池表"⇒
+           *   并行 + 候选 这一组合原来必红，而红在子进程里、母进程只报 fail=N（11-24 夜班顺手补）。 */
+          ...(arg('candidate', '') ? ['--candidate=' + arg('candidate', '')] : []),
           ...(arg('coverth', '') ? ['--coverth=' + arg('coverth', '')] : []),
           ...(arg('shortlist') ? ['--shortlist=' + arg('shortlist')] : [])], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
         cp.stdout.on('data', d => process.stdout.write(d));
