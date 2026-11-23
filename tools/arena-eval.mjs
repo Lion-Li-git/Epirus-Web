@@ -9,6 +9,7 @@
 import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { cpus } from 'node:os';
+import { createHash } from 'node:crypto';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { fileURLToPath } from 'node:url';
 import { ROOT, sandbox, loadChamp, mulberry32 } from './audit-lib.mjs';
@@ -152,6 +153,10 @@ if (isMainThread) {
   const DOSE_SUF = DOSE === 'page' ? '-page' : '';
   const LEAGUE_FILE = join(ROOT, 'champion-map/data/arena-league-1118' + DOSE_SUF + '.tsv');
   const OUT_ALL = join(ROOT, 'champion-map/data/exam4n-arena' + DOSE_SUF + '-1118.tsv');
+  /* §E597：exam 与 page 两套口径不许混表 ⇒ 条件留痕也跟着分档（同一个 DOSE_SUF 后缀）。
+   * 为什么要有这张账：`--pack` 那条路只把读数打到 stdout，而读数赖以成立的 seedBase/dose/联盟表**没有产物级留痕**
+   * ⇒ 同一枚包换个 --seed 再跑，输出行分不出是哪档条件跑出来的（#75 剩下的那一处）。 */
+  const CONDS = join(ROOT, 'champion-map/data/arenaB-conditions-1118' + DOSE_SUF + '.tsv');
   const t0 = Date.now();
   const regMap = loadRegistryPaths(ROOT);
 
@@ -291,5 +296,19 @@ if (isMainThread) {
     const anchorChoosers = loadAnchorChoosers(W, league, ROOT, DOSE_OBJ);
     const r = evaluatePackArena(W, p, id, anchorChoosers, league, { seedBase: SEED, dose: DOSE_OBJ });
     console.log(JSON.stringify(r));
+    /* 条件留痕：写完必须读回对账（写坏/写漏都直接 exit 3，不静默）——这是"表不许落后于件"的同一形状。 */
+    const packSha = createHash('sha256').update(readFileSync(packPath)).digest('hex').slice(0, 16);
+    const CHDR = ['at', 'id', 'pack', 'packSha256_16', 'seedBase', 'dose', 'leagueTable', 'shortR', 'shortX4'];
+    const row = [new Date().toISOString(), id, packPath.replace(/\\/g, '/'), packSha, String(SEED), DOSE,
+      LEAGUE_FILE.replace(/\\/g, '/').split('/').slice(-2).join('/'), String(r.short.r.toFixed(6)), String(r.short.x4.toFixed(6))].join('\t');
+    const prior = existsSync(CONDS) ? readFileSync(CONDS, 'utf8') : '';
+    writeFileSync(CONDS, (prior.endsWith('\n') || prior === '' ? prior : prior + '\n') + (prior.includes('at\tid\tpack') ? '' : CHDR.join('\t') + '\n') + row + '\n', 'utf8');
+    const back = readFileSync(CONDS, 'utf8').trim().split('\n');
+    const last = back[back.length - 1].split('\t');
+    if (last.length !== CHDR.length || last[1] !== id || last[4] !== String(SEED) || last[3] !== packSha) {
+      console.error('⛔ 条件留痕读回对不上（id=' + id + ' 读回 ' + last[1] + '/' + last[4] + '）⇒ exit 3');
+      process.exit(3);
+    }
+    console.log('✅ 条件留痕 ' + CONDS.replace(/\\/g, '/').split('/').slice(-1)[0] + '（' + (back.length - 1) + ' 行，本行 seedBase=' + SEED + ' dose=' + DOSE + '）');
   }
 }
