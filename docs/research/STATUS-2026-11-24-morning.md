@@ -107,6 +107,7 @@
 
 | Arena B 六粒 seed 配对（臂 vs 自己的基座） | **已收**（48 次跑，每次 ~2s） | `scratch/arenaB-seeds-1124.log` ‖ 配对表 `scratch/arenaB-paired-1124.tsv`（已入 `evidence-2026-11-24/`） | 六臂平均差 −7.67pt、臂间 SD 5.05 ⇒ t=−3.72（df=5）双侧 p≈0.014；三臂"六粒全退"；一臂 +1.02pt ⇒ 退步一致但不均匀 ⇒ STATUS §4.34 |
 | `promote --dry` 准入实测（六粒候选） | **已收**（每粒 ~210s） | `scratch/dry-batch-1124.log` ‖ 每粒 `scratch/dry-<臂>.log` | 5 过 1 拦；拦那条是 `G5[long]=31% > 25%`（`exit 6`、未换包）⇒ 破防轴在准入处已有闸，#76 只剩闭环那一轴 ⇒ STATUS §4.32 |
+| `arena-eval --pack` 补产物级条件留痕 | **已做**（代码 `860393cb`） | 新账 `champion-map/data/arenaB-conditions-1118{,-page}.tsv`（首跑自建；测试跑那两行已删） | `seedBase ‖ dose ‖ 联盟表 ‖ 件内容 sha` 随读数入账，跟口径分档、写完读回对账；验牙：换 seed 两行读数不同（x4 −0.164593→−0.076470）‖ 只读文件时退出码非 0。**两条限度交给白班**：`exit 3` 那一支**没造过夹具**（依赖它之前先造一枚改写 last 列的夹具验一次）；今晚那 48 次 Arena 跑在这张账**之前**，条件只在 §4.34 正文与 `scratch/arenaB-seeds-1124.log` ⇒ STATUS §4.36 |
 ⚠ 两条判活/引用的规矩（本夜踩过，写给下一班）：
 - 日志**没有 `*_EXIT=` 收尾行之前不许引用**，也别用日志 mtime 判死活——`gate-drafts` 先印完所有 `G4` 才进 `G5`，中途 `grep G5` 为 0 属正常；判活用 CPU 增量。
 - 我自己写的时间标签错过两回（用对话轮次推时刻、用 charCode 造时刻），现在一律取 `stat` 的 mtime 或 `git log` 的入档时刻，并标明是"测量"还是"入档"。
