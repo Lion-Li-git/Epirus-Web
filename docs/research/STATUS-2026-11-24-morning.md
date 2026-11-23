@@ -73,7 +73,7 @@
 | 恢复台账五条腿自检 | `node tools/land-recovered.mjs --check`（**别接管道**，`$?` 会被 `tail` 吞） |
 | 重放树扫源（只报告 / 真落盘） | `bash scratch/run-anchor-scan-1124.sh` ‖ 加 `--do` |
 | 闭环普查（含机会两列） | `node tools/firestorm-closure.mjs --all-pool`；单枚候选加 `--candidate=<路径>` |
-| 臂的准入实测 | `node tools/promote-champion.mjs --dry --support=2 --candidate=scratch/arms/<臂>.bak` |
+| 臂的准入实测 | `node tools/promote-champion.mjs scratch/arms/<臂>.bak --dry --support=2`（`.bak` 路径是**位置参数**；本工具参数白名单里没有 `--candidate`，写错会被 `rejectUnknownFlags` 直接 `exit 2`） |
 | 破防机制读数（N=300/格） | `node tools/gate-drafts.mjs <包1.bak> <包2.bak>`（`GATE4_GAMES` 可改局数） |
 | 剂量×seed 网格 | `bash scratch/run-dose-grid-1124.sh`（台账 `scratch/dose-grid-1124.out`） |
 | 收口整轮 | `node tools/gate-all.mjs --np` |
