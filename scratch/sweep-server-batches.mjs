@@ -8,7 +8,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, copyFileSync, renameSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { widOf } from '../champion-map/pack-id.mjs';
 
@@ -27,6 +27,7 @@ const mine = jobs.filter((_, k) => k % TOTAL === SHARD);
 console.log(`分片 ${SHARD}/${TOTAL}：${mine.length} 批（校准 ${mine.filter((j) => j.calibWid).length}）`);
 
 const hits = [];
+let LAST_RUN_T0 = 0;
 function wtFor(era) {
   const wt = resolve(dirname(ROOT), 'srv-wt-s' + SHARD + '-' + era.slice(0, 8));
   if (!existsSync(wt)) {
@@ -58,6 +59,20 @@ function wtFor(era) {
 
 function runBatch(j, era, seeds, force) {
   const wt = wtFor(era);
+  /* 11-24 夜班补（重要）：起跑前把同名旧件**隔离**（改名，不删）。
+   *   症状：runner 若中途抛异常（今晚并发抢核时 new5_005 两 era 都 exit=1），下面阶段 2 的比对会
+   *   直接读到**上一波留下的同名 .bak** ⇒ 报出一个与本次尝试毫无关系的 wid，把"跑不起来"记成"配方 miss"。
+   *   实测证据：驱动报 `校准 miss wid=ffbc54b6712dfe64`，那是 16:53 的旧件；静机重跑真实产物是 `a0afbfbdc32cd0fb`。
+   *   隔离之后，"产物未落"就老老实实是"产物未落"。 */
+  LAST_RUN_T0 = Date.now();
+  for (const sd of String(Array.isArray(seeds) ? seeds.join(',') : seeds).split(',')) {
+    if (!sd) continue;
+    const oldp = wt + '/docs/artifacts/' + j.arm + '-' + sd + '.bak';
+    if (existsSync(oldp)) {
+      try { renameSync(oldp, oldp + '.stale-' + LAST_RUN_T0); console.log('    · 隔离旧件 ' + j.arm + '-' + sd + '.bak（防冒充）'); }
+      catch (e) { console.log('    ⚠ 旧件隔离失败 ' + oldp + '：' + e.message.split('\n')[0] + ' ⇒ 本批比对结果不可信'); }
+    }
+  }
   const env = {
     ...process.env,
     RING2_STAGE: 'train',
@@ -158,6 +173,13 @@ for (const j of mine) {
         if (!id || !target) continue;
         const prod = `${wt}/docs/artifacts/${j.arm}-${seed}.bak`;
         if (!existsSync(prod)) { console.log(`  ✗ ${id}: 产物未落`); continue; }
+        /* 第二道防线（即便隔离失败也不许旧件冒充结果）：件的 mtime 必须晚于本次起跑 */
+        try {
+          if (statSync(prod).mtimeMs < LAST_RUN_T0 - 3000) {
+            console.log(`  ✗ ${id}: 件的时间戳早于本次起跑 ⇒ **旧件冒充**，既不记 miss 也不记命中`);
+            continue;
+          }
+        } catch (e) { }
         nProd++;
         const w = widOf(readFileSync(prod, 'utf8'));
         if (w === target) {
