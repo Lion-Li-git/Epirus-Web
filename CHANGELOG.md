@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.17 — 11-23（**`FS-G2`** 入 `hard`：P1-1 反只枪压制 × `curse/firestorm` 低剂量首破，`arenaB=-3.48pt`、`G4 只枪 14.7%/11.0%`、珠闭环 `80%`、`seatKill=0` ‖ 池 32 → 33）
+
+**这一版是什么**：修复 `supfit-gd` `--rareFrac <= 0.25` 切分边界并按单变量控制（`EQ-S4-GD6ATEACH` 底座 + `nov22-c3g-s300k` 的 `curse,firestorm@0.12`、`--rareOnly=firestorm,curse --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`FS-G2`**；`hard` 带首次拿到活跃 **`firestorm`（38/120 格）+ `curse`（68/120 格）+ `railgun`（25/120 格）**，池增至 **33 枚**（`hard 17 / soft 16`）。
+
+- **新入池 `hard` 成员 `FS-G2`**（[`docs/artifacts/FS-G2.bak`](docs/artifacts/FS-G2.bak)，`wid=892ba770d1dfca0b`，`v:92 / S1o / 16,561`）：
+  - **门禁与血统**：`selftest3` **6/6 全绿**（`腿C 最坏相对误差 0.00e+0` · `π=0.777` · `腿F 57/57`）；`promote --dry --support=2` **0 阻断**（`考卷 56.8%` · `G(multi)=5.05 / G(long)=4.88` · `墙 18.8/局` · `场A 27.6%` · `场B 3.99/局` · `G4 只枪 14.7%/11.0%` · `G5=0%/0%` · 珠闭环 `80.0%`）；
+  - **B/C 轴与人席**：`arenaB = -3.4817pt`（spread `48.9125` · 3/6 粒为正最高 `+21.54` · 较 `c3g-s300k` `+24.1pt`）；4N `multi x2..x8 = +.141/+.500/+.286/+.286`、`long = +.090/+.357/+.256/+.143`；**`seatKill = 0`**（`90210/90211` 只枪压制 `multi 20%/23%`、`long 13.5%/18%` 均优于基准，反弹 `≤5%`）；Stage1 120 格 `firestorm 38/120(524 手)` · `curse 68/120(853 手)` · `railgun 25/120(257 手)`。
+- **管线与工具修复**：修复 `champion-map/pipeline/add-point.mjs` 在 `1061ac9e` 退役 `lineage-g3` 后新增 `2.0` 点未写入 `page/lineage.tsv` 导致掉入 `fam 0` 的问题；修复 `tools/` 7 台命令行工具 `rejectUnknownFlags` 缺口（`D218` 转绿）；修复 `scratch/sweep-server-batches.mjs` 漏解析 `hot` 列并新增追回 `v7protoE` 3/3、`v7role12` 3/3、`v7curri2` 6/6、`v7u1-31`、`v7t1` 2/2 等 `v7` 历史包。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 32 → **33**（`hard 17 / soft 16`）；重烘整表 / 清单 / 33 个分片、演化图（1016 行，100 PASS / 0 FAIL）与 `skill-report`（33 枚，missing=0）；池缓存戳 `p1122e → p1123a`。
+
 ## v2.1.16 — 11-22（`nov22-ring3-gd6a18` 入 `hard`：5P long 三连 30.1% / 8P 27.2%，`arenaB=+20.40pt`，`seatKill=0` ‖ 池 31 → 32）
 
 **这一版是什么**：把 `ringEcon` 的 long 剂量从 `0.12` 提到 `0.18`，在 fresh `EQ-S4-GD6ATEACH` 上训出 `nov22-ring3-gd6a18`：5P/8P long 的环链首次稳定越过 3 连，同时 `arenaB` 和 `selftest3` 都不掉；池从 31 枚增到 **32 枚**（`hard 16 / soft 16`）。

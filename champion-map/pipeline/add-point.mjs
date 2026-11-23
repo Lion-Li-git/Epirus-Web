@@ -266,7 +266,7 @@ const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unkno
 const pointWid = widOf(packText);
 const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || statSync(PACK).mtime.toISOString()), metaSeed, nameSeed: '',
   parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };
-const ltab = VER === '2.0' ? null : linMain;
+const ltab = linMain;
 for (const c of ['ruler_id', 'cell', 'horizon', 'value', 'n']) if (readTable(RD).ix[c] === undefined) { console.error('⛔ readings 缺列 ' + c); process.exit(2); }
 const RT = readTable(RD);
 const rulerById = new Map(rulers.rows.map((r) => [r[rulers.ix.ruler_id], r]));

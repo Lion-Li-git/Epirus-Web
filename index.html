@@ -10,7 +10,7 @@
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.16 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.17 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -203,8 +203,8 @@
 <!-- 冠军池：懒加载清单（只有 id/wid/tier/file，约 5KB）。真源 champion-map/pool-members.tsv，由 tools/build-pool-bundle.mjs --split 生成，不要手改。
      分片权重在 js/pool-packs/<id>.js，由 pool-loader 按本局抽到的 N−1 席注入；HTTP 下不再下 9.6MB 整表。
      本地 file:// 若无分片文件，loader 会回退到 js/bundled-champion-pool.js（整表留给 tools/gates 与双击入口）。 -->
-<script defer src="js/pool-manifest.js?v=p1122e"></script>
-<script defer src="js/pool-loader.js?v=p1122e"></script>
+<script defer src="js/pool-manifest.js?v=p1123a"></script>
+<script defer src="js/pool-loader.js?v=p1123a"></script>
 <!-- 2026-11-13 用户裁定「2p 直接切到统一池」：旧 2P 池 bundle（bundled-champion-pool-2p.js）退役删除——两桌读同一份池；旧 v7 包（pool-members-2p.tsv 名册）转任 2P 训练对手，不再上页面桌 -->
 <!-- ui.js 也 defer，且排在清单/loader 之后：defer 按文档序执行 ⇒ 绑定事件时清单已就位。
      权重分片是**开局后才异步注入**的：newGame 会按本局抽到的席位调 EpirusPoolLoader.ensure()，

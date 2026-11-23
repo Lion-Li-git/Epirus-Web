@@ -293,4 +293,5 @@ DIV-LH6-HEAVY-S2	block	field-a,breadth-multi,behavior-gate
 RING-MINIT-CONT	pass	—			
 P9-CN-MINI-CONT	block	behavior-gate,behavior-gate,behavior-gate			
 AR-TK3	pass	—			
-nov22-c3b-kw100	block	behavior-gate
+nov22-c3b-kw100	block	behavior-gate			
+FS-G2	pass	—			
