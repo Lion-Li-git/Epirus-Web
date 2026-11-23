@@ -24,12 +24,13 @@ import { spawn } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, cardUsageProfile, rejectUnknownFlags } from './audit-lib.mjs';
+import { widOf } from '../champion-map/pack-id.mjs';
 import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
 import { createStrengthCore } from './strength-lib.mjs';
 
 rejectUnknownFlags(process.argv.slice(2), ['stage', 'pack', 'packs', 'all-pool', 'jobs', 'games-census', 'games-strength',
-  'max-strength-games', 'shortlist', 'out', 'bake', 'coverth', 'temp'], 'pool-skill-report');
+  'max-strength-games', 'shortlist', 'out', 'bake', 'coverth', 'temp', 'candidate'], 'pool-skill-report');
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const h = process.argv.find(a => a.indexOf('--' + k + '=') === 0); return h ? h.split('=')[1] : d; };
@@ -356,6 +357,19 @@ function runOne(stage, pack, oppDesc) {
 
 function main() {
   const pool = loadPool();
+  /* `--candidate=<path[,path]>`：**入池之前**也能量一枚候选（11-24 夜班加）。
+   *   为什么必须开：`pickPacks` 原来只认在册池表 id（"候选请先入池"），而闭环这类判据恰恰要在准入判断
+   *   **之前**量候选 ⇒ "先入池才能量、量完才知道该不该入池"是死结。
+   *   候选只进本次内存表与 `--out=` 指定的目录，**不写任何池表**；与在册枚同名一律拒绝（不许顶掉现役件）。 */
+  for (const cp of (arg('candidate', '') || '').split(',').map((s) => s.trim()).filter(Boolean)) {
+    if (!existsSync(cp)) { console.error('⛔ --candidate 件不在盘上：' + cp); process.exit(2); }
+    const cid = cp.split(/[\\/]/).pop().replace(/\.bak$/, '');
+    if (pool.some((m) => m.id === cid)) { console.error('⛔ --candidate 解析出的 id 与在册枚同名：' + cid + ' ⇒ 改用不带冲突的文件名，别顶掉现役件'); process.exit(2); }
+    let cwid = ''; try { cwid = widOf(readFileSync(cp, 'utf8')); } catch (e) { cwid = ''; }
+    if (!cwid) { console.error('⛔ --candidate ' + cp + ' 解不出 wid ⇒ 不是可读的权重件，拒绝'); process.exit(2); }
+    pool.push({ id: cid, wid: cwid, path: cp, tier: 'candidate' });
+    console.log('# 候选枚（只此一次，不落池表）：' + cid + ' wid=' + cwid);
+  }
   if (has('bake')) {
     import('../champion-map/build-skill-page.mjs').then(m => m.bake({ quiet: false }));
     return;
