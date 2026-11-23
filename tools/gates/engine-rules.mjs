@@ -30,7 +30,7 @@ const {
   fnBody,
 } = makeCtx();
 /* 每个门单元的**原始行号**（与下面 register() 里 t() 的调用次序一一对应）⇒ runner 按它排序执行。 */
-export const ords = [206, 216, 225, 234, 246, 258, 265, 285, 314, 327, 341, 355, 369, 383, 396, 404, 415, 427, 438, 450, 458, 471, 485, 497, 505, 539, 552, 573, 591, 606, 620, 642, 705, 730, 749, 762, 781, 2289, 2343, 2626, 2653, 2682, 3122, 3194, 3218, 3292, 4045, 4107, 4149, 4228, 4291, 4412, 5357, 5376, 5549, 5563, 5585, 5598, 5661, 5860, 6077, 7306];
+export const ords = [88, 206, 216, 225, 234, 246, 258, 265, 285, 314, 327, 341, 355, 369, 383, 396, 404, 415, 427, 438, 450, 458, 471, 485, 497, 505, 539, 552, 573, 591, 606, 620, 642, 705, 730, 749, 762, 781, 2289, 2343, 2626, 2653, 2682, 3122, 3194, 3218, 3292, 4045, 4107, 4149, 4228, 4291, 4412, 5357, 5376, 5549, 5563, 5585, 5598, 5661, 5860, 6077, 7306];
 /* ⚠ 本文件**不执行**任何门：只把 [[原始行号, 门名, 门函数]] 交给 runner 的 t()。 */
 export function register(t) {
 t('N1 人数：createState 默认 2 人；multi 模式可 3/4/5 人', function () {
@@ -83,6 +83,21 @@ t('N3b 小雷互雷成环（2 人边）：双方作废', function () {
   X.resolveActions(st);
   ok(st.actions[0].voided && st.actions[1].voided, '互雷成环双方作废');
   ok(st.events.some(function (e) { return e.type === 'thunderRing'; }), 'thunderRing 事件');
+});
+
+t('N3c N5 小雷开链 A→B→C 从链头 A 结算（turnOrder 从 B 开始也不许先结 B）', function () {
+  const st = S.createState('multi', { next: mulberry32(120) }, 4);
+  st.slotSalt = 1; st.round = 1;   /* n=4 ⇒ turnOrder 从 1 号座 B 开始 */
+  for (let i = 0; i < 4; i++) st.p[i].ep = 5;
+  X.startTurn(st);
+  S.attemptAction(st, 0, R.SK.MINI_T, { target: 1 });
+  S.attemptAction(st, 1, R.SK.MINI_T, { target: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  ok(st.actions[0].voided === false, '链头 A 的小雷必须成立');
+  ok(st.actions[1].voided === true, 'B 被链头作废');
+  ok(st.actions[2].voided === false, 'B 已作废 ⇒ B 的小雷不能继续废 C（C 的动作必须保留）');
 });
 
 t('N10 胜负：最后存活者胜', function () {

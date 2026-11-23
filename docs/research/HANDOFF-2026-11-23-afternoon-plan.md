@@ -52,7 +52,8 @@
    - **简单档倒挂修复**：[bots.js](../../js/train/bots.js) 中 `lv:sparring`（「简单·陪练」）在 5 血 `long` 模式因掺入 `st:toolkit` 导致胜率压过 `lv:regular`（`-3.23σ` 倒挂），需调低 `st:toolkit` 席位比例或提高简单档探索率 `eps`。
 3. **P1-3 · 引擎与裁定待确认项（需先对齐再改代码）**
    - **无害防误触修复**：[state.js](../../js/core/state.js) 中 `attemptAction` 在费用/CD 检查前提前写入 `lastTarget/lastTarget2` 且 `setVoid`/`endTurn` 未清，导致作废动作泄漏进 2.0 关系特征。
-   - **规则裁定确认**：向用户确认 `N5`（小雷链从链首结算 vs 轮换序）、`N6`（大雷是否连带作废无辜第三方）、`N12`（全灭时回魂直接判胜）三项边缘语义；以及归档规则是否将 `spread > 2×容差带` 写入阻塞断言（见 [HANDOFF-2026-11-22-night-for-glm.md](HANDOFF-2026-11-22-night-for-glm.md) §5.3）。
+   - **规则裁定已确认（2026-11-23）**：`N5` 按用户选 B 改为**开链从链头结算**（已改引擎 + 规则指纹）；`N6` 大雷连带第三方**按现状确认无问题**；`N12` 回魂待复活**保持现状**（视为存活、立即判胜）。
+   - 仍待确认：归档规则是否将 `spread > 2×容差带` 写入阻塞断言（见 [HANDOFF-2026-11-22-night-for-glm.md](HANDOFF-2026-11-22-night-for-glm.md) §5.3）。
 
 ---
 

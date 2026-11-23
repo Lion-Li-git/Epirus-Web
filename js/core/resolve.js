@@ -791,6 +791,28 @@
       }
     }
   }
+  /* N5（2026-11-23 用户裁定 B）：开链从**链头**结算，不再按当回合 turnOrder 的起点。
+   *   例 A→B→C：先结 A；A 把 B 废掉 ⇒ B 的出边不再生效，C 存活。
+   *   环仍由 runMiniTRing 整环作废；这里的拓扑序只安排开链，环尾按 turnOrder 兜底。 */
+  function miniTChainOrder(state, entries) {
+    const byCaster = new Map(entries.map((e) => [e.caster, e]));
+    const indeg = new Map(entries.map((e) => [e.caster, 0]));
+    const rank = new Map(turnOrder(state).map((p, i) => [p, i]));
+    for (const e of entries) if (byCaster.has(e.target)) indeg.set(e.target, (indeg.get(e.target) || 0) + 1);
+    const out = [];
+    const used = new Set();
+    const byRank = (a, b) => (rank.get(a.caster) ?? 999) - (rank.get(b.caster) ?? 999);
+    while (out.length < entries.length) {
+      const ready = entries.filter((e) => !used.has(e.caster) && (indeg.get(e.caster) || 0) === 0).sort(byRank);
+      if (!ready.length) break;
+      const e = ready[0];
+      used.add(e.caster); out.push(e);
+      if (byCaster.has(e.target)) indeg.set(e.target, indeg.get(e.target) - 1);
+    }
+    /* 剩下的全是环（runMiniTRing 已整环作废，顺序不影响结果），按 turnOrder 兜底。 */
+    if (out.length < entries.length) out.push(...entries.filter((e) => !used.has(e.caster)).sort(byRank));
+    return out;
+  }
   function runMiniTHit(state, ent) {
     const c = ent.caster, t = ent.target;
     if (!actionOf(state, c) || t == null) return false;
@@ -981,7 +1003,7 @@
       if (a && a.key === SK.MINI_T) miniEntries.push({ caster: i, target: targetOf(state, i), isMirror: false });
     }
     runMiniTRing(state, miniEntries);
-    for (const ent of miniEntries) runMiniTHit(state, ent);
+    for (const ent of miniTChainOrder(state, miniEntries)) runMiniTHit(state, ent);
 
     // ====== ②b 镜面复制小雷 pri5（若自身与来源皆未被真实小雷作废，按小雷口径执行） ======
     const mirMiniEntries = [];
@@ -995,7 +1017,7 @@
     }
     if (mirMiniEntries.length) {
       runMiniTRing(state, mirMiniEntries);
-      for (const ent of mirMiniEntries) runMiniTHit(state, ent);
+      for (const ent of miniTChainOrder(state, mirMiniEntries)) runMiniTHit(state, ent);
     }
 
     // ====== ②c N17 合二为一（统计真实与镜面小雷的全部有效命中目标） ======
