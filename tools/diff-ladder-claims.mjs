@@ -56,7 +56,8 @@ export const LADDER_CLAIM = {
    * §E609：签名尾巴多了一节（`poolMix`）—— 10-15 落地两带混抽时旧签名**逐字没变**，那张账明明换了抽法却还"有效"，
    *   ④a 就是抓不到。补上之后先复现了一次旧红（在册=旧串 vs 现算=新串），再按新串重测。 */
   sig: 'lv:sparring:champ:0.2:5:soft:0:soft:-:-:p0.35/s1/min1/st:mix+st:toolkit;lv:regular:champ:0.1:5:soft:1:mid:-:hard=0.5+soft=0.5|else=mid:p0.1/s1/min1/st:toolkit;lv:hard:champ:0.1:5:soft:1:hard:-:-:-',
-  source: '2026-11-23 全池重平衡（38→25 枚：hard 13 ‖ soft 12）+ lv:sparring 掺席调为 p=0.35/s1 后实测：node tools/probe-diff-ladder.mjs --pool=1 --surrogate=rule --pairs=1 --games=1000 --seed=77000 --mode=multi|long',
+  source: '2026-11-23 全池重平衡（38→25 枚：hard 13 ‖ soft 12）+ lv:sparring 掺席调为 p=0.35/s1 后实测：node tools/probe-diff-ladder.mjs --pool=1 --surrogate=rule --pairs=1 --games=1000 --seed=77000 --mode=multi|long' +
+    ' ‖ 已知人数边界（见 docs/research/STATUS-2026-11-23-evening.md，500g/档 配对）：3P–5P 双模式全部严格正序；6–8P 困难/简单正序但普通↔简单压缩到 ±1–3pt 噪声带（7P -1.2pt=0.5–0.6σ）；2P 因 2.0 成员未练过 1v1 且不可掺脚本，rule 替身三档平齐（69/68/67.4% · 85.6/85.2/86.0%），legacy 呈正序但差 2.2–4.2pt',
   rule: '判"分得开" = |差| ≥ 2σ(配对)（不是 ≥2pt）。行按**档位表声明序**的相邻对记：`from` = 声明里更难那一档，`d` = 人类席夺冠率( to ) − 人类席夺冠率( from ) ⇒ **d 为负 = 实测把这一对的次序翻了**（不是抄错，是记账）。',
   measuredAt: '2026-11-23',
   /* ===== 10-21 概率掺批次（用户更正：脚本与冠军包一起抽，不是固定 k 席）=====
