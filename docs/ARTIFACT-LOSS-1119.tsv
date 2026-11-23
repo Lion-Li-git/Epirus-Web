@@ -636,11 +636,11 @@ v7ringA1-82	docs/artifacts/v7ringA1-82.bak	missing
 v7ringA1-91	docs/artifacts/v7ringA1-91.bak	missing	
 v7ringA1-92	docs/artifacts/v7ringA1-92.bak	missing	
 v7ringA1-93	docs/artifacts/v7ringA1-93.bak	missing	
-v7ringB1-31	docs/artifacts/v7ringB1-31.bak	missing	
+v7ringB1-31	docs/artifacts/v7ringB1-31.bak	sha-diff-wid-same	a1daa733778eb92ceaf6eceb7d4d0d80bc0c773978c79fb943c8328d0a21bf52
 v7ringB1-81	docs/artifacts/v7ringB1-81.bak	ok	
-v7ringB1-82	docs/artifacts/v7ringB1-82.bak	missing	
-v7ringB1-91	docs/artifacts/v7ringB1-91.bak	missing	
-v7ringB1-92	docs/artifacts/v7ringB1-92.bak	missing	
+v7ringB1-82	docs/artifacts/v7ringB1-82.bak	sha-diff-wid-same	10db2353b1feca1328c7a3658628fb71a7caa4d4e9079c172ee00f122e5171c8
+v7ringB1-91	docs/artifacts/v7ringB1-91.bak	sha-diff-wid-same	76851ff5ce7d2dd47d04be7e831edfc2575235f35ff97fa31b4ae59391c78e03
+v7ringB1-92	docs/artifacts/v7ringB1-92.bak	sha-diff-wid-same	3e56fddbf759f3ad9a758cc5b8fca8749504035cf10987cc781cee984ee938d9
 v7ringB1-93	docs/artifacts/v7ringB1-93.bak	ok	
 v7ringT3-31	docs/artifacts/v7ringT3-31.bak	ok	
 v7ringT3-81	docs/artifacts/v7ringT3-81.bak	ok	
