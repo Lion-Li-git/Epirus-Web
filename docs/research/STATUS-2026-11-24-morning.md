@@ -65,13 +65,13 @@
 | 作业 | 产物 | 起点 | 说明 |
 |---|---|---|---|
 | 池 25 枚 `G4`+`G5` 全员普查 | `scratch/g5-pool-1124.log` | 01:16 | 每枚 ~2–4 分钟；先印完全部 `G4` 再进 `G5`，所以中途 `grep G5` 为 0 属正常 |
-| 剂量×seed 网格 4 臂（**已收**） | `scratch/arms/nov24-fsclose-{020,035}-2026{1102,1103}.bak{,.meta.json}` ‖ 闭环读数表 `node scratch/dose-grid-table.mjs` | 01:19–02:0x | 四臂都 `TRAIN_EXIT=0` ⇒ **0.20 那档总共 4 粒 seed 里 3 粒落了产物、1 粒被珠账自检拒绝**；结论在 STATUS §4.16 |
-| RD-G1 洁净 rod 两臂 | `scratch/arms/nov24-rdg1-{rod12,rare25}.bak` ‖ 台账 `scratch/rdg1-1124.out` | 01:40 起 | 单臂 ~40 分钟（`steps=450`、`pool=5000`，比闭环臂贵一个量级）；**判活看 CPU 增量，别看日志 mtime**（`步` 行之间本来就几分钟不动） |
+| 剂量×seed 网格 4 臂（**已收**） | `scratch/arms/nov24-fsclose-{020,035}-2026{1102,1103}.bak{,.meta.json}` ‖ 闭环读数表 `node scratch/dose-grid-table.mjs` | 01:19–01:36（台账 mtime） | 四臂都 `TRAIN_EXIT=0` ⇒ **0.20 那档总共 4 粒 seed 里 3 粒落了产物、1 粒被珠账自检拒绝**；结论在 STATUS §4.16 |
+| RD-G1 洁净 rod 两臂 | `scratch/arms/nov24-rdg1-{rod12,rare25}.bak` ‖ 台账 `scratch/rdg1-1124.out` | 01:40 起（第一臂 01:46 落盘） | 单臂 ~40 分钟（`steps=450`、`pool=5000`，比闭环臂贵一个量级）；**判活看 CPU 增量，别看日志 mtime**（`步` 行之间本来就几分钟不动） |
 | 臂的 `G5` 复现读数（**排队中**） | 待池普查跑完再单实例跑 `gate-drafts`（⛔ 别同时起第二个同型测量实例） | — | 幸存的 5 枚闭环臂 × `G5[long]`，用来判 §4.12 那个 4%↔49% 会不会随 seed 翻 |
 
 ## 七、本班收口时的认证级别（照实写，不写成"全绿"）
 
-- **定向**：`--group=meta`（01:28）与 `--group=probe`（02:2x）各 4 道全绿（`spec 81/81 ‖ smoke ‖ battle ‖ map`），**两轮工具自己就明写"不许当认证引用"**；日志 `scratch/gate-meta-after-ringb1.log` ‖ `scratch/gate-probe-after-psrfix.log`。
+- **定向**：`--group=meta`（01:28）与 `--group=probe`（01:42）各 4 道全绿（`spec 81/81 ‖ smoke ‖ battle ‖ map`），**两轮工具自己就明写"不许当认证引用"**；日志 `scratch/gate-meta-after-ringb1.log` ‖ `scratch/gate-probe-after-psrfix.log`。
 - **整轮** `node tools/gate-all.mjs --np`：按计划在收口跑一次；**跑没跑、结果如何以那笔提交与日志为准**，别引用我这句当证据。
 - **数据面**：`land-recovered --check` exit 0（五条腿零违例）‖ `map-audit` 只剩 2 条已知缺口（147 枚缺件 + 128 枚 quarantine 恢复件权重等价）‖ 页内自检 100 PASS / 0 FAIL。
 - **规则面**：`node tools/rules-fingerprint.mjs` 仍是 `11bb29db`（本班没动 `js/core/**`）。
