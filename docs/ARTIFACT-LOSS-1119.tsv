@@ -739,9 +739,9 @@ v7tgt4-62	docs/artifacts/v7tgt4-62.bak	missing
 v7tgt4-63	docs/artifacts/v7tgt4-63.bak	missing	
 v7tgt4-64	docs/artifacts/v7tgt4-64.bak	missing	
 v7tgt4-66	docs/artifacts/v7tgt4-66.bak	missing	
-v7tgt5-31	docs/artifacts/v7tgt5-31.bak	missing	
-v7tgt5-62	docs/artifacts/v7tgt5-62.bak	missing	
-v7tgt5-64	docs/artifacts/v7tgt5-64.bak	missing	
+v7tgt5-31	docs/artifacts/v7tgt5-31.bak	sha-diff-wid-same	0ddb9125317da0af37b0c32ba9a9540f53279e1719f2b6f0aa32f12f9dfbfe62
+v7tgt5-62	docs/artifacts/v7tgt5-62.bak	sha-diff-wid-same	43fe113e35ff6bfb7ad4c986d5c32cb8f0eac92481bdac899f3e23f1e85f98fc
+v7tgt5-64	docs/artifacts/v7tgt5-64.bak	sha-diff-wid-same	92bd3d2393e1d87aa0cdcdd41f3820346740ed6021e7f79e2b1e6b8d482b7cb8
 v7u1-31	docs/artifacts/v7u1-31.bak	sha-diff-wid-same	f7ffebc0e13e449456d873b5c855d4fad72edafdafff4ca89c20eaa69b942ced
 v7u1-82	docs/artifacts/v7u1-82.bak	ok	
 v7u1-93	docs/artifacts/v7u1-93.bak	ok	

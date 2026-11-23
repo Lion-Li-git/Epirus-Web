@@ -20,15 +20,31 @@
 | 批 | 枚数 | 判 | era | env 出处 | 备注 |
 |---|---:|---|---|---|---|
 | `v7tgt5` | 3 | ✅ **3/3 全中** | `3242a160` | commit 正文：同池 E + `EPIRUS_TGT_W=0.05` | `v7tgt5-31/62/64`，已 `git add -f`；`land --check` 随后仍 0 违例 |
-| `v7b` | 4 | ✗ 校准没出件 | `e227d222`/`31310c26` | 零 env（表值 = era 默认） | `ENOENT v7b-37.bak` ⇒ 先看 runner 为什么没落产物，再判配方 |
-| `v7new5_01` | 6 | ✗ 校准抛异常 | `6bd21e41`/`a81f9fbe` | commit 正文 `CLEAR_W=0.1` + wave4 模板 | 同批整扫阶段倒是出了件但 wid 不符 ⇒ 两条症状要分开查 |
-| `v7new5_005` | 4 | ✗ 校准抛异常 | 同上（`CLEAR_W=0.05`） | 同上 | `runner exit=1 @ring2-run.mjs:233` |
-| `v7ringA1` | 6 | ✗ 全 miss（`407d2c6c`） | 换试 `e5a6b4c5` | `l2-arms.mjs:28-29,54-55` + `RESEARCH-LOG-2026-09-18:149` | 六枚 wid 全不等 ⇒ 更像差一维 env，而不是 era 错 |
-| `v7ringB1` | 4 | 待跑 | — | 幸存者 meta：零偏差 + 池 16 | — |
-| `v7roleC2` | 3 | 待跑 | `9adc22c5` | `DIV_ROLEW=1;WALL_FILTER=1` + cli-context URL 的 seed 94/95/96 | — |
-| `v7rb2` | 3 | 待跑 | `be0698a6`/`0b289dc1` | `BIGCARD_W=0.2;RING2_W=0.25` + **`RING2_HOT=js/bundled-champion-3p.js`**（wave4 没发 HOT 就是 0 命中病） | 唯一三枚 seed 有 `metaSeed` 背书的批 |
-| `v7rb1` | 3 | 待跑 | 同上 | `BIGCARD_W=0.1`（两处口径冲突，先用 0.1） | miss 就换 0.2 |
-| `v7expo` | 3 | 待跑 | `407d2c6c` | `ECO_TARGET=0.3;ECO_CAP=5;ECO_DIVW=0.15` | — |
+| `v7b` | 4 | **A 抛异常**（两 era 都 exit=1） | `31310c26`/`e227d222` | 零 env（表值=era 默认） | 没出件 ⇒ 别记成配方 miss；先查 runner 为什么抛 |
+| `v7new5_01` | 6 | **A + C 混**：校准抛异常，整扫 6 枚都出件但 wid 不等 | `6bd21e41`/`a81f9fbe` | commit 正文 `CLEAR_W=0.1` + wave4 模板 | 出件说明 era/命令通，wid 不等 = **差一维 env**（C 类）|
+| `v7new5_005` | 4 | **A 抛异常**（两 era） | 同上 | 同上（`CLEAR_W=0.05`）| 校准没过后整批被跳过，没到 C |
+| `v7ringA1` | 6 | **C**：12 次全出件、wid 全不等 | `407d2c6c`/`e5a6b4c5` | `l2-arms.mjs:28-29,54-55` + `RESEARCH-LOG-2026-09-18:149` | 两 era 都到 C ⇒ era 大概率对，**缺的是那一维 env** |
+| `v7ringB1` | 4 | **A 抛异常**（只跑了一 era） | `407d2c6c` | 幸存者 meta：零偏差 + 池 16 | 没跑完，`e5a6b4c5` 未试 |
+| `v7roleC2` | 3 | **A + C 混**：出件 3 枚 wid 不等 | `9adc22c5` | `DIV_ROLEW=1;WALL_FILTER=1` + cli-context seed 94/95/96 | 同 new5_01：命令通、配置差一维 |
+| `v7rb2` | 3 | **A + B**：一 era 出件不等、另一 era 产物未落 | `be0698a6`/`0b289dc1` | `BIGCARD_W=0.2;RING2_W=0.25` + **`RING2_HOT=js/bundled-champion-3p.js`** | 唯一 3 枚有 `metaSeed` 背书的一批，值得先修 A |
+| `v7rb1` | 3 | **A + B + C 都占** | 同上 | `BIGCARD_W=0.1`（口径冲突先用 0.1）| 症状最杂，排最后 |
+| `v7expo` | 3 | **C**：两 era 各 3 枚全出件、wid 不等 | `407d2c6c`/`e5a6b4c5` | commit 正文 `ECO_TARGET=0.3;ECO_CAP=5;ECO_DIVW=0.15` | 与 ringA1 同 era 同症状 ⇒ 可能是**同缺那一维** |
+
+## 本班最终账（00:2x 跑完，10 批 / 39 枚发完）
+
+- **命中 3 枚**：`v7tgt5-31` (`243f3c44f6ab5b7b`) ‖ `v7tgt5-62` (`b2da91e48d37d018`) ‖ `v7tgt5-64` (`acbfa100611ad379`)——**3/3 全中**，正是"配方 + era + seed 逐字在案、零猜测"那一批。
+- 台账：`missing 154 → 151` ‖ `sha-diff-wid-same 121 → 124` ‖ `ok 708` 未动。
+- `node tools/land-recovered.mjs --check` **零违例**，第四条也 0（有结论 816→819，说明驱动给新命中回写的历史 ts 与我独立复算一致）。
+- 三枚 `.bak` 已进 git（`git ls-tree HEAD docs/artifacts/` 可查）。⚠ **它们搭在了 `c1949d72`（一笔工具提交）里，那笔说明没提这三个文件** —— 属"说明与 diff 不对账"，历史不改（不 amend），在此明记；下一班按 `git show --stat c1949d72` 能看到。
+- **其余 9 批 0 命中**，症状分三类，别混着记：
+  - **runner 抛异常**（`new5_01/005`，`ring2-run.mjs:233` 栈）⇒ 是"跑不起来"，不是"配方不对"；
+  - **校准件没产出**（`v7b` 的 `ENOENT v7b-37.bak`）⇒ 同上，先看产物落点；
+  - **产物落盘但 wid 全不等**（`ringA1 @407d2c6c` 六枚、`rb1/rb2/expo` 若干）⇒ 这才是"差一维 env 或 era 错"，按 §"三种形状"去分诊。
+
+## 下一班的第一个动作（别急着再扫）
+
+发**只动 era、不动 env** 的探针把 `ringA1` 钉死：它的六枚 wid 全不等，而 env 出处是逐字的 `l2-arms.mjs:28-29,54-55`——先确认 era 里那份工具**确实是当年跑这批时的那一版**（`git show 407d2c6c:tools/l2-arms.mjs` 与 `RESEARCH-LOG-2026-09-18:149` 两处对照），再谈换 era。
+`expo/rb1/rb2` 同理：**先证明"这一批当年用的是哪一份 runner 工作树"，不要拿默认 HEAD 的 runner 去重放**（11-23 已证过这个病：`train-3p.mjs` 里带 v7-era 补丁）。
 
 ## 明确不发（省算力）
 
