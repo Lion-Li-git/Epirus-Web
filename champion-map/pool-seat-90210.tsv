@@ -103,3 +103,5 @@ CN-G1	docs/artifacts/CN-G1.bak	multi	200	90210	0	0	0	0.5	0	0	0	0.07	0.5	只枪�
 CN-G1	docs/artifacts/CN-G1.bak	long	200	90210	1	0.5	0	4	0	1	1	1.07	4.0	只枪压制	2.2857142857142856
 MN-G1	docs/artifacts/MN-G1.bak	multi	200	90210	0	0	0.5	1	0	0	0	0.21	1.0	只枪压制	4
 MN-G1	docs/artifacts/MN-G1.bak	long	200	90210	0	2	0	4	0	0	0	0.86	4.0	只枪压制	3
+RG-MN	docs/artifacts/RG-MN.bak	multi	200	90210	0	0	1	0.5	0	0	0	0.21	1.0	只攒不打(农民)	6.285714285714286
+RG-MN	docs/artifacts/RG-MN.bak	long	200	90210	0	0.5	0	9	0.5	0	0	1.43	9.0	只枪压制	4.142857142857143

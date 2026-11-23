@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.20 — 11-23（**`RG-MN`** 入 `hard`：地雷 × 长程聚能环单轮防抖强将，`arenaB=+11.38pt`、`MxCL=0.257`、`ax-long h2=88.77`、`seatKill=0` ‖ 池 35 → 36）
+
+**这一版是什么**：用 fresh `EQ-S4-GD6ATEACH` 单轮防抖、`MN-G1` 主教师（地雷风格）叠加 `ringEcon@0.22(5:long,8:long)`（`--rareOnly=ring --rareFrac=0.35 --steps=250 --lr=0.0004`）训出 **`RG-MN`**；首次让 `hard` 带拿到**「地雷 + 长程聚能环 + 落雷」三位一体**的新风格长程环包（非 `GD6ATEACH` 单一克隆），池增至 **36 枚**（`hard 20 / soft 16`）。
+
+- **新入池 `hard` 成员 `RG-MN`**（[`docs/artifacts/RG-MN.bak`](docs/artifacts/RG-MN.bak)，`wid=7e4628cbec354183`，`v:92 / S1o / 16,561`）：
+  - `promote --dry --support=2` **0 阻断**：`G(multi)=3.71 / G(long)=5.61`（`S=1.803 / G_eff=6.07`，最大单卡压到 `33.3%`），场A `36.4%`（含反弹 `47.6%`），反弹墙 `13.65/局`（0 零伤害局），座位 `8.5pt`，`G4[long] 4.3% / G4[multi] 15.7%`，`G5=0%/0%`，`环@有ep·安全=28.6%`。
+  - **`arenaB=+11.3764pt`**（`arS=+0.1334 / arL=+0.1319 / arR=+0.4415`，4/6 粒正）；`MxCL=0.2568`（`MxSkU=14 / MxSkE=13`），`ax-long h2=88.77 / h3=62.50 / h5=41.89 / h8=31.82`；`seatKill=0`（90210/90211 `multi ≤ 1.0% / long ≤ 9.0%`）；Stage 1 `union=14/30`（**`mine 44/120` 格/`710` 出手、`ring 26/120` 格/`1,041` 出手、`bigT 10/120` 格/`125` 出手、`railgun 4/120`**）。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 35 → **36**（`hard 20 / soft 16`）；重烘整表 / 清单 / 36 个分片、演化图（1019 行，100 PASS / 0 FAIL）与 `skill-report`（36 枚，missing=0）；池缓存戳 `p1123c → p1123d`。
+
 ## v2.1.19 — 11-23（**`MN-G1`** 入 `hard`：P1-2 `hard` 带 `mine` 补盲首破，`arenaB=+10.38pt`、`selftest3` 6/6、`seatKill=0` ‖ 池 34 → 35）
 
 **这一版是什么**：沿用低剂量底座配方（`EQ-S4-GD6ATEACH` + `MSB11-R1S130778313` `mine@0.12`，`--rareOnly=mine --rareFrac=0.15 --steps=250 --lr=0.0004`）训出短名强包 **`MN-G1`**；`hard` 带首次拿到活跃 **`mine`（Stage1 `52/120` 格 / `797` 出手）** 兼 `arenaB=+10.38pt` 低抖动，池增至 **35 枚**（`hard 19 / soft 16`）。
