@@ -59,9 +59,9 @@
 
 ---
 
-## 三、现役产品冠军池（36 枚 · 全员在盘）
+## 三、现役产品冠军池（37 枚 · 全员在盘）
 
-> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 20 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 21 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
 
 | # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
 |---:|---|---|---|---:|---:|---|---|
@@ -101,11 +101,12 @@
 | 34 | **`CN-G1`** | `hard` | `a3f63c60a01e4f35` | 0 | 0 | [`docs/artifacts/CN-G1.bak`](artifacts/CN-G1.bak) | **11-23 `hard` 过载炮低剂量载体**（`GD6ATEACH` + `MX8-CN-M cannon@0.12`；`promote` 0 阻断、`G4 只枪 2.7%/60%`、`G5 0%/0%`、`arenaB=-2.46pt`、`MxC=.218/MxCL=.259`、`seatKill=0`，Stage1 `cannon 10/120` 格/`88` 出手、`railgun 25/120`） |
 | 35 | **`MN-G1`** | `hard` | `79e3b76bbf41c67a` | 0 | 0 | [`docs/artifacts/MN-G1.bak`](artifacts/MN-G1.bak) | **11-23 `hard` 地雷低剂量载体**（`GD6ATEACH` + `MSB11-R1S130778313 mine@0.12`；`selftest3` 6/6、`promote` 0 阻断、`arenaB=+10.38pt`（spread `21.39`）、`seatKill=0`，Stage1 `mine 52/120` 格/`797` 出手、`railgun 17/120`） |
 | 36 | **`RG-MN`** | `hard` | `7e4628cbec354183` | 0 | 0 | [`docs/artifacts/RG-MN.bak`](artifacts/RG-MN.bak) | **11-23 `hard` 地雷×长程聚能环单轮载体**（`GD6ATEACH` + `MN-G1` + `ringEcon@0.22(5:long,8:long)`；`promote` 0 阻断、`G(long)=5.61 / S=1.803`、`arenaB=+11.38pt`（`arS=.133/arL=.132`）、`MxCL=.257`、`ax-long h2=88.77`、`seatKill=0`，Stage1 `mine 44/120` 格/`710` 出手、`ring 26/120` 格/`1,041` 出手、`bigT 10/120` 格/`125` 出手） |
+| 37 | **`HL-G1`** | `hard` | `803f773db2e563f0` | 0 | 0 | [`docs/artifacts/HL-G1.bak`](artifacts/HL-G1.bak) | **11-23 `hard` 全息套盾配合载体**（`GD6ATEACH` + `OBS6E9 holo@0.15`；40g `self=0/other=56`，`promote` 0 阻断（`套给别人 0.2/局`、`S=1.822/G(long)=5.87`、`珠闭环 83%`）、`arenaB=-1.83pt`、`MxC=.255`、`seatKill=0`，Stage1 **`holo 35/120` 格/`322` 出手**、`railgun 33/120` 格/`582` 出手、`bigT 8/120`） |
 
 > 现役池状态（`2026-11-23`）：  
 > 1. **`AR-TK2` 正式合入 `hard` 带**（[`docs/artifacts/AR-TK2.bak`](artifacts/AR-TK2.bak)，`wid=b5d4cbc6af57bbdd`，`arenaB=+10.36pt`，`seatKill=0`，Stage1 `armor 120/120` 格 `5,205` 手 + `tank 26/120` 格 `212` 手）；  
-> 2. **`hard` 带聚能环载体增至 `5/20`**（`R-GD12` / `RING-MINIT-CONT` / `nov22-ring3-gd6a18` / **`RG-MN` (`mine + ring + bigT`)** / `MX8-TN25-KL`），同时拥有 `armor + tank`、`FS-G2`（`firestorm + curse + railgun`）、`CN-G1`（`cannon + railgun + bigT`）与 `MN-G1`；  
-> 3. **下一阶段重心（用户 15:55 点明）**：继续补齐 **① 困难带不同风格的长程聚能环包（`RG-FS` 等）、② 天火闭环、③ 不同风格包、④ 对局中配合（`holo` 辅助套盾 / `tkWeak` / 协同）**。
+> 2. **`hard` 带聚能环载体增至 `5/21`**（`R-GD12` / `RING-MINIT-CONT` / `nov22-ring3-gd6a18` / **`RG-MN` (`mine + ring + bigT`)** / `MX8-TN25-KL`），同时拥有 **对局配合 (`AR-TK2` `armor+tank` + `HL-G1` `holo 35/120` 套盾 + `FS-G2` `firestorm+curse`)** 与多风格覆盖（`CN-G1` `cannon` / `MN-G1` `mine`）；  
+> 3. **下一阶段重心（用户 15:55 点明）**：继续补齐 **① `hard` 带长程聚能环载体（`RG-CN`: `CN-G1` 强抗枪底座 × 长程聚能环 等）、② 避雷针等剩余风格与协同**。
 
 ---
 

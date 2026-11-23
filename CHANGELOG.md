@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.21 — 11-23（**`HL-G1`** 入 `hard`：对局中全息套盾配合载体，`holo 35/120` 格、`40g other=56/self=0`、`arenaB=-1.83pt`、`MxC=.255`、`seatKill=0` ‖ 池 36 → 37）
+
+**这一版是什么**：用 fresh `EQ-S4-GD6ATEACH` 底座 + `OBS6E9` `holo@0.15`（`--rareOnly=holo --rareFrac=0.25 --steps=250 --lr=0.0004`）训出对局配合强包 **`HL-G1`**；在 `hard` 带首次打出高覆盖全息均势/队友套盾（**Stage1 `holo 35/120` 格 / `322` 出手**，此前 `hard` 最高仅 `9/120`），同时保住 `railgun 33/120` 格、`bigT 8/120`、`S=1.822` 与 `seatKill=0`，池增至 **37 枚**（`hard 21 / soft 16`）。
+
+- **新入池 `hard` 成员 `HL-G1`**（[`docs/artifacts/HL-G1.bak`](docs/artifacts/HL-G1.bak)，`wid=803f773db2e563f0`，`v:92 / S1o / 16,561`）：
+  - `promote --dry --support=2` **0 阻断**：**`全息屏障（自对局）0.2/局（套给别人 0.2/局）`**（40 局自对局实测 `self=0 / other=56`），`G(long)=5.87 / S=1.822 / G_eff=6.18`（最大单卡压到 `30.6%`），场A `32.4%`，座位 `13pt`，`G4[long] 9.7% / G4[multi] 5.0%`，`G5=0%/0%`，珠闭环 `83.0%`。
+  - `arenaB=-1.8279pt`（spread `35.54`，`arS=+0.0988 / arL=+0.0349 / arR=+0.2154`）；`MxC=0.2546 / MxCL=0.1694`（`MxSkU=13 / MxSkE=12`），`ax-multi h2=85.12 / h3=56.46`；`seatKill=0`（90210/90211 `multi ≤ 0.5% / long ≤ 10.0%`）；Stage 1 `union=13/30`（**`holo 35/120` 格/`322` 出手、`railgun 33/120` 格/`582` 出手、`bigT 8/120`、`shift 2/120`**）。
+- **池与产物**：`champion-map/data/page/pool-members.tsv` 36 → **37**（`hard 21 / soft 16`）；重烘整表 / 清单 / 37 个分片、演化图（1020 行，100 PASS / 0 FAIL）与 `skill-report`（37 枚，missing=0）；池缓存戳 `p1123d → p1123e`。
+
 ## v2.1.20 — 11-23（**`RG-MN`** 入 `hard`：地雷 × 长程聚能环单轮防抖强将，`arenaB=+11.38pt`、`MxCL=0.257`、`ax-long h2=88.77`、`seatKill=0` ‖ 池 35 → 36）
 
 **这一版是什么**：用 fresh `EQ-S4-GD6ATEACH` 单轮防抖、`MN-G1` 主教师（地雷风格）叠加 `ringEcon@0.22(5:long,8:long)`（`--rareOnly=ring --rareFrac=0.35 --steps=250 --lr=0.0004`）训出 **`RG-MN`**；首次让 `hard` 带拿到**「地雷 + 长程聚能环 + 落雷」三位一体**的新风格长程环包（非 `GD6ATEACH` 单一克隆），池增至 **36 枚**（`hard 20 / soft 16`）。
