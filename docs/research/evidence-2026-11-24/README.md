@@ -12,5 +12,6 @@
 | `dose-vs-defense-grid-1124.tsv` | 31 行 ‖ 5336 B | `379680f320c3a8e5` | 闭环 × 破防 合表（STATUS §4.29；由 grid-1124b.mjs 现读臂 meta + g5 日志生成，带每行出处） | 见 STATUS 对应节里给的命令 |
 | `arenaB-arms-1124.tsv` | 9 行 ‖ 763 B | `a2d36139592813b4` | 六粒候选 + 两枚基座的 Arena B 轴读数与相对差（STATUS §4.33；对照尺是在册账 arenaSpread 列的 P10=21.39pt 全距地板） | 见 STATUS 对应节里给的命令 |
 | `arenaB-paired-1124.tsv` | 45 行 ‖ 2512 B | `6c9720f452e53aec` | Arena B 六粒 seed 逐 seed 配对表：六臂平均差、六粒里退的粒数、符号检验 p 与臂自身全距（STATUS §4.34） | 见 STATUS 对应节里给的命令 |
+| `pool-union-1124.tsv` | 15 行 ‖ 633 B | `9b407308336f1b7d` | 池级技能并集现读（在册 25 份 stage1 报告、格数>0）与六枚候选各补的键（STATUS §4.35） | 见 STATUS 对应节里给的命令 |
 
 ⚠ 搬动规矩：这些表**只能由生成脚本重算**，不许手改；每份都带 sha256 前 16 位，对不上就说明有人改过。

@@ -1,0 +1,15 @@
+scope
+id
+rulesFingerprint
+wid
+unionN
+poolUnionKeys
+keysNotInPoolUnion
+pool-25-members	(全部在册报告并集)	11bb29db		27		27
+candidate	nov24-pierce5-20261031	11bb29db	b9c8fe0743efd404	16	27	（无）
+candidate	nov24-pierce5-20261101	11bb29db	7c11b8c4bf7a8290	15	27	（无）
+candidate	nov24-pierce5-20261102	11bb29db	de8bd40f40f023b9	15	27	（无）
+candidate	nov24-pierce5-20261103	11bb29db	cd0d19ba78e411cf	16	27	（无）
+candidate	nov24-baseswap-20261031	11bb29db	9f07a162891a1279	14	27	（无）
+candidate	nov24-baseswap-20261101	11bb29db	9390478ce2e1ba00	15	27	（无）
+after-adding-6-candidates	(并集)	11bb29db		27		0
