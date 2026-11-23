@@ -101,7 +101,12 @@ function stage1(W, pack, oppDesc, gamesCensus) {
   const params = loadChamp(W, pack.path);
   const base = T.policyChooserN(params, TEMP);
   const bead = { elecGained: 0, elecSpent: 0, elecExpired: 0, boomGained: 0, boomSpent: 0, boomExpired: 0 };
-  const curseStats = { curseOk: 0, curseLanded: 0, firestormOk: 0, firestormHits: 0 };
+  const curseStats = { curseOk: 0, curseLanded: 0, firestormOk: 0, firestormHits: 0,
+    /* 按局闭环（11-24 夜班加）：聚合次数分不开"没学过出这一手"与"学了但从没闭环"，
+     *   而用户的裁定是「宁可不贴，也不要不闭环」⇒ 这一维必须按局记，不能从次数反推。
+     *   stickGames = 本局贴到过（`curse` 事件 owner=被测席）；loopGames = 贴过且本局至少一次引爆真吃到符（`n>0`）；
+     *   boomGames = 本局出过引爆手（不管吃没吃到）；emptyBoomGames = 出手引爆但 `n=0`（空转）的次数。 */
+    stickGames: 0, loopGames: 0, boomGames: 0, emptyBoomGames: 0 };
   const oppChoosers = oppDesc.map(od => {
     if (od.kind === 'script') {
       if (typeof B[od.fn] !== 'function') { console.error('⛔ 脚本对手取不到：' + od.name + '（fn=' + od.fn + '）'); process.exit(2); }
@@ -155,6 +160,17 @@ function stage1(W, pack, oppDesc, gamesCensus) {
         const r = T.oneGameN(choosers, gseed, n, { mode });
         cell.games++;
         cell.win += T.rankOf(r.state, seat, gseed) === 1 ? 1 : 0;
+        /* 闭环按局判定（第二遍扫同一份 events，不改上面那台的任何计数 ⇒ 老读数逐字不动） */
+        {
+          let gStick = 0, gBoomHit = 0, gBoomEmpty = 0;
+          for (const e of ((r.state && r.state.events) || [])) {
+            if (e.type === 'curse' && e.owner === seat) gStick++;
+            else if (e.type === 'firestorm' && e.pid === seat) { if ((e.n || 0) > 0) gBoomHit++; else gBoomEmpty++; }
+          }
+          if (gStick) { curseStats.stickGames++; if (gBoomHit) curseStats.loopGames++; }
+          if (gBoomHit || gBoomEmpty) curseStats.boomGames++;
+          curseStats.emptyBoomGames += gBoomEmpty;
+        }
         for (const e of ((r.state && r.state.events) || [])) {
           if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
             if (e.key === R.SK.CURSE) curseStats.curseOk++;
@@ -355,6 +371,7 @@ function main() {
   for (const f of realPackFixtures(pool)) oppDesc.push({ name: f.id, kind: 'real', path: f.path });
   const ids = pickPacks(pool, arg('pack', ''), arg('packs', ''), has('all-pool'));
   const jobs = Math.max(1, Math.min(Number(arg('jobs', 1)) || 1, 16));
+  console.log('# 落盘目录 = ' + DATA_DIR + (jobs > 1 ? '（并行 ' + jobs + ' 路，旗标逐字转给子进程）' : ''));
   if (ids.length === 1 || jobs === 1) {
     for (const id of ids) runOne(STAGE, pool.find(m => m.id === id), oppDesc);
   } else {
@@ -367,6 +384,12 @@ function main() {
         if (!id) return res();
         const cp = spawn(process.execPath, [join('tools', 'pool-skill-report.mjs'), '--stage=' + STAGE, '--pack=' + id,
           '--games-census=' + GAMES_CENSUS, '--games-strength=' + GAMES_STRENGTH, '--max-strength-games=' + MAX_STRENGTH_GAMES,
+          /* `--out=`/`--coverth=` 必须**逐字传给子进程**：并行分支以前只转 stage/pack/games 三样，
+           *   于是 `--all-pool --jobs=6 --out=scratch/…` 的产物会静默落回在册目录（11-24 夜班实测踩到，
+           *   25 枚 `champion-map/data/skill-report/*.json` 就这么被就地重写了）。**下面那行落盘目录横幅就是为这条而加**：
+           *   跑了才知道写在哪，别让人去猜。 */
+          ...(arg('out', '') ? ['--out=' + arg('out', '')] : []),
+          ...(arg('coverth', '') ? ['--coverth=' + arg('coverth', '')] : []),
           ...(arg('shortlist') ? ['--shortlist=' + arg('shortlist')] : [])], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
         cp.stdout.on('data', d => process.stdout.write(d));
         cp.stderr.on('data', d => process.stderr.write(d));

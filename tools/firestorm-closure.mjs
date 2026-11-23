@@ -22,14 +22,14 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 
 if (process.argv[1] && process.argv[1].endsWith('firestorm-closure.mjs')) {
-  rejectUnknownFlags(process.argv.slice(2), ['pool', 'out', 'quiet'], 'firestorm-closure');
+  rejectUnknownFlags(process.argv.slice(2), ['pool', 'out', 'reports', 'quiet'], 'firestorm-closure');
 }
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const QUIET = process.argv.includes('--quiet');
 const say = (...a) => { if (!QUIET) console.log(...a); };
 const POOL = arg('pool', 'champion-map/data/page/pool-members.tsv');
 const OUT = arg('out', 'champion-map/data/firestorm-closure-1124.tsv');
-const REPORT_DIR = 'champion-map/data/skill-report';
+const REPORT_DIR = arg('reports', 'champion-map/data/skill-report');
 /* 页面告警那两条常量（build-skill-page.mjs:138）——本工具照抄阈值，但**只报不判**，判它的是门 */
 const CURSE_FLOOR = 3, DET_BAD = 0.25;
 
