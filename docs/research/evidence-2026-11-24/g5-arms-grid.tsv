@@ -1,0 +1,15 @@
+pack	mode	defWinPct	verdict	finalHp	attacksPerGame	piercePerGame	pierceShare	note	ci95pt	n
+线上包	long	20	PASS	0.6	10.7	2.6	24.3	破防反射在	4.5	300
+线上包	multi	12	PASS	0.2	8.8	1.8	20.5	破防反射在	3.7	300
+scratch/arms/nov24-fsclose-f20	long	4	PASS	0.1	8.1	4.5	55.6	破防反射在	2.4	300
+scratch/arms/nov24-fsclose-f20	multi	0	PASS	0	4	4	100.0	破防反射在	0.9	300
+scratch/arms/nov24-fsclose-020-20261102	long	43	FAIL	0.7	5.4	3.3	61.1	缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射	5.6	300
+scratch/arms/nov24-fsclose-020-20261102	multi	1	PASS	0	3.9	3.1	79.5	破防反射在	1.4	300
+scratch/arms/nov24-fsclose-020-20261103	long	2	PASS	0	5.4	4.6	85.2	破防反射在	1.8	300
+scratch/arms/nov24-fsclose-020-20261103	multi	0	PASS	0	3.8	3.8	100.0	破防反射在	0.9	300
+scratch/arms/nov24-fsclose-f35	long	49	FAIL	0.9	16.5	2.9	17.6	缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射	5.6	300
+scratch/arms/nov24-fsclose-f35	multi	2	PASS	0	4.5	2.9	64.4	破防反射在	1.8	300
+scratch/arms/nov24-fsclose-f35s2	long	56	FAIL	1.2	8.5	2.6	30.6	缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射	5.6	300
+scratch/arms/nov24-fsclose-f35s2	multi	1	PASS	0	3.7	3	81.1	破防反射在	1.4	300
+scratch/arms/nov24-fsclose-035-20261102	long	48	FAIL	1.1	8.1	3.2	39.5	缺"目标免疫普通攻击 ⇒ 换穿透卡"的反射	5.6	300
+scratch/arms/nov24-fsclose-035-20261102	multi	2	PASS	0	4.4	2.6	59.1	破防反射在	1.8	300

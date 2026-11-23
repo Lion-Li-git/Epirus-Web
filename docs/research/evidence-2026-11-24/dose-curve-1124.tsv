@@ -1,0 +1,10 @@
+arm	teacher2frac	seed	teacher2keys	rulesFingerprint	stickGames	legalChances	taken	takeRatePct	loopRatePct	emptyBoom	boomPerStickPct
+nov24-fsclose-010-20261031	0.1	20261031	curse,firestorm	11bb29db	363	1264	636	50.32	84.57	0	44.38
+nov24-fsclose-010-20261101	0.1	20261101	curse,firestorm	11bb29db	376	1370	657	47.96	86.97	0	51.21
+nov24-fsclose-010-20261102	0.1	20261102	curse,firestorm	11bb29db	366	1429	723	50.59	89.89	0	69.39
+nov24-fsclose-f20	0.2	20261031	curse,firestorm	11bb29db	365	1286	654	50.86	89.04	0	34.71
+nov24-fsclose-020-20261102	0.2	20261102	curse,firestorm	11bb29db	380	1365	712	52.16	91.58	0	37.32
+nov24-fsclose-020-20261103	0.2	20261103	curse,firestorm	11bb29db	377	1299	692	53.27	90.72	0	29.45
+nov24-fsclose-f35	0.35	20261031	curse,firestorm	11bb29db	409	1482	781	52.70	92.91	0	34.88
+nov24-fsclose-f35s2	0.35	20261101	curse,firestorm	11bb29db	419	1458	728	49.93	91.89	0	27.59
+nov24-fsclose-035-20261102	0.35	20261102	curse,firestorm	11bb29db	383	1382	722	52.24	91.12	0	33.43
