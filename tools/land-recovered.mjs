@@ -29,10 +29,10 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { widOf } from '../champion-map/pack-id.mjs';
-import { rejectUnknownFlags } from './audit-lib.mjs';
+import { rejectUnknownFlags, extractJsonObject } from './audit-lib.mjs';
 
 if (process.argv[1] && process.argv[1].endsWith('land-recovered.mjs')) {
-  rejectUnknownFlags(process.argv.slice(2), ['check', 'do', 'ids', 'ledger', 'g3', 'quiet', 'root', 'leakSince', 'tsReport'], 'land-recovered');
+  rejectUnknownFlags(process.argv.slice(2), ['check', 'do', 'ids', 'ledger', 'g3', 'quiet', 'root', 'leakSince', 'tsReport', 'lineage'], 'land-recovered');
 }
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const CHECK = process.argv.includes('--check');
@@ -64,10 +64,17 @@ const setMetaTs = (txt, ts) => {
 
 /* 身份目标：lineage.tsv（2026-11-23 起 lineage-g3 退役） */
 const wantWid = new Map();
-for (const f of [rp('champion-map/data/page/lineage.tsv')]) {
+const linKnob = new Map();
+for (const f of [rp(arg('lineage', 'champion-map/data/page/lineage.tsv'))]) {
   let L; try { L = tsv(f); } catch (e) { continue; }
   const h = L[0].split('\t'), ix = Object.fromEntries(h.map((c, i) => [c, i]));
-  for (const l of L.slice(1)) { const c = l.split('\t'); if (c[ix.id] && c[ix.wid] && !wantWid.has(c[ix.id])) wantWid.set(c[ix.id], c[ix.wid]); }
+  for (const l of L.slice(1)) {
+    const c = l.split('\t');
+    if (c[ix.id] && c[ix.wid] && !wantWid.has(c[ix.id])) {
+      wantWid.set(c[ix.id], c[ix.wid]);
+      linKnob.set(c[ix.id], { oppsN: c[ix.oppsN], gens: c[ix.gens], mode: c[ix.mode] });
+    }
+  }
 }
 
 /* registry：pack_id → {sha256, path} */
@@ -88,7 +95,8 @@ if (CHECK) {
   /* 跑遍全表验三条判据；只在"文件在盘上"的行上有结论（missing/no-path 不参与，另计） */
   let ok = 0, drift = 0, badState = 0, badShaCol = 0, widMismatch = 0, unreadable = 0, noTarget = 0;
   let tsJudged = 0, tsSame = 0, tsNoField = 0, tsClockSkew = 0, tsLeak = 0;
-  const exBadState = [], exBadSha = [], exWid = [], exTs = [], tsRows = [];
+  let linJudged = 0, linStale = 0;
+  const exBadState = [], exBadSha = [], exWid = [], exTs = [], exLin = [], tsRows = [];
   for (const i of bodyIdx) {
     const c = rowAt(i);
     const id = c[lx.id], st = c[lx.state], path = c[lx.path], shaCol = c[lx.sha256] || '';
@@ -123,6 +131,31 @@ if (CHECK) {
         else tsClockSkew++;
       }
     }
+    /* 第五条判据（11-24 夜班加 · 门数不变）：**件上写得出的方法参数，表里不许还是 `-`**。
+     *   来历：本班回收了 v7tgt5 三枚（wid 逐位命中），但 `lineage.tsv` 那三行的
+     *   `oppsN/gens/mode` 仍是 `-` —— 因为这几列是 `champion-map/lineage.mjs` **从包内 META 烘出来的**
+     *   （见其 :157/:492 `oppsN = m.opps.length`），包回来之后没人重跑生成器，表就落后于件。
+     *   ⚠ 谓词必须**照生成器的推导式写**，不能拿 `pop` 去推 `oppsN`：
+     *     第一版我就是这么写的，748 枚里误报 281 枚（`B-s63` 的 gens 其实是对的）——
+     *     "一上桌就几百行红"的判据第二天就会被人关掉，那比没有判据更糟。
+     *   按生成器同式重写后实测：可推 748 枚、落后 **0** 枚（刚重生成过），而对着修复前那份表应当正好点出 3 枚。 */
+    {
+      const k = linKnob.get(id);
+      if (k) {
+        const raw = extractJsonObject(txt, 'EPIRUS_CHAMPION_3P_META');
+        let mm = null; if (raw) { try { mm = JSON.parse(raw); } catch (e) { mm = null; } }
+        if (mm) {
+          const nOpps = Array.isArray(mm.opps) ? mm.opps.length : (typeof mm.opps === 'string' && mm.opps ? mm.opps.split(',').filter(Boolean).length : 0);
+          const deriv = {};
+          if (nOpps) deriv.oppsN = String(nOpps);
+          if (mm.gens !== undefined) deriv.gens = String(mm.gens);
+          if (mm.mode !== undefined) deriv.mode = String(mm.mode);
+          const blank = (v) => v === undefined || v === null || v === '' || v === '-';
+          const miss = Object.keys(deriv).filter((c) => blank(k[c]));
+          if (Object.keys(deriv).length) { linJudged++; if (miss.length) { linStale++; if (exLin.length < 5) exLin.push(id + ' 件里可推 ' + miss.map((c) => c + '=' + deriv[c]).join('/') + ' 而表里是 `-`'); } }
+        }
+      }
+    }
     if (st === 'ok') { ok++; if (!byteEqual) { badState++; if (exBadState.length < 5) exBadState.push(id + ' 标 ok 但字节 ≠ registry.sha256'); } if (shaCol !== '') { badShaCol++; } }
     else if (st === 'sha-diff-wid-same') {
       drift++;
@@ -130,7 +163,7 @@ if (CHECK) {
       if (shaCol !== disk) { badShaCol++; if (exBadSha.length < 5) exBadSha.push(id + ' 第 4 列不是盘上 sha（差 ' + (shaCol ? shaCol.slice(0, 10) : '空') + ' vs ' + disk.slice(0, 10) + '）'); }
     }
   }
-  console.log('=== --check 四条判据跑遍全表 ===');
+  console.log('=== --check 五条判据跑遍全表 ===');
   console.log('  state=ok ' + ok + ' 枚（字节 == registry.sha256）‖ state=sha-diff-wid-same ' + drift + ' 枚（wid 同、字节不同）');
   console.log('  标错态 ' + badState + ' ‖ 第 4 列没记盘上 sha ' + badShaCol + ' ‖ wid 对不上在册 ' + widMismatch +
     ' ‖ 声称在册却读不到文件 ' + unreadable + ' ‖ 无 wid 目标（不参与判定）' + noTarget);
@@ -141,8 +174,10 @@ if (CHECK) {
     ' ‖ 钟域/历史差（只报不判）' + tsClockSkew + ' ‖ ⚠ 扫描时刻残留 ' + tsLeak + ' ‖ 包内读不到 ts（**无结论，不是干净**）' + tsNoField);
   if (exTs.length) console.log('  扫描时刻残留：' + exTs.join(' ‖ '));
   if (TS_REPORT) { writeFileSync(rp(TS_REPORT), 'id\tstate\tmetaTs\tregistryTs\tdeltaHours\tleak\n' + tsRows.join('\n') + '\n'); console.log('  时间戳账本已落盘：' + TS_REPORT + '（' + tsRows.length + ' 行）'); }
-  const bad = badState + badShaCol + widMismatch + tsLeak;
-  console.log(bad === 0 ? '✅ 约定成立：零违例 ⇒ registry 不该被登记步改动，且没有扫描时刻残留' : '⛔ 有 ' + bad + ' 处违例 ⇒ 上面那四条判据与在册数据不一致，别照它写新行');
+  console.log('  第五条（表不许落后于件）：件里可推方法参数 ' + linJudged + ' 枚 ‖ 表里仍是 `-` 的 ' + linStale + ' 枚');
+  if (exLin.length) console.log('  表落后（跑 `node champion-map/lineage.mjs` 后按 bake-flags 重烘页面即可清）：' + exLin.join(' ‖ '));
+  const bad = badState + badShaCol + widMismatch + tsLeak + linStale;
+  console.log(bad === 0 ? '✅ 约定成立：零违例 ⇒ registry 不该被登记步改动，无扫描时刻残留，表也没落后于件' : '⛔ 有 ' + bad + ' 处违例 ⇒ 上面那五条判据与在册数据不一致，别照它写新行');
   process.exit(bad === 0 ? 0 : 1);
 }
 
