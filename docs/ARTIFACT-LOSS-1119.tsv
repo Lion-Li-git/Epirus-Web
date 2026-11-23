@@ -603,12 +603,12 @@ v7press1-82	docs/artifacts/v7press1-82.bak	sha-diff-wid-same	4758fc642ed8c2d8d10
 v7press1-91	docs/artifacts/v7press1-91.bak	sha-diff-wid-same	2821445c74b3836306c5dbc59d531bd0abe6103cbd6baffa4029572bb1281887
 v7press1-92	docs/artifacts/v7press1-92.bak	sha-diff-wid-same	335ffd384f5bb7e45f8b5a321007135051b75265a611000adcd4bb0c07cb0338
 v7press1-93	docs/artifacts/v7press1-93.bak	sha-diff-wid-same	e5f45d4756ad8e9b6397c4d1a0131328ba1c966a15b180509acd1b71ef59f56c
-v7press2-31	docs/artifacts/v7press2-31.bak	missing	
-v7press2-81	docs/artifacts/v7press2-81.bak	missing	
-v7press2-82	docs/artifacts/v7press2-82.bak	missing	
-v7press2-91	docs/artifacts/v7press2-91.bak	missing	
-v7press2-92	docs/artifacts/v7press2-92.bak	missing	
-v7press2-93	docs/artifacts/v7press2-93.bak	missing	
+v7press2-31	docs/artifacts/v7press2-31.bak	sha-diff-wid-same	effea606828901331a2ece811726120b3f4f399037731568fd6570adf2bd9ffe
+v7press2-81	docs/artifacts/v7press2-81.bak	sha-diff-wid-same	6b21479769057eb4a4c9129718e6b7b098644edd7750e85a0787d75c8de3bcaf
+v7press2-82	docs/artifacts/v7press2-82.bak	sha-diff-wid-same	76df565d7e0404c86d20a1c80ed59f39f560e675d3393126b53fa6d0d0710818
+v7press2-91	docs/artifacts/v7press2-91.bak	sha-diff-wid-same	23dfee0f35110ee71f4ce51af25990b6e0bc91c1bed2ef646cd2c0346e3debf3
+v7press2-92	docs/artifacts/v7press2-92.bak	sha-diff-wid-same	a3f993fa10c255a4f61c8734a3e4664cb0aa90555cb8e986f28f42e89b3257ca
+v7press2-93	docs/artifacts/v7press2-93.bak	sha-diff-wid-same	e3590f00f149dcaaab2c3f255a3afa1817138a11a23b48d539370c8181612ac5
 v7press3-81	docs/artifacts/v7press3-81.bak	sha-diff-wid-same	04a0842b6a007896704c811119db172475d1b67ecfe5589312f31387e04bca2c
 v7press3-82	docs/artifacts/v7press3-82.bak	sha-diff-wid-same	e60dd4a1f1e2d2da13e5debe8bea3f1badb8b4e68d20b1d094ce75d9be500b0d
 v7press3-91	docs/artifacts/v7press3-91.bak	ok	
@@ -649,11 +649,11 @@ v7ringT3-91	docs/artifacts/v7ringT3-91.bak	sha-diff-wid-same	34ac54083b96416dbab
 v7ringT3-92	docs/artifacts/v7ringT3-92.bak	sha-diff-wid-same	bd31fc54a4d96465d55158da0694f8d26f8992409f662fbb45293ad584f8e050
 v7ringT3-93	docs/artifacts/v7ringT3-93.bak	sha-diff-wid-same	a6c635b68ba1e2807c5ee2fabde06988ba31cd199c09504d66556bf6c1ec6202
 v7role1-31	docs/artifacts/v7role1-31.bak	ok	
-v7role1-81	docs/artifacts/v7role1-81.bak	missing	
+v7role1-81	docs/artifacts/v7role1-81.bak	sha-diff-wid-same	c18eaf580d1802bee5fb61851ebbbbc86c0c913eed33e2740f3bbbec03f66146
 v7role1-82	docs/artifacts/v7role1-82.bak	ok	
 v7role1-91	docs/artifacts/v7role1-91.bak	ok	
-v7role1-92	docs/artifacts/v7role1-92.bak	missing	
-v7role1-93	docs/artifacts/v7role1-93.bak	missing	
+v7role1-92	docs/artifacts/v7role1-92.bak	sha-diff-wid-same	da4dfd468d91555983391c5e51ab016cda227613e49cea1b8031b452f6d88d5f
+v7role1-93	docs/artifacts/v7role1-93.bak	sha-diff-wid-same	e8ce919139ec5bebf073eeaf7f37e00abbfd178cf330d5db088ec26b0beb2e0a
 v7role12-94	docs/artifacts/v7role12-94.bak	missing	
 v7role12-95	docs/artifacts/v7role12-95.bak	missing	
 v7role12-96	docs/artifacts/v7role12-96.bak	missing	

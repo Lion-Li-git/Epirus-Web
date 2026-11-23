@@ -1256,7 +1256,7 @@ function collectInto(dst, srcParams, idBase) {
       : (nOut() >= Math.floor(NGRP * (1 - RARE_FRAC)));
     if (RARE.length && inRare && RARE.indexOf(again.key) < 0) { LABEL.rare++; return; }   /* 稀有期：只收稀有键组 */
     pend.push({ tape: fr.tape, keys, beads: cs2.map((c) => c.bead || null), wantKey: keys[wIdx], want0: t0.key, shp: curShp,
-      wantIdx: wIdx, wantBead: again.bead || null, _acctKey: again.key, _acctOk: again.key === t0.key });
+      wantIdx: wIdx, wantBead: again.bead || null, _acctKey: again.key, _acctOk: again.key === t0.key, _rare: inRare ? 1 : 0 });
     lastG = pend[pend.length - 1];
     /* keys/byKey/ok/moved 记账挪到 flushPend（X1）：采到 ≠ 留下 */
     if (_activeShapeSlot) {
@@ -1381,10 +1381,38 @@ const groups = [];
 collectInto(groups, null, 300000);
 function shapeCov(list) { const m = {}; for (const g of list) m[g.shp] = (m[g.shp] || 0) + 1; const ks = Object.keys(m); return ks.length + '/' + A2.shapes.length + ' 形（逐形 ' + ks.map((k) => m[k]).join(',') + '）'; }
 if (groups.length < 60) { console.error('⛔ 只抓到 ' + groups.length + ' 组 ⇒ 不做'); process.exit(2); }
+let _splitCall = 0;
+function splitBucket75(arr, train, test) {
+  if (!RARE.length) {
+    const c = Math.floor(arr.length * 0.75);
+    for (let i = 0; i < c; i++) train.push(arr[i]);
+    for (let i = c; i < arr.length; i++) test.push(arr[i]);
+    return;
+  }
+  /* --rareFrac 采集时将稀有样本放在每形配额末段；不拆分层直接前 75%/后 25% 会在 rareFrac<=0.25 时
+   * 把全部稀有样本送进 test（train=0）。独立 PRNG 打乱 + 按 _rare 分层切 75/25 保证两集比例严格匹配，
+   * 且不动主采集流 rnd（!RARE.length 默认路径逐位不变）。 */
+  const prng = T.mulberry32(((SEED ^ 0x517cc1b7) + (++_splitCall) * 7919) >>> 0);
+  const shufAndSplit = (sub) => {
+    const a = sub.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(prng() * (i + 1));
+      const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    const c = Math.floor(a.length * 0.75);
+    for (let i = 0; i < c; i++) train.push(a[i]);
+    for (let i = c; i < a.length; i++) test.push(a[i]);
+  };
+  const norm = [], rare = [];
+  for (const g of arr) (g._rare ? rare : norm).push(g);
+  shufAndSplit(norm);
+  shufAndSplit(rare);
+}
 function splitByShape(list) {
+  const train = [], test = [];
   if (!SHAPEBAL) {
-    const c = Math.floor(list.length * 0.75);
-    return { train: list.slice(0, c), test: list.slice(c) };
+    splitBucket75(list, train, test);
+    return { train, test };
   }
   const byS = new Map();
   for (const g of list) {
@@ -1392,12 +1420,7 @@ function splitByShape(list) {
     if (!arr) { arr = []; byS.set(g.shp, arr); }
     arr.push(g);
   }
-  const train = [], test = [];
-  for (const arr of byS.values()) {
-    const c = Math.floor(arr.length * 0.75);
-    for (let i = 0; i < c; i++) train.push(arr[i]);
-    for (let i = c; i < arr.length; i++) test.push(arr[i]);
-  }
+  for (const arr of byS.values()) splitBucket75(arr, train, test);
   return { train, test };
 }
 const { train: train0, test } = splitByShape(groups);

@@ -59,9 +59,9 @@
   /* 困难难度出招：冠军（贪心）；未训练则回退 balanced 并提示 —— championChooser 已废弃（旧版未过滤“可负担”会贷款），使用 ui.js 的正确出招。 */
 
 
-  /* 同步快速评测：冠军 vs 全部脚本基准 */
-  function quickEval(games, seedBase) {
-    const c = store.load();
+  /* 同步快速评测：冠军 vs 全部脚本基准（支持传入已解包的 2.0/多人包，默认读 2P 槽） */
+  function quickEval(games, seedBase, overrideParams) {
+    const c = overrideParams || store.load();
     if (!c) return null;
     // 只在“可负担”技能里选：与对局/训练一致，评测绝不让冠军贷款自爆
     const champ = function (state, pid, legal) {

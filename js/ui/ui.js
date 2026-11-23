@@ -457,6 +457,7 @@
   /* ---------- 多人（3~8）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
   let multiChampCache, multiChampFrom;   // v1.5.10：multiChampFrom ∈ 'local'（本机自训/导入）| 'builtin'（内置包）
+  let sessionMultiChampSet = false;
   function resetMultiChampCache() { multiChampCache = undefined; multiChampFrom = undefined; }
   function loadMultiChamp() {
     if (multiChampCache !== undefined) return multiChampCache;
@@ -712,6 +713,7 @@
       had2 = !!localStorage.getItem('epirus.champion.v3');
       localStorage.removeItem('epirus.champion.v3');
     } catch (e) { /* ignore */ }
+    sessionMultiChampSet = false;
     resetMultiChampCache();
     const loaded = loadMultiChamp();
     /* ⚠️ 顺序要紧：`newGame()` 会把提示刷成"请选择技能出招"⇒ 提示必须放在它后面
@@ -1009,8 +1011,9 @@
     return parts;
   }
   function pushTranscript(parts, events) {
-    const lines = events.map(function (e) {
-      const t = evText(e, events);
+    const ordered = (typeof orderEventsForDisplay === 'function') ? orderEventsForDisplay(events) : events;
+    const lines = ordered.map(function (e) {
+      const t = evText(e, ordered);
       return t ? t.html.replace(/<[^>]+>/g, '') : null;
     }).filter(Boolean);
     B.transcript.push({
@@ -1535,10 +1538,12 @@
       el.textContent = '已保存本地冠军（本机自训/导入 · ' + slots + '）';
       return;
     }
-    const poolOn = typeof window !== 'undefined' && Array.isArray(window.EPIRUS_CHAMPION_POOL) && window.EPIRUS_CHAMPION_POOL.length > 0;
+    const rawPool = typeof window !== 'undefined' ? window.EPIRUS_CHAMPION_POOL : null;
+    const poolMembers = rawPool ? (Array.isArray(rawPool) ? rawPool : (Array.isArray(rawPool.members) ? rawPool.members : null)) : null;
+    const poolOn = !!(poolMembers && poolMembers.length > 0);
     if (poolOn || from === 'builtin') {
       const m = (typeof window !== 'undefined' && window.EPIRUS_CHAMPION_META) || null;
-      const tail = poolOn ? ('2.0 冠军池(' + window.EPIRUS_CHAMPION_POOL.length + ' 枚)')
+      const tail = poolOn ? ('2.0 冠军池(' + poolMembers.length + ' 枚)')
         : (m ? ((m.source || '?') + (m.ts ? ' · ' + m.ts : '')) : '默认');
       el.textContent = '内置冠军（' + tail + '）';
       return;
@@ -1574,10 +1579,26 @@
   }
   const EVAL_GAMES = 30;
   if ($('btn-eval')) $('btn-eval').textContent = '评测冠军(' + EVAL_GAMES + '局/基线)';
+  function evalTargetChamp() {
+    resetMultiChampCache();
+    const multi = loadMultiChamp();
+    if (multi && (multiChampFrom === 'local' || sessionMultiChampSet)) {
+      return { params: multi, label: '本机 2.0/多人冠军' };
+    }
+    const cf = champForCount(B.players || 2);
+    if (cf && cf.params) {
+      const tag = (cf.from && String(cf.from).indexOf('local') === 0) ? '本机自训/导入冠军' : '内置冠军';
+      return { params: cf.params, label: tag };
+    }
+    const c2 = Champ.store.load();
+    if (c2) return { params: c2, label: Champ.store.lastSource === 'local' ? '本机 2P 冠军' : '内置 2P 冠军' };
+    return null;
+  }
   function doEval() {
-    const rows = Champ.quickEval(EVAL_GAMES, Date.now() % 100000);
-    if (!rows) { if ($('tr-evalbox')) $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有 2P 冠军可评测。</p>'; return; }
-    let h = '<h4 style="margin:12px 0 2px">评测：冠军 vs ' + rows.length + ' 脚本基准（各 ' + EVAL_GAMES + ' 局）</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';
+    const target = evalTargetChamp();
+    const rows = target ? Champ.quickEval(EVAL_GAMES, Date.now() % 100000, target.params) : null;
+    if (!rows) { if ($('tr-evalbox')) $('tr-evalbox').innerHTML = '<p style="color:var(--red)">还没有冠军可评测。</p>'; return; }
+    let h = '<h4 style="margin:12px 0 2px">评测（' + target.label + '）：冠军 vs ' + rows.length + ' 脚本基准（各 ' + EVAL_GAMES + ' 局）</h4><table class="eval"><tr><th>对手</th><th>胜</th><th>平</th><th>负</th><th>胜率</th></tr>';
     for (const r of rows) {
       h += '<tr><td>' + r.name + '</td><td>' + r.w + '</td><td>' + r.d + '</td><td>' + r.l + '</td><td>' + (r.wr * 100).toFixed(0) + '%</td></tr>';
     }
@@ -1676,6 +1697,7 @@
         es.close(); remoteES = null;
         if (d.champ) {
           window.EPIRUS_CHAMPION_3P = d.champ;
+          sessionMultiChampSet = true;
           try { localStorage.setItem('epirus.champion3p', JSON.stringify(d.champ)); } catch (e) { /* ignore */ }
           resetMultiChampCache();
           renderChampState();
@@ -1791,6 +1813,7 @@
        * 还原入口就是页面上那个「用内置冠军」按钮（v1.5.10 起已有，会清 `epirus.champion3p`）。 */
       if (ex.slot === '3p') {
         window.EPIRUS_CHAMPION_3P = ex.pack;
+        sessionMultiChampSet = true;
         try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { /* 隐私模式等 */ }
         resetMultiChampCache();
         renderChampState();                                    /* 里面会调 applyPackTypeLock ⇒ 人数下拉即时锁/解锁 */
@@ -1846,6 +1869,7 @@
       { label: '清空', fn: function () {
         closeModal();
         Champ.store.clear();
+        sessionMultiChampSet = false;
         try { localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
         resetMultiChampCache();
         renderChampState();
@@ -1907,9 +1931,9 @@
        *   所以这里当场把换档后的逐席也记一行（开局那一格不动，它记的是开局）。 */
       if (B.state && B.state.p && prev !== B.diff) {
         const oi = aiInfo();
-        /* 池档的逐席标签不含剂量，补一段；非池档时 `seatOppLabel` 返回的就是 `source`，它自己已经带 ε ⇒ 不再追加 */
-        const dose = (oi.poolDraw && oi.eps != null)
-          ? ' ε=' + oi.eps + '/k' + oi.epsK + '/' + oi.epsMode + (oi.ramp ? '·斜坡' : '') : '';
+        const nt2 = tierOf(B.diff);
+        /* 池档的逐席标签不含剂量，复用 tierEpsLabel（同步 2 人桌 eps2）；非池档时 `seatOppLabel` 已带 ε */
+        const dose = (oi.poolDraw && nt2) ? tierEpsLabel(nt2) : '';
         B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? (B.resolvePending ? B.state.round + 1 : B.state.round) : B.state.round + 1) +
           ' 回合起改 ' + diffName(B.diff) + '：' + seatOppLabel(oi) + dose]);
       }

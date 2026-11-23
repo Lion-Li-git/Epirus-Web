@@ -65,7 +65,7 @@ function runBatch(j, era, seeds, force) {
     RING2_SEEDS: seeds,
     RING2_POOL: j.opps || 'B',
     RING2_MODE: j.mode && j.mode !== '-' && j.mode !== 'multi' ? j.mode : '',
-    RING2_PORT: String(8906 + SHARD * 15),
+    RING2_PORT: process.env.SWEEP_PORT || String(8906 + SHARD * 15),
     EPIRUS_ALLOW_HEALTH_FAIL: '1',
     RING2_FORCE: force ? '1' : '',
   };
@@ -73,6 +73,16 @@ function runBatch(j, era, seeds, force) {
   for (const kv of (j.env || '').split(';')) {
     const i2 = kv.indexOf('=');
     if (i2 > 0 && kv.slice(0, i2).trim()) env[kv.slice(0, i2).trim()] = kv.slice(i2 + 1).trim();
+  }
+  /* 11-23：热启动列（hot=包名，不带 .bak）——t1/u1 系当年 RING2_HOT=现役冠军；包拷进 worktree 再指路径 */
+  if (j.hot && j.hot !== '-') {
+    const hp = resolve(ROOT, 'docs/artifacts', j.hot + '.bak');
+    if (existsSync(hp)) {
+      copyFileSync(hp, wt + '/docs/artifacts/' + j.hot + '.bak');
+      env.RING2_HOT = 'docs/artifacts/' + j.hot + '.bak';
+    } else {
+      console.log(`    ⚠ 热启动包缺盘 ${j.hot}.bak——本批裸 BASE 顶上（预期 miss）`);
+    }
   }
   console.log(`  ▶ ${j.batch}@${era} seeds=${seeds}`);
   const r = spawnSync(process.execPath, ['tools/ring2-run.mjs'], { cwd: wt, env, encoding: 'utf8', timeout: 60 * 60000, maxBuffer: 1 << 28 });
@@ -129,12 +139,11 @@ for (const j of mine) {
     }
     /* ---- 阶段 2：全批扫 ---- */
     const era = verifiedEra || eraCands[0];
-    /* 盲扫批（无幸存者）只扫 1 个 era 候选：今晚实测 v7 系盲扫两 era 全 miss 率 100%，
-     * 第二候选纯烧算力——等配方账 env 精配的 wave4 再回来（11-21 12:5x 裁定） */
-    const altEras = j.calibWid ? eraCands.filter((e) => e !== era) : [];
-    for (let ec = 0; ec < 1 + (j.calibWid ? 0 : Math.min(altEras.length, 1)); ec++) {
+    /* 盲扫批（无幸存者）最多补试 1 个备选 era；重扫一律 force=1，绝不复用上一波误配方留下的同名 .bak */
+    const altEras = j.calibWid ? [] : eraCands.filter((e) => e !== era);
+    for (let ec = 0; ec < 1 + Math.min(altEras.length, 1); ec++) {
       const e2 = ec === 0 ? era : altEras[ec - 1];
-      const wt = runBatch(j, e2, j.seeds.filter(Boolean).join(','), ec > 0);
+      const wt = runBatch(j, e2, j.seeds.filter(Boolean).join(','), true);
       let nHit = 0, nProd = 0;
       for (let k = 0; k < j.seeds.length; k++) {
         const seed = j.seeds[k], id = j.ids[k], ledger = j.paths[k], target = j.targets[k];
@@ -160,8 +169,6 @@ for (const j of mine) {
             if (c.length && c[0] === id && c[si] === 'missing') { c[si] = 'sha-diff-wid-same'; while (c.length < 4) c.push(''); c[3] = sha; ls[i2] = c.join('\t'); }
           }
           writeFileSync(p, ls.join('\n'));
-          spawnSync('git', ['add', '-f', ledger], { encoding: 'utf8' });
-          spawnSync('git', ['add', 'docs/ARTIFACT-LOSS-1119.tsv'], { encoding: 'utf8' });
         } else {
           console.log(`  ✗ ${id} wid=${w} ≠ ${target}`);
         }
