@@ -109,6 +109,14 @@ readFileSync('docs/ARTIFACT-LOSS-1119.tsv', 'utf8').split('\n').slice(1).forEach
   const c = l.split('\t');
   if (c.length >= 4) LEDGER_ST[c[0]] = c[2];
 });
+/* 2026-11-23：恢复件 META.ts 是扫描时刻，不是历史训出时刻；落盘时按 registry.ts 回写，
+ *   否则 lineage/图谱会把所有新扫件画在今天。 */
+const REGTS = {};
+{
+  const r = readFileSync('champion-map/data/registry.tsv', 'utf8').split('\n');
+  const h = Object.fromEntries(r[0].split('\t').map((x, i) => [x, i]));
+  for (const l of r.slice(1)) { const c = l.split('\t'); if (c[h.pack_id] && c[h.ts]) REGTS[c[h.pack_id]] = c[h.ts]; }
+}
 
 for (const j of mine) {
   const eraCands = (j.era || '').split(',').filter(Boolean);
@@ -155,6 +163,15 @@ for (const j of mine) {
         if (w === target) {
           mkdirSync(dirname(ledger), { recursive: true });
           copyFileSync(prod, ledger);
+          const histTs = REGTS[id];
+          if (histTs) {
+            let txt = readFileSync(ledger, 'utf8');
+            const tm = /"ts":"([^"]+)"/.exec(txt);
+            if (tm && tm[1].slice(0, 16) !== histTs.slice(0, 16)) {
+              txt = txt.slice(0, tm.index) + '"ts":"' + histTs + '"' + txt.slice(tm.index + tm[0].length);
+              writeFileSync(ledger, txt);
+            }
+          }
           hits.push({ id, ledger });
           nHit++;
           console.log(`  ✅ ${id} wid=${w}`);

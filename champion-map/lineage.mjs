@@ -507,7 +507,10 @@ for (const r of REC) { const m = r.m || {};
     ps = (/^SLOT-/.test(r.id) || !Object.keys(m).length) ? 'synthetic' : (noEvidence ? 'cold' : 'unresolved');
     if (ps === 'cold') nCold++; else if (ps === 'unresolved') nUnres++; else nSynthP++; }
   const g3r = REGROW[r.id], regr = g3r;
-  const TSVAL = m.ts || TSFIX[r.id] || OLDTS[r.id] || (g3r && g3r.ts) || (regr && regr.ts) || '';
+  const tsCands = [OLDTS[r.id], regr && regr.ts, m.ts, TSFIX[r.id]]
+    .filter((x) => x && Number.isFinite(Date.parse(x)))
+    .sort((a, b) => Date.parse(a) - Date.parse(b));
+  const TSVAL = tsCands[0] || '';
   if (!m.ts && TSFIX[r.id]) nTsFix++;
   const pofVal = G3SET[r.id] && g3r ? (IDSET.has(g3r.parentOf) ? g3r.parentOf : '') : (byHash || byPath || byArm || bySlot || bySlotInfer || sP1);
   const psrcVal = G3SET[r.id] && g3r
