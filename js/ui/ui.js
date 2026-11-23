@@ -642,9 +642,10 @@
   }
 
   /** 这一席该用哪一枚。`n<=2` 完全走老路：§E286 实测 3P 包在 1v1 上是**分布外**的 ⇒ 把池搬到 2 人桌等于造一个假档。 */
-  /* §E599（10-12）：`n<=2` **不再**短路 —— 2P 也走池，但走的是**2P 原生**那一份（用户裁定：每局一个对手、成员不必多）。
-   *   老注释那句"3P 包在 1v1 上是分布外（§E286）⇒ 把池搬到 2 人桌等于造一个假档"**仍然成立**，
-   *   正因为如此，2P 池的成员一律是 2P 考卷训出来的包（`pool-members-2p.tsv`），而不是 3P 池的成员。 */
+  /* §E599（10-12）：`n<=2` **不再**短路 —— 2P 也走池。
+   *   老注释那句"3P 包在 1v1 上是分布外（§E286）"曾是"2P 得单独一份池"的理由，现由 2.0 包的 2P 实测取代，
+   *   正因为如此，2P 与多人桌读**同一份**统一池（`EPIRUS_CHAMPION_POOL`，11-13 用户裁定「2p 直接切到统一池」）；
+   *   `champion-map/pool-members-2p.tsv` 那批 v7 包现在是**训练对手名册**（`EPIRUS_POOL_OPPS_TABLE`），不再上页面桌。 */
   function champForSeat(pid, state, tier) {
     const n = (state && state.p && state.p.length) || (B.players || 2);
     const single = champForCount(n);

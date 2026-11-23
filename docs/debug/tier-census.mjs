@@ -58,7 +58,12 @@ const MODE = flag('mode', 'multi');
  *   ⚠ **换人数 = 换分布**：n=2 只有 1 个 AI 席 ⇒ 分母、"全同"概念、掺席可行性都跟着变（下面各处按 `AI` 走，不写死 4）。 */
 const N = Math.max(2, Number(flag('n', 5)) || 5);
 const AI = N - 1;
-const TABLE = flag('members', '') || (N > 2 ? 'champion-map/data/page/pool-members.tsv' : 'champion-map/pool-members-2p.tsv');
+/* ⚠ 表源**不按人数分叉**（11-24 夜班改）：这里原来写 `N > 2 ? 统一池 : pool-members-2p.tsv`，
+ *   可 2026-11-13 用户已裁定「2p 直接切到统一池」——旧 2P 名册退役成**训练对手名册**（`EPIRUS_POOL_OPPS_TABLE`），
+ *   不再上页面桌（见 `index.html:208` 与 `js/ui/ui.js:525`）。留着那个分叉 = 这把尺在 n=2 上量一张
+ *   页面已经不存在的桌子，而 `js/train/bots.js:1589` 恰恰把本工具的读数当"这一档实际在打什么谱"的在册出处。
+ *   同源判据：`tools/probe-diff-ladder.mjs:205-208` 在 N=2 也读统一池。要复算旧形状请显式 `--members=`。 */
+const TABLE = flag('members', '') || 'champion-map/data/page/pool-members.tsv';
 const SEEDS = String(flag('seeds', '90210,90211,90212')).split(',').map(Number).filter(x => !Number.isNaN(x));
 const TIERS = String(flag('tiers', 'lv:sparring,lv:regular,lv:hard')).split(',').filter(Boolean);
 
@@ -208,7 +213,7 @@ if (SEEDS.length < 1) { console.error('⛔ --seeds 一枚都解析不出'); proc
 
 console.log('# 档位装配普查（1 席人类形状 + ' + AI + ' 席**按该档的带逐席抽** · 每局一个新盐 ⇒ 每局一个新排列组合）');
 console.log('# 口径：**' + N + ' 人桌** · ' + MODE + ' · ' + G + ' 局/格 × seed ' + SEEDS.join('/') + ' × 前 ' + PROTOS + ' 个人类原型 · 出手只数 action/ok · 分母=' + AI + ' 个 AI 席（含ジ）');
-console.log('# 池真源表 = ' + TABLE + (N > 2 ? '（多人桌那张）' : '（2 人桌那张原生池，§E599 ⇒ 不是把 3P 搬到 1v1）'));
+console.log('# 池真源表 = ' + TABLE + (N > 2 ? '（多人桌）' : '（**与多人桌同一份**——11-13 裁定 2P 切统一池，旧 2P 名册退役成训练对手名册）'));
 console.log('# 剂量：各档走 `Bots.tierEpsAt(档, ' + N + ', 3)`（与页面同一份 ⇒ **2 人桌吃 `eps2`**）＝ ' +
   picked.map(t0 => t0.id + ' ε=' + B.tierEpsAt(t0, N, 3) + (t0.eps2 !== undefined ? '（eps2）' : '')).join(' ‖ ') +
   ' ‖ ⚠ ramp 档按顶点算 = 本尺已知边界（与 probe-pool 同一条）');
