@@ -1,4 +1,4 @@
-# STATUS · 2026-11-25 池优化通宵班（00:56 → 07:25）
+# STATUS · 2026-11-25 池优化通宵班（00:56 → 07:52）
 
 > 基线：`4dac3adb`；规则指纹 `bfd49045`。
 > 用户授权：`t65` 入池；自主研究 hard 带 laserEye、soft 带 ring 与其余可优化训练点；实机迭代，中间不提问。
@@ -42,7 +42,7 @@
 
 - roster 新增 `human:rule` / `human:legacy`，D209 与 probe-libs 通过；人席 PG 未改善 5P 人席，Arena 仅 +0.57 / −0.81pt。
 - `RING-MINIT` 自身 laser 富集到 1 格/5 手；`purify` PG 后 G5[long]=27%，仍不过线。
-- `dualGun` multi 专属 9.6k 组得到 22 条标签、部署 3 次但 0 格；38.4k 组长臂得到 101 条标签、留出 9 条命中 1 条，Stage1 仍 0 格 / 5 手。Arena +2.40pt、promote 过，但 ring/railgun 覆盖退步。直接回报 PG 5000 局全程 `dualGun=0.00`、Stage1 0 格/0 手、Arena −0.73pt；RG-CN 菜单只 5/316 次合法、概率 5×10⁻²⁰，4×/20×/1e20× 键锚也全部 0 命中。键级目标 A/B 把概率拉到 6.34×10⁻⁹、Stage1 0 格/12 手，Arena +6.75pt、hard 池 +5.50/+2.00pt、人席 long ≤0.5%、promote 过，成为本轮最强 hard 研究候选；双枪仍 0 格且 `selftest3` 腿 F 红，按授权不入池。
+- `dualGun` multi 专属 9.6k 组得到 22 条标签、部署 3 次但 0 格；38.4k 组长臂得到 101 条标签、留出 9 条命中 1 条，Stage1 仍 0 格 / 5 手。Arena +2.40pt、promote 过，但 ring/railgun 覆盖退步。直接回报 PG 5000 局全程 `dualGun=0.00`、Stage1 0 格/0 手、Arena −0.73pt；RG-CN 菜单只 5/316 次合法、概率 5×10⁻²⁰，4×/20×/1e20× 键锚也全部 0 命中。键级目标两粒把概率拉到 6.34×10⁻⁹ 量级、Stage1 双枪 12/11 次但仍 0 格；Arena s25 两簇合计 +5.23pt（10/12 正）、s26 +3.89pt（5/6 正），5P 人席 long ≤2.5%、promote 均过。2P standard rule/legacy s25 80.5%/27.0%、s26 88.5%/23.0%，基座 74.0%/21.0%。5P 强度增益可复现，2P 退化也可复现；双枪仍 0 格且 `selftest3` 分别红在 F/C，按授权不入池。
 
 ## 验证
 
