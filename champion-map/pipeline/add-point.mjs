@@ -118,20 +118,16 @@ const PACK_DIMS = packDims(packText) || {};
 /* 11-17：按 id 前缀与观测面分代归族；仅 obs6 包允许进 obs6/obs6.5 家族，防 obs3b/obs5 混入。 */
 function autoFamLabel(id, dims, m) {
   if (dims.input === 'obs6') {
-    if (/^OBS6-SHAPEDIST-V3|^OBS6B2/.test(id)) return '2.0 obs6 V3 融合/路由（11-16）';
-    if (/^(OBS6-UNIFIED-|EQ-|BASE-)/.test(id)) return '2.0 obs6.5 统一单包（11-16）';
-    if ((m && (m.tool === 'pg-train' || (m.games && !m.teacher))) || /-(pg|kl|klcand|kw\d+|s\d+k)$/i.test(id)) {
-      return '2.0 obs6.5 PG / KL 强化续训';
+    if (/^(OBS6-SHAPEDIST-V3|OBS6B2|DIV-V3-|OBS6-UNIFIED-|EQ-|BASE-)/.test(id)) {
+      return '2.0 obs6.5 V3 路由与统一单包（11-16）';
     }
-    if (/^(night2-|nov2\d-.*dsp0)/.test(id)) {
-      return '2.0 obs6.5 DS-P0 强锚补盲与融合重馏';
-    }
-    if (/^(FS-|FC-|TK-FS|nov24-(?:fsclose|pierce))/.test(id)) {
+    if (/^(FS-|FC-|TK-FS|night2-E1|nov22-c3|nov24-(?:fsclose|pierce))/.test(id)) {
       return '2.0 obs6.5 天火闭环与双协同演进';
     }
-    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|RG-|CN-G|MN-G|HL-G|nov2\d-(?:armor|rod|c4|tzt2d|ring|bandsym|rdg1))/.test(id)
-        || (m && (m.rareOnly || m.teacher2keys)) || dims.modeBias === 1) {
-      return '2.0 obs6.5 键道/覆盖与协同蒸馏';
+    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|RG-|CN-G|MN-G|HL-G|night2-|day1119-|nov2\d-)/.test(id)
+        || (m && (m.rareOnly || m.teacher2keys || m.tool === 'pg-train' || (m.games && !m.teacher)))
+        || dims.modeBias === 1) {
+      return '2.0 obs6.5 键道/覆盖补盲与协同蒸馏';
     }
   }
   return '';

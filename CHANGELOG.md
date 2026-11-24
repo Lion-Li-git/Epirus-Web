@@ -14,7 +14,7 @@
   - `3000` 局 `5P` 全池均胜 **`22.6%`**（`#11/23`，超越 `AR-TK2` `22.2%` 与 `OBS6E9` `17.8%`；`long` `27.1%` 全场 #3）；`arenaB=-3.40pt`、`promote` **0 阻断**（`G4[long] 2%/60%`、`G5 0%/1%`）、Stage2 `强度 20 技（消融 9）`、`seatKill=0`（90210/90211 全 28 格 `≤ 12.5%`）。
 - **定位记录、家族修正与典型失败对照进图**：
   - 记录 [`supfit-gd.mjs`](training/proto2/supfit-gd.mjs#L1170-L1180) `pickBresenham` 在 `--teacher2frac == --teacher3frac` 时发生游标撞车抢占（错开 `0.23/0.19` 可恢复 `teacher2` 采样）；
-  - 修复 [`add-point.mjs`](champion-map/pipeline/add-point.mjs#L119-L138) 原先用 `dims.modeBias === 1` 兜底将近期 10 枚新包误归入 `fam=26`（`DS-P0`）的 Bug：将 `nov22-ring3-gd6a18 / CN-G1 / MN-G1 / RG-MN / HL-G1 / RG-CN` 迁回 **`fam=25`**（共 `35` 枚），`fam=26` 还原为真正的 `11-20/21` `DS-P0` `4` 枚，并为天火闭环线新开 **`fam=28`（`2.0 obs6.5 天火闭环与双协同演进`，`8` 枚）**；
+  - 修复并精简 [`add-point.mjs`](champion-map/pipeline/add-point.mjs#L119-L138) 的 `obs6.5` 家族归类：将原零碎 6 族（`fam=23..28`，其中 `24/26/27` 各仅 3–7 枚）依演化主脉合并为 `fam=23..25`（总计 `0..25` 共 `26` 族）：① `fam=23`「V3 路由与统一单包（11-16）」（`22` 枚 = 原 `23+24`）；② `fam=24`「键道/覆盖补盲与协同蒸馏」（`39` 枚 = 原 `25` + `night2-X2b-fuse / purify / taunt / cannon-pg` + `nov24-bandsym-jin`）；③ `fam=25`「天火闭环与双协同演进」（`11` 枚 = `night2-E1-det-strong → c3g/c3b → FS-G2 / FC-G1 / FC-S1 / TK-FS4` 及 4 枚对照）；
   - 测点纳入 5 枚有代表性的非崩盘失败/取舍对照包（图谱 `1,024 → 1,029` 行，`100 PASS / 0 FAIL`）：`nov24-fsclose-f35`（`G5[long]=49%`）、`nov24-pierce3-20261101`（闭环被挤至 `28.1%` 边缘）、`TK-FS1`（未护 `railgun` 致珠 `10.0%`+偏座 `23pt`）、`TK-FS3`（`S=1.991` 但 `arenaB=-22.13pt` 且 `long` 反弹人席 `38%/35.5%`）、`nov24-bandsym-jin`（吞掉基座独守 `miniT` 归零）；
   - 更正并统一池覆盖表述：`skill-report` 总出手（`totalUses > 0`）口径下为 **`hard 27/30 / soft 29/30 / 全池 29/30`**（全池仅 `mirror` 0 出手）；`pool-xray` `cov ≥ 1` 格口径为 `hard 25 / soft 24 / 并集 27`。
 
