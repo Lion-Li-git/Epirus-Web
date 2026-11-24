@@ -1191,7 +1191,7 @@ const ORC_ATTACKS = new Set([R.SK.GUN, R.SK.TANK, R.SK.SWORD, R.SK.SNIPE, R.SK.R
 const DEFW = Number(arg('defWeight', 1)) || 1;   /* oracleDef：防御类标签的权重（校准用；1=均匀） */
 const ORC_SUBSET = arg('oracleSubset', '0') === '1';   /* 只在「可预测子集」打标签 */
 const ORC_REPLIES = new Map([[R.SK.GUN, R.SK.REFLECT], [R.SK.TANK, R.SK.REFLECT], [R.SK.DUAL_GUN, R.SK.REFLECT], [R.SK.SWORD, R.SK.GUARD], [R.SK.SNIPE, R.SK.GUN], [R.SK.RAILGUN, R.SK.TRANSFER]]);
-const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0, byKey: {} };
+const LABEL = { ok: 0, moved: 0, gone: 0, keys: 0, rare: 0, byKey: {}, byShape: {} };
 /* 打出去的那一手 vs 教师（只在学生自访轮里量）——与 `LABEL`（克隆态 argmax 口径）是**两个不同的数** */
 const PLAY = { n: 0, hit: 0, stuckCharge: 0, missCharge: 0, missFire: 0 };
 
@@ -1210,7 +1210,9 @@ function collectInto(dst, srcParams, idBase) {
       dst.push(x);
       LABEL.keys++;
       LABEL.byKey[x._acctKey] = (LABEL.byKey[x._acctKey] || 0) + 1;
-      if (x._acctOk) LABEL.ok++; else LABEL.moved++;
+      const sh = LABEL.byShape[x.shp] || (LABEL.byShape[x.shp] = { n: 0, ok: 0, moved: 0, keys: {} });
+      sh.n++; sh.keys[x._acctKey] = (sh.keys[x._acctKey] || 0) + 1;
+      if (x._acctOk) { LABEL.ok++; sh.ok++; } else { LABEL.moved++; sh.moved++; }
     }
     if (WINONLY) {
       /* 字段名模式中性（1=胜局留 ‖ 2=败局留——别让 mode 2 的"win Games"字段名说谎）；kept/drop 语义只看 WINONLY */

@@ -28,6 +28,7 @@ import { widOf } from '../champion-map/pack-id.mjs';
 import { OPP_SPECS } from '../training/server/opp-pool.mjs';
 import { rulesFingerprint } from './rules-fingerprint.mjs';
 import { createStrengthCore } from './strength-lib.mjs';
+import { hpEpBucket, jsDiv } from './switch-lib.mjs';
 
 rejectUnknownFlags(process.argv.slice(2), ['stage', 'pack', 'packs', 'all-pool', 'jobs', 'games-census', 'games-strength',
   'max-strength-games', 'shortlist', 'out', 'bake', 'coverth', 'temp', 'candidate'], 'pool-skill-report');
@@ -129,24 +130,6 @@ function stage1(W, pack, oppDesc, gamesCensus) {
     return [od.name, T.policyChooserN(p, TEMP), true];
   });
   let curCell = null, decN = 0;
-  function bucketOf(state, pid) {
-    const me = (state && state.p && state.p[pid]) || {};
-    const hp = me.hp != null ? me.hp : 0, ep = me.ep != null ? me.ep : 0;
-    return (hp >= 4 ? 0 : (hp >= 2 ? 1 : 2)) * 4 + Math.min(3, ep);
-  }
-  function jsDiv(p, q) {
-    const keys = new Set([...Object.keys(p), ...Object.keys(q)]);
-    let np = 0, nq = 0;
-    for (const k of keys) { np += p[k] || 0; nq += q[k] || 0; }
-    if (!np || !nq) return 0;
-    let d = 0;
-    for (const k of keys) {
-      const a = (p[k] || 0) / np, b = (q[k] || 0) / nq, m = (a + b) / 2;
-      if (a > 0) d += 0.5 * a * Math.log2(a / m);
-      if (b > 0) d += 0.5 * b * Math.log2(b / m);
-    }
-    return d;
-  }
   const wrapped = function (state, pid, legal) {
     decN++;
     const got = base(state, pid, legal);
@@ -156,7 +139,7 @@ function stage1(W, pack, oppDesc, gamesCensus) {
       curseStats.fsLegalDecisions++;
       if (key === R.SK.FIRESTORM) curseStats.fsTakenWhenLegal++;
     }
-    const bk = bucketOf(state, pid);
+    const bk = hpEpBucket(state, pid);
     curCell.buckets[bk] = curCell.buckets[bk] || {};
     curCell.buckets[bk][key] = (curCell.buckets[bk][key] || 0) + 1;
     curCell.keys[key] = (curCell.keys[key] || 0) + 1;
