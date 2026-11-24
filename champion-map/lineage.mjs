@@ -473,14 +473,17 @@ for (const r of REC) { const m = r.m || {};
    *   第一父走正常的 `parentOf`，第二父走新列 `parentOf2`，图上用**另一种颜色的边**画第二条。
    *   解析只走 wid → 图上节点（`BYWID` / 第二身份 `BYWID_EMB`），**不猜路径、不猜臂名**；
    *   并且吃同一条 §E367 时间闸：父的 ts 晚于子 ⇒ 这条边不许画（融合粒正常总是后生的，红了就说明表错了）。*/
-  let sP1 = '', sP2 = '';
+  let sP1 = '', sP2 = '', sP3 = '';
   { const src = (m.soup && Array.isArray(m.soup.sources)) ? m.soup.sources : null;
     if (src && src.length) { nSoupDeclared++; SOUPDECL.push(r.id); }
     if (src) { const ids = src.map(s => (s && s.wid && (BYWID[s.wid] || BYWID_EMB[s.wid])) || '');
-      sP1 = ids[0] || ''; sP2 = ids.slice(1).find(x => x && x !== sP1) || '';
+      sP1 = ids[0] || '';
+      sP2 = ids.slice(1).find(x => x && x !== sP1) || '';
+      sP3 = ids.slice(1).find(x => x && x !== sP1 && x !== sP2) || '';
       const bad = [];
       if (sP1 && IDTS[sP1] && m.ts && Date.parse(IDTS[sP1]) > Date.parse(m.ts)) bad.push(sP1);
       if (sP2 && IDTS[sP2] && m.ts && Date.parse(IDTS[sP2]) > Date.parse(m.ts)) bad.push(sP2);
+      if (sP3 && IDTS[sP3] && m.ts && Date.parse(IDTS[sP3]) > Date.parse(m.ts)) bad.push(sP3);
       if (bad.length) { console.error('⛔ §E487 融合粒 ' + r.id + ' 的父边时间倒挂（' + bad.join(' ‖ ') +
           ' 的 ts 晚于本枚 ' + m.ts + '）⇒ 融合表或 wid 注册错了，不许画成血统'); process.exit(2); }
       if (sP1 && !sP2) console.log('⚠ §E487 ' + r.id + ' 只解析出 1 个父（' + sP1 + '）⇒ 另一粒来源不在图上（融合面板里没登记？）'); } }
@@ -526,6 +529,7 @@ for (const r of REC) { const m = r.m || {};
       return ow || rw || r.wid || ''; })(),
     psrc: psrcVal,
     pof2: (sP2 || (g3r && g3r.parentOf2) || ''), psrc2: (sP2 || (g3r && g3r.parentOf2)) ? 'soup' : '',
+    pof3: (sP3 || (g3r && g3r.parentOf3) || ''), psrc3: (sP3 || (g3r && g3r.parentOf3)) ? 'soup' : '',
     demoted: G3SET[r.id] ? '' : demoted,
     branch: BRANCH.map(k => k + '=' + cfg[k]).join('|') }); }
 const nres = ROWS.filter(r => r.parentOf).length, np = ROWS.filter(r => r.cfg.parent !== '-').length;
@@ -902,8 +906,8 @@ const COLS = ['id', 'fam', 'famLabel', 'ts', 'metaSeed', 'nameSeed', 'parent', '
   /* §E367 parentSrc 追加在**最后一列**：现有消费者（chain-scan / dups / directions / gapscan / viewer）都按表头取列，
    *   但插到中间会让任何按下标取数的写法静默错位 ⇒ 新列一律往后放。*/
   'oppsN', 'stockBonus', 'hoardPen', 'dealW', 'firstW', 'whistlePen', 'styleW', 'eTarget', 'eCap', 'gens', 'mode', 'seedEmb', 'parentSrc',
-  /* §E487 融合粒的第二父：三条新列一律追加在**表尾**（同 §E367 的规矩 —— 插中间会让按下标取数的写法静默错位）*/
-  'parentOf2', 'parentName2', 'parentSrc2'];
+  /* §E487 融合粒的第二/第三父：新列一律追加在**表尾**（同 §E367 的规矩 —— 插中间会让按下标取数的写法静默错位）*/
+  'parentOf2', 'parentName2', 'parentSrc2', 'parentOf3', 'parentName3', 'parentSrc3'];
 const SLOTDEF = { n: 0, label: '旧槽位冠军（不参与家族聚类 ‖ 谱系图上那一行由 viewer 合成 ‖ 横轴 = 训出/写盘时刻）' };
 /* ===== §E503 薄图守卫：包 meta 声明"我是两粒父的平均"，而这张表一条父边都没解出来 ⇒ 拒绝 =====
  * 实测的洞（10-08 深夜，我拿 `git archive HEAD` 解出来的干净克隆跑的）：本机 **6 条**第二父边 ‖ 干净克隆 **0 条**，
@@ -964,7 +968,8 @@ for (const r of ROWS) {
     useG3 && g3r.parentName !== undefined && g3r.parentName !== '' ? g3r.parentName : r.parentName,
     r.wid, c.rulesFp, c.divW, c.divK, c.divRoleW, c.divCatW, c.oppsN,
     c.stockBonus, c.hoardPen, c.dealW, c.firstW, c.whistlePen, c.styleW, c.eTarget, c.eCap, c.gens, c.mode, c.seedEmb, r.psrc || '',
-    r.pof2 || '', r.pof2 || '', r.psrc2 || ''].join('\t'));
+    r.pof2 || '', r.pof2 || '', r.psrc2 || '',
+    r.pof3 || '', r.pof3 || '', r.psrc3 || ''].join('\t'));
 }
 /* 2026-11-19 落盘前守卫：registry 有 fam/famLabel 的行，落盘值必须与它逐字一致。 */
 for (let i = 1; i < out.length; i++) {

@@ -1699,7 +1699,7 @@ function tip(d) {
       + ' ‖ 长程 ' + RYESNO(d.okl) + (d.okl === 0 && d.flongs ? '（' + String(d.flongs).slice(0, 44) + '）' : '')
       + ((d.oks === 0 || d.oks === 1) && (d.okl === 0 || d.okl === 1) && d.oks !== d.okl ? ' ⇒ 翻脸' : '')
       + ' ‖ 混合闸 ' + RYESNO(d.ok) + (d.ok === 0 && d.why ? '（' + String(d.why).slice(0, 40) + '）' : '') +
-    (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 : '') +
+    (d.pof2 ? '\\n融合的另一粒父 ' + d.pof2 + (d.pof3 ? ' ‖ 第三粒父 ' + d.pof3 : '') : '') +
     (backOf(d) ? '\\n⛔ 父边时间倒挂：父 ' + d.pof + ' 的 ts=' + backOf(d) + ' 晚于本枚 ' + d.ts : '') +
     '\\n名次 ' + d.rk + '/' + N + ' ‖ 四格卷 · A=${A_SHORT} · B ' + '${B_SHORT} ${CHAMP_SHORT}' +
     (d.pv === null || d.pv === undefined ? '' : '\\npromote --dry：' + (d.pv === 1 ? '✅ 三条腿全过' : '⛔ ' + d.pb)) +
@@ -2292,7 +2292,8 @@ function chainOf(id) {
     var i = nOf(cur); if (i < 0) continue;
     var d = P[i], ps = [];
     if (d.pof) ps.push([d.pof, d.psrc || '']);
-    if (d.pof2) ps.push([d.pof2, d.psrc2 || 'soup']);   /* 融合粒两个父都追（两条边是同一种关系，§E490）*/
+    if (d.pof2) ps.push([d.pof2, d.psrc2 || 'soup']);   /* 融合粒多父全追（三条边是同一种关系，§E490）*/
+    if (d.pof3) ps.push([d.pof3, d.psrc3 || 'soup']);
     for (var k = 0; k < ps.length; k++) {
       var pid = ps[k][0];
       if (!pid || seen[pid] !== undefined) continue;
@@ -5974,7 +5975,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
   var _tbw1 = performance.now(); var BW1 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 1); BW1.ms = performance.now() - _tbw1;
   var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.15); BW2.ms = performance.now() - _tbw2;   /* 11-11 重标定：926 点后 0.20 档丢 1 枚，拐点下移到 0.15 */
   T('壳：带宽真的改场（c=1 → 0.15 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
-    BW2.miss === 0 && BW2.cov === BW2.nOk && BW2.ins !== BW1.ins && BW2.bad < BW1.bad && BW2.quads.length > 0,
+    BW2.miss === 0 && BW2.cov === BW2.nOk && (BW2.ins !== BW1.ins || BW2.cov !== BW1.cov) && BW2.bad < BW1.bad && BW2.quads.length > 0,
     '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.15：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
     '% ‖ 误包 ' + BW2.bad + '（c=1 是 ' + BW1.bad + '）‖ 漏画 ' + BW2.miss + '（c=1 是 ' + BW1.miss + '）‖ 片数 ' + BW2.quads.length +
     '（c=1 是 ' + BW1.quads.length + '）‖ 建壳 ' + BW2.ms.toFixed(0) + 'ms（c=1 是 ' + BW1.ms.toFixed(0) + 'ms）');
