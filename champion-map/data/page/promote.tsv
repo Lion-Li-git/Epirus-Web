@@ -16,6 +16,7 @@ nov22-tzt2d-stab	pass	—
 R-s123	pass	—			
 S-s120	pass	—			
 T8-s114	pass	—			
+TK-FS4	pass	—			
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
 night2-S3	block	G5/long 清不了防席（它夺冠 28%） · G5/multi 清不了防席（它夺冠 61%）		61	
@@ -301,4 +302,4 @@ RG-MN	pass	—
 HL-G1	pass	—			
 RG-CN	pass	—			
 FC-G1	block	behavior-gate			
-FC-S1	pass	—			
+FC-S1	pass	—

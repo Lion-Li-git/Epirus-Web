@@ -4,6 +4,18 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.24 — 11-24（**`TK-FS4`** 入 `hard`：藤甲坦克 × 天火闭环 × 珠闭环双闭环火弱协同 ‖ 珠经济塌缩定位与覆盖口径纠偏）
+
+**这一版是什么**：回应用户对 `FC-G1 / FC-S1 / AR-TK2` 珠经济崩溃的定位要求，查明「退化底座（`RG-CN 4.1%` / `MX8-CN-M 1.3%` / `TZT2D+armor 2.1%`）+ `ship-promote.mjs DENSITY_BLOCK = false` 不阻断」的成因，并以 `FS-G2` 双闭环底座叠加 `AR-TK2`（`armor,tank@0.20`）兼在 `--rareOnly` 中明确护住 `railgun` 训出 **`TK-FS4`**（[`docs/artifacts/TK-FS4.bak`](docs/artifacts/TK-FS4.bak)，`wid=ac126b3320bd4ed5`）正式合入 **`hard`**（池 `22 → 23`：`hard 12 / soft 11`，缓存戳 `p1124a → p1124b`）。
+
+- **藤甲坦克 × 天火闭环双协同载体 `TK-FS4`（`hard`）**：
+  - Stage1（120 格）：**珠闭环 `82.7%`**（`220/266`，每局过期仅 `0.04` 颗）、**天火闭环 `79.8%`**（`186/233`，抓手 `48.1%`，空爆 `0`）、`armor=1,545(99/120)`、`tank=156(19/120)`、`railgun=220(12/120)`，`gunspam@2m/@2l` 全胜 `10/10`。
+  - 300 局 `5P` `eps=0` 自对局：珠闭环 **`70.8%`（`multi`）/ `54.3%`（`long`）**，首次打出同局内藤甲火弱 `+1` 同步触发 **`tank +1`（`18/29`）与 `firestorm +1`（`3/12`）** 的双火焰伤害协同。
+  - `3000` 局 `5P` 全池均胜 **`22.6%`**（`#11/23`，超越 `AR-TK2` `22.2%` 与 `OBS6E9` `17.8%`；`long` `27.1%` 全场 #3）；`arenaB=-3.40pt`、`promote` **0 阻断**（`G4[long] 2%/60%`、`G5 0%/1%`）、Stage2 `强度 20 技（消融 9）`、`seatKill=0`（90210/90211 全 28 格 `≤ 12.5%`）。
+- **定位记录与口径纠偏**：
+  - 记录 [`supfit-gd.mjs`](training/proto2/supfit-gd.mjs#L1170-L1180) `pickBresenham` 在 `--teacher2frac == --teacher3frac` 时发生游标撞车抢占（错开 `0.23/0.19` 可恢复 `teacher2` 采样）；
+  - 更正并统一池覆盖表述：`skill-report` 总出手（`totalUses > 0`）口径下为 **`hard 27/30 / soft 29/30 / 全池 29/30`**（全池仅 `mirror` 0 出手）；`pool-xray` `cov ≥ 1` 格口径为 `hard 25 / soft 24 / 并集 27`。
+
 ## v2.1.23 — 11-24（天火闭环双将 **`FC-G1 / FC-S1`** 入池 + 退 `5` 枚冗余未闭环包 `25 → 22` + `arena-eval` JSON 回归修复 + T3 考古 10 枚收口）
 
 **这一版是什么**：落实用户 `08:00` 裁定——不立天火闭环硬准入门、`curseOk=0` 免管；将天火闭环双将 **`FC-G1`**（`--invite` 入 `hard`，仅 `G5[long]=31%`、无其它缺陷）与 **`FC-S1`**（`0` 阻断入 `soft`）合入产品池，同时退役 `5` 枚冗余未闭环成员使全池精简为 **`22` 枚（`hard 11 / soft 11`）** 兼闭环主力翻倍（`2 → 4`）；顺手修复 `tools/arena-eval.mjs` stdout 混入日志文本破坏 `measure-point` 的回归，并完成最后 `8` 条 T3 线索考古扫尾（找回 `10` 枚，正式收口）。
@@ -12,7 +24,7 @@
   - **`FC-G1`（`hard`，`--invite`，[`docs/artifacts/FC-G1.bak`](docs/artifacts/FC-G1.bak)，`wid=cd0d19ba78e411cf`）**：`RG-CN` 底座 + 双路穿防 `@0.20` + `curse,firestorm@0.30`；`selftest3` **6/6**（`0.00e+0, π=0.943`），`5P` 3000g 循环赛 **`28.4%`**（`#3/29`），`Arena B` 6-seed 配对胜现役 `RG-CN +1.02pt`（`arenaB=-16.64pt`），`seatKill=0`（`90210/90211` `multi` 全 `0.0%`、`long ≤ 8.5%`），Stage1 `union=16/30`、`loopRate=91.71% (343/374)`、`takeRate=46.22%`、`emptyBoom=0`。
   - **`FC-S1`（`soft`，[`docs/artifacts/FC-S1.bak`](docs/artifacts/FC-S1.bak)，`wid=9390478ce2e1ba00`）**：`MX8-CN-M` 底座 + 同 v5 配方直接接替 `MX8-CN-M`；`selftest3` **6/6**，`promote --dry --support=2` **0 阻断**（`G5[long]=20% ≤ 25%`），`5P` `17.8%`，`arenaB=-25.67pt`，`seatKill=0`，Stage1 `union=15/30`（`cannon:9`）、`loopRate=92.76% (333/359)`、`takeRate=53.82%`、`emptyBoom=0`。
 - **池精简（`25 → 22`：`hard 11 / soft 11`）与天火普查**：
-  - 退役 5 枚冗余 `onlyStick`（`noGrab=1`）成员：`MX8-TN25-KL`、`MX1-GD-EQ`、`CN-G1`、`MX8-CN-M`、`MX7-T2-R`；`hard` `25` 技 / `soft` `24` 技 / 全池 `28` 技能并集 `0` 缺失，`probe-pool --tier=hard --games=60` `multi=1.55% / long=2.50%`（零 `3σ` 漏格）。
+  - 退役 5 枚冗余 `onlyStick`（`noGrab=1`）成员：`MX8-TN25-KL`、`MX1-GD-EQ`、`CN-G1`、`MX8-CN-M`、`MX7-T2-R`；按 `skill-report` `totalUses > 0` 口径 `hard 27/30` / `soft 29/30` / 全池 `29/30`（仅 `mirror` 未覆；`cov ≥ 1` 格为 `hard 25 / soft 24 / 并集 27`），`probe-pool --tier=hard --games=60` `multi=1.55% / long=2.50%`（零 `3σ` 漏格）。
   - `firestorm-closure.mjs` 复测：闭环主力扩至 `4` 枚（`FC-G1 92%`、`FC-S1 94%`、`FS-G2 88%`、`nov22-c3g-s300k 88%`），抓手率均 `47–55%`；`OBS6E9 / RG-MN / MSB11-R1S130778313 / nov21-purify-dsp0 / RINGB11` 共 `5` 枚 `curseOk=0` 免管。
 - **难度阶梯 `1500g` 复测（[diff-ladder-claims.mjs](tools/diff-ladder-claims.mjs)）**：
   - `pool:multi`：困难 `5.3%` → 普通 `18.4%`（`+13.13 ±1.16pt = 11.3σ`）→ 简单 `22.3%`（`+3.93 ±1.50pt = 2.6σ`）；
