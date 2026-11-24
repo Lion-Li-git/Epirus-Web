@@ -1,0 +1,95 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const source = readFileSync(join(ROOT, 'js/pool-loader.js'), 'utf8');
+const flush = () => new Promise(resolve => setImmediate(resolve));
+const widOf = pack => createHash('sha1').update(JSON.stringify(pack.a)).digest('hex').slice(0, 16);
+
+function makeLoader(members) {
+  const scripts = [];
+  const timeouts = [];
+  const warnings = [];
+  const crypto = {
+    subtle: {
+      digest: async (_alg, data) => {
+        const hex = createHash('sha1').update(Buffer.from(data)).digest('hex');
+        return Uint8Array.from(hex.match(/../g).map(x => parseInt(x, 16))).buffer;
+      },
+    },
+  };
+  const w = {
+    location: { protocol: 'http:' }, crypto, TextEncoder,
+    console: { warn: msg => warnings.push(msg) },
+    EpirusPoolPacks: {},
+    EPIRUS_CHAMPION_POOL: { lazy: true, ver: 'probe', members },
+  };
+  const box = {
+    window: w, document: {
+      createElement: () => ({}),
+      head: { appendChild: s => scripts.push(s) },
+    },
+    location: w.location, crypto, TextEncoder, console: w.console,
+    setTimeout: fn => { timeouts.push(fn); return timeouts.length; },
+    clearTimeout: id => { timeouts[id - 1] = null; },
+  };
+  box.globalThis = box;
+  vm.runInNewContext(source, box, { filename: 'js/pool-loader.js' });
+  return {
+    loader: w.EpirusPoolLoader, scripts, timeouts, warnings,
+    timeout: i => timeouts[i](),
+    shard: (i, id, pack) => { w.EpirusPoolPacks[id] = pack; scripts[i].onload(); },
+    fail: i => scripts[i].onerror(),
+    monolith: (i, fullMembers) => {
+      w.EPIRUS_CHAMPION_POOL = { members: fullMembers };
+      scripts[i].onload();
+    },
+  };
+}
+
+const packA = { a: [1, 2, 3] };
+const packB = { a: [4, 5, 6] };
+const wrong = { a: [9, 9, 9] };
+const memberA = { id: 'A', wid: widOf(packA), file: 'A.js' };
+const memberB = { id: 'B', wid: widOf(packB), file: 'B.js' };
+
+const race = makeLoader([memberA, memberB]);
+const raceDone = race.loader.ensure(['A', 'B']);
+race.fail(1);
+await flush();
+race.monolith(2, [
+  { id: 'A', wid: memberA.wid, pack: packA },
+  { id: 'B', wid: memberB.wid, pack: packB },
+]);
+await raceDone;
+race.shard(0, 'A', wrong);
+await flush();
+await flush();
+assert.equal(race.loader.get('A'), packA, '晚到分片不得覆盖回退整表');
+assert.equal(race.loader.fellBack(), true);
+
+const mismatch = makeLoader([memberA]);
+const mismatchDone = mismatch.loader.ensure(['A']);
+mismatch.shard(0, 'A', wrong);
+await flush();
+assert.equal(mismatch.scripts.length, 2, 'wid 不符必须触发整表回退');
+mismatch.monolith(1, [{ id: 'A', wid: memberA.wid, pack: packA }]);
+await mismatchDone;
+assert.equal(mismatch.loader.get('A'), packA, 'wid 不符的分片不得进入注册表');
+assert.equal(mismatch.loader.fellBack(), true);
+assert.ok(mismatch.warnings.some(msg => String(msg).includes('wid')), 'wid 不符必须响亮说明');
+
+const hung = makeLoader([memberA]);
+const hungDone = hung.loader.ensure(['A']);
+hung.timeout(0);
+await flush();
+hung.monolith(1, [{ id: 'A', wid: memberA.wid, pack: packA }]);
+await hungDone;
+assert.equal(hung.loader.get('A'), packA, '加载超时必须回退整表而不是永久 pending');
+assert.equal(hung.loader.fellBack(), true);
+
+console.log('POOL_LOADER_SELFTEST OK（晚到分片不覆盖整表；wid 不符与超时均触发回退）');

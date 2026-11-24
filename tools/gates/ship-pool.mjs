@@ -72,6 +72,9 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
     ok(!!row, '② bundle 里的 ' + m.id + ' 在表里没有这一行（bundle 过期或手改）');
     if (row) { eq(row[th.wid], m.wid, '② ' + m.id + ' 的 wid 表与 bundle 不一致'); eq(row[th.tier], m.tier, '② ' + m.id + ' 的 tier 表与 bundle 不一致'); }
   }
+  const loaderProbe = spawnSync(process.execPath, ['tools/probe-pool-loader.mjs'], { encoding: 'utf8', timeout: 30000 });
+  eq(loaderProbe.status, 0, '② HTTP 懒加载必须顶住晚到分片与 wid 不符：' +
+    String(loaderProbe.stdout || loaderProbe.stderr || '').trim().slice(-500));
 
   /* ④⑤ 抽签：产品与量具必须跑同一份实现 ⇒ 拿 sandbox 里的 `js/pool-draw.js`（不是在本文件里再抄一遍抽签） */
   const W = sandbox(process.cwd());

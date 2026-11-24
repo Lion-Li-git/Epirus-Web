@@ -177,6 +177,36 @@ async function main() {
     }
   }
 
+  /* ═══ ①-补：目标弹窗跨局残留必须连旧回调一起失效 ═══ */
+  console.log('\n①-补 跨局弹窗');
+  await evalJS('(function(){var p=document.getElementById("sel-players");p.value="3";p.dispatchEvent(new Event("change"));var d=document.getElementById("sel-diff");d.value="lv:hard";d.dispatchEvent(new Event("change"));document.getElementById("btn-newgame").click();return 1;})()');
+  for (let i = 0; i < 50 && !(await evalJS('window.EpirusUI.B.packsReady')); i++) await sleep(100);
+  await evalJS('(function(){window.EpirusUI.B.state.p[0].ep=2;window.EpirusUI.refresh();return 1;})()');
+  await clickSkill('激光剑');
+  await evalJS('(function(){var b=document.querySelectorAll("#modal-card #mbtn");if(b.length)b[0].focus();document.getElementById("btn-newgame").click();return 1;})()');
+  await sleep(250);
+  await evalJS('(function(){var p=document.getElementById("sel-players");p.value="2";p.dispatchEvent(new Event("change"));return 1;})()');
+  for (let i = 0; i < 50 && !(await evalJS('window.EpirusUI.B.packsReady')); i++) await sleep(100);
+  const stale = JSON.parse(await evalJS('(function(){var B=window.EpirusUI.B,c=document.getElementById("modal-card"),a=document.activeElement;return JSON.stringify({open:!document.getElementById("modal-root").classList.contains("hidden"),picking:B.picking,text:c.textContent,focusInside:!!(a&&c.contains(a)),round:B.state.round,locked:B.locked});})()'));
+  check('①-补-甲 新局关闭旧弹窗、清空 picking/旧回调并移走弹窗焦点',
+    !stale.open && stale.picking === null && stale.text === '' && !stale.focusInside && stale.round === 0 && !stale.locked,
+    JSON.stringify(stale));
+  check('①-补-乙 旧目标按钮已物理移除，不能再跨局落子', (await clickModalOption(1)) === 'no-option');
+
+  console.log('\n①-补2 池加载挂起后切脚本档');
+  await evalJS('window.__poolEnsure0=window.EpirusPoolLoader.ensure;window.EpirusPoolLoader.ensure=function(){return new Promise(function(){});}');
+  await evalJS('(function(){var d=document.getElementById("sel-diff");d.value="lv:hard";d.dispatchEvent(new Event("change"));document.getElementById("btn-newgame").click();return 1;})()');
+  await sleep(250);
+  const hungBefore = await evalJS('JSON.stringify({ready:window.EpirusUI.B.packsReady,disabled:[].every.call(document.querySelectorAll(".skillbtn"),function(b){return b.disabled;})})');
+  await evalJS('(function(){var d=document.getElementById("sel-diff");d.value="st:aggro";d.dispatchEvent(new Event("change"));return 1;})()');
+  await sleep(250);
+  const hungAfter = await evalJS('JSON.stringify({ready:window.EpirusUI.B.packsReady,ji:[].filter.call(document.querySelectorAll(".skillbtn"),function(b){return b.querySelector(".nm")&&b.querySelector(".nm").textContent==="ジ";})[0].disabled})');
+  check('①-补2 切脚本档作废旧加载并恢复出招', JSON.parse(hungAfter).ready === true && JSON.parse(hungAfter).ji === false,
+    'before=' + hungBefore + ' after=' + hungAfter);
+  await evalJS('window.EpirusPoolLoader.ensure=window.__poolEnsure0;delete window.__poolEnsure0;');
+  await clickSkill('ジ');
+  await waitUnlock();
+
   /* ═══ ② 结算期间的点击：必须有反馈、且不排队 ═══ */
   console.log('\n② 结算期间的点击');
   for (let i = 0; i < 20 && (await locked()); i++) await sleep(120);
@@ -211,6 +241,28 @@ async function main() {
   check('③ 真人座（pid 0）不产生"ジ不足·未发动"（格子已把买不起的置灰 ⇒ §5-③ 在当前构建不可复现）',
     insuffByPid === '{}' || !/"0":/.test(insuffByPid), 'byPid=' + insuffByPid);
   await shot(join(OUT, 'uipro-3-insufficient.png'));
+
+  console.log('\n④ 收缩伤害独立保存');
+  const sdSaved = JSON.parse(await evalJS('(function(){localStorage.removeItem("epirus.sudden");var on=document.getElementById("inp-sd"),dm=document.getElementById("inp-sd-dmg");on.value="";dm.value="2";dm.dispatchEvent(new Event("change"));document.getElementById("btn-newgame").click();var B=window.EpirusUI.B;return JSON.stringify({stored:JSON.parse(localStorage.getItem("epirus.sudden")),dmg:B.state.mode.suddenDeathDmg,onset:B.state.mode.suddenDeath,baseOnset:window.EpirusRules.MODES[B.modeKey].suddenDeath});})()'));
+  check('④ 起扣回合留空时，单独修改伤害仍持久化并生效',
+    sdSaved.stored.suddenDeathDmg === 2 && sdSaved.dmg === 2 && sdSaved.onset === sdSaved.baseOnset,
+    JSON.stringify(sdSaved));
+
+  console.log('\n⑤ 局中导入冠军后导出记录');
+  await evalJS('(function(){var d=document.getElementById("sel-diff");d.value="lv:hard";d.dispatchEvent(new Event("change"));document.getElementById("btn-newgame").click();return 1;})()');
+  for (let i = 0; i < 50 && !(await evalJS('window.EpirusUI.B.packsReady')); i++) await sleep(100);
+  await clickSkill('ジ');
+  await waitUnlock();
+  await evalJS('window.alert=function(){}');
+  await evalJS('(function(){var shell="window.EPIRUS_CHAMPION_3P="+JSON.stringify(window.EPIRUS_CHAMPION_3P)+";";var dt=new DataTransfer();dt.items.add(new File([shell],"local-test.bak",{type:"text/plain"}));var f=document.getElementById("file-import");f.files=dt.files;f.dispatchEvent(new Event("change"));return 1;})()');
+  let imported = false;
+  for (let i = 0; i < 50 && !imported; i++) { imported = await evalJS('!!localStorage.getItem("epirus.champion3p")'); if (!imported) await sleep(100); }
+  await sleep(150);
+  const afterImport = await evalJS('JSON.stringify({actual:window.EpirusUI.aiInfo().source,text:window.EpirusUI.battleText()})');
+  const imp = JSON.parse(afterImport);
+  check('⑤ 导入后导出追加换包记录，不再把实际本机包记成开局池成员',
+    imported && imp.actual.indexOf('本机') >= 0 && imp.text.indexOf('中途换档=') >= 0 && imp.text.indexOf('本机冠军包') >= 0,
+    'actual=' + imp.actual.slice(0, 80));
 
   console.log('\nJS errors: ' + (errors.length ? errors.join(' | ') : '(none)'));
   const fail = checks.filter(function (c) { return !c[1]; }).length;

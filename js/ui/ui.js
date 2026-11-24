@@ -94,10 +94,12 @@
     const on = $('inp-sd'), dm = $('inp-sd-dmg');
     if (!on || !dm) return null;
     const raw = sdRaw();
-    if (raw === '') return null;                 // 空 = 跟随模式（把缺省权交回 createState）
-    const a = parseInt(raw, 10), b = parseInt(dm.value, 10);
+    const b = parseInt(dm.value, 10);
+    const dmg = (isFinite(b) && b > 0) ? b : 1;
+    if (raw === '') return { suddenDeathDmg: dmg };
+    const a = parseInt(raw, 10);
     if (!isFinite(a) || a < 0) return null;      // 非法 = 同样不覆盖（但不写盘，见 saveSd）
-    return { suddenDeath: a, suddenDeathDmg: (isFinite(b) && b > 0 ? b : 1) };
+    return { suddenDeath: a, suddenDeathDmg: dmg };
   }
   /* 空框时用 placeholder（灰字）显示"现在实际生效的是几" —— 否则玩家看见空框无从判断这一局会不会收缩。
    * 它必须随「人数 × 血量」换模式而变 ⇒ `applyAxes()` 末尾调它。 */
@@ -119,14 +121,14 @@
     refreshSdHints();
   }
   function saveSd() {
-    /* v1.8.45 的规矩保留：非法输入**不许覆盖已存的好值**（旧病：写进 `{}` ⇒ 下次静默回默认）。
-     * 现在"非法"与"清空"分开处理 —— 清空是**明确的语义**（回到跟随模式 ⇒ 删键），
-     * 非法只是打错字（把框拉回当前生效值，不写盘）。 */
+    /* 非法输入不许覆盖已存的好值；起扣回合留空只表示跟随模式，伤害仍是独立设置。 */
     const on = $('inp-sd'), dm = $('inp-sd-dmg');
     if (!on || !dm) return;
     const raw = sdRaw();
     if (raw === '') {
-      try { localStorage.removeItem(SD_KEY); } catch (e) { /* ignore */ }
+      const b = parseInt(dm.value, 10);
+      const o = { suddenDeathDmg: (isFinite(b) && b > 0) ? b : 1 };
+      try { localStorage.setItem(SD_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
       on.value = '';
       refreshSdHints();
       return;
@@ -169,6 +171,7 @@
     B.roundStartSnapshot = null; B.roundStartRngState = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     B.packsReady = true; B.packLoadError = null;
     closeOverlay();
+    closeModal();
     buildSkillGrid();
     renderSide(0); renderSide(1);
     /* v1.6.5：这行不再分"多人/标准"两种写法 —— 人数与血量是两根明写的轴，模式名只是它们的查表结果。 */
@@ -607,7 +610,11 @@
     const token = B.packToken;
     const L = (typeof window !== 'undefined') ? window.EpirusPoolLoader : null;
     B.packsReady = true; B.packLoadError = null;
-    if (!L || !draw || !draw.seats || !draw.seats.length) return Promise.resolve();
+    if (!L || !draw || !draw.seats || !draw.seats.length) {
+      B.packsLoad = Promise.resolve();
+      buildSkillGrid(); renderSide(0); renderSide(1);
+      return B.packsLoad;
+    }
     const ids = [];
     for (const s of draw.seats) {
       if (s && s.kind !== 'script' && s.id && ids.indexOf(s.id) < 0) ids.push(s.id);
@@ -799,6 +806,11 @@
       /* v2.0.9：2P 只有 1 个 AI 席 ⇒ compose 的 allSame 必然为 true（数学必然，不是降级）。
        * 这里与 champForSeat/aiInfo 一样加 `!one`，否则最常见的 2 人桌每局都误报"该档成员不足"。 */
       (d.allSame && !one ? ' ⚠各席全同：该档成员不足' : '');
+  }
+
+  function noteOppChange(label) {
+    const at = B.roundStarted ? (B.resolvePending ? B.state.round + 1 : B.state.round) : B.state.round + 1;
+    B.oppMid = (B.oppMid || []).concat(['第 ' + at + ' 回合起改 ' + label]);
   }
 
   function aiInfo() {
@@ -1440,7 +1452,13 @@
     buttons.forEach(function (b, i) { btns[i].onclick = b.fn; });
     $('modal-root').classList.remove('hidden');
   }
-  function closeModal() { $('modal-root').classList.add('hidden'); }
+  function closeModal() {
+    const card = $('modal-card');
+    const active = document.activeElement;
+    if (active && card.contains(active)) active.blur();
+    card.innerHTML = '';
+    $('modal-root').classList.add('hidden');
+  }
   /* v1.5.80（§5-①）：目标/蓄能的弹窗**必须能取消** —— 否则玩家只能"随便选一个"，
    * 或者以为可以改主意（探针实测：改主意会静默替换/误触落子）。 */
   function cancelPick() {
@@ -1800,6 +1818,7 @@
        * 是 `window.EPIRUS_CHAMPION[_3P] = {…};`（不是纯 JSON），原来会被 `JSON.parse` 打回。
        * 剥壳逻辑单一来源在 `js/champion-pack.js`（纯函数，可单测）。槽位由外壳名判定。 */
       const PACK = window.EpirusChampionPack;
+      const stateBefore = B.state, sourceBefore = aiInfo().source;
       const ex = (PACK && PACK.extract) ? PACK.extract(String(rd.result)) : { ok: false, reason: 'parse-error' };
       if (!ex.ok) {
         alert('导入失败：' + champReasonText(ex.reason, ex));
@@ -1818,6 +1837,10 @@
         try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { /* 隐私模式等 */ }
         resetMultiChampCache();
         renderChampState();                                    /* 里面会调 applyPackTypeLock ⇒ 人数下拉即时锁/解锁 */
+        if (B.state === stateBefore) {
+          const oi = aiInfo();
+          if (oi.source !== sourceBefore) noteOppChange('本机冠军包 ' + (file.name || '(未命名)') + '：' + seatOppLabel(oi));
+        }
         const gen = packGenOf(ex.pack);
         alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n包代：' + (gen === '2.0'
           ? '2.0 代（v:' + ex.pack.v + '）——2~8 人桌全可用'
@@ -1833,6 +1856,10 @@
       }
       Champ.store.save(r.policy);
       renderChampState();
+      if (B.state === stateBefore) {
+        const oi = aiInfo();
+        if (oi.source !== sourceBefore) noteOppChange('本机冠军包 ' + (file.name || '(未命名)') + '：' + seatOppLabel(oi));
+      }
       alert('冠军策略导入成功，可用于“困难·冠军”难度（2 人场）。' +
         (ex.slot === null ? '\n⚠️ 这个文件没有 `window.EPIRUS_CHAMPION_3P` 外壳 ⇒ 按 2P 包处理；多人包请用训练产出的 .bak。' : ''));
     };
@@ -1922,10 +1949,12 @@
       /* 懒加载：换档不换局，但新档的池组成可能不同 ⇒ 先把这个档本局的席位分片加载完，再让玩家出招。 */
       if (B.state && B.state.p) {
         const nt = tierOf(B.diff);
+        let draw = null;
         if (nt && nt.pool) {
           const np = poolPlan(B.state, nt, B.players || 2);
-          if (np.on && np.draw) startPoolPackLoad(np.draw);
+          if (np.on && np.draw) draw = np.draw;
         }
+        startPoolPackLoad(draw);
       }
       /* §E667：换档**不换局**（这条本来就写着"对局中即时生效"）⇒ 一局可能是两档拼的。
        *   导出的头部若只写开局对手就把"前面 K 回合由 A 打、之后由 B 打"说成"全程由 A 打"，
@@ -1935,8 +1964,7 @@
         const nt2 = tierOf(B.diff);
         /* 池档的逐席标签不含剂量，复用 tierEpsLabel（同步 2 人桌 eps2）；非池档时 `seatOppLabel` 已带 ε */
         const dose = (oi.poolDraw && nt2) ? tierEpsLabel(nt2) : '';
-        B.oppMid = (B.oppMid || []).concat(['第 ' + (B.roundStarted ? (B.resolvePending ? B.state.round + 1 : B.state.round) : B.state.round + 1) +
-          ' 回合起改 ' + diffName(B.diff) + '：' + seatOppLabel(oi) + dose]);
+        noteOppChange(diffName(B.diff) + '：' + seatOppLabel(oi) + dose);
       }
       hint(B.packsReady === false
         ? ('难度已切换：' + diffName(B.diff) + '；本档冠军包加载中…')

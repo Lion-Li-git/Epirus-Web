@@ -130,6 +130,23 @@ export function packCfgExit(raw, tag) {
   return r;
 }
 
+function normMeta(d, ctxDim) {
+  if (!d.norm) return { norm: null, error: null };
+  const n = d.norm;
+  if (!Array.isArray(n.mean) || !Array.isArray(n.std) || n.mean.length !== ctxDim || n.std.length !== ctxDim) {
+    return { norm: null, error: 'norm 长度不符：mean/std 都必须是 ' + ctxDim + ' 维' };
+  }
+  for (let i = 0; i < ctxDim; i++) {
+    if (typeof n.mean[i] !== 'number' || !Number.isFinite(n.mean[i])) {
+      return { norm: null, error: 'norm.mean[' + i + '] 不是有限数值' };
+    }
+    if (typeof n.std[i] !== 'number' || !Number.isFinite(n.std[i]) || n.std[i] <= 0) {
+      return { norm: null, error: 'norm.std[' + i + '] 不是正有限数值' };
+    }
+  }
+  return { norm: { mean: n.mean.slice(), std: n.std.slice() }, error: null };
+}
+
 export function layout(opts) {
   const o = opts || {};
   const gen = o.gen == null ? GEN_LATEST : Number(o.gen);
@@ -228,7 +245,9 @@ export function layout(opts) {
   for (const s of seg) { s.off = off; off += s.len; }
   /* E1（DS · 11-02 晚，用户裁「输入标准化」）：ctx 输入的逐维标准化统计量（由固定语料离线算，随包存取）
    *   ⇒ 训练/推理用同一份 mean/std，旧包没有 norm 字段 ⇒ 逐位不变。 */
-  const norm = (o.norm && Array.isArray(o.norm.mean) && Array.isArray(o.norm.std) && o.norm.mean.length === ctxDim) ? { mean: o.norm.mean.slice(), std: o.norm.std.slice() } : null;
+  const nm = normMeta(o, ctxDim);
+  if (nm.error) throw new Error(nm.error);
+  const norm = nm.norm;
   return {
     arch: isO3 ? 'S1o' : 'S1', input, gen, skills, seatIn, actIn, initScale: INIT_SCALE, norm,
     poolN,

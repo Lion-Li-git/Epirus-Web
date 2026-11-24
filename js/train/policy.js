@@ -893,10 +893,14 @@
    * 于是游戏侧唯一的门槛只是"严格闸"本身 —— 这里给它一个**显式、可被门钉住**的入口。 */
   function canUpgradeStateOnly(o) {
     if (!o || !Array.isArray(o.a)) return false;
+    if (!Number.isInteger(o.v) || o.v < 1 || o.v >= PACK_VERSION) return false;
+    for (let i = 0; i < o.a.length; i++) {
+      if (typeof o.a[i] !== 'number' || !Number.isFinite(o.a[i])) return false;
+    }
     const sh = shapeOf(o.a);
     return !!(sh && sh.legacy && sh.featA === FEAT_A && sh.featS < FEAT_S);
   }
-  /* 游戏侧读包入口：严格优先；只在"状态段只增"的旧形状上做逐位等价嵌入；其余一律 null（沿用旧纪律）。 */
+  /* 游戏侧读包入口：严格优先；只在明确的早期版本、有限数值权重、且"状态段只增"的旧形状上做逐位等价嵌入；其余一律 null。 */
   function loadGame(o) {
     const strict = unpack(o, false);
     if (strict) return strict;

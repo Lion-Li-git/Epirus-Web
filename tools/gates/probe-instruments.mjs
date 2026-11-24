@@ -109,6 +109,17 @@ t('D34 旧包"逐位等价嵌入"：embedLegacy 的输出必须与按旧布局�
   ok(Pol.canUpgradeStateOnly({ v: 6, a: Array.from(w6), f: 123, h: HID }) === false,
     '反面：featA 也变过的 v6/v5 包**不许**走这条自动升级（那会静默切错候选口径，见 policy.js:777-791）');
   ok(Pol.loadGame({ v: 6, a: Array.from(w6), f: 123, h: HID }) === null, '反面：loadGame 对 v6 包必须返回 null');
+  const badVersion = Object.assign({}, packOldU, { v: 999 });
+  const badWeights = Object.assign({}, packOldU, { a: Array.from(wOld) });
+  badWeights.a[0] = '0';
+  const champBox = { EpirusPolicy: Pol, EpirusTrainer: T };
+  vm.runInNewContext(readFileSync('js/train/trainer.js', 'utf8'), { window: champBox }, { filename: 'js/train/trainer.js' });
+  const importJSON = champBox.EpirusChampion.store.importJSON;
+  ok(Pol.canUpgradeStateOnly(badVersion) === false, '未知版本不得借旧形状升级');
+  ok(Pol.loadGame(badVersion) === null, 'loadGame 必须拒绝未知版本');
+  ok(importJSON(JSON.stringify(badVersion)).ok === false, '2P 导入必须拒绝未知版本');
+  ok(Pol.canUpgradeStateOnly(badWeights) === false, '旧形状包也必须校验有限数值权重');
+  ok(importJSON(JSON.stringify(badWeights)).ok === false, '2P 导入必须拒绝非数值权重');
 });
 
 t('D83 转化率探针：分母必须是"可负担的决策点"（**不得用使用率**）+ 蒙特卡洛不得消耗对局随机流', function () {

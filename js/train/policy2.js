@@ -377,6 +377,23 @@
     return { base, idOne, t1, t2 };
   }
 
+  function normMeta(d, ctxDim) {
+    if (!d.norm) return { norm: null, error: null };
+    const n = d.norm;
+    if (!Array.isArray(n.mean) || !Array.isArray(n.std) || n.mean.length !== ctxDim || n.std.length !== ctxDim) {
+      return { norm: null, error: 'norm 长度不符：mean/std 都必须是 ' + ctxDim + ' 维' };
+    }
+    for (let i = 0; i < ctxDim; i++) {
+      if (typeof n.mean[i] !== 'number' || !Number.isFinite(n.mean[i])) {
+        return { norm: null, error: 'norm.mean[' + i + '] 不是有限数值' };
+      }
+      if (typeof n.std[i] !== 'number' || !Number.isFinite(n.std[i]) || n.std[i] <= 0) {
+        return { norm: null, error: 'norm.std[' + i + '] 不是正有限数值' };
+      }
+    }
+    return { norm: { mean: n.mean.slice(), std: n.std.slice() }, error: null };
+  }
+
   /* ---- 由包的 dims 推宽度，并与包里的 layout.seg 对账（对不上就拒读）----
    *  obs3b：seatIn 87（81 公开）‖ selfDim 176（序列 168）——与 arch2 的 SEAT3B/SELF3B_EXTRA 同账。 */
   function layoutOfPack(o, skills) {
@@ -385,7 +402,7 @@
     const is4 = d.input === 'obs4';
     const is5 = d.input === 'obs5';
     const is6 = d.input === 'obs6';
-    const keySplit = (o.dims.keySplit || 0) > 0 ? 1 : 0;
+    const keySplit = (d.keySplit == null) ? 1 : (Number(d.keySplit) > 0 ? 1 : 0);
     const L = { keySplit,
       input: d.input, seatH: d.seatH, actH: d.actH, hid: d.hid, hid2: d.hid2, interK: d.inter || 0, tinterK: d.tinter || 0, keyHeadOn: d.keyHead || 0, skills,
       seatIn: is6 ? (51 + 2 * skills) : (is4 || is5) ? SEAT_IN_4 : isB ? SEAT_IN_B : SEAT_IN,
@@ -396,8 +413,8 @@
     };
     L.ctxDim = is6 ? (L.hid + 3 * L.seatH) : (L.selfDim + L.poolN * L.seatH);
     L.candIn = L.hid + L.actH + L.seatH * 2;
-    L.norm = (d.norm && Array.isArray(d.norm.mean) && Array.isArray(d.norm.std) && d.norm.mean.length === L.ctxDim)
-      ? { mean: d.norm.mean.slice(), std: d.norm.std.slice() } : null;
+    const nm = normMeta(d, L.ctxDim);
+    L.norm = nm.norm; L.normError = nm.error;
     const FFH = 2 * L.seatH;
     const seg = is6 ? [
       { name: 'selfEnc', len: L.hid * L.selfDim + L.hid },
@@ -463,6 +480,7 @@
     if (o.dims.input !== 'obs3' && o.dims.input !== 'obs3b' && o.dims.input !== 'obs4' && o.dims.input !== 'obs5' && o.dims.input !== 'obs6') return { ok: false, reason: 'input', got: o.dims.input, want: 'obs3|obs3b|obs4|obs5|obs6' };
     const skills = R.skills.length;
     const L = layoutOfPack(o, skills);
+    if (L.normError) return { ok: false, reason: 'norm', detail: L.normError };
     const wantDof = o.dims.input === 'obs6' ? (137 + 5 * skills) : (DOF[o.dims.input] || 208);
     if (o.dims.dof != null && o.dims.dof !== wantDof) {
       return { ok: false, reason: 'dof', got: o.dims.dof, want: wantDof };

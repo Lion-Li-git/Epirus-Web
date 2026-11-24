@@ -14,7 +14,7 @@
  * 用法：node training/proto2/browser-parity.mjs [--pack=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak] [--perShape=6]
  */
 import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
-import { install, packInstallCfg, readPack2, packCfgExit } from './arch2.mjs';
+import { install, layout, packInstallCfg, readPack2, packCfgExit } from './arch2.mjs';
 import { collectFixtures } from './head-health.mjs';
 
 const W = sandbox();
@@ -104,11 +104,26 @@ const v90 = JSON.parse(JSON.stringify(raw)); v90.v = 90;                        
 const v90chk = P2.checkPack(v90, W);
 const segBad = JSON.parse(JSON.stringify(raw)); if (segBad.layout) segBad.layout.seg[2].off += 8;
 const sBad = P2.checkPack(segBad, W);
+const baseLayout = layout(Object.assign({}, raw.dims, { skills: raw.skills }));
+const normBad = JSON.parse(JSON.stringify(raw));
+normBad.dims.norm = { mean: new Array(baseLayout.ctxDim).fill(0), std: [1] };
+const nBad = P2.checkPack(normBad, W);
+let trainNormThrew = false;
+try { layout(Object.assign({}, normBad.dims, { skills: raw.skills })); } catch (e) { trainNormThrew = /norm/.test(String(e.message)); }
 const p3 = v7chk.ok === false && v7chk.reason === 'version' && g1chk.ok === false && g1chk.reason === 'gen' &&
-  v90chk.ok === false && v90chk.reason === 'version' && sBad.ok === false && sBad.reason === 'seg';
+  v90chk.ok === false && v90chk.reason === 'version' && sBad.ok === false && sBad.reason === 'seg' &&
+  nBad.ok === false && nBad.reason === 'norm' && trainNormThrew;
 console.log('P3 拒读：v7 容器 ⇒ ' + JSON.stringify(v7chk) + ' ‖ dims.gen=1(v 仍 91) ⇒ ' + JSON.stringify(g1chk) +
-  ' ‖ v=90 ⇒ ' + JSON.stringify(v90chk) + ' ‖ 段表被改 ⇒ ' + JSON.stringify(sBad));
+  ' ‖ v=90 ⇒ ' + JSON.stringify(v90chk) + ' ‖ 段表被改 ⇒ ' + JSON.stringify(sBad) + ' ‖ norm 不合法 ⇒ ' + JSON.stringify(nBad));
 if (!p3) { console.error('⛔ P3 不过：有一种被接走了（尤其"段表对不上还照读"= 代 1 那一族病的浏览器版）'); process.exit(8); }
+
+const noSplit = JSON.parse(JSON.stringify(raw));
+delete noSplit.dims.keySplit;
+const noSplitBr = P2.unpack(noSplit, W);
+const noSplitTools = layout(Object.assign({}, noSplit.dims, { skills: raw.skills }));
+const splitOk = !!noSplitBr && noSplitBr.p2.keySplit === 1 && noSplitTools.keySplit === 1;
+console.log('P8 keySplit 缺省：浏览器=' + (noSplitBr && noSplitBr.p2.keySplit) + ' ‖ 训练=' + noSplitTools.keySplit + (splitOk ? ' ✔' : ' ✖'));
+if (!splitOk) { console.error('⛔ 双胞胎对缺省 keySplit 的解释不一致'); process.exit(8); }
 
 /* ---- P4 v7 路径没被接走 ---- */
 const after = { len: v7Params.length, legacy: P.shapeOf(v7Params).legacy };
