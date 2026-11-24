@@ -7028,10 +7028,10 @@
  "id": "TK-FS4",
  "wid": "ac126b3320bd4ed5",
  "tier": "hard",
- "rulesFingerprint": "11bb29db",
- "fixtureKey": "fx-pool1119a",
- "measuredAt": "2026-11-24T03:45:19.683Z",
- "stageSec": 4,
+ "rulesFingerprint": "bfd49045",
+ "fixtureKey": "fx-pool1124a",
+ "measuredAt": "2026-11-24T10:28:57.963Z",
+ "stageSec": 16.3,
  "stage2": {
   "shortlist": [
    "tank",

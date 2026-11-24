@@ -100,6 +100,8 @@ const A2_POOL_ARG = String(arg('arenaPool', ''));
 const A2_ROSTER = rosterFromArg(W, T, A2_POOL_ARG, 'supfit-gd');
 const A2_SHAPES = shapesFromArg(arg('arenaShapes', A2_POOL_ARG ? '3:multi,5:multi' : ''), 'supfit-gd');
 const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_ROSTER, stratCap: A2_ROSTER ? undefined : 2, stratMix: A2_ROSTER ? undefined : 0.5, roster: A2_ROSTER || undefined, shapes: A2_SHAPES || undefined, regen: Number(arg('regen', 0)) || 0 });
+const HAS_SHAPE_WEIGHTS = A2.shapes.some((s) => s.weight > 1);
+if (HAS_SHAPE_WEIGHTS && !SHAPEBAL) { console.error('⛔ --arenaShapes 的 @W 逐格权重需要同时给 --shapeBal=1；否则权重不会进采集配额'); process.exit(2); }
 
 /* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
  * ⚑ `--dagger=R`（默认 0）：round 0 = 教师自访（= A 臂原样，局号 300000+/盐 4242）；
@@ -1343,9 +1345,18 @@ function collectInto(dst, srcParams, idBase) {
     flushPend(!WINONLY || (WINONLY === 1 ? !!(row && row.win) : !!(row && !row.win && !row.draw)));
   };
   if (SHAPEBAL) {
-    /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死） */
-    const q = Math.max(2, Math.ceil(NGRP / A2.shapes.length));
+    /* 配额摊在**组**上（第一版摊在局上 ⇒ 800 组的上限在前 2 形就撞掉，等于没改——这条已用 `覆盖 x/11 形` 自证堵死）。
+     *   `@W` 只改这里的训练配额；A2.shapes 仍是唯一的评测菜单。未给权重时沿用旧的 ceil 配额，缺省路径逐位不变。 */
+    const quotas = HAS_SHAPE_WEIGHTS ? (() => {
+      const ws = A2.shapes.map((s) => s.weight), sum = ws.reduce((a, b) => a + b, 0);
+      const raw = ws.map((w) => NGRP * w / sum), q = raw.map(Math.floor);
+      let left = NGRP - q.reduce((a, b) => a + b, 0);
+      const order = raw.map((v, i) => ({ i, frac: v - q[i] })).sort((a, b) => b.frac - a.frac || a.i - b.i);
+      for (let k = 0; k < left; k++) q[order[k % order.length].i]++;
+      return q;
+    })() : A2.shapes.map(() => Math.max(2, Math.ceil(NGRP / A2.shapes.length)));
     for (let s = 0; s < A2.shapes.length; s++) {
+      const q = quotas[s];
       curShp = s;
       shapeStart = dst.length;
       shapeQuota = q;
@@ -1740,6 +1751,7 @@ writeFileSync(OUT + '.meta.json', JSON.stringify({
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, rolloutMode: ROLLOUT_MODE, classPow: CLASS_POW, classCap: CLASS_CAP, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   /* 11-15 白班：训练环境（对手表/桌形）入 meta——环境轮换配方的复现与"1/8 形覆盖"类事故的查账依据 */
   arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES && A2_SHAPES.length ? arg('arenaShapes', '') || null : null,
+  arenaShapeWeights: HAS_SHAPE_WEIGHTS ? A2.shapes.map((s) => ({ shape: s.n + ':' + s.mode, weight: s.weight })) : null,
   /* 11-15 深夜：多教师配方入 meta（此前只记单教师 ⇒ E5c 的分轨配方落不了盘，复现只能考古 FINDING 正文） */
   teacher2: TEACHER2 || null, teacher2frac: TEACHER2 ? TEACHER2_FRAC : null, teacher2keys: T2KEYS.size ? [...T2KEYS].join(',') : null,
   teacher2shapes: T2SHAPES.size ? [...T2SHAPES].join(',') : null,

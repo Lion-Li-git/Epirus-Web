@@ -14,6 +14,8 @@
 import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
 import { install, layout, paramCount, make, verifyWired, V_FOR_GEN, packInstallCfg, genOf } from './arch2.mjs';
 import { encode as obs3Encode, setAblate, seqLayout } from './obs3.mjs';
+import { createArena2 } from './arena2.mjs';
+import { shapesFromArg } from './roster-lib.mjs';
 
 const W = sandbox();
 const P = W.EpirusPolicy, S = W.EpirusState, Play = W.EpirusPlay, T = W.EpirusTrainer;
@@ -533,6 +535,20 @@ const O3 = await import('./obs3.mjs');
     '（理论 ' + (1 / modeHp3).toFixed(4) + '→' + (2 / modeHp3).toFixed(4) + '）且改对手血不动 ' + near(s4, s1) +
     ' ‖ mean 路满血 ' + m1.toFixed(4) + '、改自己血不动 ' + near(m2, m1) + '、改一个对手血 → ' + m3.toFixed(4) +
     '（理论 ' + mExp.toFixed(4) + '）' + (near(m3, mExp) ? ' ✔' : ' ✘'));
+}
+
+{
+  const weighted = shapesFromArg('2:multi@2,2:multi4@2,2:long@2,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi', 'selftest2');
+  const keys = weighted.map((s) => s.n + ':' + s.mode);
+  const aDefault = createArena2(W, { refParams: REF_V7, stratified: false });
+  const aWeighted = createArena2(W, { refParams: REF_V7, stratified: false, shapes: weighted });
+  let badThrew = false;
+  try { createArena2(W, { refParams: REF_V7, stratified: false, shapes: [{ n: 2, mode: 'multi', weight: 0 }] }); } catch (e) { badThrew = true; }
+  ok(weighted.length === 11 && new Set(keys).size === 11 && weighted.slice(0, 3).every((s) => s.weight === 2)
+    && aWeighted.shapes.length === 11 && aWeighted.loopShapes.length === 14 && aWeighted.fp.includes('shapeW=')
+    && aDefault.loopShapes.length === 11 && !aDefault.fp.includes('shapeW=') && badThrew,
+    'T19 逐格权重只改训练环 ‖ 菜单 ' + aWeighted.shapes.length + ' 格且唯一 ' + new Set(keys).size + ' ‖ 训练槽 '
+    + aWeighted.loopShapes.length + '（2P 三格各 ×2）‖ 缺省槽 ' + aDefault.loopShapes.length + ' 且指纹不带 shapeW ‖ weight=0 当场抛 ' + badThrew);
 }
 
 console.log(fails.length ? '\n⛔ 自证未过 ' + fails.length + ' 条 ⇒ 结构不进下一环' : '\n⇒ ' + done + ' 条自证全过：2.0 原型可以进训练环');

@@ -29,8 +29,8 @@ const h5 = read('readings/h5-frozen.tsv');
 const disp = read('display.tsv');
 if (errs.length) { console.error('⛔ ' + errs.join('\n⛔ ')); process.exit(2); }
 
-const regIds = new Set();
-for (const r of reg.rows) { const id = r[reg.ix.pack_id]; if (!id) errs.push('registry 空 pack_id'); else if (regIds.has(id)) errs.push('registry 重复 ' + id); else regIds.add(id); }
+const regIds = new Set(), regStatus = {};
+for (const r of reg.rows) { const id = r[reg.ix.pack_id]; if (!id) errs.push('registry 空 pack_id'); else if (regIds.has(id)) errs.push('registry 重复 ' + id); else { regIds.add(id); regStatus[id] = r[reg.ix.status]; } }
 const rulerIds = new Set();
 for (const r of rulers.rows) {
   const id = r[rulers.ix.ruler_id];
@@ -72,7 +72,8 @@ for (const p of ['features.tsv', 'projections.tsv', 'readings/h5-frozen.tsv', 'd
   const s = new Set();
   for (const r of t.rows) { const id = r[idCol]; if (!regIds.has(id)) errs.push(p + ' 指向未登记 ' + id); if (s.has(id)) errs.push(p + ' 重复 ' + id); s.add(id); }
 }
-const missing = [...regIds].filter((id) => !cover.has(id) || cover.get(id).n < 16);
+/* 归档包只保留历史坐标，不要求补当前 A/B 16 格；否则 --strict 会把 19 枚已归档对照永久判红。 */
+const missing = [...regIds].filter((id) => regStatus[id] !== 'archived' && (!cover.has(id) || cover.get(id).n < 16));
 if (missing.length) {
   const msg = '有 ' + missing.length + ' 枚缺 current A/B 16 格（前 8：' + missing.slice(0, 8).join(' ') + '）';
   if (STRICT) errs.push(msg); else warns.push(msg);

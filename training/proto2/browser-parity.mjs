@@ -7,7 +7,7 @@
  *
  * 判据（任何一条不过 ⇒ exit 8；每条都带"摘腿后变异"，防恒真）：
  *   P1 逐位相同：N 个真局决策点上，`policy2.forwardCands` 与 arch2 的 `P.forwardCands` 的 logits/probs/argmax/q **逐元素相等**。
- *   P2 有牙：把浏览器那份 params 动一个下标 ⇒ logits 必须变（不然 P1 可能是"两边都没算"）。
+ *   P2 有牙：逐段替换浏览器 params，全部真局决策点中至少一处 logits 必须变（避免首个夹具的输入盲区）。
  *   P3 拒读：v7 包 / `dims.gen=1` / 段表被改 —— 三种都要**拒读并点名原因**，不许静默按新形状切。
  *   P4 v7 路径没被接走：装完 policy2 之后，v7 的 `P.checkPack/unpack/shapeOf/chooseCandidates` 对 v7 包仍给出与装档前一致的判定。
  *
@@ -76,9 +76,6 @@ if (bad.length) { for (const x of bad.slice(0, 6)) console.log('   ✖ ' + x); p
  * ⚑ 为什么不是"抽一个下标 +1"：单点扰动会被 ReLU 直接夹掉（pre-activation 还是负 ⇒ 那一维恒 0 ⇒ 输出逐位不变），
  *   于是"没变"既可能是"这段没接上"也可能是"这一维被夹了"—— 训练侧那条腿（selftest2 T18）当初就是靠**整段换**才判得动。
  *   这里与它同形，两边才谈得上"同一把尺"。 */
-const F0 = fx[0];
-const base0 = P2.forwardCands(W, F0.st, F0.pid, F0.cands, br, { temp: 0.15 });
-const baseKey = Array.from(base0.logits).join(',');
 let rs = 987654321;
 const rnd = () => { rs = (rs * 1664525 + 1013904223) >>> 0; return (rs / 4294967296 - 0.5) * 2; };
 function swapSeg(name, scale) {
@@ -87,14 +84,19 @@ function swapSeg(name, scale) {
   for (let i = s.off; i < s.off + s.len; i++) q[i] = rnd() * (scale || 0.3);   // 整段（权重+bias）一起换 ⇒ 不会被单点被 ReLU 夹掉那种假阴
   return q;
 }
-const probe = [];
-for (const s of br.p2.seg) {
-  const b = P2.forwardCands(W, F0.st, F0.pid, F0.cands, swapSeg(s.name), { temp: 0.15 });
-  probe.push({ seg: s.name, moved: Array.from(b.logits).join(',') !== baseKey });
+/* 首个 2P 开局夹具可能让交叉注意力输入恒 0；跨全部真局决策点才能区分“没接上”和“这一格看不见”。 */
+const swaps = new Map(br.p2.seg.map((s) => [s.name, swapSeg(s.name)]));
+const probe = br.p2.seg.map((s) => ({ seg: s.name, moved: 0 }));
+for (const f of fx) {
+  const baseKey = Array.from(P2.forwardCands(W, f.st, f.pid, f.cands, br, { temp: 0.15 }).logits).join(',');
+  for (const p of probe) {
+    const b = P2.forwardCands(W, f.st, f.pid, f.cands, swaps.get(p.seg), { temp: 0.15 });
+    if (Array.from(b.logits).join(',') !== baseKey) p.moved++;
+  }
 }
-console.log('P2 牙：逐段换权重区 ⇒ ' + probe.map((p) => p.seg + (p.moved ? '✔' : '✖')).join(' ‖ '));
+console.log('P2 牙：逐段换权重区，在 ' + fx.length + ' 个真局决策点中至少命中一次 ⇒ ' + probe.map((p) => p.seg + (p.moved ? '✔' + p.moved : '✖')).join(' ‖ '));
 const deadSegs = probe.filter((p) => !p.moved);
-if (deadSegs.length) { console.error('⛔ 这些段整块换掉都抽不动输出：' + deadSegs.map((d) => d.seg).join(', ') + ' ⇒ 浏览器侧那段没接上（或它的输入列在夹具里恒 0）'); process.exit(8); }
+if (deadSegs.length) { console.error('⛔ 这些段整块换掉在所有夹具都抽不动输出：' + deadSegs.map((d) => d.seg).join(', ') + ' ⇒ 浏览器侧那段没接上（或输入列恒 0）'); process.exit(8); }
 
 /* ---- P3 拒读三例 ---- */
 const v7chk = P2.checkPack(v7Fake, W);

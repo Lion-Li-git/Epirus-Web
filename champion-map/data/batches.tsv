@@ -109,3 +109,12 @@ measure-nov24-pierce3-20261101	a-v2-page-1109	A	-	-	measure-nov24-pierce3-202611
 measure-TK-FS1	a-v2-page-1109	A	-	-	measure-TK-FS1	TK-FS1-readings.tsv	32	2026-11-24T04:31:51.876Z	add-point
 measure-TK-FS3	a-v2-page-1109	A	-	-	measure-TK-FS3	TK-FS3-readings.tsv	32	2026-11-24T04:33:12.745Z	add-point
 measure-nov24-bandsym-jin	a-v2-page-1109	A	-	-	measure-nov24-bandsym-jin	nov24-bandsym-jin-readings.tsv	32	2026-11-24T04:34:33.566Z	add-point
+measure-MX1-E9-GD-a	a-v2coop-page-1114	A	-	-	measure-MX1-E9-GD-a	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX1-E9-GD-b	b-f5-page-1114	B	-	-	measure-MX1-E9-GD-b	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX1-E9-GD-beps0	b-f5-eps0-1114	X	-	-	measure-MX1-E9-GD-beps0	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX1-GD-EQ-a	a-v2coop-page-1114	A	-	-	measure-MX1-GD-EQ-a	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX1-GD-EQ-b	b-f5-page-1114	B	-	-	measure-MX1-GD-EQ-b	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX1-GD-EQ-beps0	b-f5-eps0-1114	X	-	-	measure-MX1-GD-EQ-beps0	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX2-U4-EQ-a	a-v2coop-page-1114	A	-	-	measure-MX2-U4-EQ-a	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX2-U4-EQ-b	b-f5-page-1114	B	-	-	measure-MX2-U4-EQ-b	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-MX2-U4-EQ-beps0	b-f5-eps0-1114	X	-	-	measure-MX2-U4-EQ-beps0	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留

@@ -45135,78 +45135,78 @@ BASE-P9-MB5	b-f5-eps0-1114	2	long	0.4131	2600	measure-BASE-P9-MB5
 BASE-P9-MB5	b-f5-eps0-1114	3	long	0.2671	1400	measure-BASE-P9-MB5	
 BASE-P9-MB5	b-f5-eps0-1114	5	long	0.3464	700	measure-BASE-P9-MB5	
 BASE-P9-MB5	b-f5-eps0-1114	8	long	0.2857	400	measure-BASE-P9-MB5	
-MX1-E9-GD	a-v2coop-page-1114	2	short	0.6792	2600	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	3	short	0.3562	1440	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	5	short	0.2635	740	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	8	short	0.1247	440	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	2	long	0.5469	2600	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	3	long	0.2479	1440	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	5	long	0.3007	740	measure-MX1-E9-GD	
-MX1-E9-GD	a-v2coop-page-1114	8	long	0.2753	440	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	2	short	0.5754	2600	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	3	short	0.0464	1400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	5	short	-0.0536	700	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	8	short	-0.0486	400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	2	long	0.0977	2600	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	3	long	-0.1014	1400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	5	long	-0.1089	700	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-page-1114	8	long	-0.0829	400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	2	short	0.7085	2600	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	3	short	0.0186	1400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	5	short	-0.0643	700	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	8	short	-0.0429	400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	2	long	0.1023	2600	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	3	long	-0.1175	1400	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	5	long	-0.1054	700	measure-MX1-E9-GD	
-MX1-E9-GD	b-f5-eps0-1114	8	long	-0.1029	400	measure-MX1-E9-GD	
-MX1-GD-EQ	a-v2coop-page-1114	2	short	0.6892	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	3	short	0.3875	1440	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	5	short	0.2399	740	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	8	short	0.1403	440	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	2	long	0.4177	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	3	long	0.2969	1440	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	5	long	0.3209	740	measure-MX1-GD-EQ	
-MX1-GD-EQ	a-v2coop-page-1114	8	long	0.2909	440	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	2	short	0.51	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	3	short	0.0282	1400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	5	short	-0.0946	700	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	8	short	-0.0743	400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	2	long	-0.2038	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	3	long	-0.1239	1400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	5	long	-0.0839	700	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-page-1114	8	long	-0.0286	400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	2	short	0.6662	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	3	short	0.0229	1400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	5	short	-0.0964	700	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	8	short	-0.0314	400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	2	long	-0.1854	2600	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	3	long	-0.1282	1400	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	5	long	-0.0714	700	measure-MX1-GD-EQ	
-MX1-GD-EQ	b-f5-eps0-1114	8	long	-0.06	400	measure-MX1-GD-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	2	short	0.5131	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	3	short	0.3823	1440	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	5	short	0.1959	740	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	8	short	0.1351	440	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	2	long	0.4808	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	3	long	0.1469	1440	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	5	long	0.1655	740	measure-MX2-U4-EQ	
-MX2-U4-EQ	a-v2coop-page-1114	8	long	0.226	440	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	2	short	0.1623	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	3	short	-0.0511	1400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	5	short	-0.0732	700	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	8	short	0.0143	400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	2	long	0.1377	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	3	long	-0.0736	1400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	5	long	-0.0232	700	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-page-1114	8	long	0.0029	400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	2	short	0.1254	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	3	short	-0.0704	1400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	5	short	-0.0625	700	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	8	short	0.0257	400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	2	long	0.2438	2600	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	3	long	-0.0768	1400	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	5	long	-0.0554	700	measure-MX2-U4-EQ	
-MX2-U4-EQ	b-f5-eps0-1114	8	long	0.0029	400	measure-MX2-U4-EQ	
+MX1-E9-GD	a-v2coop-page-1114	2	short	0.6792	2600	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	3	short	0.3562	1440	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	5	short	0.2635	740	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	8	short	0.1247	440	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	2	long	0.5469	2600	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	3	long	0.2479	1440	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	5	long	0.3007	740	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	a-v2coop-page-1114	8	long	0.2753	440	measure-MX1-E9-GD-a	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	2	short	0.5754	2600	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	3	short	0.0464	1400	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	5	short	-0.0536	700	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	8	short	-0.0486	400	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	2	long	0.0977	2600	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	3	long	-0.1014	1400	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	5	long	-0.1089	700	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-page-1114	8	long	-0.0829	400	measure-MX1-E9-GD-b	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	2	short	0.7085	2600	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	3	short	0.0186	1400	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	5	short	-0.0643	700	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	8	short	-0.0429	400	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	2	long	0.1023	2600	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	3	long	-0.1175	1400	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	5	long	-0.1054	700	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-E9-GD	b-f5-eps0-1114	8	long	-0.1029	400	measure-MX1-E9-GD-beps0	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	2	short	0.6892	2600	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	3	short	0.3875	1440	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	5	short	0.2399	740	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	8	short	0.1403	440	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	2	long	0.4177	2600	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	3	long	0.2969	1440	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	5	long	0.3209	740	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	a-v2coop-page-1114	8	long	0.2909	440	measure-MX1-GD-EQ-a	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	2	short	0.51	2600	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	3	short	0.0282	1400	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	5	short	-0.0946	700	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	8	short	-0.0743	400	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	2	long	-0.2038	2600	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	3	long	-0.1239	1400	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	5	long	-0.0839	700	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-page-1114	8	long	-0.0286	400	measure-MX1-GD-EQ-b	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	2	short	0.6662	2600	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	3	short	0.0229	1400	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	5	short	-0.0964	700	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	8	short	-0.0314	400	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	2	long	-0.1854	2600	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	3	long	-0.1282	1400	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	5	long	-0.0714	700	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX1-GD-EQ	b-f5-eps0-1114	8	long	-0.06	400	measure-MX1-GD-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	2	short	0.5131	2600	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	3	short	0.3823	1440	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	5	short	0.1959	740	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	8	short	0.1351	440	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	2	long	0.4808	2600	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	3	long	0.1469	1440	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	5	long	0.1655	740	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	a-v2coop-page-1114	8	long	0.226	440	measure-MX2-U4-EQ-a	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	2	short	0.1623	2600	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	3	short	-0.0511	1400	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	5	short	-0.0732	700	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	8	short	0.0143	400	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	2	long	0.1377	2600	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	3	long	-0.0736	1400	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	5	long	-0.0232	700	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-page-1114	8	long	0.0029	400	measure-MX2-U4-EQ-b	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	2	short	0.1254	2600	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	3	short	-0.0704	1400	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	5	short	-0.0625	700	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	8	short	0.0257	400	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	2	long	0.2438	2600	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	3	long	-0.0768	1400	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	5	long	-0.0554	700	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
+MX2-U4-EQ	b-f5-eps0-1114	8	long	0.0029	400	measure-MX2-U4-EQ-beps0	11-24 按尺拆批
 MX3-GDEQ-GD	a-v2coop-page-1114	2	short	0.6731	2600	measure-MX3-GDEQ-GD	
 MX3-GDEQ-GD	a-v2coop-page-1114	3	short	0.4302	1440	measure-MX3-GDEQ-GD	
 MX3-GDEQ-GD	a-v2coop-page-1114	5	short	0.2331	740	measure-MX3-GDEQ-GD	

@@ -104,7 +104,11 @@ export function createArena2(W, opts) {
     for (const s of R.skills) roster.push({ name: 'only:' + s.key, kind: 'fixed', sel: fixedChooser(P, T, R, s.key) });
     roster.push({ name: 'random', kind: 'random', sel: null });
   }
-  const shapes = (o.shapes && o.shapes.length ? o.shapes : SHAPES).slice();
+  const shapes = (o.shapes && o.shapes.length ? o.shapes : SHAPES).map((s) => Object.assign({}, s, { weight: s.weight == null ? 1 : s.weight }));
+  for (const s of shapes) {
+    if (!Number.isInteger(s.weight) || s.weight < 1) throw new Error('createArena2: shape.weight 要正整数（收到 ' + JSON.stringify(s) + '）');
+  }
+  const hasShapeWeights = shapes.some((s) => s.weight > 1);
   const temp = o.temp == null ? TEMP_DEFAULT : Number(o.temp);
   if (!(temp > 0)) throw new Error('createArena2: temp 要正数（收到 ' + o.temp + '）');
   /* `regen=`（ZCode · 11-02 夜）：**采集桌经济补贴**（每回合每席 +N ep，透传 oneGameN 的 GOPT.regen）。
@@ -117,7 +121,7 @@ export function createArena2(W, opts) {
   const highNW = Math.max(1, Math.floor(Number(o.highN) || 1));
   const loopShapes = [];
   for (let i = 0; i < shapes.length; i++) {
-    const reps = (shapes[i].n >= 8 ? highNW : 1);
+    const reps = (shapes[i].n >= 8 ? highNW : 1) * shapes[i].weight;
     for (let k = 0; k < reps; k++) loopShapes.push({ idx: i, n: shapes[i].n, mode: shapes[i].mode });
   }
   /* `stratified=1`（DS P1）：每局非被测席**优先塞捕食者**（bigT/reflect/snipe/guard 轮换），
@@ -138,6 +142,7 @@ export function createArena2(W, opts) {
     'shapes=' + shapes.map((s) => s.n + ':' + s.mode + (s.regen != null ? ':r' + s.regen : '')).join(','),
     'roster=' + roster.map((r) => r.name).join(','),
     highNW > 1 ? 'highN=' + highNW + '（仅训练环）' : 'highN=1',
+    ...(hasShapeWeights ? ['shapeW=' + shapes.map((s) => s.n + ':' + s.mode + '@' + s.weight).join(',')] : []),
     'regen=' + REGEN,
     stratified ? 'stratified=' + PREDATORS.join('+') + '~cap' + stratCap + '~mix' + stratMix : 'stratified=0'].join('|');
   const fixedByKey = {};
@@ -314,7 +319,7 @@ export function createArena2(W, opts) {
     return { win: 100 * w / Math.max(1, g), games: g, cells: cells.length };
   }
   return {
-    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, loopShapes, stratified, predators: PREDATORS, stratCap, stratMix,
+    version: ARENA2_VERSION, fp, temp, pool, poolFp, roster, shapes, poolSeed, highN: highNW, shapeWeights: hasShapeWeights, loopShapes, stratified, predators: PREDATORS, stratCap, stratMix,
     fixed, evalChooser, evalParams, verifyWired, legacyCheck, playOne,
     chooserOf: (params, t) => T.policyChooserN(params, t == null ? temp : t),
     rosterNames: () => roster.map((r) => r.name),

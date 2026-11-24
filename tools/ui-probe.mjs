@@ -295,6 +295,27 @@ async function main() {
     await evalJS('getComputedStyle(document.getElementById("logsummary")).display') !== 'none' &&
     await evalJS('getComputedStyle(document.getElementById("logbox")).display') === 'none');
 
+  console.log('\n⑦ 密集事件回合应力');
+  await clickSkill('ジ');
+  await waitUnlock();
+  await evalJS(`(function(){
+    var B=window.EpirusUI.B, ev=[], guards=['防御','反弹','藤甲','八卦阵','金刚盾','原型制控'];
+    if(!B.transcript.length) return false;
+    for(var to=0;to<8;to++) for(var gi=0;gi<guards.length;gi++) ev.push({type:'blocked',to:to,by:guards[gi]});
+    for(var n=1;n<=40;n++) ev.push({type:'firestorm',pid:n%8,n:n});
+    B.transcript[0].events=ev;
+    document.getElementById('btn-undo').click();
+    return true;
+  })()`);
+  await sleep(250);
+  const storm = JSON.parse(await evalJS('(function(){var a=document.getElementById("logsum-actions"),e=document.getElementById("logsum-events"),d=document.getElementById("logdock");return JSON.stringify({actions:a.querySelectorAll(".logsum-act").length,events:e.querySelectorAll(".logsum-event").length,wrapA:getComputedStyle(a).flexWrap,wrapE:getComputedStyle(e).flexWrap,scrollA:a.scrollWidth<=a.clientWidth+1,scrollE:e.scrollWidth<=e.clientWidth+1,h:d.getBoundingClientRect().height,pos:getComputedStyle(d).position});})()'));
+  check('⑦ 88 条特殊事件自动换行且无横向滚动，8 人动作条仍完整',
+    storm.actions === 8 && storm.events === 88 && storm.wrapA === 'wrap' && storm.wrapE === 'wrap' && storm.scrollA && storm.scrollE && storm.pos === 'static',
+    JSON.stringify(storm));
+  await evalJS('document.getElementById("logdock").scrollIntoView({block:"start"})');
+  await sleep(100);
+  await shot(join(OUT, 'uipro-7-log-summary-stress.png'));
+
   console.log('\nJS errors: ' + (errors.length ? errors.join(' | ') : '(none)'));
   const fail = checks.filter(function (c) { return !c[1]; }).length;
   console.log('UI 探针：' + (checks.length - fail) + ' / ' + checks.length + (fail ? '  （有 FAIL ⇒ 需要修）' : '  （全过）'));

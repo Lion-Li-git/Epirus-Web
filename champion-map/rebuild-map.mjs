@@ -44,11 +44,13 @@ run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期）
+ *   先跑 check-lineage 的 2.0 只读对账；缺权重也仍然能发现 registry 改了而 lineage 没同步。
  *   2026-11-19：registry 里存在缺失权重文件时**不重生成 lineage** —— 11-19 清理删掉了 docs/artifacts/*-out
  *   （800 枚 active、不可恢复），重生成会因配置/融合父粒读不到而把家族并拢、把薄图写进历史（§E503）。
  *   默认保留在册 lineage.tsv 并响亮说明；权重补回后自动恢复，或显式 --require-lineage 强制跑（会按原判据失败）。 */
 if (DATA === resolve(HERE, 'data')) {
   run([join(ROOT, 'tools/sync-page-coords.mjs')], '②b sync page/coords.tsv');
+  run([join(HERE, 'check-lineage.mjs')], '③a lineage 2.0 只读一致性');
   const _missPath = (() => {
     const rp = join(DATA, 'registry.tsv');
     const L = readFileSync(rp, 'utf8').replace(/\r\n/g, '\n').trim().split('\n');

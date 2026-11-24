@@ -27,9 +27,10 @@
 
 1. ① 历史戳检查：`attach-exam-stamp --check`（**只对 F2/F5 旧图有意义**；2026-11-18 起 B=Arena，已改成自动跳过并打印原因）
 2. ② `build-view`：readings + current A/B(+X) → `exam-view.tsv` + `coords-view.tsv`；与 gen8 对照锚逐值比对（mismatch=0 才过）
-3. ③ `lineage.mjs`：写 `data/page/lineage.tsv`
-4. ④ `build-trends.mjs`：写 `trends.html`
-5. ④ `viewer.mjs --fit=coords-view`：烘 `index.html`（内联自检 6388 行 JS）
+3. ③ `check-lineage.mjs`：只读核对 2.0 `registry` 与 `lineage.tsv` 的血统字段；缺旧权重时也能抓住“改了 registry 忘了同步”
+4. ③ `lineage.mjs`：权重齐全时写 `data/page/lineage.tsv`；缺历史权重时保留在册表并响亮说明
+5. ④ `build-trends.mjs`：写 `trends.html`
+6. ④ `viewer.mjs --fit=coords-view`：烘 `index.html`（内联自检 6388 行 JS）
 6. ④ `shot.mjs --hash=mode=tree&check=1`：页内 100 条断言（0 FAIL 才收工）
 
 换尺流程（手工，易错）：`build-view --compare=<不存在>` 跳守卫 → 拷成新 gen 锚 → 改 `rebuild-map` 的 `--compare` 行 → 再跑。

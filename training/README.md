@@ -35,7 +35,7 @@
 ### 2. 三条训练通路（均在单粒子上做，不做交叉变异）
 
 1. **教师蒸馏 + DAgger（`proto2/supfit-gd.mjs`，`--mode=supfit|distill`）—— 注入新技能与纠正零覆盖键**
-   - **采样**：在 `arena2` 桌面上收集 `(状态, 合法候选, 教师动作)`，支持 `--shapeBal=1` 按桌形均摊配额、`--winOnly=1|2` 仅采胜/败局语境、`--classPow/--classCap` 压低稀有类过拟合，以及 `closeCurseStorm` 标签闭环兜底。
+   - **采样**：在 `arena2` 桌面上收集 `(状态, 合法候选, 教师动作)`，支持 `--shapeBal=1` 按桌形均摊配额、`--arenaShapes=2:multi@2,...` 只改训练环逐格权重（评测菜单不增格）、`--winOnly=1|2` 仅采胜/败局语境、`--classPow/--classCap` 压低稀有类过拟合，以及 `closeCurseStorm` 标签闭环兜底。
    - **多教师轮替**：支持 `--teacher` 搭配 `--teacher2/3/4`（按比例、指定技能键或桌形切教师，可以是内置脚本专精如 `toolkit`/`cannon`/`detonate`，也可以是任意 `pack:<v7或2.0包>`），防止单教师洗塌基础攻防。
    - **DAgger（`--dagger=R`）**：第 0 轮只采教师自访轨迹；后续每轮改由**当前学生自己走出来的局面**请教师重标并入训练集再训，消除上线后走偏到陌生局面的协变量漂移。
    - **梯度更新**：对 `--objective=cand`（推荐）精确最大化 `log π(教师候选)`（`dLogPi` + `tapeBackward` + Adam，可选 `seatDrop` 与 `onlySeg`）。

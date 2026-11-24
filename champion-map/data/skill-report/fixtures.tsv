@@ -1,7 +1,7 @@
 # pool-skill-report 对手夹具声明（fixtures 唯一登记处；PLAN-2026-11-18-late §1.4）
 # 规矩：夹具换内容 ⇒ fixtureKey 换代 ⇒ 新读数批次换列族（AGENTS §7「不同夹具的读数不混表」）。
 # 旧普查（11-16，crossenv）的夹具 = E9/P4/P9/MSB15R/WSEL9 五真包（已退役出池）⇒ 与本表不可混表。
-fixtureKey	fx-pool1119a
+fixtureKey	fx-pool1124a
 rulesFingerprint	(生成时由 tools/rules-fingerprint.mjs 现算，随 raw JSON 逐份带)
 # 观察层脚本对手（10；承 crossenv 11-16 名单，全部在 training/server/opp-pool.mjs OPP_SPECS）
 script	gunspam
