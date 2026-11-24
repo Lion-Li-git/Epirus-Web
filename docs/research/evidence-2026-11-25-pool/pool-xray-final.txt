@@ -1,0 +1,33 @@
+id                   带   arenaB    并集 覆盖≥3   覆盖技能清单（前 12）
+nov22-ring3-gd6a18   hard 20.401    13    11       bagua,bigT,c
+nov21-taunt-dsp0b    hard 17.9177   15    11       bagua,bigT,c
+T65-RINGBEAD         hard 16.5617   19    12       bagua,charge
+R-GD12               hard 15.8858   13    11       bagua,bigT,c
+nov21-purify-dsp0    soft 14.0432   12    10       bagua,bigT,c
+OBS6E9               hard 14.024    13    13       bagua,charge
+RG-MN                hard 11.3764   14    12       bagua,bigT,c
+AR-TK2               soft 10.3588   16    14       armor,bagua,
+MX6-GD-TF20          soft 4.0896    18    12       bagua,charge
+RING-MINIT-CONT      hard 2.2957    20    14       bagua,bigT,c
+HL-G1                hard -1.8279   13    11       bagua,bigT,c
+RG-CN                hard -1.9914   16    12       bagua,bigT,c
+TK-FS4               hard -3.3954   15    13       armor,bagua,
+FS-G2                hard -3.4817   13    11       bagua,charge
+MX8-TN35-KL3         soft -7.3259   20    15       bagua,bigT,c
+nov21-armor-tzt2d    hard -12.1972  13    13       armor,bagua,
+FC-G1                hard -16.6364  16    11       bagua,charge
+MX8-R6B-KL           soft -16.7482  20    13       bagua,bigT,c
+FC-S1                soft -25.6677  15    13       bagua,cannon
+MX8-R6C-KL           soft -26.7632  18    13       bagua,bigT,c
+nov22-c3g-s300k      soft -27.5473  14    12       bagua,bigT,c
+nov21-rod-tzt2d-r10  soft -30.4076  15    13       bagua,bigT,c
+RINGB11              soft -32.7164  10    9        bigT,charge,
+MSB11-R1S130778313   soft -47.796   16    9        guard,gun,ji
+
+[hard] 13 枚 ‖ arenaB 中位 2.3 ‖ 带内覆盖并集 25 技
+   并集明细：bagua×13 charge×13 guard×13 gun×13 ji×13 reflect×13 snipe×13 sword×13 railgun×10 bigT×8 ring×7 curse×5 proto×3 firestorm×3 holo×2 shift×2 tank×2 armor×2 taunt×1 jinshield×1 mine×1 drain×1 laserEye×1 cannon×1 transfer×1
+
+[mid] 空
+
+[soft] 11 枚 ‖ arenaB 中位 -25.7 ‖ 带内覆盖并集 24 技
+   并集明细：guard×11 gun×11 ji×11 reflect×11 sword×11 charge×10 snipe×10 bagua×9 bigT×8 railgun×8 shift×7 holo×4 transfer×3 curse×3 firestorm×3 tank×2 laserEye×2 proto×2 ring×2 armor×1 miniT×1 cannon×1 rod×1 mine×1

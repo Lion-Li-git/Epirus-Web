@@ -194,11 +194,11 @@ async function main() {
     check('\u6bcf\u683c\u7684\u8840\u91cf\u771f\u843d\u5230 mode.hp \u4e0e\u6bcf\u4e2a\u5ea7\u4f4d\u7684\u521d\u59cb\u8840', rows.every(r => r.modeHp === r.h && r.initHp === new Array(r.p).fill(r.h).join('/')));
     const seen = {};
     rows.forEach(r => { seen[r.modeKey] = 1; });
-    check('\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u6620\u5c04\u7684\u50cf\u6070\u597d\u76d6\u4f4f MODES \u5168\u90e8 key\uff08\u65e0\u5e7d\u7075\u3001\u65e0\u6ca1\u5165\u53e3\u7684\u6a21\u5f0f\uff09',
+    check('\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u6620\u5c04\u7684\u50cf\u6070\u597d\u76d6\u4f4f MODES \u5168\u90e8 key',
       sweep.modeKeys.every(k => seen[k]) && Object.keys(seen).length === sweep.modeKeys.length);
     check('2 \u4eba\u5c40\uff1a\u4e09\u5f20\u591a\u4eba\u4e13\u7528\u5361\u5168\u90e8\u6807\u6ce8\u4e3a\u300c\u591a\u4eba\u6a21\u5f0f\u300d\uff08\u7528\u6237\u70b9\u540d\u7684\u56de\u5f52\uff0c\u9010\u8840\u91cf\u5224\uff09',
       rows.filter(r => r.p === 2).every(r => r.cardCt === sweep.blockedText));
-    check('\u6b63\u5bf9\u7167\uff1a3~5 \u4eba\u5c40\u90a3\u4e09\u5f20\u4e0d\u8bb8\u88ab\u5f53\u300c\u591a\u4eba\u4e13\u7528\u300d\u6321\u6389',
+    check('\u6b63\u5bf9\u7167\uff1a3~5 \u4eba\u5c40\u90a3\u4e09\u5f20\u4fdd\u6301\u53ef\u7528',
       rows.filter(r => r.p > 2).every(r => r.cardCt !== sweep.blockedText));
     console.log('  sweep 4 \u8840\u683c =', JSON.stringify(rows.filter(r => r.h === 4).map(r => r.p + '\u4eba\u2192' + r.modeKey + '(hp' + r.modeHp + ')')));
     console.log('  sweep 2 \u4eba\u683c =', JSON.stringify(rows.filter(r => r.p === 2).map(r => r.h + '\u8840\u2192' + r.modeKey + ' \u5361=' + r.cardCt)));
@@ -211,7 +211,7 @@ async function main() {
    * 验证下拉选项与页面状态联动（静态契约由 D227 负责）。
    * 三件事只有真浏览器能证：① 每个档 id 都能选中且 `B.diff` 跟着变；② 换档时 `aiInfo()` 报的
    *   champ/style/兜底 身份与表一致（"档是假的"= 选了它却走了别的路）；
-   *   ③ **人数=2 与人数=5 的档位列表一模一样**（阶梯不许按人数被裁短 —— 这正是"把 2 人并进多人"那一步的行为定义），
+   *   ③ **人数=2 与人数=5 的档位列表一模一样**，2 人与多人共用同一难度阶梯。
    *   而 `aiInfo()` 报的**包**必须一个 2P 一个 3P（§E286 的换包裁定要能在页面上看见）。 */
   const lad = await evalJS(`(function(){
     const U = window.EpirusUI, Bots = window.EpirusBots;
@@ -258,9 +258,8 @@ async function main() {
     /* 2P 与多人桌共用统一池；验证两格都由池供给，并保持本机包与单包回退关闭。 */
     check('统一池：2 人与多人两格同走池供给，本机包与单包回退关闭',
       lad.at2.pack2.indexOf('池') === 0 && lad.at5.pack2.indexOf('池') === 0);
-    /* 第一版这里真红过：去重比的是映射后的 `{v,t}` 列表（`.style` 恒 undefined）⇒
-     *   「极限 · 读招」和「风格 · 读招反制」**同时**在册，玩家点是同一个脚本、以为选了两档。 */
-    check('下拉里没有"同一个脚本占两格"（被阶梯认领的风格不许再以"风格"重复出现）',
+    /* 风格档去重按映射后的 `{v,t}` 列表比较，确保每个脚本只占一个可选席位。 */
+    check('下拉里每个脚本只占一个席位',
       new Set(lad.at5.list).size === lad.at5.list.length &&
       lad.at5.list.length === lad.tierIds.length + lad.styleN - lad.claimed);
     console.log('  ladder rows =', JSON.stringify(lad.rows.map(r => r.id + ':' + (r.champ ? 'champ' : 'style') + ':' + r.src2)));

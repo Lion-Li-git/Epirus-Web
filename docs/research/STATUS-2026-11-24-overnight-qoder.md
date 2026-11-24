@@ -47,7 +47,7 @@
 
 ### P3 余量
 
-- 缺件队列现为 **72 枚 / 24 批，全部 T3**；`v7b` 四枚重放件可找到，但线谱表没有可比列，需查热启动件与 era 工作树。本轮无新复刻登记；分诊回执已升格到 `docs/research/evidence-2026-11-25/p3/`。
+- 缺件队列现为 **72 枚 / 24 批，全部 T3**；`v7b` 四枚重放件可找到，但线谱表没有可比列，需查热启动件与 era 工作树。本轮无新复刻登记；分诊回执已升格到 `docs/research/evidence-2026-11-25/p3/`。11-25 追加：两份兄弟工作树的 `v7b-43..46` 虽各自字节一致，但四份彼此完全相同、wid 均为 `e379c62c…`，与台账四枚 SHA 全不符 ⇒ 判定为同一旧槽热启动件复制，拒绝升格；负证据见 `p3/v7b-sibling-worktree-check-1125.tsv`。随后在 `1499d507` era 的两份工作树中找到校准件 `v7b-37`，wid 均为台账值 `c76335f8f42135f9` ⇒ 已把重放 jobs 切到该 era。首次全批四枚均 `healthReject/wrote:false`，runner 把上一版 base 误当成品；在恢复工作树补 `EPIRUS_ALLOW_HEALTH_FAIL=1` 实验豁免（patch 留档）后四枚全部命中：`v7b-43..46` wid 分别为 `af421684ad43b368 / 2c1037230b65064c / 773f81c0e2a6f5d2 / eb0dd651d18dcdff`。文件 SHA 与历史 registry 不同，台账如实记 `sha-diff-wid-same`；丢失账现为 `missing 133`。完整 lineage 重生成被既存 `SOUP-s9-82XD4a` 缺父粒挡住，故只按生成器同式补回四行 `oppsN=12/gens=250/mode=multi`；`land-recovered --check` 1002 行零违例，规范重烘与四视图全绿。
 
 ## 收口
 

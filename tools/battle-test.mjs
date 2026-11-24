@@ -180,10 +180,9 @@ async function main() {
   await setupBattle2P();
   const src2Builtin = await aiSource();
   /* §E599（10-12）：2P 池上线后，2P 侧的内置来源由**2P 原生池**供给（标签 `2P池·mid(…)`）⇒
-   *   判据从"钉『内置』二字"改成**钉实质**：来源是"内置"或"池"，且**永远不许**出现"本机"
-   *   （本机导入那一支在上面已单独验过）。与 §E286/§E590 那次 3P 的修法同一条纪律：
-   *   **钉"用的是哪一类来源"，不钉那句话当时怎么写**。 */
-  check('2P 重开后走内置来源（内置或 2P 池），且不许是本机那枚',
+   *   判据钉来源实质：标签读作“内置”或“池”，本机槽保持清除。
+   *   与 §E286/§E590 那次 3P 的修法同一条纪律：**钉“用的是哪一类来源”**。 */
+  check('2P 重开后走内置来源（内置或 2P 池），本机槽保持清除',
     (src2Builtin.indexOf('内置') >= 0 || src2Builtin.indexOf('池') >= 0) && src2Builtin.indexOf('本机') < 0,
     '对手AI=' + src2Builtin);
 
@@ -226,7 +225,7 @@ async function main() {
    * v1.5.8 教训：第一版让 P0 一直出ジ"摆烂"，结果人为造出"没人进攻"的退化局面，
    * 4 个冠军座就一起摆架势（引擎复现：伤害 3.0/局、10/10 平局、220 架势/局）——
    * 而 P0 随便打个什么（balanced/aggro 脚本）冠军立刻正常开打（13~14 伤害/局、0 平局）。
-   * ⇒ 测试必须让人类座**真的进攻**，否则量的是退化均衡而不是对战质量。 */
+   * ⇒ 测试让人类座**真的进攻**，量到主动对战质量。 */
   const ATK = ['枪', '激光剑', '坦克', '狙击枪', '电磁炮', '真正的落雷', '摄魂指法'];
   /* 按页面状态等待可点技能，从日志读取真实回合；持续出招并上报连续就绪超时。 */
   const btnReady = () => evalJS(`[...document.querySelectorAll('.skillbtn')].some((x) => !x.disabled)`);
@@ -284,10 +283,8 @@ async function main() {
   check('全程无 JS 错误', errors.length === 0, errors.length ? errors.slice(0, 3).join(' | ') : '0');
 
   /* ── 第二段：长程（5 血）**与本版新增的 4 血格**也要真打若干回合 ──
-   * 为什么：同一个 bundle 同时服务 multi/multi4/long，而 long 的回合上限高得多（140）——
-   * 摆烂型冠军在长程里更难看（long-33 在 long 口径 57% 全是"熬"）。这里只做**有界**验证：
-   * 跑固定回合数，断言"真的有人受伤 + 没有套盾 spam + 无 JS 错误"，不强求跑到终局。
-   * v1.6.5：血量现在是一根独立的轴（`#sel-hp`），所以这一段的循环体就是"选档 → 回读建局 → 打几回合"。 */
+   * 同一个 bundle 同时服务 multi/multi4/long，long 的回合上限更高；
+   * 每格做有界实战验证：真实伤害、全息屏障健康范围、JS 错误计数稳定。 */
   await evalJS(`document.getElementById('tab-battle').click()`);
   await sleep(250);
   await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='3'; s.dispatchEvent(new Event('change'));})()`);
@@ -316,8 +313,8 @@ async function main() {
     const holo = (t.match(/全息屏障/g) || []).length;
     await shot(join(OUT, shotName));
     check(label + '：有真实伤害', dmg >= 3, '「伤害」' + dmg + ' 次');
-    check(label + '：没有套盾 spam', holo <= 12, '全息屏障 ' + holo + ' 次');
-    check(label + '：无新增 JS 错误', errors.length === errBefore, (errors.length - errBefore) + ' 个新错误');
+    check(label + '：全息屏障使用保持在健康范围', holo <= 12, '全息屏障 ' + holo + ' 次');
+    check(label + '：JS 错误计数保持稳定', errors.length === errBefore, (errors.length - errBefore) + ' 个新错误');
   };
   for (const wantHp of [5, 4]) {
     const m2 = await evalJS(`(()=>{const s=document.getElementById('sel-hp'); if(!s) return {fatal:'no-sel-hp'}; s.value='${wantHp}'; s.dispatchEvent(new Event('change'));

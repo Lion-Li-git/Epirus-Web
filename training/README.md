@@ -41,7 +41,7 @@
    - **DAgger（`--dagger=R`）**：第 0 轮只采教师自访轨迹；后续每轮改由**当前学生自己走出来的局面**请教师重标并入训练集再训，消除上线后走偏到陌生局面的协变量漂移。
    - **梯度更新**：对 `--objective=cand`（推荐）精确最大化 `log π(教师候选)`（`dLogPi` + `tapeBackward` + Adam，可选 `seatDrop` 与 `onlySeg`）。
 2. **策略梯度 REINFORCE + 行为塑形 + 键频锚（`proto2/pg-train.mjs`，`--mode=pg`）—— 实战强度拔高**
-   - **采样对手池（`--arenaPool`）**：用当前模型以 `--temp`（默认 `0.5`）在 `arena2` 打 `batch` 局；不传 `--arenaPool` 时默认为全脚本池 `buildPoolSeeded`，传入 `--arenaPool=names:pack:...,aggro,...` 可让训练桌上同时坐着现役真冠军包和关键对抗脚本。
+   - **采样对手池（`--arenaPool`）**：用当前模型以 `--temp`（默认 `0.5`）在 `arena2` 打 `batch` 局；不传时默认为全脚本池 `buildPoolSeeded`。`--arenaPool=names:pack:...,aggro,...` 可摆真包与关键脚本；`human:rule` / `human:legacy` 复用 `tools/human-pool.mjs` 的人席原型，可把训练对手设为脚本替身，用于直接检验对脚本席的强度。
    - **回报与优势**：决策点累积回报 `G_t = 终局 scoreNet + 事后事件塑形`（常驻 `lamC`/`lamF`，以及可选 `lamExp` 废珠罚、`penDeadElec` 死电罚、`--shapeKey=key:w` 正/负塑形如孤儿贴符罚分），减去批均值 `mean` 或闭式岭回归 `ridge` 状态基线，按批内 `G` 标准差标准化得到优势 `A`。
    - **梯度 + KL 锚**：主梯度为 `A · dLogPi`；若开 `--klW > 0`，每步叠加对冻结起点键分布的交叉熵拉力（`dLogKeyP`，mode-covering），配合 `--klTilt/--klTiltMul` 拉抬弱键，并自动在 KL 目标里剔除负塑形键。
    - **防漂**：内置 `--segEvery` 定时落盘多节点快照（供后筛）与未见 seed 探针回滚闸（`--probe`）。

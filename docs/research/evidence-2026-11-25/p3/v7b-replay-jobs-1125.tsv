@@ -1,0 +1,2 @@
+batch	fam	era	arm	seeds	opps	mode	hot	ids	paths	targets	calibSeed	calibWid	calibPath	env
+v7b	fam123	1499d507	v7b	43,44,45,46	random,balanced,aggro,defend,wall,antidef,breakdef,mix,farmer,tankline,heavyfire,deepsaver	multi	-	v7b-43,v7b-44,v7b-45,v7b-46	docs/artifacts/v7b-43.bak,docs/artifacts/v7b-44.bak,docs/artifacts/v7b-45.bak,docs/artifacts/v7b-46.bak	af421684ad43b368,2c1037230b65064c,773f81c0e2a6f5d2,eb0dd651d18dcdff	37	c76335f8f42135f9	docs/artifacts/v7b-37.bak

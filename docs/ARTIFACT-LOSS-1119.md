@@ -5,10 +5,11 @@
 ## 账
 
 - 原始缺失：**800 枚**（1.8 706 + 2.0 94；全部 status=active，registry path 非空但盘上不存在）
-- 已挽回：**132 枚**（含 Q-s47：按 K2+seed47+400gen 复现，wid 596b8fad 逐位一致，文件 sha 因 meta 不同已更新）（Git 历史 46 枚逐字节 + quarantine 84 枚〔7 枚同 sha256 + 77 枚同 wid〕+ GitHub Release v1.5.0 冠军档案 1 枚〔long-33，sha+wid 一致〕；winfr 扫 D 盘 711 条 MFT：701 枚 TRIM 清零、10 枚覆盖，盘恢复 0 枚）
-- **当前实缺：668 枚**（1.8 616 + 2.0 53；见 node tools/map-audit.mjs）
-- 池成员：**0 枚**（page/pool-members.tsv 的 25 枚文件都在，游戏/池不受影响）
-- 影响：其余 669 枚历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
+- 11-19 当时已挽回：**132 枚**（含 Q-s47：按 K2+seed47+400gen 复现，wid 596b8fad 逐位一致，文件 sha 因 meta 不同已更新）（Git 历史 46 枚逐字节 + quarantine 84 枚〔7 枚同 sha256 + 77 枚同 wid〕+ GitHub Release v1.5.0 冠军档案 1 枚〔long-33，sha+wid 一致〕；winfr 扫 D 盘 711 条 MFT：701 枚 TRIM 清零、10 枚覆盖，盘恢复 0 枚）
+- 11-19 当时实缺：**668 枚**（1.8 616 + 2.0 53；见 node tools/map-audit.mjs）
+- 11-19 当时池成员：**0 枚**（page/pool-members.tsv 的 25 枚文件都在，游戏/池不受影响）
+- 当时影响：其余历史包不能重跑/复核；lineage.mjs 重新生成会因配置/融合父粒缺失而塌家族（见 rebuild-map ③ 的跳过守卫）
+- **2026-11-25 账本现状**：`ok 708 / sha-diff-wid-same 142 / missing 133 / no-path 19`（共 1002 行）。本轮在 `1499d507` era 复现 `v7b-43..46`，四枚 wid 全部逐位命中台账；文件 SHA 因 META 序列化不同记为 `sha-diff-wid-same`，历史 registry SHA 未改。
 
 ## 按目录
 

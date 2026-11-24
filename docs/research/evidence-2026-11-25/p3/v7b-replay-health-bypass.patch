@@ -1,0 +1,15 @@
+diff --git a/server/train-server.mjs b/server/train-server.mjs
+index 9306cbc6..9396b80f 100644
+--- a/server/train-server.mjs
++++ b/server/train-server.mjs
+@@ -562,7 +562,9 @@ async function runTrainN(gens, cfg) {
+     const mh = T.mirrorHealth(finalParams, HGD.games, HGD.n, mode);
+     healthInfo = { effSkills: mh.effSkills, distinctKeys: mh.distinctKeys, rounds: mh.rounds, drawRate: mh.drawRate, dmgPerGame: mh.dmgPerGame };
+     const hf = T.healthFails(mh);
+-    if (hf.length) {
++    if (hf.length && process.env.EPIRUS_ALLOW_HEALTH_FAIL === '1') {
++      console.log('[health] !! EPIRUS_ALLOW_HEALTH_FAIL=1（实验臂）：本次体检未过仍落盘（出厂门槛不受影响）');
++    } else if (hf.length) {
+       healthReject = hf;
+       console.log('[health] ⚠ 产物未过自对局体检 ⇒ 不写盘（保留上一版）：' + hf.join('；') +
+         '（G=' + mh.effSkills.toFixed(2) + ' 种类=' + mh.distinctKeys + ' 回合=' + mh.rounds.toFixed(1) + '）');

@@ -1,0 +1,19 @@
+# selftest3 ‖ RG-CN.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.886（逐坐标 16561 里可分辨 2662）‖ 判定 2695 ‖ 不进判定 14411（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# pg-train（B 臂） ‖ 起点 RG-CN.bak ‖ 面=obs6 ‖ 局 3000 ‖ 批 48 ‖ lr 0.0002 ‖ temp 0.5 ‖ λc 0.005 ‖ λf 0.05 ‖ beadSpendW 0.2 ‖ shape dualGun:0.2 ‖ shapeModes multi ‖ 基线 mean ‖ seed 20261130
+  口径：arena2 mild(cap2/mix0.5) salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度
+  ⚑ P-B2 快照（1/3 预算）→ scratch/arms/nov25-hard-dualgun-tilt4-s20261130-8k.bak
+  ⚑ seg 快照（1000 局）→ scratch/arms/nov25-hard-dualgun-tilt4-s20261130.seg1000.bak
+  局 1200 ‖ 步 25 ‖ 平均净分 0.324 ‖ 炮 0.14/局 ‖ 纪律蓄 0.15/局 ‖ dualGun 0.00 ‖ 熵 0.164nats ‖ zip坏 0/1200 ‖ 锚L1 0.019
+  ⚑ seg 快照（2000 局）→ scratch/arms/nov25-hard-dualgun-tilt4-s20261130.seg2000.bak
+  局 2400 ‖ 步 50 ‖ 平均净分 0.340 ‖ 炮 0.14/局 ‖ 纪律蓄 0.16/局 ‖ dualGun 0.00 ‖ 熵 0.166nats ‖ zip坏 0/2400 ‖ 锚L1 0.019
+  局 3000 ‖ 步 63 ‖ 平均净分 0.345 ‖ 炮 0.14/局 ‖ 纪律蓄 0.16/局 ‖ dualGun 0.00 ‖ 熵 0.168nats ‖ zip坏 0/3000 ‖ 锚L1 0.019
+  ⚑ seg 快照（3000 局）→ scratch/arms/nov25-hard-dualgun-tilt4-s20261130.seg3000.bak
+  终：局 3000 ‖ 平均净分 0.345 ‖ 炮/局 0.143 ‖ 纪律蓄/局 0.156 ‖ zip 坏 0/3000 ‖ 耗时 65s
+  产物 → scratch/arms/nov25-hard-dualgun-tilt4-s20261130.bak

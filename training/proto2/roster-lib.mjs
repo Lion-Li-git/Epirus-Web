@@ -5,7 +5,7 @@
  *   跑到一半才报 `sel is not a function`）。⇒ 名单只在这里写一次，两个工具都 import。
  * `names:` 档（同文件第二形态）是给"对手面实验"用的：`server/opp-pool.mjs` 里**已登记但两个训练池都没在用**
  *   的脚本（targeter / gunspam / snipespam / ringspam / deadlineburst / earlypressure …）可以直接摆进训练桌，
- *   不必每加一枚对手就改一次代码。名字不在册 ⇒ 当场拒（不许静默变成 undefined 席位）。
+ *   也可摆 `human:rule` / `human:legacy` 两枚人席原型。名字不在册 ⇒ 当场拒（不许静默变成 undefined 席位）。
  * `pack:` 席（ZCode · 11-17 深夜，用户批）：`names:` 表里可摆**真包对手**——`names:MX6-GD-TF15,pack:scratch/arms/X.bak`
  *   也允许 `pack:<在册id>`。动机（11-17 两班汇合）：① FINDING-ring-econ 的"混强包谱"强度训练；
  *   ② purify/贴贴类技能的**状态可达性**（自对局里没人出符咒 ⇒ 被诅咒状态 0 可达 ⇒ 教师演示不了；
@@ -15,7 +15,8 @@
  */
 import { OPP_SPECS } from '../server/opp-pool.mjs';
 import { makeAsChooser } from '../../tools/bot-chooser-lib.mjs';
-import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
+import { sandbox, loadChamp, mulberry32 } from '../../tools/audit-lib.mjs';
+import { loadPool, makeMimic, makeRuleHuman } from '../../tools/human-pool.mjs';
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, dirname, isAbsolute } from 'node:path';
@@ -83,11 +84,22 @@ function buildPackSeat(W, T, item, tag) {
   return { name, kind: 'pack', sel: T.policyChooserN(params, 0.15) };
 }
 
+function buildHumanSeat(W, nm, tag) {
+  if (nm === 'human:rule') return { name: nm, kind: 'human', sel: makeRuleHuman(W, null, mulberry32(20261125)) };
+  if (nm === 'human:legacy') {
+    const pool = loadPool(W, 'human');
+    return { name: nm, kind: 'human', sel: makeMimic(W, pool, 'rand', mulberry32(20261125)) };
+  }
+  console.error('⛔ ' + tag + '：未知人席原型 "' + nm + '"（可选 human:rule / human:legacy）');
+  process.exit(2);
+}
+
 function build(W, T, rows, tag) {
   const asC = makeAsChooser({ T: T, R: W.EpirusRules });
   const out = [];
   for (const nm of rows) {
     if (nm.indexOf('pack:') === 0) { out.push(buildPackSeat(W, T, nm.slice(5), tag)); continue; }
+    if (nm.indexOf('human:') === 0) { out.push(buildHumanSeat(W, nm, tag)); continue; }
     const x = OPP_SPECS.filter((o) => o.name === nm)[0];
     if (!x) { console.error('⛔ ' + tag + '：对手名不在册（`server/opp-pool.mjs` 的 OPP_SPECS 里没有 "' + nm + '"；可选 ' + OPP_SPECS.map((o) => o.name).join(',') + '，或用 pack:<在册id|路径> 摆真包）'); process.exit(2); }
     const fn = W.EpirusBots[x.fn];
@@ -106,7 +118,7 @@ function buildProduct(W, T, tag) {
 
 /* `--arenaPool` 的三种取值：
  *   `product`          ⇒ 产品 7 脚本（eval-5p CORE 同名单）
- *   `names:a,b,c`      ⇒ 按名字摆任何**已登记**对手（可含产品池没用的 specialist）
+ *   `names:a,b,c`      ⇒ 按名字摆任何**已登记**对手（可含产品池没用的 specialist、human:rule / human:legacy）
  *   空                 ⇒ 不换池（研究卷 buildPoolSeeded 原路，逐字不变）
  * 返回 null 表示"不换"。 */
 export function rosterFromArg(W, T, s, tag) {
@@ -115,7 +127,7 @@ export function rosterFromArg(W, T, s, tag) {
   if (str === 'product') return buildProduct(W, T, tag);
   const m = /^names:(.+)$/i.exec(str);
   if (m) return build(W, T, m[1].split(',').map((x) => x.trim()).filter(Boolean), tag);
-  console.error('⛔ ' + tag + '：--arenaPool 只认 product | names:a,b,c（收到 ' + str + '）');
+  console.error('⛔ ' + tag + '：--arenaPool 只认 product | names:a,b,c（可含 pack:<id|路径>、human:rule、human:legacy；收到 ' + str + '）');
   process.exit(2);
 }
 

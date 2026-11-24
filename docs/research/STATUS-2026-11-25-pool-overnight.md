@@ -1,4 +1,4 @@
-# STATUS · 2026-11-25 池优化通宵班（00:56 → 05:12）
+# STATUS · 2026-11-25 池优化通宵班（00:56 → 07:25）
 
 > 基线：`4dac3adb`；规则指纹 `bfd49045`。
 > 用户授权：`t65` 入池；自主研究 hard 带 laserEye、soft 带 ring 与其余可优化训练点；实机迭代，中间不提问。
@@ -12,7 +12,7 @@
 - 池成员 **23→24（hard 12→13）**。
 - `wid=00065fc589070d4e`；Stage1 并集 **19/30**；Arena 六粒中位 **+16.56pt**。
 - promote dry：G4/G5 零阻断、花珠率 **80.3%**、环@安全窗口 **7.7%**。
-- `seatKill=-1`（未测，表内如实记录）；`selftest3` 红只限制续训，不否决冻结推理包。
+- 两批 200 局人席电池已补：`seatKill=0`；`selftest3` 红只限制续训，不否决冻结推理包。
 
 ### 池缺口
 
@@ -22,10 +22,10 @@
 
 ### 训练结果
 
-- **hard laserEye 没有干净候选**。built-in 激光教师剂量扫描、完整 LE40 教师、RG-CN/RING-MINIT 底座、KL PG 均未同时保住 2P/5P 强度。
+- **hard laserEye 没有可直接入池的候选**。built-in 激光教师剂量扫描、完整 LE40 教师、RG-CN/RING-MINIT 底座、KL PG 均未同时保住 2P/5P 强度。RING-MINIT PG 的 1000 局快照已有 20 个 laser 格、promote 全过且人席与基座持平，但 Arena −3.53pt（5/6 反号）；更强 KL 两粒把 laser 复现到 21/18 格、promote 全过，hard 池 200 盐配对分别 +0.50/+1.50pt 与 0.00/0.00pt，Arena −2.39/−5.25pt。25/50/75% 基座融合均保持 21 格，Arena −1.06/−1.53/−2.59pt；最佳 25% 融合 hard 池 −1.00/+1.00pt、人席无独立改善。覆盖成立，强度增益不成立。
 - **soft laserEye 副产物两粒复现**：`LE40-PG2k-s25/s26`，laser 29/31 格，Arena 相对 LE40 **+4.35 / +2.83pt（各 5/6 正）**，promote 均过；5P 人席仍约 14–18%，符合 soft 定位。
 - **soft ring 副产物两粒复现**：`c3g + ringEcon`，ring 41/43 格，Arena 相对 c3g **+2.71 / +1.58pt**，promote 均过，天火局闭环 94%/96%。
-- `purify@0.30` 只有 4 格/23 手且 G5[long]=28% 阻断；`dualGun` 两条教师路线均零标签。
+- `purify@0.30` 只有 4 格/23 手且 G5[long]=28% 阻断；`dualGun` 早期两条教师路线零标签，后续 multi 专属采集结果见后段。
 - 按用户裁定，soft 不再专门训练，只接收强包扩广度后强度落差的副产物。
 
 ### 真实浏览器
@@ -35,22 +35,32 @@
 - `T65-RINGBEAD`：24 回合、16 次伤害。
 - `LE40-PG2k-s25`：21 回合、18 次伤害、6 次聚能环。
 - `soft-ring-c3g-s26`：20 回合、15 次伤害。
+- `laser-ringbase-kl8-seg1000`：16 回合、12 次伤害、2 次聚能环，0 JS 错误。
+- `laser-kl8-fuse25`：30 回合、16 次伤害，0 JS 错误。
+
+### 后段追加
+
+- roster 新增 `human:rule` / `human:legacy`，D209 与 probe-libs 通过；人席 PG 未改善 5P 人席，Arena 仅 +0.57 / −0.81pt。
+- `RING-MINIT` 自身 laser 富集到 1 格/5 手；`purify` PG 后 G5[long]=27%，仍不过线。
+- `dualGun` multi 专属 9.6k 组得到 22 条标签、部署 3 次但 0 格；38.4k 组长臂得到 101 条标签、留出 9 条命中 1 条，Stage1 仍 0 格 / 5 手。Arena +2.40pt、promote 过，但 ring/railgun 覆盖退步。直接回报 PG 5000 局全程 `dualGun=0.00`、Stage1 0 格/0 手、Arena −0.73pt；RG-CN 菜单只 5/316 次合法、概率 5×10⁻²⁰，4×/20×/1e20× 键锚也全部 0 命中。键级目标 A/B 把概率拉到 6.34×10⁻⁹、Stage1 0 格/12 手，Arena +6.75pt、hard 池 +5.50/+2.00pt、人席 long ≤0.5%、promote 过，成为本轮最强 hard 研究候选；双枪仍 0 格且 `selftest3` 腿 F 红，按授权不入池。
 
 ## 验证
 
-- pool audit：24 枚、hard 13/soft 11、untracked 0、dupWid 0、blockedAuto 0、seatUnknown 1。
+- pool audit：24 枚、hard 13/soft 11、untracked 0、dupWid 0、blockedAuto 0、seatKilledAuto 0、seatUnknown 0。
 - `pool-sync --check`、`validate --strict`、`check-lineage` 全绿。
 - `np --group=ui`：**55/55**（定向，不是整轮）。
+- `np --group=probe`：**83/83**（定向，不是整轮）；`D209` 单独复跑 **1/1**。
 - `spec-run`：**81/81**。
 - `smoke` / `battle`：均 `SUMMARY OK`。
 - 四视图：各 **100 PASS / 0 FAIL**。
 - `git diff --check` 通过；TSV 行尾空列 tab 已在 `.gitattributes` 标为列结构，不按行尾空白告警。
+- `land-recovered --check`：1002 行零违例；`v7b-43..46` 四枚 wid 复现并登记为 `sha-diff-wid-same`。
 
 ## 决定
 
 - **只入池 `T65-RINGBEAD`**；不改其他成员、不退役、不 push。
 - hard 激光眼本轮未解决；soft 激光眼与 soft 环各有两粒可复现副产物，留作后续候选。
-- 下一轮优先：激光眼副产物换第二基座或做 2P/5P 分工；dualGun 先解决状态可达性，不再重复本轮教师剂量扫描。
+- 下一轮优先：hard 激光眼换第二基座或改目标函数；`dualgun-keyobj` 是强副产物但双枪仍 0 格，下一轮先解决 curse 并列 logit 的续训阻断与候选级目标选择，不再加同一采集。
 
 ## 产物
 
