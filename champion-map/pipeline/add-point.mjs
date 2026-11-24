@@ -123,11 +123,15 @@ function autoFamLabel(id, dims, m) {
     if ((m && (m.tool === 'pg-train' || (m.games && !m.teacher))) || /-(pg|kl|klcand|kw\d+|s\d+k)$/i.test(id)) {
       return '2.0 obs6.5 PG / KL 强化续训';
     }
-    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|nov2\d-(?:armor|rod|c4|tzt2d))/.test(id) || (m && (m.rareOnly || m.teacher2keys))) {
-      return '2.0 obs6.5 键道/覆盖与协同蒸馏';
-    }
-    if (/^(night2-|nov2\d-.*dsp0)/.test(id) || dims.modeBias === 1) {
+    if (/^(night2-|nov2\d-.*dsp0)/.test(id)) {
       return '2.0 obs6.5 DS-P0 强锚补盲与融合重馏';
+    }
+    if (/^(FS-|FC-|TK-FS|nov24-(?:fsclose|pierce))/.test(id)) {
+      return '2.0 obs6.5 天火闭环与双协同演进';
+    }
+    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|RG-|CN-G|MN-G|HL-G|nov2\d-(?:armor|rod|c4|tzt2d|ring|bandsym|rdg1))/.test(id)
+        || (m && (m.rareOnly || m.teacher2keys)) || dims.modeBias === 1) {
+      return '2.0 obs6.5 键道/覆盖与协同蒸馏';
     }
   }
   return '';

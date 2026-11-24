@@ -23,3 +23,8 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-24T03:44:54.066Z	TK-FS4	docs/artifacts/TK-FS4.bak	a05227ae9c7456b7	85200	page	data/arena-league-1118-page.tsv	-0.478167	-0.112303
 2026-11-24T03:44:56.553Z	TK-FS4	docs/artifacts/TK-FS4.bak	a05227ae9c7456b7	86200	page	data/arena-league-1118-page.tsv	0.289886	0.091389
 2026-11-24T03:44:59.012Z	TK-FS4	docs/artifacts/TK-FS4.bak	a05227ae9c7456b7	87200	page	data/arena-league-1118-page.tsv	-0.921786	-0.204153
+2026-11-24T04:28:42.764Z	nov24-fsclose-f35	scratch/arms/nov24-fsclose-f35.bak	fee68ed0d024eeca	82200	page	data/arena-league-1118-page.tsv	0.415052	0.129785
+2026-11-24T04:29:51.972Z	nov24-pierce3-20261101	scratch/arms/nov24-pierce3-20261101.bak	eeb345a3394f6c2b	82200	page	data/arena-league-1118-page.tsv	0.245915	0.066514
+2026-11-24T04:30:55.303Z	TK-FS1	scratch/arms/TK-FS1.bak	d46ac8b575652848	82200	page	data/arena-league-1118-page.tsv	-0.481769	-0.104891
+2026-11-24T04:31:57.944Z	TK-FS3	scratch/arms/TK-FS3.bak	c8f935e3d3548701	82200	page	data/arena-league-1118-page.tsv	-0.330914	-0.076403
+2026-11-24T04:33:19.697Z	nov24-bandsym-jin	scratch/arms/nov24-bandsym-jin.bak	03f53895bd12c39b	82200	page	data/arena-league-1118-page.tsv	0.128189	0.050546

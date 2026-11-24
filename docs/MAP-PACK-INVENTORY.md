@@ -1,6 +1,6 @@
 # 全图谱冠军包盘存总表（Champion Map Pack Inventory）
 
-> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,014` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行历史对照）为真源，于 `2026-11-22 19:58`（合入 `AR-TK2` 至 `hard` 带 + 补入代表性失败包 `AR-TK3`、`nov22-c3b-kw100` 替换纯崩盘点 `nov22-c3a-kw0` + 拆分 `fam=23..27` 与全量 `mixedfix` 补测后）实盘核验。  
+> 统计基准：以 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv)（`1,029` 枚）与 [`docs/ARTIFACT-LOSS-1119.tsv`](ARTIFACT-LOSS-1119.tsv)（`1,002` 行历史对照）为真源，于 `2026-11-24`（入池 `TK-FS4`、修正 `fam=25/26/28` 并补入 5 枚非崩盘失败对照包 + T3 考古收口后）实盘核验。  
 > 相关文档：[`docs/ARTIFACT-LOSS-1119.md`](ARTIFACT-LOSS-1119.md) ‖ [`docs/GOAL-2026-11-19-ruler-resolution.md`](GOAL-2026-11-19-ruler-resolution.md) ‖ [`docs/POOL-CONTRACT.md`](POOL-CONTRACT.md) ‖ [`docs/TRAINING-RUN-LOG.md`](TRAINING-RUN-LOG.md)
 
 ---
@@ -9,21 +9,21 @@
 
 | 口径 | 数量 | 说明 |
 |---|---:|---|
-| **图谱在册总数** | **1,014** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **183** 枚（含 **`AR-TK2`**、**`R-GD12`**、失败对照 **`AR-TK3` / `nov22-c3b-kw100`** 及 `nov21–nov22` 新入图批） |
+| **图谱在册总数** | **1,029** | `v1.8` 早期演化线 **831** 枚 + `2.0` 网络线 **198** 枚（含 `fam=25..28`、现役池与代表性失败对照包） |
 | 无路径记录（`no-path`） | **19** | 仅见于 `fam=11`（4）、`fam=13`（14）、`fam=19`（1） |
-| 有路径记录（`hasPath`） | **995** | 以下盘面状态均基于此 995 枚 |
-| **实际在盘（可用）** | **615** | 原封 `sha256` 一致 **529** 枚 + 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
-| **盘上仍缺失（`missing`）** | **380** | `364` 枚早期 `v1.5.x` `server` 盲扫尾批（`fam=1..6`）+ `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
+| 有路径记录（`hasPath`） | **1,010** | 以下盘面状态均基于此 1,010 枚 |
+| **实际在盘（可用）** | **873** | 台账原封 `sha256` 一致 **708** 枚 + 逐位复现 `wid` 一致 **138** 枚 + 新建 2.0 节点 **27** 枚 |
+| **盘上仍缺失（`missing`）** | **137** | `v1.8` 早期 `server` 盲扫尾批 + `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
 | **现役产品冠军池** | **23** | **`hard` 12 枚 / `soft` 11 枚**，**`23/23` 全员在盘（0 缺失、`seatUnknown=0`、`arenaUnknown=0`）** |
 | **现役 B 轴 24 锚联盟** | **24** | [`arena-league-1118-page.tsv`](../champion-map/data/arena-league-1118-page.tsv)，**`24/24` 全员在盘（0 缺失）** |
 
-> 缺失台账分目录剩余（共 `380` 枚）：`docs/artifacts/*.bak` 根目录 **365** 枚、`docs/artifacts/night-adapt/` **14** 枚、`scratch/arms/` **1** 枚（`GD6b-TILT-3p.bak`）。
+> 考古扫尾状态（见 `land-recovered.mjs --check` 零违例）：历史 `1,002` 行台账中 `state=ok 708` / `sha-diff-wid-same 138` / `missing 137` / `no-path 19`。
 
 ---
 
-## 二、28 个谱系家族全量分布（`fam=0..27`）
+## 二、29 个谱系家族全量分布（`fam=0..28`）
 
-> 家族聚类由 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv) 的 `fam` / `fam_label` 定义；其中 **`21` 个家族已实现 `missing = 0`（全部 `2.0` 小族可复现部分与 `fam=0, 7..18, 21..27` 已清零）**。
+> 家族聚类由 [`champion-map/data/registry.tsv`](../champion-map/data/registry.tsv) 的 `fam` / `fam_label` 定义；其中 **`22` 个家族已实现 `missing = 0`**。
 
 | `fam` | 网络线 | 在册 | 在盘 | `shaOk` | `shaDiff` | 缺失 | 无路径 | 家族语义 / 定位 | 盘存状态 |
 |---:|:---:|---:|---:|---:|---:|---:|---:|---|---|
@@ -52,10 +52,11 @@
 | **22** | `2.0` | 13 | 13 | 13 | 0 | **0** | 0 | 2.0 `obs6` `v7` 蒸馏（11-14） | 已清零 |
 | **23** | `2.0` | 15 | 15 | 15 | 0 | **0** | 0 | 2.0 `obs6.5` 统一单包（11-16：`OBS6-UNIFIED-*` / `EQ-*` / `BASE-*`） | 已清零 |
 | **24** | `2.0` | 7 | 7 | 7 | 0 | **0** | 0 | 2.0 `obs6` `V3` 融合 / 路由（11-16） | 已清零（B 轴缺锚与 `V3H3` 全归位） |
-| **25** | `2.0` | 28 | 28 | 28 | 0 | **0** | 0 | 2.0 `obs6.5` 键道 / 覆盖与协同蒸馏（`MX*` / `RING*` / `TZ*` / `nov21`–`nov22` 覆盖线 / `R-GD12` / `AR-TK2` / `AR-TK3`） | 已清零 |
-| **26** | `2.0` | 4 | 4 | 4 | 0 | **0** | 0 | 2.0 `obs6.5` `DS-P0` 强锚补盲与融合重馏（`night2-X2b-fuse` / `night2-E1-det-strong` / `purify` / `taunt`） | 已清零 |
+| **25** | `2.0` | 35 | 35 | 35 | 0 | **0** | 0 | 2.0 `obs6.5` 键道 / 覆盖与协同蒸馏（`MX*` / `RING*` / `TZ*` / `nov21`–`nov22` 覆盖线 / `R-GD12` / `AR-TK2` / `AR-TK3` / `nov22-ring3-gd6a18` / `CN-G1` / `MN-G1` / `RG-MN` / `HL-G1` / `RG-CN` / `nov24-bandsym-jin`） | 已清零 |
+| **26** | `2.0` | 4 | 4 | 4 | 0 | **0** | 0 | 2.0 `obs6.5` `DS-P0` 强锚补盲与融合重馏（`night2-X2b-fuse` / `night2-E1-det-strong` / `nov21-purify-dsp0` / `nov21-taunt-dsp0b`） | 已清零 |
 | **27** | `2.0` | 3 | 3 | 3 | 0 | **0** | 0 | 2.0 `obs6.5` `PG / KL` 强化续训（`day1119-cannon-pg` / `nov22-c3b-kw100` / `nov22-c3g-s300k`） | 已清零 |
-| **合计** | — | **1,014** | **615** | **529** | **86** | **380** | **19** | 全谱系（`1.8` `831` + `2.0` `183`） | `21` 族清零；余 `364` 早期 `server` + `16` 不可复根链 |
+| **28** | `2.0` | 8 | 8 | 8 | 0 | **0** | 0 | 2.0 `obs6.5` 天火闭环与双协同演进（`FS-G2` / `FC-G1` / `FC-S1` / `TK-FS4` 及对照失败包 `nov24-fsclose-f35` / `nov24-pierce3-20261101` / `TK-FS1` / `TK-FS3`） | 已清零 |
+| **合计** | — | **1,029** | **873** | — | — | **137** | **19** | 全谱系（`1.8` `831` + `2.0` `198`；`1002` 行历史台账中 `708 ok + 138 sha-diff-wid-same + 137 missing + 19 no-path`） | `22` 族清零；余 `137` 缺失（含 `16` 不可复 `KDO5-seed`） |
 
 ---
 

@@ -105,3 +105,8 @@ measure-RG-CN	a-v2-page-1109	A	-	-	measure-RG-CN	RG-CN-readings.tsv	32	2026-11-2
 measure-FC-G1	a-v2-page-1109	A	-	-	measure-FC-G1	FC-G1-readings.tsv	32	2026-11-24T00:26:18.651Z	add-point
 measure-FC-S1	a-v2-page-1109	A	-	-	measure-FC-S1	FC-S1-readings.tsv	32	2026-11-24T00:31:53.390Z	add-point
 measure-TK-FS4	a-v2-page-1109	A	-	-	measure-TK-FS4	TK-FS4-readings.tsv	32	2026-11-24T03:40:26.529Z	add-point
+measure-nov24-fsclose-f35	a-v2-page-1109	A	-	-	measure-nov24-fsclose-f35	nov24-fsclose-f35-readings.tsv	32	2026-11-24T04:29:46.981Z	add-point
+measure-nov24-pierce3-20261101	a-v2-page-1109	A	-	-	measure-nov24-pierce3-20261101	nov24-pierce3-20261101-readings.tsv	32	2026-11-24T04:30:51.095Z	add-point
+measure-TK-FS1	a-v2-page-1109	A	-	-	measure-TK-FS1	TK-FS1-readings.tsv	32	2026-11-24T04:31:51.876Z	add-point
+measure-TK-FS3	a-v2-page-1109	A	-	-	measure-TK-FS3	TK-FS3-readings.tsv	32	2026-11-24T04:33:12.745Z	add-point
+measure-nov24-bandsym-jin	a-v2-page-1109	A	-	-	measure-nov24-bandsym-jin	nov24-bandsym-jin-readings.tsv	32	2026-11-24T04:34:33.566Z	add-point
