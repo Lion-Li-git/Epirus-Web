@@ -28,7 +28,8 @@ const OBS_SPEC = String(arg('obs', '')).trim();
 const NGRP = Math.max(60, Number(arg('groups', 800)) || 800);
 const LR = Number(arg('lr', 0.02)) || 0.02;
 const STEPS = Math.max(10, Number(arg('steps', 400)) || 400);
-const SEED = Number(arg('seed', 20261031)) || 20261031;
+const SEED_ARG = arg('seed', null);
+const SEED = Number(SEED_ARG == null ? 20261031 : SEED_ARG) || 20261031;
 const OUT = String(arg('out', 'scratch/arms/supfit-gd1.bak'));
 const TAG = String(arg('tag', ''));
 /* `--snapEvery=N`（11-15 夜 · ZCode · Tier1 课表 T1-2 的快照对冲）：DAgger 每轮存一粒
@@ -103,11 +104,14 @@ const A2 = createArena2(W, { refParams, temp: 0.15, highN: 1, stratified: !A2_RO
 const HAS_SHAPE_WEIGHTS = A2.shapes.some((s) => s.weight > 1);
 if (HAS_SHAPE_WEIGHTS && !SHAPEBAL) { console.error('⛔ --arenaShapes 的 @W 逐格权重需要同时给 --shapeBal=1；否则权重不会进采集配额'); process.exit(2); }
 
-/* ---- 收集：与 chain-supfit 逐字同流（seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
+/* ---- 收集：与 chain-supfit 逐字同流（默认 seed 20261030 LCG、同 salt/局号、同教师、同克隆）----
  * ⚑ `--dagger=R`（默认 0）：round 0 = 教师自访（= A 臂原样，局号 300000+/盐 4242）；
  *   之后每轮换**学生自己走出来的状态**再标一次教师（`--dagTemp` 部署温度）⇒ 正面治 §十三 边界②"协变量漂移"。
- *   默认路径（R=0）不碰任何一局学生自访、不改变 RNG 消耗次序 ⇒ 产物必须与 `supfit-gd1.bak` 逐位同（这条是回归腿）。 */
-let seed = 20261030;
+ *   默认路径（R=0）不碰任何一局学生自访、不改变 RNG 消耗次序 ⇒ 产物必须与 `supfit-gd1.bak` 逐位同（这条是回归腿）。
+ *   显式 `--seed` 同时改克隆候选 LCG 与局 salt；缺省仍走 20261030/4242，历史产物逐位不变。 */
+const COLLECTION_SEED = SEED_ARG == null ? 20261030 : ((SEED ^ 0x9e3779b9) >>> 0) || 1;
+const COLLECTION_SALT = SEED_ARG == null ? 4242 : ((SEED ^ 0x85ebca6b) >>> 0) || 1;
+let seed = COLLECTION_SEED;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 /* `--teacher=v7mix`（ZCode · 10-31 晚，产品卷反差的一号修法）：链覆写（pickChain 优先）+ **其余全交 v7 价值 argmax**。
  *   为什么：产品考卷（eval-5p 420 局）实测纯链教师的学生"出手种类=3"（ジ/蓄/炮）、含深经济对手 Δ=−19.2pt ——
@@ -1341,7 +1345,7 @@ function collectInto(dst, srcParams, idBase) {
     _activeShapeSlot = shpEnt ? nextShapeSlot(shpEnt, 'game') : null;
     _gameDriver = (!_activeShapeSlot && ROLLOUT_MODE === 'game') ? pickBresenham(gameN++, A2.shapes[s]) : 0;
     let row = null;
-    try { row = A2.playOne(play, s, idBase + s * 1000 + g, 4242, oracleHook); }
+    try { row = A2.playOne(play, s, idBase + s * 1000 + g, COLLECTION_SALT, oracleHook); }
     finally { _gameDriver = 0; _activeShapeSlot = null; }
     /* X1 局终裁决：1=胜局才落盘 ‖ 2=败局才落盘（镜像对照）；winOnly=0 恒落盘（默认路径逐位不变） */
     flushPend(!WINONLY || (WINONLY === 1 ? !!(row && row.win) : !!(row && !row.win && !row.draw)));
@@ -1749,7 +1753,7 @@ writeFileSync(OUT, 'window.EPIRUS_CHAMPION_3P_META = ' + JSON.stringify({
   teacher: TEACHER, objective: OBJ, keySplit: KS, detDose: DET_CURSE_DOSE_RAW,
 }) + ';\n' + 'window.EPIRUS_CHAMPION_3P = ' + JSON.stringify(packed) + ';\n', 'utf8');
 writeFileSync(OUT + '.meta.json', JSON.stringify({
-  tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
+  tool: 'supfit-gd', tag: TAG || null, parent: UP, seed: SEED, collectionSeed: COLLECTION_SEED, collectionSalt: COLLECTION_SALT, lr: LR, steps: STEPS, groups: groups.length, trainG: cut, testG: test.length,
   objective: OBJ, dagger: DAG, dagTemp: DAG_TEMP, pool: POOL, shapeBal: SHAPEBAL, rolloutMode: ROLLOUT_MODE, classPow: CLASS_POW, classCap: CLASS_CAP, teacher: TEACHER, keySplit: KS, rareOnly: RARE.length ? RARE.join(",") : null, rareFrac: RARE_FRAC || null,
   /* 11-15 白班：训练环境（对手表/桌形）入 meta——环境轮换配方的复现与"1/8 形覆盖"类事故的查账依据 */
   arenaPool: A2_POOL_ARG || null, arenaShapes: A2_SHAPES && A2_SHAPES.length ? arg('arenaShapes', '') || null : null,

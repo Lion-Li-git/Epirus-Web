@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { readTable } from '../map-table.mjs';
 import { loadRulers, currentRuler } from './rulers.mjs';
-import { buildView } from './build-view.mjs';
+import { buildView, DEFAULT_COMPARE } from './build-view.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));
@@ -79,11 +79,11 @@ if (missing.length) {
   if (STRICT) errs.push(msg); else warns.push(msg);
 }
 let cmp = null;
-try { cmp = buildView({ data: DATA, compare: join(DATA, '..', 'archive/2026-11-11-legacy-data/coords-gen3-1105.tsv'), noWrite: true }).report.compare; }
+try { cmp = buildView({ data: DATA, compare: DEFAULT_COMPARE, noWrite: true }).report.compare; }
 catch (e) { errs.push('build-view 对照失败：' + e.message); }
 console.log('registry ' + regIds.size + ' ‖ rulers A=' + A + ' B=' + B + ' ‖ batches ' + batchIds.size + ' ‖ readings ' + rd.rows.length);
 console.log('readings 按尺 ' + Object.entries(perRuler).map(([k, v]) => k + '=' + v).join(' ‖ '));
-if (cmp) console.log('对照 coords-gen3：matched ' + cmp.matched + ' max ' + cmp.max_abs_diff + ' mismatch ' + cmp.mismatches);
+if (cmp) console.log('对照 canonical：matched ' + cmp.matched + ' max ' + cmp.max_abs_diff + ' mismatch ' + cmp.mismatches);
 if (warns.length) console.log('⚠ ' + warns.join(' ‖ '));
 if (errs.length) { console.error('⛔ ' + errs.length + ' 条：\n  ' + errs.slice(0, 20).join('\n  ')); process.exit(2); }
 console.log('✅ data 模型校验通过' + (STRICT ? '（strict）' : ''));

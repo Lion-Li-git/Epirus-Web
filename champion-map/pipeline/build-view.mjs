@@ -3,7 +3,7 @@
  * 输入：data/registry.tsv + data/readings/current.tsv + data/rulers.tsv（current A/B）
  * 输出：data/build/exam-view.tsv（P 与 C 列）+ data/build/report.json
  * 关键：这里只读 readings；projections.tsv 只进报告、不参与换尺 —— 换尺只动数值，不动坐标。
- * 用法：node champion-map/pipeline/build-view.mjs [--data=champion-map/data] [--compare=champion-map/coords-gen3-1105.tsv] [--no-write]
+ * 用法：node champion-map/pipeline/build-view.mjs [--data=champion-map/data] [--compare=champion-map/archive/2026-11-18-de/coords-gen10-de-1118.tsv] [--no-write]
  */
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
