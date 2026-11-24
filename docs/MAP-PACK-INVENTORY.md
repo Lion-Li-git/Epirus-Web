@@ -14,7 +14,7 @@
 | 有路径记录（`hasPath`） | **995** | 以下盘面状态均基于此 995 枚 |
 | **实际在盘（可用）** | **615** | 原封 `sha256` 一致 **529** 枚 + 逐位复现 `wid` 一致、`META.ts` 归一化致 `sha256` 变更 **86** 枚 |
 | **盘上仍缺失（`missing`）** | **380** | `364` 枚早期 `v1.5.x` `server` 盲扫尾批（`fam=1..6`）+ `16` 枚未播种 `KDO5-seed` 随机根链（`fam=19..20`） |
-| **现役产品冠军池** | **31** | **`hard` 15 枚 / `soft` 16 枚**，**`31/31` 全员在盘（0 缺失、`seatUnknown=0`、`arenaUnknown=0`）** |
+| **现役产品冠军池** | **22** | **`hard` 11 枚 / `soft` 11 枚**，**`22/22` 全员在盘（0 缺失、`seatUnknown=0`、`arenaUnknown=0`）** |
 | **现役 B 轴 24 锚联盟** | **24** | [`arena-league-1118-page.tsv`](../champion-map/data/arena-league-1118-page.tsv)，**`24/24` 全员在盘（0 缺失）** |
 
 > 缺失台账分目录剩余（共 `380` 枚）：`docs/artifacts/*.bak` 根目录 **365** 枚、`docs/artifacts/night-adapt/` **14** 枚、`scratch/arms/` **1** 枚（`GD6b-TILT-3p.bak`）。
@@ -59,55 +59,38 @@
 
 ---
 
-## 三、现役产品冠军池（37 枚 · 全员在盘）
+## 三、现役产品冠军池（22 枚 · `hard 11 / soft 11` · 全员在盘）
 
-> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 21 / soft 16`，全部满足 `promoteVerdict=pass` 且 `seatUnknown = 0`）。
+> 真源：[`champion-map/data/page/pool-members.tsv`](../champion-map/data/page/pool-members.tsv) → 烘焙产物 [`js/pool-manifest.js`](../js/pool-manifest.js) + [`js/bundled-champion-pool.js`](../js/bundled-champion-pool.js)（`hard 11 / soft 11`，`seatUnknown = 0`，全池 28 技能并集 0 缺失）。
 
 | # | `id` | 分带 | `wid` | `invited` | `seatKill` | 产物路径 | 关键角色 / 备注 |
 |---:|---|---|---|---:|---:|---|---|
-| 1 | **`AR-TK2`** | `hard` | `b5d4cbc6af57bbdd` | 0 | 0 | [`docs/artifacts/AR-TK2.bak`](artifacts/AR-TK2.bak) | **11-22 晚 `hard` 带藤甲×坦克协同载体**（`TZT2D` 底 + `nov21-armor` 主教师 + `tkWeak@0.20`，`arenaB=+10.36pt`，`seatKill=0`，Stage1 `armor 120/120` 格 `5,205` 手 / `tank 26/120` 格 `212` 手） |
-| 2 | `EQ-S4-E9` | `hard` | `a847eb3a41a160bb` | 1 | 0 | `docs/artifacts/obs6-coldstart/EQ-S4-E9.bak` | 当前推荐 `PG`/蒸馏强基座与主教师（2P 强，珠经济 0） |
-| 3 | `EQ-S4-GD6ATEACH` | `hard` | `72abddc710e6252b` | 1 | 0 | `docs/artifacts/obs6-coldstart/EQ-S4-GD6ATEACH.bak` | `GD6A` 教师臂（珠经济 77.4% 闭环） |
-| 4 | `MX1-GD-EQ` | `hard` | `c4fa2576f9700b39` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX1-GD-EQ.bak` | `GD` 底座 + `EQ` 均衡配方（`gen1` 长榜强包） |
-| 5 | `MX3-GDEQ-GD` | `hard` | `3e9799402f0b37c1` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX3-GDEQ-GD.bak` | `GD` 链续代高综合读数 |
-| 6 | `MX5-GD-T2STR` | `hard` | `2648c67284ab8936` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX5-GD-T2STR.bak` | `hard` 带高综合主将 |
-| 7 | `MX6-GD-TF15` | `hard` | `95940870c4b8d16e` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF15.bak` | `transfer` + `railgun` + `bigT`（5P 原生强） |
-| 8 | `MX6-GD-TF20` | `hard` | `bab64e2b297b1e68` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak` | `transfer` + `miniT` + `railgun` + `bigT` |
-| 9 | `MX8-TN25-KL` | `hard` | `0940f463c2ac8966` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN25-KL.bak` | `KL-PG` 收官（`drain` + `railgun`） |
-| 10 | `nov21-purify-dsp0` | `hard` | `b4a65ee4437584cf` | 0 | 0 | `docs/artifacts/nov21-purify-dsp0.bak` | **11-21 DS-P0 净化补盲**（`arenaB=+14.04pt`，珠闭环 100%，条件净化 `0.27/局`） |
-| 11 | `nov21-taunt-dsp0b` | `hard` | `db7883520de2e2fe` | 0 | 0 | `docs/artifacts/nov21-taunt-dsp0b.bak` | **11-21 DS-P0 挑衅补盲**（`arenaB=+17.92pt` / `arR=+35.83pt`，Stage1 **`taunt` 95/120 格 · 1,822 次**） |
-| 12 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | 强宽六轴全持代表 |
-| 13 | `OBS6P9-S4000` | `hard` | `cfb62c2c977897fd` | 1 | 3 | `docs/artifacts/obs6-coldstart/OBS6P9-S4000.bak` | 高 `bpM` 真伤双穿 + `holo` 线（现役 `B` 榜高位） |
-| 14 | **`R-GD12`** | `hard` | `7e55abc3894ca3e2` | 0 | 0 | [`docs/artifacts/R-GD12.bak`](artifacts/R-GD12.bak) | **11-22 午 `hard` 带聚能环新强将**（`GD6ATEACH` + 长程 `ringEcon@0.12`，`arenaB=+15.89pt`，`seatKill=0`，Stage1 `ring 28/120` 格 `1,046` 手 / 胜率 `47.0%`） |
-| 15 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` 带 `ring` / `miniT` 载体 |
-| 16 | `DEF-s16` | `soft` | `4f53c20de51d378b` | 1 | 1 | `docs/artifacts/2p0-pool/DEF-s16.bak` | `DEF` 反墙破防元老 |
-| 17 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `obs5` 反墙线保留成员 |
-| 18 | `MX5-GD-LE40` | `soft` | `de7d0db32467c3c1` | 1 | 2 | `docs/artifacts/obs6-coldstart/MX5-GD-LE40.bak` | `laserEye` 补强载体 |
-| 19 | `MX7-T2-R` | `soft` | `27224033f4ed932d` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX7-T2-R.bak` | `T2` / `transfer` 载体 |
-| 20 | `MX8-CN-M` | `soft` | `6e4c165da007a6a4` | 0 | 0 | `docs/artifacts/obs6-coldstart/MX8-CN-M.bak` | `cannon` 载体 |
-| 21 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `rod` + `mine` 载体 |
-| 22 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `armor` + `rod` 载体（注意直接当底座易偏弱） |
-| 23 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | 最高用卡广度与 `taunt` + `drain` + `dualGun` + `laserEye` + `ring` |
-| 24 | `night2-E1-det-strong` | `soft` | `862e0ef47bcf06f7` | 1 | 1 | `docs/artifacts/night2-E1-det-strong.bak` | **DS-P0 首证**：强锚+天火专科闭环（11-21 已补测 `seatKill=1`） |
-| 25 | `nov21-armor-tzt2d` | `soft` | `7819b2196ba23fca` | 0 | 0 | `docs/artifacts/nov21-armor-tzt2d.bak` | **11-22 `armor` 强接盘**：`TZT2D` 底 + `armor@0.30`，新场A 32.5% 0 阻断，`arenaB=-12.20pt`，Stage1 **`armor 5,228` 次** |
-| 26 | `nov21-rod-tzt2d-r10` | `soft` | `da2981d21406ca06` | 1 | 2 | `docs/artifacts/nov21-rod-tzt2d-r10.bak` | **11-21 `rod` 避雷针首枚覆盖**：`TZT2D` 底 + `rod@0.25/ring@0.10`，Stage1 `rod 17/120` 格（`151` 次），`arenaB=-30.4pt`（留观 `multi` 人席 2 格） |
-| 27 | `nov22-c3g-s300k` | `soft` | `39f605c3f8b9a62c` | 0 | 0 | `docs/artifacts/nov22-c3g-s300k.bak` | **11-22 `klCand=1.0` 长程 PG 强节点（300k）**：`arenaB=-27.55pt`（超 `E1` +2.8pt），珠经济 75%/0% 闭环，Stage1 `curse 1,370 / firestorm 851` |
-| 28 | `nov22-c4c-t20` | `soft` | `e658497a05bf30b2` | 1 | 2 | `docs/artifacts/nov22-c4c-t20.bak` | **11-22 `tank` 接盘替代 `X2b-fuse`**：`TZT2D` 底 + `X2b@0.20(tank)`，`promote` 0 阻断，`arenaB=-34.72pt`（较 `X2b-fuse` +52.5pt），Stage1 **`tank 2,528` 次**（点名越 `long` 人席 2 格） |
-| 29 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `DEF-s16` 环线升级件 |
-| 30 | `RINGB9` | `soft` | `313a5f6ae837c0db` | 1 | 2 | `docs/artifacts/obs6-coldstart/RINGB9.bak` | `T1` 环线 / 大雷 / `railgun` 载体 |
-| 31 | `TZT2D` | `soft` | `91645cf8499737b1` | 1 | 2 | `docs/artifacts/obs6-coldstart/TZT2D.bak` | 贴符 / 转移线教师载体 |
-| 32 | **`nov22-ring3-gd6a18`** | `hard` | `a64b53c90367221a` | 0 | 0 | [`docs/artifacts/nov22-ring3-gd6a18.bak`](artifacts/nov22-ring3-gd6a18.bak) | **11-22 晚 `hard` 环 3 连载体**（`GD6ATEACH` + `ringEcon@0.18(5:long,8:long)`；5P 三连 30.1% / 8P 27.2%，`arenaB=+20.40pt`，`selftest3` 6/6，`promote` 0 阻断，`seatKill=0`） |
-| 33 | **`FS-G2`** | `hard` | `892ba770d1dfca0b` | 0 | 0 | [`docs/artifacts/FS-G2.bak`](artifacts/FS-G2.bak) | **11-23 `hard` 反只枪×天火低剂量载体**（`GD6ATEACH` + `c3g curse,firestorm@0.12`；`selftest3` 6/6、`promote` 0 阻断、`G4 只枪 14.7%/11.0%`、`G5 0%/0%`、`arenaB=-3.48pt`、`seatKill=0`，Stage1 `firestorm 38/120` 格、`curse 68/120`、`railgun 25/120`） |
-| 34 | **`CN-G1`** | `hard` | `a3f63c60a01e4f35` | 0 | 0 | [`docs/artifacts/CN-G1.bak`](artifacts/CN-G1.bak) | **11-23 `hard` 过载炮低剂量载体**（`GD6ATEACH` + `MX8-CN-M cannon@0.12`；`promote` 0 阻断、`G4 只枪 2.7%/60%`、`G5 0%/0%`、`arenaB=-2.46pt`、`MxC=.218/MxCL=.259`、`seatKill=0`，Stage1 `cannon 10/120` 格/`88` 出手、`railgun 25/120`） |
-| 35 | **`MN-G1`** | `hard` | `79e3b76bbf41c67a` | 0 | 0 | [`docs/artifacts/MN-G1.bak`](artifacts/MN-G1.bak) | **11-23 `hard` 地雷低剂量载体**（`GD6ATEACH` + `MSB11-R1S130778313 mine@0.12`；`selftest3` 6/6、`promote` 0 阻断、`arenaB=+10.38pt`（spread `21.39`）、`seatKill=0`，Stage1 `mine 52/120` 格/`797` 出手、`railgun 17/120`） |
-| 36 | **`RG-MN`** | `hard` | `7e4628cbec354183` | 0 | 0 | [`docs/artifacts/RG-MN.bak`](artifacts/RG-MN.bak) | **11-23 `hard` 地雷×长程聚能环单轮载体**（`GD6ATEACH` + `MN-G1` + `ringEcon@0.22(5:long,8:long)`；`promote` 0 阻断、`G(long)=5.61 / S=1.803`、`arenaB=+11.38pt`（`arS=.133/arL=.132`）、`MxCL=.257`、`ax-long h2=88.77`、`seatKill=0`，Stage1 `mine 44/120` 格/`710` 出手、`ring 26/120` 格/`1,041` 出手、`bigT 10/120` 格/`125` 出手） |
-| 37 | **`HL-G1`** | `hard` | `803f773db2e563f0` | 0 | 0 | [`docs/artifacts/HL-G1.bak`](artifacts/HL-G1.bak) | **11-23 `hard` 全息套盾配合载体**（`GD6ATEACH` + `OBS6E9 holo@0.15`；40g `self=0/other=56`，`promote` 0 阻断（`套给别人 0.2/局`、`S=1.822/G(long)=5.87`、`珠闭环 83%`）、`arenaB=-1.83pt`、`MxC=.255`、`seatKill=0`，Stage1 **`holo 35/120` 格/`322` 出手**、`railgun 33/120` 格/`582` 出手、`bigT 8/120`） |
-| 38 | **`RG-CN`** | `hard` | `6f926e8b926fa719` | 0 | 0 | [`docs/artifacts/RG-CN.bak`](artifacts/RG-CN.bak) | **11-23 `hard` 过载炮×长程聚能环单轮载体**（`GD6ATEACH` + `CN-G1` + `ringEcon@0.22(5:long,8:long)`；`selftest3` 6/6，`promote` 0 阻断（`G(long)=5.93/S=1.818`、`G4` 全 `0%`、`环@安全 80%`），`arenaB=-1.99pt`，`MxCL=.240`，`seatKill=0`，Stage1 `ring 27/120`、`bigT 11/120`、`cannon 4/120`） |
+| 1 | **`FC-G1`** | `hard` | `cd0d19ba78e411cf` | 1 | 0 | [`docs/artifacts/FC-G1.bak`](artifacts/FC-G1.bak) | **11-24 `hard` 天火闭环强将（特邀 `G5[long]=31%`）**：`RG-CN` 底 + 双路穿防 `@0.20` + 闭环 `@0.30`；`5P` 28.4%（#3/29）、`arenaB=-16.64pt`（配对胜 `RG-CN +1.02pt`）、Stage1 `loopRate=91.71%` / `takeRate=46.22%` / `emptyBoom=0` |
+| 2 | `FS-G2` | `hard` | `892ba770d1dfca0b` | 0 | 0 | [`docs/artifacts/FS-G2.bak`](artifacts/FS-G2.bak) | `hard` 反只枪×天火低剂量载体（`arenaB=-3.48pt`、`promote` 0 阻断、`loopRate=88%`） |
+| 3 | `HL-G1` | `hard` | `803f773db2e563f0` | 0 | 0 | [`docs/artifacts/HL-G1.bak`](artifacts/HL-G1.bak) | `hard` 全息套盾配合载体（`arenaB=-1.83pt`、40g `self=0/other=56`、`holo 35/120` 格） |
+| 4 | `nov21-armor-tzt2d` | `hard` | `7819b2196ba23fca` | 0 | 0 | [`docs/artifacts/nov21-armor-tzt2d.bak`](artifacts/nov21-armor-tzt2d.bak) | `hard` 藤甲载体（全场 `27.2%`、`armor 5,228` 次） |
+| 5 | `nov21-taunt-dsp0b` | `hard` | `db7883520de2e2fe` | 0 | 0 | [`docs/artifacts/nov21-taunt-dsp0b.bak`](artifacts/nov21-taunt-dsp0b.bak) | `hard` 挑衅补盲（`arenaB=+17.92pt`、`taunt 95/120` 格） |
+| 6 | `nov22-ring3-gd6a18` | `hard` | `a64b53c90367221a` | 0 | 0 | [`docs/artifacts/nov22-ring3-gd6a18.bak`](artifacts/nov22-ring3-gd6a18.bak) | `hard` 环 3 连载体（`arenaB=+20.40pt`、`5P` 三连 30.1% / `8P` 27.2%） |
+| 7 | `OBS6E9` | `hard` | `d2a64af418b85949` | 0 | 0 | `docs/artifacts/obs6-coldstart/OBS6E9.bak` | `hard` 强宽六轴全持代表（`arenaB=+14.02pt`、`curseOk=0`） |
+| 8 | `R-GD12` | `hard` | `7e55abc3894ca3e2` | 0 | 0 | [`docs/artifacts/R-GD12.bak`](artifacts/R-GD12.bak) | `hard` 聚能环强将（`arenaB=+15.89pt`、`ring 28/120` 格） |
+| 9 | `RG-CN` | `hard` | `6f926e8b926fa719` | 0 | 0 | [`docs/artifacts/RG-CN.bak`](artifacts/RG-CN.bak) | `hard` 过载炮×长程聚能环（`arenaB=-1.99pt`、`cannon` / `ring`） |
+| 10 | `RG-MN` | `hard` | `7e4628cbec354183` | 0 | 0 | [`docs/artifacts/RG-MN.bak`](artifacts/RG-MN.bak) | `hard` 地雷×长程聚能环（`arenaB=+11.38pt`、`mine 44/120`、`curseOk=0`） |
+| 11 | `RING-MINIT-CONT` | `hard` | `225404c8e4454cf0` | 1 | 2 | `docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak` | `hard` `ring` / `miniT` 载体（`arenaB=+2.30pt`） |
+| 12 | `AR-TK2` | `soft` | `b5d4cbc6af57bbdd` | 0 | 0 | [`docs/artifacts/AR-TK2.bak`](artifacts/AR-TK2.bak) | `soft` 藤甲×坦克协同载体（`arenaB=+10.36pt`） |
+| 13 | **`FC-S1`** | `soft` | `9390478ce2e1ba00` | 0 | 0 | [`docs/artifacts/FC-S1.bak`](artifacts/FC-S1.bak) | **11-24 `soft` 过载炮×天火闭环（直接接替 `MX8-CN-M`）**：`5P` 17.8%、`arenaB=-25.67pt`、`promote` 0 阻断、`cannon 9/120`、Stage1 `loopRate=92.76%` / `takeRate=53.82%` / `emptyBoom=0` |
+| 14 | `MSB11-R1S130778313` | `soft` | `970c77da80818f40` | 0 | 0 | `docs/artifacts/night-adapt/MSB11-R1S130778313.js` | `soft` `obs5` 反墙线保留成员（`curseOk=0`） |
+| 15 | `MX6-GD-TF20` | `soft` | `bab64e2b297b1e68` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX6-GD-TF20.bak` | `soft` `transfer` + `miniT` + `railgun` + `bigT` |
+| 16 | `MX8-R6B-KL` | `soft` | `eb5f0460834e3974` | 1 | 1 | `docs/artifacts/obs6-coldstart/MX8-R6B-KL.bak` | `soft` `rod` + `mine` 载体 |
+| 17 | `MX8-R6C-KL` | `soft` | `ece05168351625a9` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak` | `soft` `armor` + `rod` 载体 |
+| 18 | `MX8-TN35-KL3` | `soft` | `137f584ec08418b2` | 1 | 0 | `docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak` | `soft` 最高用卡广度（20 技）与 `dualGun` / `taunt` / `drain` |
+| 19 | `nov21-purify-dsp0` | `soft` | `b4a65ee4437584cf` | 0 | 0 | [`docs/artifacts/nov21-purify-dsp0.bak`](artifacts/nov21-purify-dsp0.bak) | `soft` 净化补盲（`arenaB=+14.04pt`、`curseOk=0`） |
+| 20 | `nov21-rod-tzt2d-r10` | `soft` | `da2981d21406ca06` | 1 | 2 | [`docs/artifacts/nov21-rod-tzt2d-r10.bak`](artifacts/nov21-rod-tzt2d-r10.bak) | `soft` 避雷针覆盖首枚（待后续洁净低剂量替换） |
+| 21 | `nov22-c3g-s300k` | `soft` | `39f605c3f8b9a62c` | 0 | 0 | [`docs/artifacts/nov22-c3g-s300k.bak`](artifacts/nov22-c3g-s300k.bak) | `soft` 天火闭环强节点（`arenaB=-27.55pt`、`loopRate=88%`） |
+| 22 | `RINGB11` | `soft` | `764f0b92c696fc62` | 0 | 0 | `docs/artifacts/obs6-coldstart/RINGB11.bak` | `soft` 环线升级件（`curseOk=0`） |
 
-> 现役池状态（`2026-11-23 v2.1.22` 重平衡定稿：共 **`25` 枚 = `hard 13 ‖ soft 12`**，`mid` 空）：  
-> 1. **本轮退役 `13` 枚冗余/被替代成员**：`EQ-S4-E9 / EQ-S4-GD6ATEACH / MN-G1 / MX3-GDEQ-GD / MX5-GD-T2STR / MX6-GD-TF15 / OBS6P9-S4000 / DEF-s16 / MX5-GD-LE40 / night2-E1-det-strong / nov22-c4c-t20 / RINGB9 / TZT2D`；  
-> 2. **跨带重划 `4` 枚**：`nov21-armor-tzt2d`（`27.2%`）升入 `hard`；`AR-TK2 / nov21-purify-dsp0 / MX6-GD-TF20` 调入 `soft`，`hard` 中位 `arenaB=+11.4pt（25 技）`、`soft` `-16.7pt（24 技）`，全池 `28` 技能并集 `0` 缺失；  
-> 3. **后续可继续补盲方向**：① 用洁净低剂量替换 `soft` 带遗留 `sk=2` 避雷针载体 `nov21-rod-tzt2d-r10`（如 `RD-G1`）；② 天火闭环新机制与更多 `hard` 对局中合作载体。
+> 现役池状态（`2026-11-24 v2.1.23` 精简闭环后定稿：共 **`22` 枚 = `hard 11 ‖ soft 11`**，`mid` 空）：  
+> 1. **11-23 `v2.1.22` 先前退役 `13` 枚**：`EQ-S4-E9 / EQ-S4-GD6ATEACH / MN-G1 / MX3-GDEQ-GD / MX5-GD-T2STR / MX6-GD-TF15 / OBS6P9-S4000 / DEF-s16 / MX5-GD-LE40 / night2-E1-det-strong / nov22-c4c-t20 / RINGB9 / TZT2D`；  
+> 2. **11-24 `v2.1.23` 新入 `2` 枚天火闭环包并再退 `5` 枚冗余未闭环包**：特邀 `FC-G1` 入 `hard`、`FC-S1` 入 `soft`，退役 `MX8-TN25-KL / MX1-GD-EQ / CN-G1 / MX8-CN-M / MX7-T2-R`；`hard` `25` 技 / `soft` `24` 技 / 全池 `28` 技能并集 `0` 缺失，`probe-pool --tier=hard --games=60` `multi=1.55% / long=2.50%`；`1500g` 阶梯 `multi 5.3/18.4/22.3% (11.3σ/2.6σ)`、`long 11.5/23.5/31.1% (8.5σ/4.7σ)`。
 
 ---
 

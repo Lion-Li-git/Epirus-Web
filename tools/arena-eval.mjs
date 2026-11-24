@@ -309,6 +309,8 @@ if (isMainThread) {
       console.error('⛔ 条件留痕读回对不上（id=' + id + ' 读回 ' + last[1] + '/' + last[4] + '）⇒ exit 3');
       process.exit(3);
     }
-    console.log('✅ 条件留痕 ' + CONDS.replace(/\\/g, '/').split('/').slice(-1)[0] + '（' + (back.length - 1) + ' 行，本行 seedBase=' + SEED + ' dose=' + DOSE + '）');
+    /* 保持 --pack stdout 末行始终是纯 JSON（measure-point.mjs:163 等调用方走 stdout.split('\n').pop() 解析），
+     *   条件留痕回执打到 stderr，避免破坏机器可读出口。 */
+    console.error('✅ 条件留痕 ' + CONDS.replace(/\\/g, '/').split('/').slice(-1)[0] + '（' + (back.length - 1) + ' 行，本行 seedBase=' + SEED + ' dose=' + DOSE + '）');
   }
 }

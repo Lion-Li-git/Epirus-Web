@@ -300,3 +300,5 @@ MN-G1	pass	—
 RG-MN	pass	—			
 HL-G1	pass	—			
 RG-CN	pass	—			
+FC-G1	block	behavior-gate			
+FC-S1	pass	—			

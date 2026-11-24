@@ -160,7 +160,8 @@ if (!FROM_STAGING) {
         /* 2026-11-18：Arena 分两半测——页面剂量（B 轴）+ 贪心（X 半边），同赛程同种子（176 局/包） */
         const runArena = async (dose) => {
           const { stdout } = await execFileP('node', ['tools/arena-eval.mjs', '--pack=' + rel, '--id=' + ID, '--dose=' + dose], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26 });
-          return JSON.parse(stdout.trim().split('\n').pop());
+          const jsonLine = stdout.trim().split('\n').reverse().find((l) => l.trim().startsWith('{'));
+          return JSON.parse(jsonLine || stdout.trim().split('\n').pop());
         };
         const ar = await runArena('page');
         const arX = await runArena('exam');

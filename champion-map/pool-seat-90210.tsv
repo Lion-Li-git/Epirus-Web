@@ -109,3 +109,7 @@ HL-G1	docs/artifacts/HL-G1.bak	multi	200	90210	0	0	0.5	0.5	0	0	0	0.14	0.5	只枪
 HL-G1	docs/artifacts/HL-G1.bak	long	200	90210	0	2.5	0.5	10	0	0	0	1.86	10.0	只枪压制	3.857142857142857
 RG-CN	docs/artifacts/RG-CN.bak	multi	200	90210	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	10.571428571428571
 RG-CN	docs/artifacts/RG-CN.bak	long	200	90210	1.5	6	0	0	0	1.5	1.5	1.50	6.0	全程只防御	2.142857142857143
+FC-G1	docs/artifacts/FC-G1.bak	multi	200	90210	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	4.142857142857143
+FC-G1	docs/artifacts/FC-G1.bak	long	200	90210	8.5	0	0	0	0	8.5	8.5	3.64	8.5	全程刷反弹	2.7142857142857144
+FC-S1	docs/artifacts/FC-S1.bak	multi	200	90210	0	16.5	0	2.5	5	0	0	3.43	16.5	全程只防御	4.428571428571429
+FC-S1	docs/artifacts/FC-S1.bak	long	200	90210	2	1.5	0	16	0	2	2	3.36	16.0	只枪压制	2

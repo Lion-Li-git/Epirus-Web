@@ -4,6 +4,23 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.23 — 11-24（天火闭环双将 **`FC-G1 / FC-S1`** 入池 + 退 `5` 枚冗余未闭环包 `25 → 22` + `arena-eval` JSON 回归修复 + T3 考古 10 枚收口）
+
+**这一版是什么**：落实用户 `08:00` 裁定——不立天火闭环硬准入门、`curseOk=0` 免管；将天火闭环双将 **`FC-G1`**（`--invite` 入 `hard`，仅 `G5[long]=31%`、无其它缺陷）与 **`FC-S1`**（`0` 阻断入 `soft`）合入产品池，同时退役 `5` 枚冗余未闭环成员使全池精简为 **`22` 枚（`hard 11 / soft 11`）** 兼闭环主力翻倍（`2 → 4`）；顺手修复 `tools/arena-eval.mjs` stdout 混入日志文本破坏 `measure-point` 的回归，并完成最后 `8` 条 T3 线索考古扫尾（找回 `10` 枚，正式收口）。
+
+- **新入池天火闭环双将**：
+  - **`FC-G1`（`hard`，`--invite`，[`docs/artifacts/FC-G1.bak`](docs/artifacts/FC-G1.bak)，`wid=cd0d19ba78e411cf`）**：`RG-CN` 底座 + 双路穿防 `@0.20` + `curse,firestorm@0.30`；`selftest3` **6/6**（`0.00e+0, π=0.943`），`5P` 3000g 循环赛 **`28.4%`**（`#3/29`），`Arena B` 6-seed 配对胜现役 `RG-CN +1.02pt`（`arenaB=-16.64pt`），`seatKill=0`（`90210/90211` `multi` 全 `0.0%`、`long ≤ 8.5%`），Stage1 `union=16/30`、`loopRate=91.71% (343/374)`、`takeRate=46.22%`、`emptyBoom=0`。
+  - **`FC-S1`（`soft`，[`docs/artifacts/FC-S1.bak`](docs/artifacts/FC-S1.bak)，`wid=9390478ce2e1ba00`）**：`MX8-CN-M` 底座 + 同 v5 配方直接接替 `MX8-CN-M`；`selftest3` **6/6**，`promote --dry --support=2` **0 阻断**（`G5[long]=20% ≤ 25%`），`5P` `17.8%`，`arenaB=-25.67pt`，`seatKill=0`，Stage1 `union=15/30`（`cannon:9`）、`loopRate=92.76% (333/359)`、`takeRate=53.82%`、`emptyBoom=0`。
+- **池精简（`25 → 22`：`hard 11 / soft 11`）与天火普查**：
+  - 退役 5 枚冗余 `onlyStick`（`noGrab=1`）成员：`MX8-TN25-KL`、`MX1-GD-EQ`、`CN-G1`、`MX8-CN-M`、`MX7-T2-R`；`hard` `25` 技 / `soft` `24` 技 / 全池 `28` 技能并集 `0` 缺失，`probe-pool --tier=hard --games=60` `multi=1.55% / long=2.50%`（零 `3σ` 漏格）。
+  - `firestorm-closure.mjs` 复测：闭环主力扩至 `4` 枚（`FC-G1 92%`、`FC-S1 94%`、`FS-G2 88%`、`nov22-c3g-s300k 88%`），抓手率均 `47–55%`；`OBS6E9 / RG-MN / MSB11-R1S130778313 / nov21-purify-dsp0 / RINGB11` 共 `5` 枚 `curseOk=0` 免管。
+- **难度阶梯 `1500g` 复测（[diff-ladder-claims.mjs](tools/diff-ladder-claims.mjs)）**：
+  - `pool:multi`：困难 `5.3%` → 普通 `18.4%`（`+13.13 ±1.16pt = 11.3σ`）→ 简单 `22.3%`（`+3.93 ±1.50pt = 2.6σ`）；
+  - `pool:long`：困难 `11.5%` → 普通 `23.5%`（`+12.00 ±1.41pt = 8.5σ`）→ 简单 `31.1%`（`+7.60 ±1.62pt = 4.7σ`）。
+- **工具链修复与 T3 考古收口**：
+  - 修复 `arena-eval.mjs` 将 `✅ 条件留痕` 输出到 `stdout` 导致 `measure-point.mjs --pack` JSON 解析失败的回归（改为 `console.error`，并在 `measure-point.mjs` 取末尾 `{` 行容错）；
+  - 对剩余 8 线索（7 批）执行 `sweep-server-batches.mjs`，校准命中并找回 **`10`** 枚缺失权重（`v7new5_005-82/91/92/93`、`v7bead3-31/93`、`v7beadseed-31/93`、`v7cmin4-93`、`v7t2-82`），台账 `missing` 从 `147 → 137`（`ok 708 / sha-diff-wid-same 138`，`land-recovered --check` 零违例），其余无线索项正式收口；重烘清单与分片戳 `p1123f → p1124a`、演化图 100 PASS / 0 FAIL。
+
 ## v2.1.22 — 11-23（**`RG-CN`** 入 `hard` + 全场强弱重分层与精简 `38 → 25` + `lv:sparring` `scriptMix` 调降为 `p=0.35/s1`）
 
 **这一版是什么**：新增过载炮 × 长程聚能环强包 **`RG-CN`**（5P 全池均胜 **31.5%**、对规则人类 `0.0%/0.0%`、`G4` 全原型 `0%`）；随后按 **4000 局全场 5P 循环赛 + 逐枚人席强度 + 技能覆盖并集** 将冠军池从臃肿的 `38` 枚精简并重分层为 **`25` 枚（`hard 13 / soft 12`）**，并把简单档脚本席概率由 `p=0.7/s2` 下调至 `p=0.35/s1`（保留 `st:mix` + `st:toolkit`），使 `multi` 与 `long` 四相邻难度台阶全部站上 **`≥ 2.1σ`**。
