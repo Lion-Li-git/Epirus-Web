@@ -4,6 +4,22 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.25 — 11-24（原位摘要日志与事件自动换行 ‖ 冠军加载/UI 防卡死 ‖ 图谱三父谱系与退图修复）
+
+**这一版是什么**：把对战页战斗日志改造成“原位摘要 + 自动换行事件 + 一键展开完整日志”，同时补齐冠军池懒加载 `wid`/超时防御、包维度与权重校验以及演化图三父融合与异常底点清理。
+
+- **对战页原位摘要日志**（[`index.html`](index.html)、[`css/style.css`](css/style.css)、[`js/ui/ui.js`](js/ui/ui.js)、[`tools/ui-probe.mjs`](tools/ui-probe.mjs)）：
+  - 日志栏放回对局区 `#page-battle` 原全宽 `grid` 行（取消底部 `fixed` 悬浮），收起与展开都不再悬在视口最底端或遮挡技能栏与对手面板；
+  - 收起态显示 `R<n>` + 全席动作芯片与过滤后的特殊事件摘要（`LOG_SUMMARY_SKIP` 跳过面板已展示的 EP/伤害/死亡/普通架势等高频条目），两行均采用 `flex-wrap: wrap` 自动换行、无横向滚动条；`logClear` 与悔一步 `undo` 同步刷新摘要，新增 `cannonCountered` 事件文案；
+  - 点击「展开」在原位切换为 `min(42vh, 320px)` 完整事件日志面板，UI 探针第 `⑥` 组扩容校验至 **`19/19`** 全过。
+- **冠军池懒加载校验、包结构防御与 UI 防卡死**（`2675f6ef`、`a3239351`）：
+  - [`js/pool-loader.js`](js/pool-loader.js) 新增 15 秒加载超时、`widOf`（SHA-1）身份校验与回退后 `epoch` / `monoPacks` 作废晚到分片，新增 [`tools/probe-pool-loader.mjs`](tools/probe-pool-loader.mjs) 并接入 `D234`；
+  - [`js/train/policy.js`](js/train/policy.js) 拒绝未知 `v` 与非有限权重借旧形状升级；[`js/train/policy2.js`](js/train/policy2.js) 与 [`training/proto2/arch2.mjs`](training/proto2/arch2.mjs) 同步校验 `dims.norm` 维度/有限性/正标准差并对齐缺省 `keySplit=1`，[`js/bundled-champion.js`](js/bundled-champion.js) / [`js/bundled-champion-3p.js`](js/bundled-champion-3p.js) 刷新规则指纹至 `bfd49045`；
+  - [`js/ui/ui.js`](js/ui/ui.js) 分离终局收缩起扣回合清空与独立伤害配置，切脚本档立即作废挂起加载、`newGame`/`closeModal` 清空弹窗按钮与焦点防跨局误触、局中导入冠军包补写换包留痕。
+- **演化图三父融合导出、谱系真相修正与极值退图**（`e6b52a2f`，含 `8bbd671a` / `c93d6c81`）：
+  - [`champion-map/lineage.mjs`](champion-map/lineage.mjs) 与 [`champion-map/viewer.mjs`](champion-map/viewer.mjs) 补齐 `parentOf3` / `parentName3` / `parentSrc3` 导出与追溯链/明细渲染，使真三路融合包 `OBS6-SHAPEDIST-V3S2` 完整保留三父边；
+  - 清除 `MSB15-SOUPB` 残留的半截融合父边，标实未落档 R1 热启动与 `soup-15b` 来源说明；退图无强度训练且将全图线性高度轴压扁 20% 以上的蒸馏中间态 `GD4-RATION`（保留磁盘原件 `scratch/arms/GD4-RATION.bak`，同步更新 `MSB15R-GD4RAT` 说明与 `11-18` 对照快照），重烘后页内自检 **`100 PASS / 0 FAIL`**。
+
 ## v2.1.24 — 11-24（**`TK-FS4`** 入 `hard`：藤甲坦克 × 天火闭环 × 珠闭环双闭环火弱协同 ‖ 珠经济塌缩定位与覆盖口径纠偏）
 
 **这一版是什么**：回应用户对 `FC-G1 / FC-S1 / AR-TK2` 珠经济崩溃的定位要求，查明「退化底座（`RG-CN 4.1%` / `MX8-CN-M 1.3%` / `TZT2D+armor 2.1%`）+ `ship-promote.mjs DENSITY_BLOCK = false` 不阻断」的成因，并以 `FS-G2` 双闭环底座叠加 `AR-TK2`（`armor,tank@0.20`）兼在 `--rareOnly` 中明确护住 `railgun` 训出 **`TK-FS4`**（[`docs/artifacts/TK-FS4.bak`](docs/artifacts/TK-FS4.bak)，`wid=ac126b3320bd4ed5`）正式合入 **`hard`**（池 `22 → 23`：`hard 12 / soft 11`，缓存戳 `p1124a → p1124b`）。

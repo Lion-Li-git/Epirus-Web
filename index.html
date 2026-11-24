@@ -6,11 +6,11 @@
 <title>Epirus 拍手游戏 — 2~8 人对战（3/4/5 血）</title>
 <link rel="stylesheet" href="css/style.css?v=mwm11sbs">
 </head>
-<body class="battle-tab">
+<body>
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.24 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.25 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -80,14 +80,16 @@
     </div>
     <div class="side" id="side-1"></div>
     <!-- v2.1.1（用户裁定 2026-11-18）：≥6 人桌的对手栏在 CSS 里压紧并与技能列等高；
-         日志自 2026-11-22 修复起移出 grid，改为下面的视口底部固定抽屉（不再占一行）。 -->
-    <!-- 日志改为视口底部固定抽屉：1440×900 / 1366×768 下旧的全宽 330px 日志会把最新一行顶到折叠线以下。
-         收起时只占约 110px，展开时 42vh；#logbox 的 id 与既有探针/清空逻辑保持同一份。 -->
+         日志留在原 grid 全宽行：收起态展示动作条与自动换行的特殊事件摘要，展开态切换为完整日志面板。 -->
     <div class="logdock" id="logdock">
       <div class="logdock-bar">
         <span class="logdock-title">战斗日志</span>
         <span class="logdock-sub">最新一行自动滚动到底</span>
         <button type="button" class="logdock-btn" id="btn-logdock" aria-expanded="false">展开</button>
+      </div>
+      <div class="logsummary" id="logsummary">
+        <div class="logsum-actions" id="logsum-actions"></div>
+        <div class="logsum-events" id="logsum-events"></div>
       </div>
       <div class="logbox" id="logbox"></div>
     </div>

@@ -359,8 +359,56 @@
 
   /* ---------- 对局流程 ---------- */
   function hint(txt) { $('battle-hint').textContent = txt; }
+  const LOG_SUMMARY_SKIP = {
+    action: 1, insufficient: 1, ep: 1, damage: 1, heal: 1, bead: 1, beadExpire: 1,
+    guardSet: 1, holoSet: 1, curse: 1, curseExpire: 1, death: 1, mineArm: 1, mineExpire: 1, taunt: 1,
+  };
+  function specialEventSummary(events) {
+    if (typeof events === 'string') return events ? [events] : [];
+    const ordered = [], byText = {};
+    for (const e of (events || [])) {
+      if (!e || LOG_SUMMARY_SKIP[e.type]) continue;
+      const t = evText(e, events);
+      if (!t) continue;
+      const text = t.html.replace(/<[^>]+>/g, '');
+      if (!text) continue;
+      if (byText[text] == null) { byText[text] = ordered.length; ordered.push({ text: text, n: 1 }); }
+      else ordered[byText[text]].n++;
+    }
+    return ordered.map(function (x) { return x.text + (x.n > 1 ? ' ×' + x.n : ''); });
+  }
+  function renderLogSummary(round, parts, events) {
+    const actions = $('logsum-actions'), special = $('logsum-events');
+    if (!actions || !special) return;
+    actions.innerHTML = ''; special.innerHTML = '';
+    const rnd = document.createElement('span');
+    rnd.className = 'logsum-round'; rnd.textContent = round > 0 ? ('R' + round) : '新局';
+    actions.appendChild(rnd);
+    if (parts && parts.length) {
+      parts.forEach(function (text, i) {
+        const chip = document.createElement('span');
+        chip.className = 'logsum-act' + (i === 0 ? ' you' : '');
+        chip.textContent = text; chip.title = text;
+        actions.appendChild(chip);
+      });
+    } else {
+      const wait = document.createElement('span');
+      wait.className = 'logsum-act dim'; wait.textContent = '等待出招';
+      actions.appendChild(wait);
+    }
+    const label = document.createElement('span');
+    label.className = 'logsum-event-label'; label.textContent = '事件';
+    special.appendChild(label);
+    const list = specialEventSummary(events);
+    (list.length ? list : ['—']).forEach(function (text) {
+      const chip = document.createElement('span');
+      chip.className = 'logsum-event'; chip.textContent = text; chip.title = text;
+      special.appendChild(chip);
+    });
+  }
   function logClear(first) {
     const lb = $('logbox'); lb.innerHTML = '';
+    renderLogSummary(0, null, first || '等待首次出招');
     if (first) addLog('div', 'rnd', esc(first));
   }
   function addLog(tag, cls, html) {
@@ -1031,7 +1079,8 @@
     }).filter(Boolean);
     B.transcript.push({
       round: B.state.round, line: parts.join('  '),
-      human: parts[0], ai: parts.slice(1).join(' '), lines: lines
+      human: parts[0], ai: parts.slice(1).join(' '), lines: lines,
+      parts: parts.slice(), events: events.slice()
     });
   }
 
@@ -1078,9 +1127,11 @@
       X.endTurn(B.state);
       /* v1.5.21：观战回合也走同一套回合行 + 追加 transcript（此前只写"（观战）"且不落 transcript） */
       const parts = roundLineParts();
+      const roundEvents = B.state.events.slice(idx0);
       addLog('div', 'rnd', '第 ' + B.state.round + ' 回合（观战）：' + parts.join('  '));
-      logEvents(B.state.events.slice(idx0));
-      pushTranscript(parts, B.state.events.slice(idx0));
+      logEvents(roundEvents);
+      pushTranscript(parts, roundEvents);
+      renderLogSummary(B.state.round, parts, roundEvents);
       persistBattle();
     }
     B.evCursor = B.state.events.length;
@@ -1197,6 +1248,7 @@
         addLog('div', 'rnd', '第 ' + B.state.round + ' 回合：' + parts.join('  '));
         logEvents(events);
         pushTranscript(parts, events);
+        renderLogSummary(B.state.round, parts, events);
         persistBattle();
         B.evCursor = B.state.events.length;
         buildSkillGrid(); renderSide(0); renderSide(1);
@@ -1229,6 +1281,9 @@
       addLog('div', 'rnd', '第 ' + r.round + ' 回合：' + (r.line ? r.line : '你=【' + r.human + '】 电脑=【' + r.ai + '】'));
       for (const l of r.lines) addLog('div', 'ev', l);
     }
+    const last = B.transcript[B.transcript.length - 1];
+    renderLogSummary(last ? last.round : 0, last ? last.parts : null,
+      last ? last.events : '已悔一步：回到上一回合开始前');
   }
 
   function undo() {
@@ -1388,6 +1443,7 @@
         : '✖ ' + nm(e.pid) + ' 消耗 1 ' + (e.kind === 'elec' ? '电珠' : '爆珠')) };
       case 'beadExpire': return { cls: 'dim', html: '⏳ ' + nm(e.pid) + ' 的' + (e.pid === 0 ? (e.kind === 'elec' ? '电珠' : '爆珠') : '蓄能珠') + '过期（蓄能珠只供下一回合）' };
       case 'mineArm': return { cls: 'ev', html: '💣 ' + nm(e.pid) + ' 埋下地雷' };
+      case 'cannonCountered': return { cls: 'ev dim', html: '🚫 ' + nm(e.pid) + ' 的过载炮被 ' + nm(e.by) + ' 反制' };
       case 'guardSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 摆出【' + skillName(e.key) + '】架势' };
       case 'holoSet': return { cls: 'ev dim', html: '🛡 ' + nm(e.pid) + ' 用【全息屏障】护住 ' + nm(e.target) + '（本回合视为原型制御架势）' };
       case 'blocked': return { cls: 'ev dim', html: '🛡 ' + nm(e.to) + ' 的【' + (e.by || '架势') + '】挡下伤害' + (e.judge ? '（判定成功）' : '') };
@@ -1481,7 +1537,6 @@
 
   /* ---------- Tab ---------- */
   function showTab(which) {
-    document.body.classList.toggle('battle-tab', which === 'battle');
     $('tab-battle').classList.toggle('on', which === 'battle');
     if ($('tab-train')) $('tab-train').classList.toggle('on', which === 'train');
     $('tab-rules').classList.toggle('on', which === 'rules');
@@ -1924,7 +1979,7 @@
     $('tab-rules').onclick = function () { showTab('rules'); };
     applyAxes();   // 首屏同步一次（人数/血量 → 模式键）
     $('btn-lastlog').onclick = showLastBattle;
-    /* 日志抽屉：默认收起（84px），展开 42vh；按钮文案/aria 同步。 */
+    /* 日志框：留在原 grid 全宽行，收起显示摘要（动作条 + 自动换行事件），展开切换完整日志面板。 */
     const dock = $('logdock'), logBtn = $('btn-logdock'), logBox = $('logbox');
     if (logBtn && dock && logBox) {
       logBtn.onclick = function () {

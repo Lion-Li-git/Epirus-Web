@@ -8,9 +8,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
   font:14px/1.5 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}
-/* --appw 给固定日志抽屉做内宽对齐：2~5 人 1180，≥6 人 1500（#app.app-wide）。 */
 #app{--appw:1180px;max-width:var(--appw);margin:0 auto;padding:12px 16px 60px}
-body.battle-tab #app{padding-bottom:150px}
 header.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:6px 2px 10px}
 header.top h1{margin:0;font-size:22px;letter-spacing:1px}
 header.top h1 .jp{color:var(--accent)}
@@ -74,23 +72,32 @@ nav.tabs button.on{color:#fff;border-color:var(--accent);background:var(--panel2
   .skillgrid{scroll-margin-top:44px}
 }
 
-/* ===== 战斗日志：视口底部固定抽屉（2026-11-22）=====
- * 病：1440×900 / 1366×768 下旧的全宽 330px 日志底边在 995，最新一行被顶到折叠线以下。
- * 现在日志脱离 grid，钉在视口底部：收起 84px（含标题条约 110px），展开 42vh；
- * #app 的底部留白由 body.battle-tab 提供，保证页脚能滚到抽屉上方。 */
-.logdock{position:fixed;left:0;right:0;bottom:0;z-index:30;
-  background:rgba(11,14,28,.97);border-top:1px solid var(--line);
-  box-shadow:0 -10px 30px rgba(0,0,0,.45)}
-.logdock-bar{width:min(calc(100% - 32px),calc(var(--appw) - 32px));margin:0 auto;display:flex;align-items:center;gap:10px;
-  padding:5px 0 3px;font-size:12px;color:var(--dim)}
+/* ===== 战斗日志：留在原 grid 全宽行，收起显示摘要（事件自动换行）+ 展开切换完整日志（2026-11-24）===== */
+.logdock{grid-column:1/-1;background:rgba(11,14,28,.65);border:1px solid var(--line);border-radius:10px;
+  padding:8px 10px}
+.logdock-bar{display:flex;align-items:center;gap:10px;padding:0 0 6px;font-size:12px;color:var(--dim)}
 .logdock-title{color:var(--ink);font-weight:600;letter-spacing:.5px}
 .logdock-sub{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .logdock-btn{margin-left:auto;background:var(--panel2);color:var(--ink);border:1px solid var(--line);
   border-radius:6px;padding:2px 12px;font-size:12px;cursor:pointer;flex:0 0 auto}
 .logdock-btn:hover{border-color:var(--accent);color:var(--accent)}
-.logdock .logbox{width:min(calc(100% - 32px),calc(var(--appw) - 32px));margin:0 auto;height:84px;border:0;border-radius:0;
-  padding:2px 0 8px;background:transparent;overflow-y:auto;font-size:12.5px}
-.logdock.open .logbox{height:42vh}
+.logdock .logsummary{display:flex;flex-direction:column;gap:6px}
+.logsum-actions,.logsum-events{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.logsum-actions{padding-bottom:6px;border-bottom:1px solid rgba(44,53,96,.55)}
+.logsum-round,.logsum-event-label{flex:0 0 auto;background:#0b0e1c;color:var(--dim);font-size:11px;
+  padding:2px 6px;border-radius:5px}
+.logsum-round{color:var(--gold);font-weight:700}
+.logsum-act{flex:0 0 auto;color:#cdd6ff;font-size:12px;padding:2px 7px;border:1px solid var(--line);
+  border-radius:6px;background:var(--panel2);white-space:normal}
+.logsum-act.you{border-color:var(--green);color:var(--green)}
+.logsum-act.dim{color:var(--dim);background:transparent}
+.logsum-event{color:var(--gold);font-size:12px;padding:2px 7px;border-radius:5px;line-height:1.35;
+  background:rgba(255,209,102,.08);white-space:normal;word-break:break-word}
+.logdock .logbox{display:none;height:0;border:0;border-radius:0;padding:0;background:transparent;
+  overflow-y:auto;font-size:12.5px}
+.logdock.open .logsummary{display:none}
+.logdock.open .logbox{display:block;height:min(42vh,320px);border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;background:#0b0e1c}
 .logbox{background:#0b0e1c;border:1px solid var(--line);border-radius:9px;height:520px;
   overflow-y:auto;padding:8px 10px;font-size:12.5px}
 .logbox .rnd{color:var(--gold);font-weight:700;margin:8px 0 2px}

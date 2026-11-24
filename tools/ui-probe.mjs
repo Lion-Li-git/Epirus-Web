@@ -264,6 +264,37 @@ async function main() {
     imported && imp.actual.indexOf('本机') >= 0 && imp.text.indexOf('中途换档=') >= 0 && imp.text.indexOf('本机冠军包') >= 0,
     'actual=' + imp.actual.slice(0, 80));
 
+  console.log('\n⑥ 页内日志摘要与展开布局');
+  await evalJS('document.getElementById("btn-champ-reset").click()');
+  await sleep(200);
+  await evalJS('(function(){var p=document.getElementById("sel-players");p.value="8";p.dispatchEvent(new Event("change"));var d=document.getElementById("sel-diff");d.value="lv:regular";d.dispatchEvent(new Event("change"));document.getElementById("btn-newgame").click();return 1;})()');
+  for (let i = 0; i < 50 && !(await evalJS('window.EpirusUI.B.packsReady')); i++) await sleep(100);
+  await clickSkill('ジ');
+  await waitUnlock();
+  const collapsed = JSON.parse(await evalJS('(function(){var d=document.getElementById("logdock"),b=d.getBoundingClientRect(),sk=document.getElementById("skillgrid").getBoundingClientRect(),side=document.getElementById("side-1").getBoundingClientRect(),a=document.getElementById("logsum-actions"),e=document.getElementById("logsum-events");return JSON.stringify({h:b.height,pos:getComputedStyle(d).position,top:b.top,skillOverlap:Math.max(0,sk.bottom-b.top),sideOverlap:Math.max(0,side.bottom-b.top),summary:getComputedStyle(document.getElementById("logsummary")).display,full:getComputedStyle(document.getElementById("logbox")).display,chips:a.querySelectorAll(".logsum-act").length,wrapA:getComputedStyle(a).flexWrap,wrapE:getComputedStyle(e).flexWrap,scrollA:a.scrollWidth<=a.clientWidth+1,scrollE:e.scrollWidth<=e.clientWidth+1,actions:a.textContent,events:e.textContent,fullText:document.getElementById("logbox").textContent});})()'));
+  check('⑥-甲 收起态回到页面原位（非底部fixed），不遮挡战场且8人动作条完整自动换行',
+    collapsed.pos === 'static' && collapsed.skillOverlap === 0 && collapsed.sideOverlap === 0 &&
+      collapsed.summary !== 'none' && collapsed.full === 'none' && collapsed.chips === 8 &&
+      collapsed.wrapA === 'wrap' && collapsed.scrollA && collapsed.fullText.length > 0,
+    JSON.stringify({ h: collapsed.h, pos: collapsed.pos, overlap: [collapsed.skillOverlap, collapsed.sideOverlap], chips: collapsed.chips }));
+  check('⑥-乙 特殊事件条自动换行无横向滚动条，且不重复面板已展示的EP/伤害/死亡/普通架势',
+    collapsed.wrapE === 'wrap' && collapsed.scrollE && !/🔋|💥|☠|摆出【|完成蓄能|消耗 1 .*珠/.test(collapsed.events),
+    JSON.stringify({ wrap: collapsed.wrapE, noHScroll: collapsed.scrollE, events: collapsed.events.slice(0, 140) }));
+  await shot(join(OUT, 'uipro-6-log-summary-collapsed.png'));
+  await evalJS('document.getElementById("btn-logdock").click()');
+  await sleep(250);
+  const expanded = JSON.parse(await evalJS('(function(){var d=document.getElementById("logdock"),b=d.getBoundingClientRect(),sk=document.getElementById("skillgrid").getBoundingClientRect(),side=document.getElementById("side-1").getBoundingClientRect(),lb=document.getElementById("logbox");return JSON.stringify({pos:getComputedStyle(d).position,top:b.top,width:b.width,skillOverlap:Math.max(0,sk.bottom-b.top),sideOverlap:Math.max(0,side.bottom-b.top),summary:getComputedStyle(document.getElementById("logsummary")).display,full:getComputedStyle(lb).display,h:lb.clientHeight,atBottom:lb.scrollHeight-lb.scrollTop-lb.clientHeight<5});})()'));
+  check('⑥-丙 展开保持在原位整行面板，不覆盖技能栏且高度不超过320px',
+    expanded.pos === 'static' && expanded.skillOverlap === 0 && expanded.sideOverlap === 0 && expanded.summary === 'none' &&
+      expanded.full !== 'none' && expanded.h <= 320 && expanded.h >= 200 && expanded.atBottom,
+    JSON.stringify(expanded));
+  await shot(join(OUT, 'uipro-6-log-summary.png'));
+  await evalJS('document.getElementById("btn-logdock").click()');
+  await sleep(150);
+  check('⑥-丁 收起后保留原位摘要并隐藏完整日志', await evalJS('getComputedStyle(document.getElementById("logdock")).position') === 'static' &&
+    await evalJS('getComputedStyle(document.getElementById("logsummary")).display') !== 'none' &&
+    await evalJS('getComputedStyle(document.getElementById("logbox")).display') === 'none');
+
   console.log('\nJS errors: ' + (errors.length ? errors.join(' | ') : '(none)'));
   const fail = checks.filter(function (c) { return !c[1]; }).length;
   console.log('UI 探针：' + (checks.length - fail) + ' / ' + checks.length + (fail ? '  （有 FAIL ⇒ 需要修）' : '  （全过）'));
