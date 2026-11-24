@@ -16,4 +16,9 @@ const m = OUT.match(/通过 (\d+) \/ (\d+)/);
 console.log('spec: ' + (m ? m[0] : 'NO OUTPUT'));
 const fails = [...OUT.matchAll(/<li class="fail">✘ ([^<]+)/g)].map(function (x) { return x[1]; });
 if (fails.length) { console.log('FAILS (' + fails.length + '):'); for (const f of fails) console.log('  - ' + f); }
-process.exit(fails.length ? 1 : 0);
+const total = m ? Number(m[2]) : 0;
+const passed = m ? Number(m[1]) : 0;
+if (!m || total < 1 || passed !== total || fails.length) {
+  console.error('⛔ spec 未给出完整通过总结：passed=' + passed + ' total=' + total + ' fails=' + fails.length);
+  process.exit(1);
+}

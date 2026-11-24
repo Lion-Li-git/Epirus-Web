@@ -69,13 +69,15 @@
 | `server/knob-guard.mjs` | 暗键检测（knobs.mjs、gates、table-census） |
 | `server/shape-scorer.mjs` / `server/wall-cap.mjs` | 打分/墙帽（js/train/evo.js、np-parallel、gates） |
 
-### 已退役删除（2026-11-19，v7 线整体退役；页面训练场与本地服务已重写接入 2.0）
+### 当前训练入口
 
-已删除旧 v7 训练器（`train-3p.mjs`、`train-best.mjs`、`train-fast.mjs`、`train-selftest.mjs`）、旧 v7 `server/*`（`train-worker` / `paralleltrain` / `train-env` / `econ-env` / `fight-env`）、`proto2/{obs2-from-v7,grow-modebias-nmode,chain-supfit,supfit-full}.mjs` 与 `tools/probe-econ-reset-audit.mjs`。原导入控件及 2.0「🧪 训练场」tab（`pg` / `supfit` 双模式 + SSE 进度与本机多人槽回写）现已在 `index.html` 与 `js/ui/ui.js` 就位。
+- 日常训练：`pg-train` / `supfit-gd`，唯一合法产物形状为 `v:92 / S1o`。
+- 历史逐位复刻：`training/train-3p.mjs` 仅由 `training/train.mjs --mode=v7 --era=<commit>` 委托调用。
+- 页面「🧪 训练场」：`pg` / `supfit` 双模式，带 SSE 进度与多人槽回写。
 
-### 归档候选清单（下一批批量处理，本班不动）
+### 已隔离的一次性探针
 
-`proto2/` 里 10 月 PREREG 波的一次性研究探针（battery/matrix2/rankfit/rank-signal/rank-inter/breadth2/capacity/behav-shift/composite-score/def-drain-trace/def-gate/dimgate/fit2/fitness-noise/head-health/longrange-offer/margin-n/mixprobe/obs2.mjs/offer-trace/pool-check/preflight2/project-blocks/ref-baseline/chain-price/chain-clone/convert-obs3c 等）——零 import 但属 CLI 仪器，**删除前要逐个对谱系**（docs/research 在册读数可能引用）。删法照 11-14 白班批先例（a30f1098：白名单+读取代码同删零残留）。
+2026-11-24 将 22 个零代码引用的一次性研究探针整体移到仓外隔离目录 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-24\training\proto2\zero-ref-probes\`，原相对路径与 SHA 清单保存在该目录的 `manifest.tsv`。历史研究读数仍引用原命令；需要恢复时按清单原路放回。
 
 ## 三、纪律：禁止训老网络（2026-11-19 用户裁定）
 
@@ -97,9 +99,10 @@
 
 ## 五、门禁与 CI
 
-- 产品门禁每 push 跑全量 np + spec + 旋钮册 `--check`；训练侧 np 部件的**分家（paths 过滤 + 手动档）是下一批**（11-13 用户裁定：训练的门禁只随训练开）。
-- 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**重生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40；当前全集 40 / 在用 19 / 暗键 21）。
-- 训练侧自查：统一执行 `node training/train.mjs --selftest`（涵盖 `selftest2` + `selftest3` + `browser-parity`）。
+- 产品 CI 跑 np 矩阵、spec 与浏览器三档；训练侧旋钮册和训练栈自检走独立 `.github/workflows/training.yml`，只在训练面变更时触发。
+- 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40）。
+- 梯度训练启动门：`pg-train` / `supfit-gd` 对实际装载的上游参数自动执行 `selftest3`；红则不开训。冻结推理包的产品验收不消费这门。
+- 训练侧手动自查：`node training/train.mjs --selftest`（涵盖 `selftest2` + `selftest3` + `browser-parity`）。
 
 ## 六、常用验尸（30 秒判断产物血统）
 

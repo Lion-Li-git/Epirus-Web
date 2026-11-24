@@ -16,6 +16,7 @@ import { widOf } from '../../champion-map/pack-id.mjs';   // 起点身份入档�
 import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogKeyP, dLogPi, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
+import { runSelftest3 } from './selftest3.mjs';
 import { pickChain, pickKey } from './chain-lib.mjs';
 import { scanChargeRounds, GUARD_FAMILY } from './skill-mastery.mjs';   // 预示式代理 + 防席名单的单一来源（千问 §二十三/11-01）
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   // 对手表/桌形的单一来源（见该文件头注）
@@ -95,6 +96,8 @@ const up = (() => {
 if (!up || up.length !== P.paramCount()) { console.error('⛔ 上游读不出/参数数不符：' + UP + '（' + (up ? up.length : 'null') + ' vs ' + P.paramCount() + '）'); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
+const preflight = runSelftest3(W, P, up, UP);
+if (preflight) { console.error('⛔ 上游梯度预检未过 ⇒ supfit-gd 不启动（exit ' + preflight + '）'); process.exit(preflight); }
 /* `--arenaPool`（千问 · 11-01 收敛到 `roster-lib` 单源）：`product` = 产品 7 脚本；`names:a,b,…` = 摆已登记的
  *   任意对手（含两个训练池都没在用的 specialist）；空 = 研究卷 mild 分层原路。搬了池就**不分层**（产品卷同形）。 */
 const A2_POOL_ARG = String(arg('arenaPool', ''));

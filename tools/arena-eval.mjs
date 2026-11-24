@@ -301,12 +301,14 @@ if (isMainThread) {
     const CHDR = ['at', 'id', 'pack', 'packSha256_16', 'seedBase', 'dose', 'leagueTable', 'shortR', 'shortX4'];
     const row = [new Date().toISOString(), id, packPath.replace(/\\/g, '/'), packSha, String(SEED), DOSE,
       LEAGUE_FILE.replace(/\\/g, '/').split('/').slice(-2).join('/'), String(r.short.r.toFixed(6)), String(r.short.x4.toFixed(6))].join('\t');
-    const prior = existsSync(CONDS) ? readFileSync(CONDS, 'utf8') : '';
-    writeFileSync(CONDS, (prior.endsWith('\n') || prior === '' ? prior : prior + '\n') + (prior.includes('at\tid\tpack') ? '' : CHDR.join('\t') + '\n') + row + '\n', 'utf8');
+    if (!existsSync(CONDS)) {
+      try { writeFileSync(CONDS, CHDR.join('\t') + '\n', { encoding: 'utf8', flag: 'wx' }); }
+      catch (e) { if (e.code !== 'EEXIST') throw e; }
+    }
+    appendFileSync(CONDS, row + '\n', 'utf8');
     const back = readFileSync(CONDS, 'utf8').trim().split('\n');
-    const last = back[back.length - 1].split('\t');
-    if (last.length !== CHDR.length || last[1] !== id || last[4] !== String(SEED) || last[3] !== packSha) {
-      console.error('⛔ 条件留痕读回对不上（id=' + id + ' 读回 ' + last[1] + '/' + last[4] + '）⇒ exit 3');
+    if (!back.includes(row)) {
+      console.error('⛔ 条件留痕读回找不到本行（id=' + id + ' seedBase=' + SEED + ' sha=' + packSha + '）⇒ exit 3');
       process.exit(3);
     }
     /* 保持 --pack stdout 末行始终是纯 JSON（measure-point.mjs:163 等调用方走 stdout.split('\n').pop() 解析），

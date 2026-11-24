@@ -32,16 +32,9 @@
   const CAT_NM = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
   /* v1.5.18：删掉 `fast` / `lucky` 两个标签 —— 它们对应的模式已从 `MODES` 里删除（用户裁定）。 */
   const MODE_NM = { standard: '标准(2人·3血)', multi: '多人(3血)', multi4: '4 血', long: '长程(5血)' };
-  /* ===== v1.6.5（用户 10-03 夜裁定「把 2 人合并进多人，变成选人数 × 3血/5血正交，4 血也可以上，实现连续性」）=====
-   * 原来页面有一根「模式」下拉，它其实**同时**决定了人数与血量（standard=2人3血 / multi=多人3血 / long=多人5血），
-   * 于是「2 人 · 5 血」「任意人数 · 4 血」这类组合在页面上点不出来。现在两根轴各自一个下拉（`#sel-players` / `#sel-hp`），
-   * **模式键由这两根轴查出来** —— 下面这张表是唯一的映射来源：
-   *   · 门 D28（本版重写）钉"这张表 + 2 人 3 血那一格的像必须恰好等于 `R.MODES` 的全部 key"：
-   *     漏一个 = 有模式没有入口（D28 当年就是这么抓到 `fast`/`lucky` 的），多一个 = 幽灵选项。
-   *   · 血量 4 是本版新增的一格规则（`R.MODES.multi4`），其余字段照 `multi` ⇒ "4 血 = 3 血那套 + 多一格血"，
-   *     不是第四套规则。
-   * ⚠ `standard` 只在 **2 人 · 3 血** 那一格命中：它是 v1.0.0 功能冻结的那套（含"收缩起点 100 > 回合上限 60 ⇒ 一局里永不触发"
-   *   这条历史形状）。2 人 + 4/5 血走 multi4/long，那里收缩/回合上限是真的会起作用 —— 这是**规则差异**，不是 bug。 */
+  /* 人数与血量是两根独立轴，模式键由 #sel-players / #sel-hp 查表得到。
+   * 2 人 · 3 血命中 standard；其余组合按血量命中 multi / multi4 / long。
+   * D28 验证这张表与 2 人 3 血的像恰好覆盖 R.MODES 的全部键。 */
   const HP_MODE = { 3: 'multi', 4: 'multi4', 5: 'long' };
   const HP_MODE_2P = 'standard';
   function modeFor(hp, players) {
@@ -149,11 +142,9 @@
    *   ③ **回退 = 把 `evo.js` 里那个常数改成 0**（一行）。 */
 
   function newGame() {
-    applyAxes();   // v1.6.5：人数 × 血量 → 模式键（旧版这根叫 `syncModeOptions`，它按人数把"标准"置灰）
+    applyAxes();   // 人数 × 血量 → 模式键
     const n = B.players || 2;
-    /* v1.6.6：这根旗标**只管版式**（2 人 = 左右两块面板；3~8 人 = 右栏堆叠），不再决定"走哪条 AI 路"
-     * —— 以前它还兼管"2 人用 `doPick`/`chooseAI`、多人用 `doPickMulti`/`chooseAIMulti`"，那两条已合成一条。
-     * ⇒ 读代码的人注意：`B.multi === false` **不表示**"这局用的是 v1.0 那套 AI"，只表示座位是 2 个。 */
+    /* 这根旗标只管版式：2 人用左右两块面板，3~8 人用右栏堆叠；AI 决策共用同一条路径。 */
     B.multi = n > 2;
     if (typeof syncDiffOptions === 'function') syncDiffOptions();
     /* 一局一枚种子：判定（八卦阵/金刚盾/爆头）、池的逐席抽签盐、AI 的 ε 探索全部从它派生。
@@ -174,7 +165,7 @@
     closeModal();
     buildSkillGrid();
     renderSide(0); renderSide(1);
-    /* v1.6.5：这行不再分"多人/标准"两种写法 —— 人数与血量是两根明写的轴，模式名只是它们的查表结果。 */
+    /* 人数与血量是两根独立轴，模式名由查表得到。 */
     /* §E667：开局这一格算**一次**，页面首行与导出的头部读同一份（抄两遍 = 两份实现会分叉） */
     const oppInfo = aiInfo();
     B.oppInfo = oppInfo.source;
@@ -308,7 +299,7 @@
   function buildSkillGrid() {
     const grid = $('skillgrid');
     const st = B.state;
-    // 不可用（ジ/珠子不足或条件不满足）的技能直接置灰不可点——不再"能点但显示无效"
+    // 不可用（ジ/珠子不足或条件不满足）的技能直接置灰
     const legalMap = {};
     if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
     grid.innerHTML = '';
@@ -323,8 +314,7 @@
       const cd = (st.p[0].cooldown[s.key] || 0);
       const multiOnly = R.MULTI_ONLY.indexOf(s.key) >= 0 && !S.canUseSkillInMode(st, s.key);
       /* v1.8.45（11-06 夜）：multiOnly 的两种成因要分开说——2 人局是"多人模式不开放"，
-       * 多人残局（存活 ≤2，state.js canUseSkillInMode）是"残局人数不足"。旧文案统一写"多人模式"，
-       * 玩家在 3 人局残局里会误读成"这局不是多人"。 */
+       * 多人残局（存活 ≤2，state.js canUseSkillInMode）显示"残局≤2人"，与开局多人模式区分。 */
       let aliveCount = 0;
       for (let ai = 0; ai < st.p.length; ai++) if (st.p[ai].hp > 0) aliveCount++;
       const multiOnlyResidual = multiOnly && st.p.length > 2 && aliveCount <= 2;
@@ -336,11 +326,7 @@
       const ct = document.createElement('span'); ct.className = 'ct';
       ct.textContent = multiOnly ? (multiOnlyResidual ? '残局≤2人' : '多人模式') : (cd > 0 ? ('禁用剩' + cd + '回合') : costLabel(s));
       btn.appendChild(nm); btn.appendChild(ct);
-      /* v1.5.173（用户实测报"摄魂 bug 没解决"追到的真凶）：**卡面文案与引擎门槛不同源**。
-       * `SK.DRAIN` 的 `desc` 把窗口写死成"HP 小于等于 1"（R25 原口径），而长程按 `state.mode.drainHpMax=3` 放行（`RULES-NP.md` N24）
-       * ⇒ HP 2 上格子按规则**应该亮**（也确实亮），提示却说 1 ⇒ 玩家读出来就是"血回上去了摄魂还能用"。
-       * **引擎没错（实测 HP4/5 一律拒），错在那句话。**组装放在 `js/ui/skill-tip.js`（纯函数、单一来源，
-       * 且 `rules.js` 是指纹五件套之一、不能为一个显示字符串换代），这样门 D131 能 headless 直接跑它。 */
+      /* 卡面数字从 state.mode 取真值；rules.js 保留静态描述，显示组装集中在 skill-tip.js。 */
       const loadingPacks = (B.packsReady === false);
       btn.title = '【' + CAT_NM[s.cat] + ' · 优先级' + (s.pri || 3) + '】手势：' + (s.gesture || '—') + '\n' + Tip.of(R, st, s);
       btn.disabled = multiOnly || !modeOk || cd > 0 || st.over || unaffordable || loadingPacks;
@@ -554,27 +540,20 @@
    * ⚠ 组成是**纯派生**（`compose(该档成员, n-1, rng(state.slotSalt))`）⇒ 同一局不论问第几席、第几回合答案都同，
    *   所以这里**故意不设缓存**（有缓存就有"缓存与局不同步"这一类错）。`cloneState` 走 JSON 往返会带上 slotSalt。
    * ⚠ 抽签实现不在本文件重写 —— 走 `js/pool-draw.js` 那一份（门 `D234` 与量具 `tools/probe-pool.mjs` 用的是同一份）。 */
-  /** 降级分三种原因，**必须分开说**（浏览器实机跑出来的第一条就是这句：默认档"普通"没配成员时，
-   *  旧文案会写"bundle 缺失或该档池空"，而 bundle 其实加载得好好的 ⇒ 把"还没配"说成了"坏了"）。 */
+  /** 池不可用时区分初始化、加载与名单状态，并使用内置单包。 */
   function poolOffReasonOf(k, tier, two) {
     const slot = POOLS[k], S = slot.st;
     loadPoolOf(k);
     const back = two ? '退回单包（那一枚 2P 冠军）' : aiSeatWord() + '同一枚（内置槽）';
     if (S.status === 'no-bundle') return slot.name + ' bundle 未加载 ⇒ ' + back;
-    /* §E621：走到这里说明"这一次还没拿到全局"（bundle 的 defer 脚本还没执行），**不是**坏了；
-     *   单独一句是为了下次有人读到它不会又去查 bundle 在不在（我这晚就是这么绕了一圈的）。 */
-    if (S.status === 'not-yet') return slot.name + ' bundle 还没执行到（脚本顺序，不是故障）⇒ ' + back;
-    if (!S.members || !S.members.length) return slot.name + ' bundle 里一枚都解不开 ⇒ ' + back;
+    if (S.status === 'not-yet') return slot.name + ' bundle 初始化中 ⇒ ' + back;
+    if (!S.members || !S.members.length) return slot.name + ' bundle 里没有可解出的成员 ⇒ ' + back;
     const n = S.members.filter(function (m) { return m.tier === (tier && tier.pool); }).length;
-    if (!n) return '该难度档（' + (tier && tier.pool) + '）还没配' + slot.name + '成员 ⇒ ' + back + '，**不是故障**';
+    if (!n) return '该难度档（' + (tier && tier.pool) + '）暂无' + slot.name + '成员 ⇒ ' + back;
     return null;
   }
   function poolOffReason(tier, two) { return poolOffReasonOf('p3', tier, two); }
-  /* §E599（10-12）：池层曾按桌数**两份**（多人 3P 与 2P 各一份），逻辑只写一遍。
-   *   **2026-11-13 用户裁定「2p 直接切到统一池」：2P 槽退役，两桌读同一份池**（`EPIRUS_CHAMPION_POOL`）——
-   *   §E286"3P 包在 1v1 是分布外"的旧顾虑被 2.0 包的 2P 能力实测取代（2P 桌从未同步主池的账也一并清掉）；
-   *   旧 2P 原生包（`champion-map/pool-members-2p.tsv` 那批 v7）**不再上页面桌**，转任 2P 训练对手名册
-   *   （`EPIRUS_POOL_OPPS_TABLE` 指它）。这一段历史裁定（2P 每局只要一个对手、种类 <5 的不要）只约束过旧池，随槽一起退。 */
+  /* 2P 与多人桌共用 EPIRUS_CHAMPION_POOL；pool-members-2p.tsv 作为 2P 训练对手名册。 */
   const POOLS = {
     p3: { g: 'EPIRUS_CHAMPION_POOL', st: { members: null, params: {}, bad: [], status: 'init' }, name: '池' },
   };
@@ -1899,7 +1878,7 @@
         const gen = packGenOf(ex.pack);
         alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n包代：' + (gen === '2.0'
           ? '2.0 代（v:' + ex.pack.v + '）——2~8 人桌全可用'
-          : 'v7 / 1.8 代（v:' + ex.pack.v + '）——6/7/8 人桌已锁定（该代包只对 ≤5 人桌验证过；连 5 禁用是另一个裁定，改 V7_MAX_PLAYERS）') +
+          : 'v7 / 1.8 代（v:' + ex.pack.v + '）——适用于 2–5 人桌') +
           '\n对局「困难」档即时生效。\n想还原内置冠军：点「用内置冠军」。');
         return;
       }
@@ -1926,11 +1905,11 @@
     const want = info.want != null ? ('应为 ' + info.want) : '';
     const got = info.got != null ? ('实际 ' + info.got + '，') : '';
     switch (reason) {
-      case 'version': return '版本不符（' + got + want + '），可能是旧版策略网络训练的冠军';
-      case 'length': return '权重长度不符（' + got + want + '），旧版 1177≠新版 1633，无法复用';
+      case 'version': return '版本不符（' + got + want + '），请使用当前页面支持的冠军包';
+      case 'length': return '权重长度不符（' + got + want + '），请重新导出冠军包';
       case 'feature': return '状态特征维度不符（' + got + want + '）';
       case 'hidden': return '隐藏层维度不符（' + got + want + '）';
-      case 'no-version': return '缺少版本号，无法确认是否兼容';
+      case 'no-version': return '缺少版本号，请补全后重试';
       case 'parse-error': return 'JSON 解析失败';
       /* v1.8.45（11-06 夜）：补齐 policy2（2.0 代 3 容器）与训练侧的失败原因——原来统一落到
        * "不是有效的冠军 JSON"，与上面四条的详细中文提示不对齐。 */
@@ -1941,9 +1920,9 @@
       case 'layout': return '网络布局不符（' + got + want + '）';
       case 'arch': return '架构档不符（' + got + want + '）';
       case 'empty': return '文件为空或没有可解出的权重';
-      case 'shell': return '外壳不认（既不是纯 JSON 也不是 window.EPIRUS_CHAMPION* 赋值）';
-      case 'weights': return '权重数组含非数值/NaN（第 ' + (info.got != null ? info.got : '?') + ' 个）—— 包已损坏或不是训练产物';
-      default: return '不是有效的冠军 JSON（' + (reason || 'unknown') + '）';
+      case 'shell': return '文件格式不支持，请使用纯 JSON 或 window.EPIRUS_CHAMPION* 赋值包装';
+      case 'weights': return '权重数组含非数值/NaN（第 ' + (info.got != null ? info.got : '?') + ' 个），请重新导出';
+      default: return '无法识别为冠军 JSON（' + (reason || 'unknown') + '）';
     }
   }
   function resetChamp() {
@@ -1960,9 +1939,7 @@
     ]);
   }
 
-  /* v1.6.5：人数 × 血量 → 模式键（`modeFor` 那张表是唯一来源）。
-   * 旧版这根叫 `syncModeOptions`，方向是反的：先选模式、再把"与人数不符"的选项置灰 ⇒
-   * 「2 人 · 5 血」「任意人数 · 4 血」在界面上根本不存在。现在两根下拉都可点，模式只是查表结果。 */
+  /* 人数 × 血量 → 模式键；modeFor 是唯一映射来源。 */
   function applyAxes() {
     const pl = $('sel-players'), hp = $('sel-hp');
     if (pl) B.players = parseInt(pl.value, 10) || 2;
@@ -2071,10 +2048,10 @@
   bind();
   newGame();
   renderChampState();
-  // P1：若加载时发现并清除了“旧架构/不兼容”的**本地**冠军，提示一次（内置冠军不兼容属于版本升级正常现象，不弹窗）
+  // 本地冠军未通过兼容检查时提示一次；内置冠军由页面直接管理。
   const why0 = Champ.store.lastInvalidReason;
   if (why0 && why0.indexOf('builtin-') !== 0) {
     const why = champReasonText(why0);
-    if (why) setTimeout(function () { alert('检测到旧版/不兼容的本地冠军，已自动清除：' + why); }, 300);
+    if (why) setTimeout(function () { alert('本地冠军包未通过兼容检查，已清除：' + why); }, 300);
   }
 })();

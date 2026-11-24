@@ -42,9 +42,9 @@ export const LAYERS = {
 export const LINES = [
   { key: 'seat', old: '座', layer: 'L0', dim: '公平（不偏心座位）',
     name: '坐哪个位置都一样能打',
-    rule: '5 席同一枚包时，各席夺冠率的极差 < 30pt',
+    rule: '5 席同一枚包时，各席夺冠率的极差 < 21pt（n=100 零分布 p99）',
     src: 'seatSymmetry · 5 席镜像 · n=100 · ε=0',
-    get: r => r.raw.seat, pass: v => v != null && v < 30 },
+    get: r => r.raw.seat, pass: v => v != null && v < 21 },
 
   { key: 'legal', old: '（新增）', layer: 'L0', dim: '合法性（交出的动作真被引擎执行）',
     name: '交出去的动作没有被静默改写',
@@ -122,9 +122,9 @@ export const LINES = [
     get: r => (r.raw.expiredPerGame == null ? null : (r.raw.gained === 0 ? 'NA' : r.raw.expiredPerGame)),
     pass: v => v === 'NA' ? true : (v == null ? null : v <= 5) },
 
-  { key: 'strong', old: '强', layer: 'L1', dim: '强度（抽到它赢不赢得下来）',
+  { key: 'strong', old: '强', layer: 'L3', dim: '强度（抽到它赢不赢得了）',
     name: '玩家抽到它时赢不赢得了',
-    rule: 'A 考卷 1st ≥ 48.2%（= soft 带中位）—— **初期只当诊断**：用户 10-28「强度要求在初期肯定是没办法完成的，考卷本身可能也需要修改」**待考卷重做后再进阻断**',
+    rule: 'A 考卷 1st ≥ 48.2%（= soft 带中位）—— **只记录，不阻断**；考卷重做并重新标定后再决定是否升级',
     src: 'eval-5p A 考卷 · 5 人 3 血 · 4 席互不相同脚本 · n=120（池上极差只有 17.8pt，而单枚 95% 区间 ±4.5pt ⇒ 量程约等于 4 个台阶）',
     get: r => r.strength, pass: v => v != null && v >= 48.2 },
 
@@ -258,10 +258,10 @@ function selftest() {
   checks.push(['送盾（旧硬门槛）已登记为只记录', (LINES.find(l => l.key === 'holo') || {}).layer === 'L3']);
   checks.push(['珠这条按绝对颗数判（规则里不许出现「浪费率」）', /过期 ≤ \d+ 颗\/局/.test(LINES.find(l => l.key === 'bead').rule)]);
   checks.push(['防御这条把两个分母都写明（白防要 ≥20 手才判）', /≥\s?20 手/.test(LINES.find(l => l.key === 'stance').rule)]);
-  checks.push(['强度这条挂着「初期只当诊断」', /初期只当诊断/.test(LINES.find(l => l.key === 'strong').rule)]);
+  checks.push(['强度这条确实只记录、不阻断', LINES.find(l => l.key === 'strong').layer === 'L3' && /只记录，不阻断/.test(LINES.find(l => l.key === 'strong').rule)]);
   const gate = LINES.filter(l => l.layer === 'L0' || l.layer === 'L1').map(l => l.key).sort().join(',');
-  const want = ['seat', 'legal', 'dmg', 'draw', 'stance', 'fieldA', 'broad', 'wall', 'fieldB', 'g4', 'g5', 'bead', 'strong'].sort().join(',');
-  checks.push(['逐枚闸门 = 原 12 条（珠保留、架并入白防、珍与送盾出局）+ 新增 1 条合法性', gate === want]);
+  const want = ['seat', 'legal', 'dmg', 'draw', 'stance', 'fieldA', 'broad', 'wall', 'fieldB', 'g4', 'g5', 'bead'].sort().join(',');
+  checks.push(['逐枚闸门 = 原 12 条（珠保留、架并入白防、珍/送盾/强度出局）+ 新增 1 条合法性', gate === want]);
   checks.push(['新增那条挂了「未接线就读不出」（na 字段在）', !!LINES.find(l => l.key === 'legal').na]);
   checks.push(['池级配额覆盖用户点名的全部卡（含 10-28 追加的小雷/原型制御/转移伤害/地雷/避雷针）',
     ['ring', 'bigT', 'railgun', 'laserEye', 'cannon', 'curse', 'firestorm', 'miniT', 'proto', 'transfer', 'mine', 'rod'].every(k => POOL_QUOTAS.some(q => q.key === k))]);
@@ -309,6 +309,7 @@ async function poolReport(list, games, seats) {
   if (!live) { console.error('⛔ ' + list.length + ' 枚全读不出权重 ⇒ 拒绝判语'); process.exit(2); }
   const tab = coverageTable(rows, R);
   const ids = list.map(r => r.id);
+  let bad = 0, judged = 0;
   console.log('# 池级覆盖率 · n=' + rows.filter(r => !r.unreadable).length + ' 枚 · 每格 ' + games + ' 局 × ' + (seats || 5) + ' 席 · 两把口径并排（ε=0 = 策略想用什么 ‖ ε=0.2 = 玩家抽到看得见什么）');
   const nameOf = {}; for (const s of R.skills) nameOf[s.key] = s.name;
   for (const q of POOL_QUOTAS) {
@@ -317,6 +318,7 @@ async function poolReport(list, games, seats) {
     const need = eff === 0 ? null : Math.ceil(eff * rows.filter(r => !r.unreadable).length);
     const okG = need == null ? '—' : (c.greedy >= need ? '✅' : '❌');
     const okP = need == null ? '—' : (c.product >= need ? '✅' : '❌');
+    if (need != null) { judged++; if (c.greedy < need || c.product < need) bad++; }
     console.log('  ' + (nameOf[q.key] || q.name).padEnd(9, ' ') + ' 配额 '
       + (need == null ? '不设' : need + ' 枚以上' + (q.perSeats ? '(' + (seats || 5) + '人档)' : '')).padEnd(9, ' ')
       + ' ‖ ε=0 ' + String(c.greedy).padStart(2) + '/' + c.n + ' ' + okG
@@ -327,7 +329,9 @@ async function poolReport(list, games, seats) {
   console.log('\n  其余卡（本轮未设配额，只列覆盖率）：');
   for (const k of unmetered) console.log('    ' + (nameOf[k] || k).padEnd(9, ' ') + ' ε=0 ' + String(tab[k].greedy).padStart(2) + '/' + tab[k].n
     + ' ‖ 产品档 ' + String(tab[k].product).padStart(2) + '/' + tab[k].n);
-  console.log('\n  耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + ' 秒');
+  console.log('\n  池级配额判定：' + (judged - bad) + '/' + judged + ' 项通过');
+  console.log('  耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + ' 秒');
+  if (bad) process.exit(1);
 }
 
 const A = process.argv.slice(2);

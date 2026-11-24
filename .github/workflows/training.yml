@@ -1,0 +1,29 @@
+name: training
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'training/**'
+      - 'tools/pack-fuse.mjs'
+      - '.github/workflows/training.yml'
+  pull_request:
+    paths:
+      - 'training/**'
+      - 'tools/pack-fuse.mjs'
+      - '.github/workflows/training.yml'
+  workflow_dispatch:
+
+jobs:
+  training:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: 旋钮册一致性
+        run: node training/knobs.mjs --check
+      - name: 训练栈与浏览器镜像自查
+        run: node training/train.mjs --selftest --pack=docs/artifacts/obs6-coldstart/EQ-S4-E9.bak

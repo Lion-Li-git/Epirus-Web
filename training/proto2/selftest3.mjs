@@ -1,29 +1,20 @@
 #!/usr/bin/env node
-/* selftest3.mjs — pg-lib 的牙（ZCode · 10-31，PREREG-2026-10-31-PG-TRAIN §三）
+/* selftest3.mjs — pg/supfit 梯度训练启动预检（PREREG-2026-10-31-PG-TRAIN §三）
  *   A probs 复刻：pg-lib.tailOf 与 forwardObs3.probs 逐位同（随机 50 决策点）
  *   B 前向重放：tapeForward 的 logits 与 forwardObs3 的 logits 逐位同（同上分母）
- *   C 数值梯度：解析 dlogπ vs 中心差分（随机 120 参数 × 随机 3 决策点；相对误差 <1e-3）
+ *   C 数值梯度：解析 dlogπ vs 中心差分，并要求足够多非噪声格
  *   D 部署尾一致：policyChooserN 走的真实栈与 tailOf 在同一 logits 上同 argmax/probs（抽样对账）
- * 任何一条红 ⇒ pg 臂不许开（PREREG §三：先绿后跑）。
+ *   E 浏览器镜像：policy2.js 与 arch2 同位同值
+ *   F 键级导数：supfit-gd 的监督目标数值对账
+ * 任何一条红 ⇒ 本次梯度训练不许开；冻结推理包的产品验收不消费本门。
  */
+import { pathToFileURL } from 'node:url';
 import { sandbox, loadChamp } from '../../tools/audit-lib.mjs';
 import { install, readPack2, packInstallCfg } from './arch2.mjs';
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP } from './pg-lib.mjs';
 
-/* ⚑ 包参数**必填**（10-31 晚改）：默认曾指向 `scratch/arms/OB3CH-s7.bak`，代 2（v:91）退役后裸跑必撞代闸。
- *   scratch/ 不入库 ⇒ 没有可进 git 的默认 gen-3 包；与其埋一个会过期的默认值，不如响亮要参数。
- *   本机现成代 3 包：`scratch/arms/gd3b-ks-sb.bak`（电磁炮桶专家，电磁炮线产物都在它下游）。 */
-const PACK = process.argv[2];
-if (!PACK) {
-  console.error('⛔ selftest3 需要 --包路径（代 3 容器）。例：node tools/proto2/selftest3.mjs scratch/arms/gd3b-ks-sb.bak（scratch/ 不入库，盘上没有就先跑一发 supfit-gd/pg-train 冒烟产出）。');
-  process.exit(2);
-}
-const W = sandbox();
-const P = W.EpirusPolicy, T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, R = W.EpirusRules;
-loadChamp(W, 'js/bundled-champion-3p.js');
-const raw = readPack2(PACK);
-install(W, packInstallCfg(raw, {}).cfg);
-const params = Float64Array.from(P.unpack(raw, true));
+export function runSelftest3(W, P, params, label) {
+const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay;
 const ly = layoutOf(P);
 let seed = 20261031;
 const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
@@ -61,8 +52,8 @@ function decisionPoints(k) {
 }
 
 const pts = decisionPoints(50);
-if (pts.length < 20) { console.error('⛔ 决策点不够：' + pts.length); process.exit(2); }
-console.log('# selftest3 ‖ 包 ' + PACK.replace(/^.*[\\/]/, '') + ' ‖ 参数 ' + params.length + ' ‖ 决策点 ' + pts.length);
+if (pts.length < 20) { console.error('⛔ 决策点不够：' + pts.length); return 2; }
+console.log('# selftest3 ‖ ' + String(label).replace(/^.*[\\/]/, '') + ' ‖ 参数 ' + params.length + ' ‖ 决策点 ' + pts.length);
 
 /* —— 腿 A/B：probs 复刻 + 前向重放 —— */
 let badA = 0, badB = 0;
@@ -227,8 +218,24 @@ let fBad = 0, fN = 0;
 console.log('腿F 键级导数:   ' + (fBad === 0 ? '✔ ' + fN + ' 对账' : '✘ ' + fBad));
 
 const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0;
-console.log(ok ? '# selftest3 全绿 ✔（pg 臂允许开）' : '# selftest3 红 ⇒ pg 臂不许开');
-if (!ok) process.exit(8);
+console.log(ok ? '# selftest3 全绿 ✔（本次梯度训练允许开）' : '# selftest3 红 ⇒ 本次梯度训练不许开');
+return ok ? 0 : 8;
+}
 
-function main() {}
-if (process.argv[1] && import.meta.url === (await import('node:url')).pathToFileURL(process.argv[1]).href) main();
+function main() {
+  const PACK = process.argv[2];
+  if (!PACK) {
+    console.error('⛔ selftest3 需要包路径。例：node training/proto2/selftest3.mjs docs/artifacts/obs6-coldstart/EQ-S4-E9.bak');
+    process.exit(2);
+  }
+  const W = sandbox();
+  const P = W.EpirusPolicy;
+  loadChamp(W, 'js/bundled-champion-3p.js');
+  const raw = readPack2(PACK);
+  install(W, packInstallCfg(raw, {}).cfg);
+  const params = Float64Array.from(P.unpack(raw, true));
+  const status = runSelftest3(W, P, params, PACK);
+  if (status) process.exit(status);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

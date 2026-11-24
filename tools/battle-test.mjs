@@ -1,26 +1,6 @@
-/* Epirus 浏览器对战测试（v1.5.8）
- *
- * 为什么要有它：`smoke.mjs` 只验证"页面能开、按钮能点"，而**对战质量**（冠军在真浏览器里
- * 到底怎么打、UI 有没有正确跟着走、跑到终局会不会出 JS 错误）一直没人自动看过。
- * 千问体检与我的实验都在 **Node 沙箱**里量游戏；页面是另一条链路（UI 事件、渲染、localStorage
- * 缓存、`?v=` 戳），必须也真的跑一遍。
- *
- * 做法（不改页面代码）：
- *   1. 多人 5 人 + 难度选「冠军（最强）」⇒ AI 座用的就是 `js/bundled-champion-3p.js` 里的线上冠军；
- *   2. P0（人类座）一直出ジ"摆烂"，被淘汰后页面会走 `autoRunRest()`（观战）把剩下的 AI 自己打完；
- *   3. 全程收集 JS 错误、截图、日志文本，并对 UI 做不变量断言。
- *
- * 断言里最有价值的一条：**日志里必须出现「聚能环」**。
- * 线上冠军 long-33 的出手分布是 聚能环 42% / ジ 30% / 激光剑 13%（`eval-5p` 实测），
- * 而旧冠军（v1.3.58）根本不出环 ⇒ 这条能证明**页面真的在用新换上去的那个包**，
- * 而不是被 localStorage 或 `?v=` 缓存留在旧冠军上（那正是换冠军最容易静默失败的地方）。
- *
+/* Epirus 浏览器对战测试：在真实 Chrome 中运行 5 人冠军档对局。
+ * 人类席主动出招，验证 UI 状态、冠军装配、终局推进与 JS 错误，并保存截图。
  * 用法：node tools/battle-test.mjs [chrome路径] [端口] [--players=5] [--max-ms=180000] [--out=docs/artifacts/battle-out]
- *
- * ⚠️ v1.5.18（第三方复核 §5-9）：`--out` 默认值从 `results` 改成 `docs/artifacts/battle-out`。
- * 原因是原默认会覆写 **git 跟踪**的 `results/battle-0{1,2,3,4}.png` ⇒ 一次"只读复核"照抄
- * 验收单里的命令就会把工作区弄脏（复核者实测踩到，还得 `git checkout --` 还原）。
- * 新目录已进 `.gitignore`。要看历史截图仍在 `results/`（它们不再被覆盖）。
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -42,8 +22,7 @@ const flag = function (n, d) {
   const hit = process.argv.find(function (a) { return a.indexOf('--' + n + '=') === 0; });
   return hit ? hit.split('=')[1] : d;
 };
-/* v1.7.5（S0）：Chrome 路径不再写死本机位置（原来 `ARGV[0] || 'C:\\Program Files\\...'` 在别的镜像上
- *   只会变成一句"CDP 端点不可达"，指错方向）；起 Chrome / 等 CDP 统一走 `tools/cdp-boot.mjs` 一份实现。 */
+/* Chrome 路径由 cdp-boot 按平台解析；起浏览器与等 CDP 共用一份实现。 */
 const PORT = Number(ARGV[1] || 9341);
 const CDP_TRIES = Number((process.argv.find(a => /^--cdp-wait=/.test(a)) || '').split('=')[1]) || 60;
 const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
@@ -51,10 +30,9 @@ const PLAYERS = Number(flag('players', 5));
 /* v1.5.35（第三方复核 §4-3）：本门的看门狗是**墙钟**，而长局对峙（60 回合上限）是分布的尾部
  * ⇒ 会概率性在"还没跑到终局"时被判超时（复核实测 5 次里 1 次 FAILED）。
  * 这里先把窗口放宽（180s → 300s）作为**止血**；
- * ⚠️ 真正的修法是**按状态等待**：在出招循环里轮询 `window.EpirusUI.B.state.over`，
- * 到终局（或回合上限）立即收尾，而不是靠固定墙钟 —— 见 METHODOLOGY「按状态等待，不按墙钟」。 */
+ * 出招循环按 state.over 与回合日志推进，到终局立即收尾；墙上时间只作安全上限。 */
 const MAX_MS = Number(flag('max-ms', 300000));
-/* v1.5.18：默认落点改到**未跟踪**目录（原先写 results/，会覆写 git 跟踪的历史截图）。 */
+/* 截图默认写入未跟踪目录 docs/artifacts/battle-out。 */
 const OUT = join(ROOT, flag('out', 'docs/artifacts/battle-out'));
 
 let BOOT;
@@ -118,21 +96,16 @@ async function main() {
   await send('Page.navigate', { url: URL });
   await sleep(1600);
 
-  /* ── 关键：先清掉 localStorage 里的冠军包再刷新 ──
-   * 页面 `loadMultiChamp()` **优先读 `localStorage['epirus.champion3p']`**，没有才回退内置包
-   * ⇒ 不清的话测的是"这台机器上次训练/导入留下的冠军"，而不是真正上线的那一个。
-   * （v1.5.8 实测踩到：不清 localStorage 时跑出来的是旧 v1.3.58 的行为 —— 每局出 28 次全息屏障、
-   * 残局互套盾打成 0 伤害僵局 —— 而当时 bundle 里装的其实是新冠军。） */
+  /* 先清掉 localStorage 冠军包，再刷新页面读取默认装配。 */
   const lsBefore = await evalJS(`(()=>{try{return localStorage.getItem('epirus.champion3p')?'有':'无'}catch(e){return 'ERR'}})()`);
   await evalJS(`try{localStorage.removeItem('epirus.champion3p');}catch(e){}`);
   await send('Page.navigate', { url: URL });
   await sleep(1600);
   const lsAfter = await evalJS(`(()=>{try{return localStorage.getItem('epirus.champion3p')?'有':'无'}catch(e){return 'ERR'}})()`);
-  check('已清掉 localStorage 里的旧冠军包（否则测的不是上线包）', lsAfter === '无', '清前=' + lsBefore + ' 清后=' + lsAfter);
+  check('localStorage 已清空，评测读取页面默认冠军', lsAfter === '无', '清前=' + lsBefore + ' 清后=' + lsAfter);
 
   /* ── 起局：5 人 + 难度=冠军（抽成函数，因为"用内置冠军"那段要起两次局）──
-   * v1.6.5：页面不再有「模式」下拉 —— 人数与血量是两根正交轴，模式键由 `ui.js` 查表算出来。
-   * 所以这里**回读真建出来的局**（`B.state.modeKey` / `mode.hp` / 座位数），而不是下拉写了什么。 */
+   * 人数与血量是两根正交轴，模式键由 ui.js 查表；这里回读真实建局状态。 */
   const setupBattle = async function () {
     await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='${PLAYERS}'; s.dispatchEvent(new Event('change'));})()`);
     await sleep(400);
@@ -151,15 +124,12 @@ async function main() {
     return m ? m[1].trim() : '';
   };
 
-  /* ── 「用内置冠军」按钮的端到端验证（v1.5.10）──
-   * 页面原本优先用 localStorage 里的冠军 ⇒ 换内置包对"曾自训/导入过"的用户无效（REVIEW §11.1）。
-   * 这里模拟这种用户：① 把内置包原样塞进 localStorage；② 重载 ⇒ 日志「对手AI=」应显示"本机自训/导入"；
-   * ③ 点「用内置冠军」⇒ localStorage 被清空、提示改回内置；④ 重开一局 ⇒ 显示"内置"。 */
+  /* 「用内置冠军」端到端验证：本机包状态下切换内置包，并核对日志与训练场回显。 */
   await evalJS(`(()=>{try{localStorage.setItem('epirus.champion3p', JSON.stringify(window.EPIRUS_CHAMPION_3P));}catch(e){}})()`);
   await send('Page.navigate', { url: URL });
   await sleep(1600);
   const planted = await evalJS(`(()=>{try{return !!localStorage.getItem('epirus.champion3p');}catch(e){return false;}})()`);
-  check('能写入本机冠军（模拟老用户）', planted);
+  check('能写入本机冠军状态', planted);
   await setupBattle();
   const srcLocal = await aiSource();
   check('页面确实优先用本机冠军（对手AI 标注"本机自训/导入"）', srcLocal.indexOf('本机') >= 0, '对手AI=' + srcLocal);
@@ -170,27 +140,18 @@ async function main() {
   check('提示告知已改回内置冠军', /内置/.test(rr.hint || ''), '提示=' + rr.hint);
   await setupBattle();
   const srcBuiltin = await aiSource();
-  /* §E286/§E590：这一句的**实质** = 点过「用内置冠军」之后，多方侧用的是**内置**来源、**不许**是用户本机那枚。
-   *   池上线（10-11）后多人侧的内置来源由**池**供给，标签是 `池·…` ⇒ 原来只认 `内置` 二字会**误报**
-   *   （10-12 CI 实测：`SUMMARY: BATTLE FAILED`，唯一一条 `FAIL 重开后用的是内置冠军 [对手AI=池]`；本机逐字复现）。
-   *   判据改成：来源是内置（`内置`，或池上线后的 `池`）**且**不含 `本机` —— 本机导入那一支永远不许在这里出现，
-   *   所以"清掉本机包之后仍走本机"这类回归照样红（两向验过）。 */
-  check('重开后用的是内置冠军（本机导入已清掉：来源是"内置"或池上线后的"池"，且不许含"本机"）',
+  /* 切换后来源应为内置冠军或统一池；本机标签作为反向对照。 */
+  check('重开后来源显示内置冠军或统一池',
     (srcBuiltin.indexOf('内置') >= 0 || srcBuiltin.indexOf('池') >= 0) && srcBuiltin.indexOf('本机') < 0,
     '对手AI=' + srcBuiltin);
 
-  /* ── v1.5.131（handoff §4-10）：**2P 槽位**上的同一件事（原先只测了 3P 键）──
-   * 病：2P 的本机冠军存在 `epirus.champion.v3`（`js/train/trainer.js:6`），而「用内置冠军」原先
-   * **只清 `epirus.champion3p`** ⇒ 本地训过冠军的用户**永远打自己那个旧包**（v1.5.130 修好的线上
-   * 2P 冠军发不到他们手里），而按钮 tooltip 写着"清除本机自训/导入的冠军、改回内置冠军"= 假承诺。
-   * 反证：把 `js/ui/ui.js` 里那句 `localStorage.removeItem('epirus.champion.v3')` 删掉 ⇒ 本段立即红。 */
+  /* 2P 槽位同样验证「用内置冠军」：本机键 epirus.champion.v3 与多人键一起清理。 */
   await evalJS(`(()=>{try{localStorage.setItem('epirus.champion.v3', JSON.stringify(window.EPIRUS_CHAMPION));}catch(e){}})()`);
   await send('Page.navigate', { url: URL });
   await sleep(1600);
-  check('能写入 2P 本机冠军（模拟本地训过冠军的老用户）',
+  check('能写入 2P 本机冠军状态',
     await evalJS(`(()=>{try{return !!localStorage.getItem('epirus.champion.v3');}catch(e){return false;}})()`));
-  /* 2 人起局：人数=2（血量=3 那一格命中 `standard` = v1.0.0 冻结档）、难度=「困难 · 冠军」
-   *   ⇒ v1.6.6 起 2 人桌也走**同一条阶梯**，底层包按人数选（2 人 = 2P 那颗 `Champ.store`，见 `champForCount`）。 */
+  /* 2 人起局：人数=2、血量=3 命中 standard，难度使用「困难 · 冠军」统一阶梯。 */
   const setupBattle2P = async function () {
     await evalJS(`(()=>{const s=document.getElementById('sel-players'); s.value='2'; s.dispatchEvent(new Event('change'));})()`);
     await sleep(400);
@@ -214,7 +175,7 @@ async function main() {
     r2.v3 === null, 'localStorage(2P)=' + (r2.v3 === null ? 'null' : '仍在（' + String(r2.v3).length + ' 字节的包）'));
   check('两个槽位一起清（同一语义：改回内置）', r2.v3p === null, 'localStorage(3P)=' + r2.v3p);
   check('提示点明清掉的是哪几个槽位（须含"2 人"）', /2\s*人/.test(String(r2.hint || '')), '提示=' + r2.hint);
-  check('训练场「当前冠军」随后显示内置（原先它会一直说"已保存本地冠军"）',
+  check('训练场「当前冠军」随后显示内置',
     /内置/.test(String(r2.trHas || '')), 'tr-has=' + r2.trHas);
   await setupBattle2P();
   const src2Builtin = await aiSource();
@@ -261,28 +222,17 @@ async function main() {
     '键=' + JSON.stringify(sdCleared.key) + ' 本局=' + sdCleared.eff + ' 值=' + JSON.stringify(sdCleared.v));
   await shot(join(OUT, 'battle-01-start.png'));
 
-  /* ── P0 主动出招（**不再摆烂**）──
+  /* ── P0 主动出招 ──
    * v1.5.8 教训：第一版让 P0 一直出ジ"摆烂"，结果人为造出"没人进攻"的退化局面，
    * 4 个冠军座就一起摆架势（引擎复现：伤害 3.0/局、10/10 平局、220 架势/局）——
    * 而 P0 随便打个什么（balanced/aggro 脚本）冠军立刻正常开打（13~14 伤害/局、0 平局）。
    * ⇒ 测试必须让人类座**真的进攻**，否则量的是退化均衡而不是对战质量。 */
   const ATK = ['枪', '激光剑', '坦克', '狙击枪', '电磁炮', '真正的落雷', '摄魂指法'];
-  /* 11-06 修的是**量具自己猜时机**这件事（CI 红出来的，不是引擎红出来的）：
-   *   CI（windows-latest 的 headless Chrome）实测 80 次尝试里 **77 次连一个可点的攻击技都没有**，
-   *   而本地同一份代码 21 回合就出覆盖层 ⇒ 那句固定 `sleep(230)` 在慢机器上等不到"轮到人类"，
-   *   按钮还是禁用态，`click()` 一律返回 false ⇒ 游戏几乎没推进 ⇒ 回合上限 60 到不了 ⇒ "没终局"。
-   *   另外原来"打完 80 次就干等 120 秒"那段本身就不可能等到终局：**人类座不再出手，回合就不往前走**。
-   *   改法三条：① 出手前先等到"有可点的技能按钮"（按状态，不按秒表）；
-   *   ② 回合数从日志里读（`第 N 回合`），只有**真的前进了**才计入 rounds，不再把"我点了 80 次"当成"打了 80 回合"；
-   *   ③ 终局段继续出手而不是干等，并给整段一个墙上时间上限 + 连续就绪超时就把 stall 报出来（不许静默）。 */
+  /* 按页面状态等待可点技能，从日志读取真实回合；持续出招并上报连续就绪超时。 */
   const btnReady = () => evalJS(`[...document.querySelectorAll('.skillbtn')].some((x) => !x.disabled)`);
   const waitReady = async (ms) => { const t0 = Date.now(); for (;;) { if (await btnReady()) return true; if (Date.now() - t0 > ms) return false; await sleep(60); } };
   const roundNo = async () => { const t = String(await logText() || ''); let last = 0, m; const re = /第 (\d+) 回合/g; while ((m = re.exec(t))) { if (+m[1] > last) last = +m[1]; } return last; };
-  /* 弹窗必答（11-06 夜补，CI run 42228843800 的病根）：`pickSkill` 对 **蓄能** 也开弹窗（存电珠还是爆破珠，
-   *   `js/ui/ui.js:411`），而原来只有**攻击技**那一条分支答弹窗，兜底那条（点蓄能/ジ）没答
-   *   ⇒ 下一轮再点蓄能时 `ui.js:406` 先「已放弃【蓄能】的目标选择」再重开 ⇒ **回合永远不落地**。
-   *   CI 那遍 P0 有 229/240 次打不起攻击技、只能走兜底，所以这条只在 runner 上现形；本机把 ATK 清空即可复现（推进 1 回合 ‖ 满屏「已放弃」）。
-   *   一律点第一个 = 存电珠；这台仪器判的是"能不能打到终局"，不判珠选得好不好。 */
+  /* 蓄能与攻击技能都可能弹窗；统一点第一项，保证回合持续落地。 */
   let modalAns = 0;
   const pickModal = async () => {
     const hit = await evalJS(`(()=>{const r=document.getElementById('modal-root'); if(r && !r.classList.contains('hidden')){const b=document.querySelector('#modal-card #mbtn'); if(b){b.click(); return 1;}} return 0;})()`);
@@ -314,9 +264,9 @@ async function main() {
   check('日志里出现 ' + PLAYERS + ' 名玩家', seatNames >= PLAYERS, '出现 ' + seatNames + ' 名');
   await shot(join(OUT, 'battle-02-mid.png'));
   const driveExtra = '推进 ' + rounds + ' 回合（日志里读到的）‖ 无攻击技可打 ' + idle + ' 次 ‖ 就绪等待超时 ' + stalled + ' 次 ‖ 弹窗已答 ' + modalAns + ' 次 ‖ 墙上 ' + Math.round((Date.now() - tDrive) / 1000) + 's';
-  check('P0 能持续出招（真打，不是摆烂）', rounds > 0, driveExtra);
+  check('P0 能持续主动出招', rounds > 0, driveExtra);
 
-  /* ── 终局判定：上面那段是"边打边看"，这里只补一次确认（不再干等 120 秒 —— 人类不出手，回合不会自己走）── */
+  /* 终局判定：持续出招推进后，再读一次 state.over 确认。 */
   const ended = await over();
   const txt = await logText();
   await shot(join(OUT, 'battle-03-end.png'));
@@ -328,8 +278,8 @@ async function main() {
   const dmgHits = (txt.match(/伤害/g) || []).length;
   const holoHits = (txt.match(/全息屏障/g) || []).length;
   const ringHits = (txt.match(/聚能环/g) || []).length;
-  check('对局里有真实伤害（不是 0 伤害僵局）', dmgHits >= 5, '日志出现「伤害」' + dmgHits + ' 次');
-  check('没有"互套盾"僵局（全息屏障施放不过量）', holoHits <= 12, '全息屏障出现 ' + holoHits + ' 次');
+  check('对局产生真实伤害', dmgHits >= 5, '日志出现「伤害」' + dmgHits + ' 次');
+  check('全息屏障使用保持在健康范围', holoHits <= 12, '全息屏障出现 ' + holoHits + ' 次');
   console.log('  （参考）聚能环出现 ' + ringHits + ' 次；盾 ' + holoHits + ' 次；伤害 ' + dmgHits + ' 次');
   check('全程无 JS 错误', errors.length === 0, errors.length ? errors.slice(0, 3).join(' | ') : '0');
 

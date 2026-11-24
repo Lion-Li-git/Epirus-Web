@@ -26,7 +26,7 @@ const CHECK = process.argv.includes('--check');
  *     而它被 `tools/gate-*.mjs`、`tools/gates/*.mjs` 当子进程调起 ⇒ 名单里没有它，全族被判"暗键"，
  *     照着这张表去删就会删坏现役训练器；
  *   · 反例第二枚：`EPIRUS_BATCH_MAX` 被 `tools/np-parallel.mjs` 读着，同样被判"暗键"。
- * 新口径不猜名单，**按读法扫维护面**：`process.env.X` / `process.env['X']` / `env.X` / `env['X']` 才算读。
+ * 新口径不猜名单，**按读法扫维护面**：`process.env.X` / `process.env['X']` / `env.X` / `env['X']` / `e.<KEY>` 这类 env 别名都算读。
  *   动态读法（`env[变量]`，例如 `knob-guard.mjs` 的 `env[ESCAPE_KEY]`）看不见具体键 ⇒ 单列一档，
  *   **绝不当删除候选**；只有既无读法、也不在任何动态读取者里的键才进"暗键"。
  * ⚠ 已知偏乐观的一面：读法出现在**注释里**也算数（我没剥注释），所以这一版只会把死键错报成活的，
@@ -57,10 +57,10 @@ for (const r of READ_ROOTS) walk(r);
 const READ_HITS = new Map();
 const DYN_FILES = [];
 for (const f of scanned) {
-  const re = /(?:process\.)?env\s*\.\s*(EPIRUS_[A-Z0-9_]+)|(?:process\.)?env\s*\[\s*['"](EPIRUS_[A-Z0-9_]+)['"]\s*\]/g;
+  const re = /(?:process\.)?env\s*\.\s*(EPIRUS_[A-Z0-9_]+)|(?:process\.)?env\s*\[\s*['"](EPIRUS_[A-Z0-9_]+)['"]\s*\]|\b(?:e|env)\s*\.\s*(EPIRUS_[A-Z0-9_]+)/g;
   let m2;
   while ((m2 = re.exec(f.src))) {
-    const k = m2[1] || m2[2];
+    const k = m2[1] || m2[2] || m2[3];
     if (!READ_HITS.has(k)) READ_HITS.set(k, []);
     if (!READ_HITS.get(k).includes(f.p)) READ_HITS.get(k).push(f.p);
   }
@@ -99,7 +99,7 @@ md.push('');
  *   并且任何人一跑重生成就会把它抹掉。头注写进生成器才是它该待的地方（11-20 核对）。 */
 md.push('> 生成器就是本文件：`node training/knobs.mjs` 重生成；CI 每次都跑 `node training/knobs.mjs --check`（`.github/workflows/gates.yml:125`）。');
 md.push('> ⚠ `--check` 比的是**整篇字节**（不是只比数据账三个数——旧头注这么写，是错的：`cur !== content` 才 exit 1）。');
-md.push('> 判"在用/暗键"的口径（2026-11-24 换）：**按读法扫维护面**（`tools/ training/ js/ champion-map/` 里 `process.env.X` / `env[\'X\']` 两形），');
+md.push('> 判"在用/暗键"的口径（2026-11-24 换）：**按读法扫维护面**（`tools/ training/ js/ champion-map/` 里 `process.env.X` / `env[\'X\']` / `e.<KEY>` 别名），');
 md.push('> 名单模块与注释不参与判定；`env[变量]` 这种**动态读法**看不见具体键，落进"仅动态提及"档，**不是删除候选**。');
 md.push('> 为什么换口径：旧口径拿手维护的入口名单判，实测两头都错过——`training/train-3p.mjs` 整族键（`EPIRUS_ANCHOR`/`BREADTH_FLOOR`/`GA_GATE`…）与 `tools/np-parallel.mjs` 读的 `EPIRUS_BATCH_MAX` 都被判成暗键，照表删就删坏现役代码。');
 md.push('> 运行时那套（`training/server/knob-guard.mjs` 的 `readKeysOf()` / `detectDarkKnobs()`，按**单个入口**的 import 闭包判）没变，也不该变：那是"这个入口认不认这个键"，本册答的是"全仓还有没有人读"。');
@@ -126,7 +126,7 @@ if (dyn.length) {
   md.push('');
 }
 if (dark.length) {
-  md.push('## 暗键（删除候选：维护面里没有任何 `env.X` / `env[\'X\']` 读法）');
+  md.push('## 暗键（删除候选：维护面里没有任何 `env.X` / `env[\'X\']` / `e.<KEY>` 读法）');
   md.push('');
   for (const r of dark) md.push('- `' + r.k + '`');
   md.push('');

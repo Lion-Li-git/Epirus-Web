@@ -11,7 +11,7 @@
  *   node tools/score13.mjs --pack=<包.js|.bak> [--json] [--run]   # --run：自己 spawn promote/eval（≈5-7 分钟/枚）
  *   node tools/score13.mjs --promote=<promote --dry 的输出.txt> --density=0.99,0.833 --strength=51.5 [--json]
  *   node tools/score13.mjs --selftest                               # 只跑解析器的夹具（秒级）
- *   `--rows=13` = 连 L3「只记录」那几条一起印（旧口径对照）；默认只判闸门层（L0+L1）。
+ *   `--rows=all` = 连 L3「只记录」那几条一起印；默认只判闸门层（L0+L1）。
  *
  * ⚠ 三条口径（与 PREREG §二 一致，别在调用点各写一遍）：
  *   ① 广读 **取严** 那句（min(selfPlay ‖ breadthProfile)），不是可行性栏里的 selfPlay 值；
@@ -111,7 +111,7 @@ export function parseEval(txt) {
  * 2026-10-28 用户裁定：① 激光眼密度不进闸门 ② 池子是多风格抽卡，不能指望每枚都会所有技能
  *   ⇒ 判据分两层（单包只判缺陷 / 能力覆盖归整池），并且**每条线要写人话**。
  * 本文件因此不再自带 `LINES`：它只做「解析 promote 的输出 ⇒ 按登记处判语」。
- * 默认判 **闸门层（L0+L1）**；`--rows=13` 把旧口径（含珍那一条 L3）一并印出来做历史对照。 */
+ * 默认判 **闸门层（L0+L1）**；`--rows=all` 把 L3 只记录行一并印出来。 */
 import { LINES, LAYERS } from './champion-gate.mjs';
 
 /* ===== 密度：仓内 in-process（ε=0 镜像 120 局 × 5 席，castByKey.laserEye） ===== */
@@ -134,7 +134,7 @@ export function densityOf(packPath) {
 }
 
 function verdict(rec, allRows) {
-  /* 默认只判闸门层（L0+L1）；`--rows=13` 把登记处所有行都印出来（含 L3 只记录那几条）*/
+  /* 默认只判闸门层（L0+L1）；`--rows=all` 把登记处所有行都印出来（含 L3 只记录那几条）*/
   const set = allRows ? LINES : LINES.filter(l => l.layer === 'L0' || l.layer === 'L1');
   const rows = set.map((L) => {
     const v = L.get(rec);
@@ -179,20 +179,20 @@ function main() {
       [parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorHeader === false && parsePromote(SAMPLE_BEH_UNRUN).raw.behaviorUnrun === true, '⛔「候选一行都没判到」⇒ 读不出，不许绿'],
       [(function () { const na = verdict({ raw: parsePromote(SAMPLE_BEH_BARE).raw, density: null, strength: 50 }, false).na.join('·'); return na.includes('G4') && na.includes('G5'); })(),
         '旧格式裸 ✅（没有"判到 N 行"）⇒ G4 与 G5 都挂"读不出"——夜里那几张 gen-3 成绩单就是这个形状'],
-      [verdict({ raw: f.raw, density: null, strength: 51.5 }, false).of === 13, '闸门默认条数 = 13（L0+L1；珍/送盾/G6 在 L3 不进分母）'],
+      [verdict({ raw: f.raw, density: null, strength: 51.5 }, false).of === 12, '闸门默认条数 = 12（L0+L1；珍/送盾/强度在 L3 不进分母）'],
       [verdict({ raw: s.raw, density: null, strength: 44 }, false).na.includes('（新增）'), 'S3 缺防御质量栏 ⇒ 那条挂"读不出"，不判绿'],
       [verdict({ raw: { gained: 0, expiredPerGame: 0, charge: 0, waste: 0 }, density: null, strength: null }, false)
         .rows.find(r => r.key === 'bead').ok === true, '得珠=0 ⇒ 珠那条判「不适用」（绿）而不是红'],
       [parseEval('[冠军] 1st=51.5% 严胜=49.5%') === 51.5, 'eval 解析'],
-      /* T2（11-03）：期望损失**只记录** ⇒ 它不许进 13 项分母；但"没这一行"与"mean=0"必须分得开。 */
+      /* T2（11-03）：期望损失**只记录** ⇒ 它不许进 12 项分母；但"没这一行"与"mean=0"必须分得开。 */
       [(function () { const c = parsePromote(SAMPLE_CELLS_OK).raw.g4Cells; return !!c && c.length === 2 && c[0].mean === 72.3 && c[0].over50 === '7/8' && c[1].median === 38.5 && c[1].worstPct === 60.3 && c[1].n === 300; })(),
         'T2 两格都接住：mean 72.3/41.2 ‖ >50% 格 7/8 ‖ 中位 38.5 ‖ 最克 60.3%（n=300）'],
       [(function () { const u = parsePromote(SAMPLE_CELLS_UNREAD).raw; return u.g4Cells === null && u.g4CellsUnrun === true; })(),
         'T2「⛔ 读不出」⇒ g4Cells=null 且旗标为真（**不许**把没这行读成 mean=0）'],
       [(function () { const n = parsePromote(SAMPLE_BEH_OK).raw; return n.g4Cells === null && n.g4CellsUnrun === false; })(),
         'T2 整句都没印（旧版 promote）⇒ g4Cells=null 且**不打**"读不出"旗（分母=没这条记录，不是门坏了）'],
-      [verdict({ raw: Object.assign({}, f.raw, { g4Cells: [{ mean: 72.3 }] }), density: null, strength: 51.5 }, false).of === 13,
-        'T2 有读数也**不进 13 项分母**（只记录 ⇒ 分母还是 13）']
+      [verdict({ raw: Object.assign({}, f.raw, { g4Cells: [{ mean: 72.3 }] }), density: null, strength: 51.5 }, false).of === 12,
+        'T2 有读数也**不进 12 项分母**（只记录 ⇒ 分母还是 12）']
     ];
     let bad = 0;
     for (const [ok, name] of checks) { if (!ok) bad++; console.log((ok ? 'PASS ' : 'FAIL ') + name); }
@@ -227,7 +227,7 @@ function main() {
   const sArg = arg('strength');
   const eFile = arg('eval');
   rec.strength = sArg != null ? Number(sArg) : (eFile ? parseEval(readFileSync(eFile, 'utf8')) : null);
-  const V = verdict(rec, arg('rows') === '13');
+  const V = verdict(rec, arg('rows') === 'all');
   if (has('json')) {
     console.log(JSON.stringify({ rows: V.rows, red: V.red, na: V.na, green: V.green, of: V.of, raw: rec.raw, density: rec.density, strength: rec.strength }));
   } else {

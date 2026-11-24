@@ -400,7 +400,7 @@ for b in $(git branch --format='%(refname:short)'); do echo "$b $(git rev-list -
 
 ## 11-03 晨追记 12（ZCode 深夜班二段；`RESULTS-2026-11-03-NIGHT-zcode.md` §一~九）
 
-- **覆盖门落地**（`tools/proto2/coverage-gate.mjs`）：三探针桌 × 逐技能份额/质量 × 写死判带，池级=并集/存在性判。
+- **覆盖门落地**（`tools/proto2/coverage-gate.mjs`，2026-11-24 已退役并仓外隔离）：三探针桌 × 逐技能份额/质量 × 写死判带，池级=并集/存在性判。
   终版（9 包代 3 池）：**主干 6/6 ‖ 地雷 ✔ ‖ 摄魂 ✔ ‖ tank/snipe ✔ ‖ 防御原型 ✘（份额可到带沿 4.9-5.2%、准头 11% 是最后一根梁）**。
 - **两条新旋钮**（默认关、回归腿齐、deployKnobs 字据）：`EPIRUS_MIX8=K`（fitness 每第 K 局 8 人桌——地雷课）‖
   `EPIRUS_HPSEED=p`（残血开局课程——摄魂 (b) 线）。

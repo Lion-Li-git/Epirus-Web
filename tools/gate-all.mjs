@@ -19,8 +19,7 @@
  * 退出码：0 全绿；7 有任意一道红（点名是哪道）。
  * ⚠ 带 `--group=` 的那一遍**不是认证**：np 只跑了分组里的门，总结论行会显式标出来（同 `--only` 的规矩）。
  * ⚠ 带 `--no-browser` 的那遍**也不是"全绿"**：总结论会点名"本轮缺哪几道"。
- *   它存在的理由 = 那三道要在 **CI 里跑**（本机每班次都跑，因为只要 45 秒），
- *   而 GitHub 的 runner 上它们是观察档（10-01 转阻断后 3 跑 2 红、根因未定 ⇒ 红不能阻断提交）。
+ *   它存在的理由 = 那三道要在 **CI 里跑**；浏览器三档现在并入 required `gates` 聚合，失败会阻断。
  */
 import { spawn } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -40,10 +39,8 @@ const ALL_JOBS = [
   { name: 'spec', argv: ['node', 'tools/spec-run.mjs'], want: /通过 (\d+) \/ (\d+)/ },
   { name: 'smoke', argv: ['node', 'tools/smoke.mjs'], want: /SMOKE OK/ },
   { name: 'battle', argv: ['node', 'tools/battle-test.mjs'], want: /BATTLE OK/ },
-  /* §E365 演化页（champion-map）的页内自检从此**在册**：它此前不在任何一道门禁的读取面上
-   *   （grep -c champion-map 在 np-test / spec-run / smoke / battle 四个仪器里都是 0）⇒ 页面整个坏了 CI 与本机都不响。
-   *   判据 = 页内自检的总结论行（PASS 条数会变，"0 FAIL"不会）；它要真 Chrome ⇒ 与 smoke/battle 同属浏览器那一波。 */
-  { name: 'map', argv: ['node', 'champion-map/shot.mjs', '--hash=mode=tree&check=1', '--dump'], want: /断言：\d+ PASS ‖ 0 FAIL/ },
+  /* 演化页四个视图共用同一自检入口；CI 与本机都消费同一结论。 */
+  { name: 'map', argv: ['node', 'tools/map-selfcheck.mjs'], want: /MAP SELFCHECK OK/ },
 ];
 /* §E355：`--no-browser` ⇒ 只留能在 ubuntu runner 上稳定判的那两道（spec + np）。
  * §E365：浏览器那一族从两道变三道（加 champion-map 的页内自检）⇒ 判据改成**一张名单**，

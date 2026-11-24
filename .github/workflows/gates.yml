@@ -100,7 +100,7 @@ jobs:
   # ── ③ gates：聚合成**一个**判定（作业名与旧版相同 ⇒ 分支保护/required check 不用改）──
   gates:
     name: gates
-    needs: [plan, part]
+    needs: [plan, part, browser]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -109,21 +109,22 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: 各部分的判定（有红 ⇒ 这一档就红，并点名是哪一段）
+      - name: 各部分与浏览器的判定（有红 ⇒ 这一档就红，并点名是哪一段）
         run: |
           echo "part 那一档：${{ needs.part.result }}"
+          echo "browser 那一档：${{ needs.browser.result }}"
           if [ "${{ needs.part.result }}" != "success" ]; then
             echo "⛔ 有部分红了（或 plan 挂了）⇒ 整轮不成立。去上面 'part <名字>' 那些作业里看是哪一条门，别先重跑。"
+            exit 1
+          fi
+          if [ "${{ needs.browser.result }}" != "success" ]; then
+            echo "⛔ 浏览器三档有红 ⇒ 整轮不成立。去 browser 作业里看 smoke / battle / map 的具体判词。"
             exit 1
           fi
       - name: 并集守卫（全部部分的并集必须 = 整轮；少跑一条就红。条数由脚本现读 ⇒ 这里不写死）
         run: node tools/gate-parts-check.mjs
       - name: spec（2 人引擎用例；条数现读不写死，历史沿革见 tests/RESULT.txt）
         run: node tools/spec-run.mjs
-      # 11-11 夜（训练侧独立子仓）：旋钮册防腐烂跟着仓库走 —— env 读取或 SELF_ENV_KEYS 注解变了没重生成 ⇒ 红。
-      #   生成器/册都在 training/（这条是"配置事实真源"的卫生门，独立于 np 部件体系）。
-      - name: 训练侧旋钮册 --check（training/knobs.mjs）
-        run: node training/knobs.mjs --check
       # §2026-10-10（Claude 整改建议 §门禁规矩 1）：**门禁只许测行为**的机械检查。
       #   文档明说它「不算门、也不进 np-test」⇒ 所以它是一个独立脚本、一个独立 step：
       #     node tools/gate-sentinel.mjs   报告三类（读 .md ‖ 对源码做正则 ‖ 匹配日志措辞）的**门号清单**。
@@ -134,29 +135,8 @@ jobs:
         run: node tools/gate-sentinel.mjs
 
   browser:
-    # ⚠️ **10-01 深夜退回观察档**（千问复核发现 · 用户点头）：转阻断之后**非确定性**，不是内容问题。
-    #   实测台账（`actions/workflows/gates.yml/runs` + `commits/<sha>/check-runs`，取于 10-01 23:3x）：
-    #     8180c71（就是"转阻断"那一笔）browser=**failure** ‖ cffd8a1 success ‖ **1533a54（当前 HEAD，只动文档）failure**
-    #     ⇒ 转阻断后 3 次里红 **2** 次；两次失败都只跑 **43 秒**（绿的那两遍是 67 ‖ 70 秒）。
-    #   同一台仓库的**本机**连跑 3 遍 smoke/battle 全绿（12.3s ‖ 26~32s，10-01 23:26 实测）⇒ 红的是 runner，不是代码。
-    #   ⛔ 只拿到 annotation 一句"Process completed with exit code 1"——job log 要鉴权，复核时取不到 ⇒ **根因未定**。
-    #      首要嫌疑：`tools/smoke.mjs` 里那一串**固定 sleep**（导航后 1600ms、点击后 650ms、远程页 2500ms、select 后 500ms）
-    #      在慢 1.5~2 倍的 runner 上不够；但这是嫌疑，**没有日志不许当结论**。
-    #   ⇒ 为什么必须退回：一个 2/3 概率红的**阻断**档，会把"红"训练成噪音，下次真红没人看 ——
-    #     与本仓"永绿假守卫"（D199/D205 那一族）是同一种病的两面。**转正判据：连续 5 次绿**（当前计数从这次重新起算）。
-    #   11-06 夜补现场（这次能取到 job log 了，`gh run view --job=<id> --log` ⇒ 上面那句"取不到"作废）：
-    #     修完 battle 的时机猜测之后连着两遍绿（42190926521 ‖ 42192072384，逐步骤核过），第三遍 42224342920 又红，
-    #     红在第 4 步 smoke 的 **CDP 起不来**（等了 12s、进程还活着、stderr 空），不是任何一条页面判据 ⇒ 10-01 那三种可能里
-    #     "绑端口慢过预算"这一支现在最像，所以把 CI 的等待预算显式提到 30s（见下面 smoke 那一步的注释）。
-    #     ⇒ 连绿计数被这次打断、重新起算；观察档仍然不阻断，"browser 绿不绿"要逐步骤读，不看 run 级结论。
-    #   11-06 夜第二遍（带上面那两处改动）run `42228843800`：**第 4 步 smoke 绿**（16s 就起来了 ⇒ 30s 这一遍有没有起作用单遍读不出来，不归功于它）
-    #     ‖ **第 5 步 battle 不再是 skipped，而是自己红出来**：`推进 13 回合 ‖ 无攻击技可打 229 次 ‖ 就绪等待超时 0 次`，
-    #     日志尾部满屏「（已放弃【蓄能】的目标选择）」⇒ 驱动点了蓄能却没答它那个"存哪种珠"的弹窗（`js/ui/ui.js:411`），回合永不落地。
-    #     ⇒ 这正是给 battle 补 `if: always()` 的全部理由：同一批读数，前一遍它根本不出现。修的是量具，细节在 PROBLEMS 第 26 条末。
-    #   ⚠️ §E355 之后这一档是 **CI 里唯一跑 smoke/battle 的地方**（阻断档 `gates` 用 `--no-browser` 摘掉了它们）
-    #     ⇒ 所以"CI 绿了"这句话从此的准确说法是：**np 全部门 + spec 绿，浏览器两档未见红但也未参与判定**。
-    #     ⇒ 本机不受影响：`gate-all` 不带 `--no-browser` 时照旧跑四道，收工前那遍才算认证。
-    continue-on-error: true
+    # 三档都跑真实 Chrome；任一步失败都会进入 required gates 聚合。
+    # 后续步骤保留 always()，让一次失败仍能收齐另外两档的诊断。
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -175,44 +155,6 @@ jobs:
         #   于是"browser 红了"只说出了一半（同一条纪律 11-06 傍晚已经给演化页那一步补过，这里漏了中间那步）。
         if: always()
         run: node tools/battle-test.mjs --cdp-wait=150
-      - name: 冠军演化页页内自检（CDP 真 Chrome · §E365 新增 · 10-12 补"四个视图各跑一遍 + 读数必须可读"）
-        # 11-06 加 `if: always()`：这一档原来排在 battle-test 后面且没有该条件 ⇒ battle 一红它就被 **skipped**，
-        #   于是"browser 作业红了"这一件事只说出了一半（今天真实踩到：红的是 battle，而我第一反应以为还是那四条自检腿）。
-        #   观察档之间不该互相遮蔽 ⇒ 每一步自己报自己的成败。
+      - name: 冠军演化页页内自检（四个视图 · 阻断）
         if: always()
-        # 为什么放这一档而不是阻断档：它要真 Chrome，而本机认证的 np/spec 那两跑在 ubuntu。
-        #   判据 = 页内自检总结论那一行（PASS 条数会变、"0 FAIL"不许变）。
-        #   ⚠️ 这一档整体仍是 continue-on-error（见上面 10-01 那笔退回记录）⇒ **演化页的红不会阻断提交**。
-        # 🔴 10-12 千问补的两件事（用户裁定"进 CI，先只当观察档"）：
-        #   ① **观察档也必须读得出成败**：job 级 `continue-on-error: true` 会让"步骤失败"与"通过"都显示 conclusion=success
-        #      ⇒ 我以前在 API 上看到 browser=success 就以为这 86 条过了，那句话其实毫无信息量。
-        #      现在把每个视图的 `断言：N PASS ‖ M FAIL` 与退出码写进 job summary（`$GITHUB_STEP_SUMMARY`，API 可取）。
-        #   ② **原来只跑 mode=tree 这一个视图**：把同一批自检搬到其余视图上，当场量出两条真红
-        #      —— mode=1d 与 mode=3db 的"池层环真画到画布上"都是 差分 0 颗 ⇒ 池档身份在这两个视图里整层不存在。
-        #      （先排除了"判据量错画布"：draw1/draw3b 用的就是同一块 cv/g，所以那不是仪器瞎。）已补画，四个视图各 86 PASS / 0 FAIL。
-        shell: bash
-        run: |
-          # ⚠ 这个 shell 是 `bash -e -o pipefail`：循环里任何一条命令非零（或 `grep` 没命中 + pipefail）
-          #   都会**当场中止**，于是下面那句 `cat /tmp/shot-all.log` 永远轮不到 ⇒ **红得看不见原因**。
-          #   10-12 实测：run #153 第 6 步 4 秒红，日志里连一行"视图 mode=… ‖ … ‖ exit=" 都没有，
-          #   而 /tmp/shot-*.log 是 runner 上的临时文件，事后取不到 ⇒ 这一步当时是"黑箱红"。
-          #   口径改成：**允许中间失败**、收集完四个视图再统一 exit；失败时把该视图日志的尾部也写进汇总
-          #   （与这段注释上面那两条同一条纪律：观察档也必须读得出成败）。
-          set +e
-          fail=0
-          : > /tmp/shot-all.log
-          for m in tree 1d 3db map; do
-            node champion-map/shot.mjs "--hash=mode=$m&check=1" --dump > "/tmp/shot-$m.log" 2>&1
-            st=$?
-            line=$(grep -E '^断言：' "/tmp/shot-$m.log" | tail -1)
-            [ -n "$line" ] || line='（没抓到"断言："那一行 ⇒ 这一步本身没跑成，别当全绿）'
-            echo "视图 mode=$m ‖ ${line} ‖ exit=${st}" >> /tmp/shot-all.log
-            if [ "$st" -ne 0 ]; then fail=1
-              echo "--- mode=$m 日志尾 25 行（失败原因在这里） ---" >> /tmp/shot-all.log
-              tail -25 "/tmp/shot-$m.log" >> /tmp/shot-all.log
-            fi
-          done
-          { echo "## 谱系图页内自检（观察档 · 不阻断）"; echo; echo '```'; cat /tmp/shot-all.log; echo '```';
-            echo; echo "退出码口径：0=全过 ‖ 1=有 FAIL ‖ 2=浏览器没跑出结果或一条断言都没跑（宁可红也不许假绿）。"; } >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/shot-all.log
-          exit $fail
+        run: node tools/map-selfcheck.mjs

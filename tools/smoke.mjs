@@ -35,8 +35,7 @@ try {
   process.exit(e.code === 'NO_CHROME' ? 4 : 2);
 }
 const proc = BOOT.proc, udd = BOOT.udd;
-/* --- 自限时 + 收尸（不再用 shell timeout 包 node：那样 node 被杀时
- * finally 不会执行 → 探针自己起的 headless Chrome 变成孤儿。
+/* --- 自限时 + 收尸由脚本负责：退出时统一关闭探针启动的 headless Chrome。
  * 现在由脚本自己计时，到点先杀 Chrome 进程树再退出。用 --max-ms=N 调。 --- */
 const MAX_MS = Number((process.argv.find(function (a) { return /^--max-ms=/.test(a); }) || '').split('=')[1]) || 240000;
 let __closed = false;
@@ -71,7 +70,7 @@ async function main() {
       errors.push('CONSOLE: ' + m.params.args.map(a => a.value || a.description || '').join(' '));
     } else if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') {
       const t = m.params.entry.text || '';
-      // 探测"未启动的训练服务"产生的是预期网络错误，不是 JS 异常
+      // 训练服务未启动的连接拒绝单独分类
       if (t.indexOf('ERR_CONNECTION_REFUSED') < 0) errors.push('LOG: ' + t);
     }
   };
@@ -99,8 +98,8 @@ async function main() {
    *   实测症状正是「对局页可见 & 技能按钮=30」/「多人专用技能置灰(≥2 disabled)」/
    *   「双方 HP 显示 3」/「点击出招:ジ」一起 FAIL，而「点击出招:防御」有时 PASS（= 初始化到一半）。
    * 改法：**先轮询到"30 个技能钮都渲染出来"再往下走**，上限 15 秒（就绪即刻返回 ⇒ 正常路径不拖慢）。
-   *   ⚠️ 这不是放松判据：超时后下面的 `check` 照样判 FAIL，只是**先给它足够时间**。
-   * 同族另外两处一起修：① 点招前先等那个按钮可点（原来直接找，找不到就 FAIL）；
+   *   超时后下面的 `check` 照样判 FAIL；等待只给页面初始化留出时间。
+   * 点招前先等按钮可点，日志出现第 4 回合后再读状态；
    *   ② 第四回合的日志（原来靠 4×650ms 攒出来，慢机器上不够）。 */
   const waitFor = async (expr, desc, timeoutMs) => {
     const t0 = Date.now(), cap = timeoutMs || 15000;
@@ -123,7 +122,8 @@ async function main() {
   check('多人专用技能置灰(≥2 disabled)', await evalJS(`document.querySelectorAll('.skillbtn:disabled').length >= 2`));
   check('双方 HP 显示 3', await evalJS(`[...document.querySelectorAll('.side .statbar .stat')].some(s=>s.textContent.includes('HP')&&s.textContent.includes('3'))`));
 
-  // 打 4 个回合（稳健招，避免提前终局）
+  // 四回合交互夹具：先确认默认 3 血，再抬高双方生命，让随机 AI 稳定陪跑四回合
+  check('四回合夹具生命已设为 99', await evalJS(`(()=>{const st=EpirusUI.B.state;if(!st||st.over)return false;for(const p of st.p)p.hp=99;EpirusUI.refresh();return st.p.every(p=>p.hp===99)&&!st.over;})()`));
   const moves = ['ジ', '防御', 'ジ', '防御'];
   for (const mv of moves) {
     /* v1.6.52：点之前先等这个按钮可点（同族的等待竞态，见上面 waitFor 的说明）。 */
@@ -134,7 +134,7 @@ async function main() {
   }
   await waitFor(`document.getElementById('logbox').textContent.includes('第 4 回合')`, '日志出现第 4 回合', 8000);
   check('日志有第 4 回合', await evalJS(`document.getElementById('logbox').textContent.includes('第 4 回合')`));
-  check('界面无 over 覆盖层', await evalJS(`document.getElementById('overlay-root').classList.contains('hidden')`));
+  check('四回合后仍处于对局中', await evalJS(`!EpirusUI.B.state.over && document.getElementById('overlay-root').classList.contains('hidden')`));
   await shot(join(tmpdir(), 'screenshot-battle.png'));
   console.log('screenshot-battle saved');
 
@@ -208,7 +208,7 @@ async function main() {
   console.log('screenshot-long saved');
 
   /* --- v1.6.6 难度阶梯（用户指令 2「重新研究脚本难度…冠军作为底层但探索概率很高」）：
-   * 判的是**下拉里点得到的东西，页面真的换得动**，不是表里写了什么（静态那半在 D227）。
+   * 验证下拉选项与页面状态联动（静态契约由 D227 负责）。
    * 三件事只有真浏览器能证：① 每个档 id 都能选中且 `B.diff` 跟着变；② 换档时 `aiInfo()` 报的
    *   champ/style/兜底 身份与表一致（"档是假的"= 选了它却走了别的路）；
    *   ③ **人数=2 与人数=5 的档位列表一模一样**（阶梯不许按人数被裁短 —— 这正是"把 2 人并进多人"那一步的行为定义），
@@ -247,7 +247,7 @@ async function main() {
   } else {
     check('每个难度档都点得动，且 B.diff / tierOf 跟着变成那一档',
       lad.rows.every(r => r.picked === r.id && r.tierId === r.id));
-    check('冠军档报"是冠军"、风格档报"不是冠军"，且都不许落到兜底格（兜底=包没解开的信号）',
+    check('冠军档与风格档各自报出正确身份，并保持池装配',
       lad.rows.every(r => r.fallback === false && r.champ === (r.kind === 'champ') && r.tier === r.id));
     check('档位列表不随人数被裁短（2 人 = 5 人，这就是"2 人并进同一条阶梯"的行为定义）',
       JSON.stringify(lad.at2.list) === JSON.stringify(lad.at5.list));
@@ -255,11 +255,8 @@ async function main() {
       lad.tierIds.every(id => lad.at5.list.indexOf(id) >= 0));
     check('默认档在册且是 lv:regular（改默认档 = 改所有老用户的手感，属产品裁定）',
       lad.def === 'lv:regular' && lad.at5.list.indexOf(lad.def) >= 0);
-    /* §E286 的**实质**几经换代：v1.6.x = "包随人数换"（2 人 2P 冠军 ‖ 多人池）；10-11 池上线后多人侧报 `池·…`；
-     *   **2026-11-13 用户裁定「2p 直接切到统一池」⇒ 两桌同源是产品行为**，"包随人数换"不再是断言。
-     *   现在钉的新实质：**两格都由池供给**（`池` 开头）且都不是本机导入/兜底（兜底 = 包没解开的信号）。
-     *   池被关掉/没生效 ⇒ `pack2` 变成单包来源（`2P`/`3P`）⇒ 仍然红（降级不许静默这条纪律不变）。 */
-    check('统一池（11-13 裁定）：2 人与多人两格同走池供给，且都不落本机/兜底',
+    /* 2P 与多人桌共用统一池；验证两格都由池供给，并保持本机包与单包回退关闭。 */
+    check('统一池：2 人与多人两格同走池供给，本机包与单包回退关闭',
       lad.at2.pack2.indexOf('池') === 0 && lad.at5.pack2.indexOf('池') === 0);
     /* 第一版这里真红过：去重比的是映射后的 `{v,t}` 列表（`.style` 恒 undefined）⇒
      *   「极限 · 读招」和「风格 · 读招反制」**同时**在册，玩家点是同一个脚本、以为选了两档。 */

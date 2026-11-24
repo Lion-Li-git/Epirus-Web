@@ -138,7 +138,7 @@ async function main() {
   if (afforded) {
     const mOpen = await modalOpen();
     const hintWhenModal = await hintText();
-    check('①-甲 弹窗开着时提示是"请选择目标"（不再误写"请出招"）',
+    check('①-甲 弹窗开着时提示保持"请选择目标"',
       mOpen && hintWhenModal.indexOf('选择目标') >= 0 && hintWhenModal.indexOf('请出招') < 0, 'hint="' + hintWhenModal + '"');
     check('①-甲2 弹窗里提供「取消」出口', (await modalText()).indexOf('取消') >= 0, 'modal="' + (await modalText()).slice(0, 60) + '"');
     await shot(join(OUT, 'uipro-1a-target-modal.png'));
@@ -148,7 +148,7 @@ async function main() {
     await sleep(250);
     const titleB = await modalText();
     const logAfterSwitch = await logText();
-    check('①-乙 弹窗开着时改点别的技能：明确留痕（日志出现"已放弃"）而不是静默替换',
+    check('①-乙 弹窗开着时改点技能：明确留痕并保留新弹窗',
       !!alt && (await modalOpen()) && titleB !== titleA && logAfterSwitch.indexOf('已放弃') >= 0, 'alt=' + alt);
     await shot(join(OUT, 'uipro-1b-modal-replaced.png'));
 
@@ -221,12 +221,12 @@ async function main() {
   await sleep(60);
   const hintAfter = await hintText();
   console.log('   结算中：locked=' + lk + ' 第一下=' + rFirst + ' 途中再点=' + second);
-  check('②-甲 结算期间点击给出**明确反馈**（提示改变，不再是静默丢弃）',
+  check('②-甲 结算期间点击给出明确反馈',
     lk === true && second === 'clicked' && hintAfter !== hintDuring, 'before="' + hintDuring + '" after="' + hintAfter + '"');
   await shot(join(OUT, 'uipro-2-locked-click.png'));
   await waitUnlock(); await sleep(900);
   const afterActions = await evalJS('(function(){var es=window.EpirusUI.B.state.events||[]; return es.filter(function(e){return e.type==="action"&&e.pid===0;}).length;})()');
-  check('②-乙 被丢的那一下**没有排队补执行**（只落一手，不会出现"迟到的动作"）',
+  check('②-乙 结算期间额外点击不排队补执行',
     (afterActions - beforeActions) <= 1, 'actions +' + (afterActions - beforeActions));
 
   /* ═══ ③ "ジ不足·未发动" 是否在真人座可复现 ═══ */
@@ -260,7 +260,7 @@ async function main() {
   await sleep(150);
   const afterImport = await evalJS('JSON.stringify({actual:window.EpirusUI.aiInfo().source,text:window.EpirusUI.battleText()})');
   const imp = JSON.parse(afterImport);
-  check('⑤ 导入后导出追加换包记录，不再把实际本机包记成开局池成员',
+  check('⑤ 导入后导出记录实际本机包与换包事件',
     imported && imp.actual.indexOf('本机') >= 0 && imp.text.indexOf('中途换档=') >= 0 && imp.text.indexOf('本机冠军包') >= 0,
     'actual=' + imp.actual.slice(0, 80));
 

@@ -1,0 +1,9 @@
+2pw12w3-lr5-s20261124 rule s=77000 exit=0 pct=51.8
+2pw12w3-lr5-s20261124 rule s=90210 exit=0 pct=51.2
+2pw12w3-lr5-s20261124 legacy s=77000 exit=0 pct=17.3
+2pw12w3-lr5-s20261124 legacy s=90210 exit=0 pct=17.2
+2pw12w3-lr5-s20261125 rule s=77000 exit=0 pct=83.7
+2pw12w3-lr5-s20261125 rule s=90210 exit=0 pct=83.4
+2pw12w3-lr5-s20261125 legacy s=77000 exit=0 pct=18.7
+2pw12w3-lr5-s20261125 legacy s=90210 exit=0 pct=18.7
+EVAL_DONE runs=24 bad=0

@@ -3002,8 +3002,8 @@ function drawBody() {
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
   document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
-    ' 枚 · 续训现役的子代 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
-    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('**F = 长程桌**（有读数 ' + NHP() + '/' + N + (N === NHP() ? ' ‖ 全图同一把长程卷' : ' ‖ 缺长程 ' + (N - NHP()) + ' 枚 ⇒ 这些枚在当前档**不画**，卡片明细写"未测"') + '）') : 'F = 默认桌(3血)') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · ' + (st.mode === 'map' && st.color !== 'fam' ? ('底图 = ' + colorTitle() + '（点=素点）') : ('颜色 = ' + colorTitle())) +
+    ' 枚 · 训练衍生 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
+    ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('F = 长程桌（5血；已测 ' + NHP() + '/' + N + '）') : 'F = 默认桌（3血）') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · ' + (st.mode === 'map' && st.color !== 'fam' ? ('底图 = ' + colorTitle() + '（点=素点）') : ('颜色 = ' + colorTitle())) +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
     /* §E371 窗口不是"关着"的状态就必须报出来：只画了 312 枚却写着"901 枚候选"，读图人会把一张局部图当全库。
      *   现役被切掉时额外点名 —— 那时图上的绿红分界（rel 档）与色带上的针都指向一个**不在图上**的东西。 */

@@ -65,6 +65,7 @@
 | `CHANGELOG.md` 里 **v1.5.319 及更早**的逐字条目 | 同一文件末尾那份「历史版本索引」里的一行摘要（全文 `git log -p CHANGELOG.md`） | 10-13（v1.7.0 · 用户要求「把旧的 changelog 压缩一下」；**界限抬到 v1.5.320 是为了保住 `## v1.5.` 这道门自己在用的抽取式边界** —— `D224⑩a` ‖ `D205④`） |
 | `CHANGELOG.md` 里 v1.5.129 及更早的逐字条目 | 同上（第一次压缩留下的那一段索引，现在并成一份 384 行） | v1.5.145（DS） |
 | `docs/research/` 顶层 **2026-10-31 及更早**的 49 份过程账 | `docs/research/archive/2026-11-06-october-sweep/` 同名文件 | 11-06（v2.0.1 收尾；16 处活引用已同步改：`docs/README` 三处、`GATE-SHIFTS` 三处、源码注释 13 处） |
+| `docs/research/handoff/` 24 份旧交接 ‖ `docs/research/` 顶层 10 份零引用旧 PLAN/STATUS/HANDOFF/FINDING | `docs/research/archive/2026-11-25-doc-sweep/` 同名文件 | 11-25（通宵清理；活引用面零命中，历史软引用保留） |
 | `champion-map/index-2v-18.html` ‖ `index-2v-20.html` ‖ `index-2v-all.html`（3.4 MB） | **已删除** —— 三合一后由单页 `champion-map/index.html` 取代；要读旧版从 git 历史取 | 11-06 |
 | `champion-map/` 里 25 份**零代码引用**的数据回执（`seat-*` / `k8*` / `opphuman-verdict-*` 等） | `docs/research/archive/2026-11-06-champion-map-cleanup/`（对照表 `INDEX.tsv`） | 11-06 |
 | `champion-map/*.tsv` ‖ `*.txt` 里**没有任何人按文件名点名**的 77 张点数据表 | 同一目录下那份单文件容器 `champion-map/point-data.tsv`（读法：`node champion-map/point-data.mjs` 的 `rows(batch)` / `valueOf(batch,id,metric)` / `reconstruct('<旧表名>')`） | 10-13（v1.7.4 · §E593 夜班 S1；**判据在 v1.7.6 改过一次** —— "文件名被源码点名"的表**一律留盘，注释里点名也算**，所以 `epsfull-tier-*`、`cont1200-*` 这 6 张又回到了盘上） |

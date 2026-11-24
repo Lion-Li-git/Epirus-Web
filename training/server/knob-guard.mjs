@@ -62,7 +62,7 @@ export function stripComments(src) {
 /** 不是 env 键、但形如键名的那些（页面全局量 / 冠军外壳名）—— 扫到了也不算旋钮。
  *  `EPIRUS_CHAMPION*` 是 `window` 上的包名（全仓从没有 `process.env.EPIRUS_CHAMPION*`，已 grep 证），
  *  留在全集里只会让"有人读"的名单虚胖。 */
-const NOT_A_KNOB = /^EPIRUS_CHAMPION/;
+const NOT_A_KNOB = /^EPIRUS_(?:CHAMPION|INSTR)/;
 
 /** 全集口径 = 读集口径：出现过的**键名**（裸字符串字面量也算）。
  *

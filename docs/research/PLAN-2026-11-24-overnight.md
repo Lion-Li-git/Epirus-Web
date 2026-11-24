@@ -57,7 +57,7 @@
 
 1. **P0｜训练与测试脆弱点（阻塞交付质量）**
    - **`tools/smoke.mjs:127–137` 第 9 项随机暴毙**：固定 4 手 `['ジ','防御','ジ','防御']` 对随机抽取的 `lv:regular` 3HP AI 有概率在第 4 回合被破防打死触发 `#overlay-root`，造成整轮 `gate-all --np` 偶发红。
-   - **2P 兼顾全绿候选闭环**：在 `supfit-gd.mjs` 中组合「12 形基础集 + `--arenaShapes` 内加权 `2:standard@3` + `--teacher2=fsSpecialist`（仅 `5:long`）+ `--lr` / 截断微调（过 `selftest3` 腿 C）」，争取在同一枚 `selftest3` 全绿包上同时站稳 `2P ≤ 35%`、珠闭环 `≥ 75%`、`ring + 天火` 活跃。
+   - **2P 兼顾候选闭环**：在 `supfit-gd.mjs` 中组合「12 形基础集 + `--arenaShapes` 内加权 `2:standard@3` + `--teacher2=fsSpecialist`（仅 `5:long`）+ `--lr` / 截断微调」，争取在同一冻结推理包上同时站稳 `2P ≤ 35%`、珠闭环 `≥ 75%`、`ring + 天火` 活跃；`selftest3` 只记录该包能否继续梯度训练。
    - **v5 / `baseswap` 6 粒收尾评价**：早班 §三已指出这 6 粒仍未跑全 `pool-skill-report` 池级并集与 6-seed 同尺 Arena，尚无 `pool-add` 资格。
 
 2. **P1｜冠军池提质与弱项替换**
@@ -67,21 +67,27 @@
 
 3. **P2｜管线一致性、代码卫生与考古扫尾**
    - **#62 Lineage 增量与时间戳对齐**：当前 `137` 枚历史权重缺失导致 `rebuild-map` 跳过 `lineage.mjs` 全量重算；且 `pipeline-audit` 报 353 条秒级 vs 毫秒级 `ts` 格式漂移（如 `17:03:38` vs `17:03:38.760Z`）与 `138` 枚恢复件 `sha256` 差异，应在核对规则后给出只读对齐方案。
-   - **旋钮 KPI（`AGENTS.md §2`: 目标 `≤40`，当前全集 `186`）与 `knobs.mjs` 识别缺口**：实测 `training/server/econ-env.mjs` 用 `nv(e.EPIRUS_DIV_W)` 等 `e.X` 形参读取，被 `knobs.mjs` 误判为 `暗键（无读法）`（当前 26 暗键含 `EPIRUS_DIV_W / WALL_GAMES / VOID_W / BEAD_BOOM_W` 等）。需先修读法识别再按批次删真死键。
-   - **`training/proto2/` 零代码引用探针归档**：脚本扫描实测 `49` 个 `.mjs` 中有 **`23` 个零代码引用**（`arms-index.mjs`、`arms-tree.mjs`、`audit-dims.mjs`、`battery.mjs`、`capacity.mjs`、`check-align.mjs`、`composite-score.mjs`、`convert-obs3c.mjs`、`coverage-gate.mjs`、`def-drain-trace.mjs`、`def-gate.mjs`、`fitness-noise.mjs`、`make-norm.mjs`、`margin-n.mjs`、`matrix2.mjs`、`mixprobe.mjs`、`offer-trace.mjs`、`pack2-audit.mjs`、`pool-check.mjs`、`preflight2.mjs`、`project-blocks.mjs`、`rank-inter.mjs`、`rank-signal.mjs`），需逐个核对文档引用后依 `AGENTS.md §24` 迁出清理（不动 `AGENTS.md §10` 先提案再物理删的红线）。
+   - **旋钮 KPI 与扫描识别（已完成）**：`knobs.mjs` 现识别 `e.<KEY>` 等 env 别名，`EPIRUS_DIV_W / WALL_GAMES / VOID_W / BEAD_BOOM_W` 等回到在用；扫描器排除注释假键与 `EPIRUS_INSTR` 仪器全局量。当前全集 `185` / 在用 `144` / 动态 `41` / 暗键 `0`，`--check` 通过。
+   - **`training/proto2/` 零代码引用探针归档（已完成）**：`coverage-gate.mjs` 与其余 22 个一次性探针共 23 个文件已整体移到仓外隔离目录，保留原相对路径与 SHA 清单；训练 README 已改为当前入口说明。
    - **v7 现成第 2 轮考古队列**：`scratch/v7-mined/server-jobs-1124-r2.tsv` 尚余 `v7b / v7new5_005 / v7ringB1` 三批可低成本静机验证，遵循 `AGENTS.md §12` 单分片跑、命中后回写历史 `META.ts`。
 
 ---
 
 ## 四、2026-11-24 通宵班执行时间表（23:15–06:30 · 并行子进程 ≤ 2）
 
-> 红线：不随意跑整轮门禁（只在收口跑一次 `gate-all.mjs --np`）；不直接 `rmSync` 删件（`AGENTS.md §24`）；不改 `js/core/**`（保住规则指纹 `bfd49045`）；所有新臂第一枚产物落盘立即验 `selftest3` + `wid/v=92/arch=S1o`。
+> 红线：不跑整轮门禁，按改动面做定向验证；不直接 `rmSync` 删件（`AGENTS.md §24`）；不改 `js/core/**`（保住规则指纹 `bfd49045`）；训练启动对真实上游验 `selftest3`，新臂第一枚产物落盘立即验 `wid/v=92/arch=S1o`。
 
 | 时段 | 任务 | 具体动作与预算 | 硬验收 / 止损线 |
 |---|---|---|---|
 | **P0a · 23:15–23:45** | 修 `smoke.mjs` 第 9 项随机暴毙 | 检查并加固 `tools/smoke.mjs:126–138`（如改 `5` 血或切 `lv:sparring` 后跑 4 手安全招，保留"真的打完 4 回合且不提前误弹出 over"校验），连跑 `5` 遍 `smoke.mjs` 复现验证 | 5/5 `SMOKE OK`，不放松失败判定；改 `tools/smoke.mjs` 后跑 `node tools/gate-all.mjs --np --group=ui` |
-| **P0b · 23:45–01:15** | 攻关 `2P + 珠 + 天火` 全绿蒸馏包 | 以 `RING-MINIT-CONT.bak`（或洁净 `EQ-S4` / `RG-CN`）为底，`--teacher=pack:t65`、`--shapeTeachers` 禁用 `bundled-champion.js` 且在 `5:long` 加 `fsspecialist`、`--rareOnly=railgun,ring,curse,firestorm`（禁 `charge`），调 `12` 形中 `2:standard` 权重（如 `@2` 与 `@3` 对照）+ 微调 `lr`（`5e-5` / `1e-4`）/ `snapEvery`；每批 2 seed，先过 `selftest3` 再测 2P `rule/legacy`、`probe-bead-loop`、`promote --dry`、6-seed Arena B | 目标：`selftest3` **6/6**、`promote --dry` **0 阻断**、2P `rule <= 35%`、珠闭环 `>= 70%`；连续 3 组过不了 `selftest3` 腿 C 即停止加步，改换正交基座 + KL 混合 |
+| **P0b · 23:45–01:15** | 攻关 `2P + 珠 + 天火` 候选包 | 以 `RING-MINIT-CONT.bak`（或洁净 `EQ-S4` / `RG-CN`）为底，`--teacher=pack:t65`、`--shapeTeachers` 禁用 `bundled-champion.js` 且在 `5:long` 加 `fsspecialist`、`--rareOnly=railgun,ring,curse,firestorm`（禁 `charge`），调 `12` 形中 `2:standard` 权重（如 `@2` 与 `@3` 对照）+ 微调 `lr`（`5e-5` / `1e-4`）/ `snapEvery`；每批 2 seed，训练启动预检过后测 2P `rule/legacy`、`probe-bead-loop`、`promote --dry`、6-seed Arena B | 目标：`promote --dry` **0 阻断**、2P `rule <= 35%`、珠闭环 `>= 70%`；连续 3 组上游预检不过则换正交基座，不降低数值门槛；产物 `selftest3` 只记可续训性 |
 | **P1 · 01:15–03:15** | 池替换准备：`seatKill=2` 去偏（`ring` & `rod`） | ① 从 `FS-G2`/`TK-FS4` 或洁净 `RING` 底座重训低 `seatKill` 载体（先验证 2-seed `seatKill=0` 与 Stage 1 覆盖）；② 对高潜力候选跑完整入池前体检：`promote --dry --support=2` + 2-seed `seat` + 6-seed `arena-noise-floor` + `pool-skill-report --stage=1/2` | 只产生候选报告进 `STATUS`（按 `AGENTS.md §20` 完整链过线后才做 `pool-add`；任一柱子退步 > 阈值即放弃换包） |
 | **P2a · 03:15–04:30** | 工程与管线清洁（不动核心语义） | ① 修 `training/knobs.mjs` 对 `nv(e.EPIRUS_*)` 读法的扫描口径后核查真正无读者死键，制定首批 `暗键` 清单并更新 `TRAINING-KNOBS.md`；② 为 `proto2/` 23 枚零引用文件生成迁移清单一览，准备提案或归档进隔离目录 | `node training/knobs.mjs --check` 绿；`meta` 门全绿；零误删 |
 | **P2b · 04:30–05:30** | v7 第 2 轮短批 + #78/`audit` 收尾 | ① 静机单分片重跑 `scratch/v7-mined/server-jobs-1124-r2.tsv`（限时 ≤40 分钟，`--check` 保持 0 违例）；② 整理 #78 文案修复点（仅改动展示层或记录方案） | 命中即回写历史 `META.ts` 并 `git add -f`；超时立即收停并记结论 |
-| **收口 · 05:30–06:30** | 整轮认证与交接 | ① 清除临时失败日志并确认 `land-recovered --check`、`validate.mjs --strict`、`check-lineage.mjs` 全绿；② 跑一遍 `node tools/gate-all.mjs --np`（目标 `5 道全绿` 且 `smoke` 稳过）；③ 写入 `docs/research/STATUS-2026-11-25-morning.md` 并更新 `CHANGELOG.md`（如有发布变更），按规范提交 | 5/5 全绿日志留档；零孤儿 `node` 进程 |
+| **收口 · 05:30–06:30** | 定向认证与交接 | ① 清除临时失败日志并确认 `land-recovered --check`、`validate.mjs --strict`、`check-lineage.mjs` 全绿；② 按改动面跑定向组，`smoke` 单独连测确认稳定；③ 写入 `docs/research/STATUS-2026-11-25-morning.md` 并更新 `CHANGELOG.md`（如有发布变更），按规范提交 | 定向日志留档并注明不是整轮；零孤儿 `node` 进程 |
+
+---
+
+## 五、P3 低优先级余量：剩余丢失权重考古与复刻
+
+仅在前面任务收口后、仍有时间时执行。以 `docs/ARTIFACT-LOSS-1119.tsv`、`scratch/v7-mined/` 与 `replay-diagnose` 的现账为队列，按单分片、可逐位验 `wid` 的方式继续；不猜参数、不把近似权重登记成原件。命中即回写台账与历史 `META.ts`，未命中保留诊断证据。时间不足时在晨间 STATUS 留下“已扫源 / 剩余批 / 下一枚最值得跑”的接力清单，不挤占 P0–P2 验收。

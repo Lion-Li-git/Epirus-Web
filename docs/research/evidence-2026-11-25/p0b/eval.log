@@ -1,0 +1,17 @@
+2pw12c-s20261124 rule s=77000 exit=0 pct=64.7
+2pw12c-s20261124 rule s=90210 exit=0 pct=63.4
+2pw12c-s20261124 legacy s=77000 exit=0 pct=17.5
+2pw12c-s20261124 legacy s=90210 exit=0 pct=16.4
+2pw12w3-s20261124 rule s=77000 exit=0 pct=70.3
+2pw12w3-s20261124 rule s=90210 exit=0 pct=69.3
+2pw12w3-s20261124 legacy s=77000 exit=0 pct=18.3
+2pw12w3-s20261124 legacy s=90210 exit=0 pct=18.2
+2pw12c-s20261125 rule s=77000 exit=0 pct=62.6
+2pw12c-s20261125 rule s=90210 exit=0 pct=61.3
+2pw12c-s20261125 legacy s=90210 exit=0 pct=18.9
+2pw12c-s20261125 legacy s=77000 exit=0 pct=18.8
+2pw12w3-s20261125 rule s=77000 exit=0 pct=21
+2pw12w3-s20261125 rule s=90210 exit=0 pct=25.2
+2pw12w3-s20261125 legacy s=77000 exit=0 pct=19.8
+2pw12w3-s20261125 legacy s=90210 exit=0 pct=19.4
+EVAL_DONE runs=16 bad=0

@@ -903,7 +903,7 @@ export function aggressionProfile(W, params, GAMES, opts) {
   /* v1.5.133：**诊断钩子**（默认关闭 ⇒ 读数逐位不变）。只改**冠军席**的一个决策规则，做反事实：
    *   `forceAttack`：它选ジ、而当回合 `GUN` 买得起时 → 改判成枪（目标 `T.pickTargetN`，与 G4 的 `pT` 同口径）；
    *   `forceTurtle`：它任何非ジ输出 → 改判成ジ。
-   * 动机（`docs/research/handoff/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」）：那条互斥是**沿 `CLEAR_W`
+   * 动机（`docs/research/archive/2026-11-25-doc-sweep/handoff/HANDOFF-2026-09-19.md` §2.1 的「场B 清场 ↔ 抗只枪单调互斥」）：那条互斥是**沿 `CLEAR_W`
    *   一个旋钮**、比较**两个不同的包**得到的；要判它是不是**根本**的，得在**同一个包、同一 seed 序列**下
    *   只动一个决策规则（与 `probe-ring-ablate.mjs` 的消融同法）。
    *   `forced` = 实际改判次数（**空枪检测**：0 ⇒ 本行无信息，不得读成"改了没用"）。 */

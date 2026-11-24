@@ -108,6 +108,13 @@ export function bake(opts = {}) {
     const curseOk = cs.curseOk != null ? cs.curseOk : ((d.stage1 && d.stage1.totalUses && d.stage1.totalUses.curse) || 0);
     const fireOk = cs.firestormOk != null ? cs.firestormOk : ((d.stage1 && d.stage1.totalUses && d.stage1.totalUses.firestorm) || 0);
     const fireHits = cs.firestormHits || 0;
+    const curseLanded = cs.curseLanded != null ? cs.curseLanded : curseOk;
+    const blocked = Math.max(0, curseOk - curseLanded);
+    const blockedPct = curseOk > 0 ? Math.round(100 * blocked / curseOk) : 0;
+    const loopRate = cs.stickGames > 0 ? cs.loopGames / cs.stickGames : null;
+    const takeRate = cs.fsLegalDecisions > 0 ? cs.fsTakenWhenLegal / cs.fsLegalDecisions : null;
+    const loopPct = loopRate == null ? '—' : Math.round(100 * loopRate) + '%';
+    const takePct = takeRate == null ? '—' : Math.round(100 * takeRate) + '%';
     const detRate = curseOk > 0 ? fireOk / curseOk : (fireOk > 0 ? 1 : 0);
     const detPct = Math.round(100 * detRate);
     const rows = [...d.stage2.results].sort((a, b) => a.key.localeCompare(b.key));
@@ -135,11 +142,17 @@ export function bake(opts = {}) {
         else { verdict = '中性'; vcls = 'v0'; }
       }
       let extra = '';
-      if (r.key === 'curse' && curseOk >= 3 && detRate < 0.25) {
-        extra = ' <span class="tag vpit" title="贴贴=' + curseOk + ' / 天火=' + fireOk + '">引爆 ' + detPct + '%</span>';
+      if (r.key === 'curse' && curseOk >= 3) {
+        const notes = [];
+        if (loopRate != null && loopRate < 0.25) notes.push('局闭环 ' + loopPct);
+        if (blockedPct >= 25) notes.push('被盾挡 ' + blockedPct + '%');
+        if (notes.length) extra = ' <span class="tag ' + (loopRate != null && loopRate < 0.25 ? 'vpit' : 'v0') + '" title="贴=' + curseOk + ' / 落=' + curseLanded + ' / 闭环局=' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '">' + notes.join(' · ') + '</span>';
       } else if (r.key === 'firestorm' && (curseOk > 0 || fireOk > 0)) {
-        const dc = (curseOk >= 3 && detPct < 25) ? 'neg' : (detPct >= 75 ? 'pos' : '');
-        extra = '<div class="subinfo">引爆率 <b class="' + dc + '">' + detPct + '%</b>（' + fireOk + '引/' + curseOk + '贴' + (fireHits ? '·' + fireHits + '伤' : '') + '）</div>';
+        const dc = (loopRate != null && loopRate < 0.25) ? 'neg' : (loopRate != null && loopRate >= 0.75 ? 'pos' : '');
+        extra = '<div class="subinfo">局闭环 <b class="' + dc + '">' + loopPct + '</b>（' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '局）'
+          + ' · 抓手 <b>' + takePct + '</b>（' + (cs.fsTakenWhenLegal || 0) + '/' + (cs.fsLegalDecisions || 0) + '次）'
+          + ' · 被盾挡 <b>' + blockedPct + '%</b>（' + blocked + '/' + curseOk + '贴）'
+          + (fireHits ? ' · ' + fireHits + ' 伤' : '') + '</div>';
       } else if (r.key === 'charge' && bds) {
         const ep = bds.elecGained > 0 ? Math.round(100 * bds.elecSpent / bds.elecGained) + '%' : '—';
         const bp = bds.boomGained > 0 ? Math.round(100 * bds.boomSpent / bds.boomGained) + '%' : '—';

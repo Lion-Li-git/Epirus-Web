@@ -1,7 +1,6 @@
 batch	tier	packs	rootBatch	rootState	seeds	oppsN	knobUniform	knobs	probeFirst	ids
 v7new5_01	T3根查不到	6	-		     	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7new5_01-31 v7new5_01-81 v7new5_01-82 v7new5_01-91 v7new5_01-92 v7new5_01-93
 v7ringA1	T3根查不到	6	-		     	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7ringA1-31 v7ringA1-81 v7ringA1-82 v7ringA1-91 v7ringA1-92 v7ringA1-93
-v7new5_005	T3根查不到	4	-		   	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7new5_005-82 v7new5_005-91 v7new5_005-92 v7new5_005-93
 v7aim1f	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7aim1f-31 v7aim1f-82 v7aim1f-93
 v7aim2	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7aim2-31 v7aim2-82 v7aim2-93
 v7bead100	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7bead100-31 v7bead100-82 v7bead100-93
@@ -21,10 +20,6 @@ v7s7	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父�
 v7s8	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7s8-31 v7s8-82 v7s8-93
 v7s9	T3根查不到	3	-		  	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7s9-31 v7s9-82 v7s9-93
 v7aim3	T3根查不到	2	-		 	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7aim3-31 v7aim3-82
-v7bead3	T3根查不到	2	-		 	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7bead3-31 v7bead3-93
-v7beadseed	T3根查不到	2	-		 	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7beadseed-31 v7beadseed-93
 v7divK2	T3根查不到	2	-		 	-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7divK2-81 v7divK2-82
-v7cmin4	T3根查不到	1	-			-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7cmin4-93
 v7l2a	T3根查不到	1	-			-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7l2a-81
 v7n1	T3根查不到	1	-			-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7n1-82
-v7t2	T3根查不到	1	-			-	uniform	-|-|-|-|-|-|-|-|-|-|-|-|-|-	先复现父：?	v7t2-82

@@ -437,7 +437,10 @@ t('D205 门号纪律（DS 清单 B8 · 09-30 夜班）：D 号不许撞车，且
    *   现在改成量它本来要量的那件事：**抽取式对整段 v1.6.x 必须还数得出门号**（数不出 = 正则或区段边界被改坏，
    *   那时 ⑤ 会跟着变成假绿）。"每一版都点名自己动了哪些门"这条习惯保留 —— 但它写进条目正文由人核，不由数 token 的门代管。 */
   const top = String(readFileSync('CHANGELOG.md', 'utf8').split(/^## /m)[1] || '');
-  const zone = String(readFileSync('CHANGELOG.md', 'utf8').split('\n## v1.5.')[0] || '');
+  const archive = String(readFileSync('docs/research/archive/CHANGELOG-v1.5.320-v1.6.69-full.md', 'utf8'));
+  const v16 = archive.indexOf('## v1.6.');
+  const v15 = archive.indexOf('## v1.5.', v16);
+  const zone = v16 >= 0 ? archive.slice(v16, v15 > v16 ? v15 : archive.length) : '';
   const idSet = new Set(gateIds);
   /* v1.8.41（2026-10-27）：**"删除/换号"的记录不算"声称门在"**。
    * 病：本轮删了 108 条训练门（+ D206）之后，CHANGELOG 必须能写"删掉 D206 / D204→D205"，

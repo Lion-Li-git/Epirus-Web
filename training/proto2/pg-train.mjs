@@ -16,6 +16,7 @@ import { install as installArch2, readPack2, packCfgExit } from './arch2.mjs';
 import { createArena2 } from './arena2.mjs';
 import { rosterFromArg, shapesFromArg } from './roster-lib.mjs';   /* 对手表/桌形单一来源（与 supfit-gd 同源） */
 import { layoutOf, tailOf, tapeForward, tapeBackward, dLogPi, dLogKeyP, dropObs6Tape, assertObsArch } from './pg-lib.mjs';
+import { runSelftest3 } from './selftest3.mjs';
 
 const argv = process.argv.slice(2);
 rejectUnknownFlags(argv, ['up', 'upstream', 'obs', 'games', 'batch', 'lr', 'seed', 'lamC', 'lamF', 'lamExp', 'penDeadElec', 'dmgW', 'beadSpendW', 'defTax', 'temp', 'out', 'tag', 'baseline', 'probe', 'rollbackTol', 'criticProbe', 'ridgeL2', 'ridgeFeat', 'seatDrop', 'seatL2', 'segEvery', 'snapEvery', 'shapeKey', 'shapeW', 'shapeModes', 'klModes', 'onlySeg', 'klW', 'klCand', 'klTilt', 'klTiltMul', 'arenaPool', 'arenaShapes'], 'pg-train');
@@ -131,6 +132,8 @@ const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=U
 if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
+const preflight = runSelftest3(W, P, pv, UP);
+if (preflight) { console.error('⛔ 上游梯度预检未过 ⇒ pg-train 不启动（exit ' + preflight + '）'); process.exit(preflight); }
 const ONLY_SEG_RAW = String(arg('onlySeg', '') || '').trim();
 const ONLY_SEG = ONLY_SEG_RAW ? ONLY_SEG_RAW.split(',').map((s) => s.trim()).filter(Boolean) : [];
 let segMask = null;

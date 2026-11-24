@@ -1060,7 +1060,7 @@
    *   而 v1.5.133 把它的机制量成了因果读数 —— **不是被打死，是"龟"**：只枪局里被测席 **62.2% 的决策是ジ**、
    *   其中 **1759 次是"当回合枪买得起却选攒钱"**；只把这一条规则改成"买得起就开枪" ⇒ 只枪胜率
    *   **75% → 13%**（long）/ **62% → 17%**（multi），而**场B 清场 1.00 → 1.00**
-   *   （CHANGELOG v1.5.133 · `docs/research/handoff/HANDOFF-2026-09-19.md` §0d/§4-13 · 探针 `tools/probe-g4-anatomy.mjs`）。
+   *   （CHANGELOG v1.5.133 · `docs/research/archive/2026-11-25-doc-sweep/handoff/HANDOFF-2026-09-19.md` §0d/§4-13 · 探针 `tools/probe-g4-anatomy.mjs`）。
    * ⚠️ **它与 `pickGunSpam` 不是同一条线**（名字骗过很久）：
    *   · `pickGunSpam` = **只打最肥**（血量最高）＝ 稀释/喷子线；
    *   · 本函数 = **击杀优先 → 再压血量最高者**（与 `gate-drafts.mjs` 的 `pT` → `T.pickTargetN` 同口径）
