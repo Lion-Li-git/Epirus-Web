@@ -238,7 +238,7 @@ async function main() {
   /* v2.0.1（2026-11-06 用户裁定）：终局收缩入口的契约变了 —— **留空 = 跟随模式**（= 考卷口径）。
    * 这条腿以前只判「入口在且有值」，读到的永远是写死的 100 ⇒ 页面口径与考卷（multi=45）分叉这件事
    * 一路无人报警。现在判**建局实际生效的 `state.mode.suddenDeath`**：留空必须 = 模式自带，填数必须覆盖，
-   * 清空必须删键并回到模式值。主语从「输入框里写着什么」换成「这一局真正会用几」。 */
+   * 清空必须回到模式值，但伤害是独立设置，不能再把整个 localStorage 键删掉。主语从「输入框里写着什么」换成「这一局真正会用几」。 */
   const sd0 = await evalJS(`(()=>{const a=document.getElementById('inp-sd'), b=document.getElementById('inp-sd-dmg'); const B=window.EpirusUI.B;
     return {a:!!a, b:!!b, v:a?a.value:null, ph:a?a.placeholder:null, modeKey:B?B.modeKey:null, eff:B&&B.state?B.state.mode.suddenDeath:null};})()`);
   check('终局收缩入口缺省 = 跟随模式（框留空，建局用模式自带的 45）',
@@ -253,9 +253,11 @@ async function main() {
   await evalJS(`(()=>{const a=document.getElementById('inp-sd'); a.value=''; a.dispatchEvent(new Event('change'));})()`);
   await evalJS(`window.EpirusUI.newGame()`);
   const sdCleared = await evalJS(`(()=>{const B=window.EpirusUI.B; let k='ERR'; try{k=localStorage.getItem('epirus.sudden');}catch(e){}
-    return {key:k, eff:B.state.mode.suddenDeath, v:document.getElementById('inp-sd').value};})()`);
-  check('清空 = 回到跟随模式（删键 + 建局回到模式自带的 45）',
-    sdCleared.key === null && String(sdCleared.v || '') === '' && sdCleared.eff === 45,
+    let dmg=null; try{dmg=JSON.parse(k||'null');}catch(e){}
+    return {key:k, dmg:dmg, eff:B.state.mode.suddenDeath, v:document.getElementById('inp-sd').value};})()`);
+  check('清空 = 回到模式起扣回合，同时保留独立伤害设置',
+    sdCleared.key !== null && sdCleared.dmg && sdCleared.dmg.suddenDeath === undefined && sdCleared.dmg.suddenDeathDmg === 1 &&
+      String(sdCleared.v || '') === '' && sdCleared.eff === 45,
     '键=' + JSON.stringify(sdCleared.key) + ' 本局=' + sdCleared.eff + ' 值=' + JSON.stringify(sdCleared.v));
   await shot(join(OUT, 'battle-01-start.png'));
 

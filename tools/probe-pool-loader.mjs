@@ -4,6 +4,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
+import { rejectUnknownFlags } from './audit-lib.mjs';
+
+if (process.argv[1] && process.argv[1].endsWith('probe-pool-loader.mjs')) {
+  rejectUnknownFlags(process.argv.slice(2), [], 'probe-pool-loader');
+}
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = readFileSync(join(ROOT, 'js/pool-loader.js'), 'utf8');
