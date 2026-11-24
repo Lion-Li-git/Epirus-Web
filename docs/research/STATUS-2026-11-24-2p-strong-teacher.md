@@ -2,12 +2,13 @@
 
 ## 结论
 
-**`2:standard` 单桌强教师能按配方命中并改变行为，但没有稳定胜过同菜单自蒸馏对照，不入池。**
+**FC-G1 单桌强教师没有稳定胜过自蒸馏对照；v7 专用 2P 包在 Arena B 2P 格两粒都提升，但产品 `2:standard` 人席方向不一致，因此暂不入池。**
 
 - 对照臂本身把产品 2P `standard` 的 rule 替身夺冠率从 FS-G2 的 **61.0%** 降到两粒均值 **16.5%**；legacy 均值仍为 **27.05%**。
-- 强教师臂 rule 替身均值 **14.15%**，但两粒训练 seed 的配对变化是 **−4.75pt / +0.05pt**，没有复现稳定增益；legacy 反而 **+1.50 / +2.70pt**。
-- Arena B（page，6 个评测 seed）强教师相对对照的 2P/5P/8P 平均变化为 **−0.041 / −0.003 / −0.020**，合计 **−0.028**。
-- 行为上强教师成功把 2P 拉向 FC-G1：天火平均 **+23.2pt**、贴贴 **+12.8pt**，枪 **−24.4pt**、剑 **−6.6pt**；但换招变宽没有转化为稳定强度。
+- FC-G1 强教师臂 rule 替身均值 **14.15%**，但两粒训练 seed 的配对变化是 **−4.75pt / +0.05pt**，没有复现稳定增益；legacy 反而 **+1.50 / +2.70pt**。
+- Arena B（page，6 个评测 seed）FC-G1 强教师相对对照的 2P/5P/8P 平均变化为 **−0.041 / −0.003 / −0.020**，合计 **−0.028**。
+- v7 专用 2P 教师相对对照的 Arena B 2P 格为 **+0.036 / +0.101**，两粒同向；但产品 `2:standard` rule 替身为 **−0.70 / +3.00pt**，legacy 基本不变。
+- 行为上 FC-G1 把 2P 拉成天火/贴贴；v7 没有复制这条塌缩，但两粒对脚本胜率只变化 **+2.5 / +10.0pt**，且 5P 残局一升一降。
 
 ## 代码修复
 
@@ -30,14 +31,14 @@
 | bundled-champion | 81.2 / 79.8% | 16.2 / 16.6% | 63.2% | 0.4% | — |
 | **FC-G1** | **16.2 / 19.6%** | 28.2 / 34.0% | **49.8%** | **25.5%** | **13.5%** |
 
-FC-G1 在 rule 替手上显著强于现役两枚基座，且动作谱与 toolkit 完全不同，故选作 `2:standard` 专科教师。
+FC-G1 在 rule 替手上显著强于现役两枚基座，且动作谱与 toolkit 完全不同，故选作第一轮 `2:standard` 专科教师。用户随后点名 v7 专用 2P 包；已核实 `js/bundled-champion.js` 就是 2P 槽 `v7xfer44c13-2p`，不是 3P 包，另做同设计追加实验。
 
 ## 实验设计
 
 - 基座：`docs/artifacts/FS-G2.bak`。
 - 菜单：缺省 11 格前加 `2:standard`，共 12 格；对照与处理完全同菜单、同 1200 组、50 步、`objective=cand`、DAgger 1。
 - 对照：全桌形 `teacher=pack:FS-G2` 自蒸馏。
-- 处理：仅 `2:standard` 改为 `shapeTeachers=2:standard=pack:FC-G1`，其余桌形不变。
+- 处理：仅 `2:standard` 改为 `shapeTeachers=2:standard=pack:FC-G1`，其余桌形不变；第二轮仅把该教师换成 `pack:js/bundled-champion.js`（v7 专用 2P 包）。
 - 两个真实训练 seed：`20261124 / 20261125`；每粒处理臂的专科教师命中均为 **200** 条，12/12 桌形覆盖，产物均为 `v=92 / S1o / obs6 / 16561`。
 
 | 臂 | wid |
@@ -46,6 +47,8 @@ FC-G1 在 rule 替手上显著强于现役两枚基座，且动作谱与 toolkit
 | ctrl-s20261125 | `30f285ca5742598a` |
 | strong-s20261124 | `0be86ad6ccf61acd` |
 | strong-s20261125 | `5e21438d2198914e` |
+| v7-s20261124 | `795bf62923b4930d` |
+| v7-s20261125 | `339ae709de5d515f` |
 
 ## 实战读数
 
@@ -80,16 +83,45 @@ Arena B 的 2P 格是 `multi`，不是产品 `standard`；它与 2P standard 人
 - 5P 残局对脚本：处理两粒胜率 **72.9% / 68.0%**，对照 **74.0% / 80.0%**。
 - 2P standard 教师标签 JS 仅 **0.0287 / 0.0288**：少量标签差异足以把部署行为大幅拉向教师，但这不是强度证据。
 
+## v7 专用 2P 包追加实验
+
+`js/bundled-champion.js` 的元数据与 09-22 快照均指向 v7 2P 槽 `v7xfer44c13-2p`。两粒处理臂与 FC-G1 轮共用同一对照、12 格菜单、1200 组、50 步和训练 seed；v7 教师在 `2:standard` 各命中 **200** 条。
+
+### 强度
+
+| 对象 | 2P standard rule | 2P standard legacy | 5P multi legacy | 8P multi legacy |
+|---|---:|---:|---:|---:|
+| ctrl 均值 | 16.50% | 27.05% | 3.00% | 2.05% |
+| v7 均值 | 17.65% | 27.08% | 3.05% | 1.95% |
+| v7 − ctrl（seed 1 / 2） | −0.70 / +3.00pt | +0.05 / 0.00pt | +1.30 / −1.20pt | +0.20 / −0.40pt |
+
+| 对象 | Arena x2 | Arena x5 | Arena x8 | Arena arS |
+|---|---:|---:|---:|---:|
+| ctrl 均值 | −0.0216 | −0.0040 | −0.0051 | −0.0438 |
+| v7 均值 | 0.0467 | −0.0220 | 0.0061 | 0.0235 |
+| v7 − ctrl（seed 1 / 2） | +0.0358 / +0.1008 | −0.0378 / +0.0018 | −0.0004 / +0.0228 | +0.1006 / +0.0340 |
+
+Arena B 2P 格两粒同向改善，但该格是 `multi`；产品 `standard` 的 rule 替身没有同向结论。
+
+### 行为与结构
+
+- v7 没有像 FC-G1 那样塌向天火/贴贴；对脚本 2P 胜率两粒为 **57.5% / 66.25%**，对照为 **55.0% / 56.25%**。
+- 5P 残局对脚本胜率：v7 **74.47% / 75.51%**，对照 **74.0% / 80.0%**，一升一降。
+- 2P standard 教师标签 JS 为 **0.100 / 0.080**，明显大于 FC-G1 的 0.029，但部署强度仍不呈现稳定胜势。
+- `selftest3`：v7-s20261125 **6/6 全绿**；v7-s20261124 参数 5736 数值梯度相对误差 **1.53e-3** 而红。对照 s20261124 也因夹具 `π=NaN` 红，基座与 FC-G1-s20261124 为绿，故不能把梯度红单独归因于 v7。
+- v7-s20261125 的 `promote-champion --dry --support=2` **通过**：G4/G5 全过，G5 long/multi 为 **1% / 0%**，座位极差 **11pt**，广度两模式均未阻断；dry 未写任何产品文件。
+
 ## 决定与下一步
 
-- **不入池、不改冠军池、不继续加大 FC-G1 剂量。**
+- **暂不入池、不改冠军池、不继续加大 FC-G1 剂量。**
+- v7-s20261125 是本轮唯一同时通过 `selftest3` 与 promote dry 的处理臂，但只有一个基座，且产品 `standard` rule 替身两粒不同向；入池前还需第二基座或真实浏览器配对复现。
 - 本轮可复用的正面结果是“补 `2:standard` + 自蒸馏”对照臂，但 Arena B 仍有 seed 分歧，不能直接宣称全轴提升。
 - 若继续 2P，优先复现对照臂到第二个基座，并使用相同 12 格菜单；不要再把“强教师命中”“换招率上升”或单一替身改善当成立项依据。
 - 分桌形强教师机制本身已验证可调用，可复用于其他技能，但每个新桌形仍需同夹具对照与跨模式回归。
 
 ## 验证与产物
 
-- `validate.mjs --strict`、`check-lineage.mjs`、`selftest2` 37/37、候选 `selftest3` 6/6、browser-parity、meta-lint、`git diff --check` 均通过。
+- `validate.mjs --strict`、`check-lineage.mjs`、`selftest2` 37/37、browser-parity、meta-lint、`git diff --check` 均通过；候选 `selftest3` 与 promote dry 结果逐臂记在正文，未把红臂当绿。
 - 未跑整轮门禁；按仓规只做定向验证。
-- 训练与评测原件：`scratch/2p-strong-1124/`、`scratch/arms/nov24-2pstrong-fsg2-*.bak(.meta.json)`、`scratch/teacher-screen*-1124/`。
+- 训练与评测原件：`scratch/2p-strong-1124/`、`scratch/2p-v7-1124/`、`scratch/arms/nov24-2pstrong-fsg2-*.bak(.meta.json)`、`scratch/arms/nov24-2pv7-fsg2-*.bak(.meta.json)`、`scratch/teacher-screen*-1124/`。
 - Arena B 条件留痕写入 `champion-map/data/arenaB-conditions-1118-page.tsv`。
