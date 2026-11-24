@@ -1,0 +1,6 @@
+id	wid	union	laserCells	laserUses	ringCells	ringUses	railCells	railUses	elecSpent	elecGained	boomSpent	boomGained
+T65-RINGBEAD	00065fc589070d4e	19	0	3	4	15	35	271	271	340	2	2
+LE40-PG2k-s25	e8f8bd8f869833fd	15	29	1049	0	0	4	41	41	1711	1049	1820
+LE40-PG2k-s26	34435c956f0d6203	14	31	947	0	0	6	51	51	2250	947	1709
+soft-ring-c3g-s25	8c7030eb03258b17	14	0	0	41	1726	12	98	98	269	0	0
+soft-ring-c3g-s26	0926c583b9f7e9ba	14	0	0	43	1633	12	94	94	196	0	0

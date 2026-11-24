@@ -118,3 +118,4 @@ measure-MX1-GD-EQ-beps0	b-f5-eps0-1114	X	-	-	measure-MX1-GD-EQ-beps0	readings/cu
 measure-MX2-U4-EQ-a	a-v2coop-page-1114	A	-	-	measure-MX2-U4-EQ-a	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
 measure-MX2-U4-EQ-b	b-f5-page-1114	B	-	-	measure-MX2-U4-EQ-b	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
 measure-MX2-U4-EQ-beps0	b-f5-eps0-1114	X	-	-	measure-MX2-U4-EQ-beps0	readings/current.tsv（历史行补登）	8	2026-11-24T09:51:44.000Z	11-24 补登；原批次横跨三把尺，按尺拆号；原测量时刻未留
+measure-T65-RINGBEAD	a-v2-page-1109	A	-	-	measure-T65-RINGBEAD	T65-RINGBEAD-readings.tsv	32	2026-11-24T17:02:13.674Z	add-point

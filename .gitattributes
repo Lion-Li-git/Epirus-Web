@@ -15,3 +15,8 @@ docs/artifacts/eval-out/win-Ldemo.bak binary
 docs/artifacts/e129-out/matrix.json -text
 docs/artifacts/**/*.js binary
 scratch/**/*.js binary
+
+# TSV 行尾 tab 表示末尾空列，属于表结构；不按行尾空白告警。
+champion-map/data/*.tsv whitespace=-blank-at-eol
+champion-map/data/page/*.tsv whitespace=-blank-at-eol
+champion-map/data/readings/*.tsv whitespace=-blank-at-eol

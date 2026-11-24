@@ -1,0 +1,12 @@
+== 加入冠军池 ==
+   id=T65-RINGBEAD · wid=00065fc589070d4e · tier=hard
+   上槽体检：pass（—） ‖ 人席否决：没量过（批表里没这枚）
+   前线读数（24 锚联盟 · page 剂量 · 6 粒 seed）已落 data/arena-noise-floor-1118.tsv：B=16.5617pt ‖ 极差 35.5979pt ‖ 当选判决窗口 5.8pt
+✔ 已写 champion-map/pool-members.tsv（现 24 枚）
+   下一步：node tools/build-pool-bundle.mjs --split（整表 + 页面懒加载清单/分片）
+   [skill-report] 入池普查（Stage 1 观察 + Stage 2 强度）…
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [T65-RINGBEAD] stage1 并集 19/30（自对局 12） 换招JS 0.0716 ‖ 16s → D:\code\Epirus-Web\champion-map\data\skill-report\T65-RINGBEAD.json
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [T65-RINGBEAD] stage2 并集 19/30（自对局 12） 换招JS 0.0716 ‖ 强度 26 技（消融 10） ‖ 6.3s → D:\code\Epirus-Web\champion-map\data\skill-report\T65-RINGBEAD.json
+   ↻ 演化图已自动同步：（一致）
