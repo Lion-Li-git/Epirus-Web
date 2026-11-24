@@ -2,7 +2,7 @@
 
 ## 结论
 
-**FC-G1 单桌强教师没有稳定胜过自蒸馏对照；v7 专用 2P 包在 Arena B 2P 格两粒都提升，但产品 `2:standard` 人席方向不一致。后续 5P 保全实验证明当前单包蒸馏/PG 无法同时保住聚能环、珠经济与天火闭环，因此暂不入池。**
+**严格“三保全”没有干净候选；按用户放宽天火要求后，65% 权重融合在行为层同时保住 ring、珠经济与 occasional 天火，2P/Arena B 与 promote dry 均通过，但融合粒子 `selftest3` 红，回蒸又会丢技能，因此暂不入池。**
 
 - 对照臂本身把产品 2P `standard` 的 rule 替身夺冠率从 FS-G2 的 **61.0%** 降到两粒均值 **16.5%**；legacy 均值仍为 **27.05%**。
 - FC-G1 强教师臂 rule 替身均值 **14.15%**，但两粒训练 seed 的配对变化是 **−4.75pt / +0.05pt**，没有复现稳定增益；legacy 反而 **+1.50 / +2.70pt**。
@@ -10,6 +10,7 @@
 - v7 专用 2P 教师相对对照的 Arena B 2P 格为 **+0.036 / +0.101**，两粒同向；但产品 `2:standard` rule 替身为 **−0.70 / +3.00pt**，legacy 基本不变。
 - 行为上 FC-G1 把 2P 拉成天火/贴贴；v7 没有复制这条塌缩，但两粒对脚本胜率只变化 **+2.5 / +10.0pt**，且 5P 残局一升一降。
 - 5P 保全追加实验：保护臂可把珠经济恢复到 **95–97%**、天火闭环保持 **87–92%**，但 ring=0；换环底座后 ring 恢复到 **449–632 次**，珠经济却降到 **7–21%**、天火=0；三轨迹混合与 PG 均未同时修复三项。
+- 降低天火要求后，**65% RING-MINIT + 35% 珠经济/天火保护臂**的融合候选得到 ring 15、花珠 **79.8% / 81.7%**、天火局闭环 **20%**、贴贴 41；2P standard rule **21.6–24.2%**、Arena B arS **0.136**、promote dry 全过。唯一未过项是融合粒子的 `selftest3`。
 
 ## 代码修复
 
@@ -146,10 +147,36 @@ Stage1 与 mirror 是不同装配，不能互校；表中只并排。天火=0 �
 - Arena B 相对 v7：x2 **+0.124 / 0.000**，x5 **+0.064 / +0.056**，x8 **−0.025 / −0.071**；8P legacy 人席其中一粒从 2.1% 回退到 **11.7%**。
 - 因此“珠经济+天火保护臂”本身也不是可直接入池的全轴候选，更何况它没有 ring。
 
+## 低天火份额与权重融合
+
+用户裁定贴贴/天火不是必要技能，可降低份额，只要偶尔闭环。据此把 5P 长桌教师改为 40% RING-MINIT + 50% chain + 10% 天火专科：ring 部署 687、贴贴 8，但花珠只有 40.3%；翻倍预算的无 DAgger 臂最终 wid 与上游完全相同，等于空转；后续 bead-focused PG 仍把花珠压到 25–34%，天火为 0。
+
+改用同形权重融合后找到可行区：
+
+| RING-MINIT 权重 | ring | 花珠率（Stage1 / mirror） | 天火局闭环 | 贴贴 |
+|---:|---:|---:|---:|---:|
+| 50% | 0 | 67.9% / 84.9% | 48.1% | 40 |
+| 60% | 9 | 74.4% / 84.4% | 30.8% | 46 |
+| **65%** | **15** | **79.8% / 81.7%** | **20.0%** | **41** |
+| 70% | 87 | 68.0% / 82.5% | 0% | 31 |
+| 75% | 141 | 50.9% / 79.9% | 0% | 22 |
+| 90% | 523 | 53.8% / 69.3% | 0% | 25 |
+
+### 65% 融合候选
+
+- 2P standard rule 替身：**21.6% / 24.2%**；legacy：**18.2% / 18.7%**。
+- Arena B（page，6 seed）：x2 **0.1517**、x5 **0.0329**、x8 **−0.0125**、arS **0.1360**。
+- 5P multi 人席：rule **1.8% / 3.6%**，legacy **2.4% / 3.0%**；8P multi：rule **5.0% / 6.2%**，legacy **5.2% / 6.2%**。
+- promote dry：**全过**；珠经济 **80.3%**，环@有ep·安全 **7.7%（n=26）**，G4/G5 全过，dry 未写产品文件。
+- 结构：`selftest3` 红——可分辨格只有 52（<60），且 curse 键级导数解析 0 vs 数值 0.5。它是线性插值粒子，不能直接当 PG 起点。
+- 只对 `2:standard` 做 v7 回蒸：rule 替身反而升到 **79.7–80.3%**，拒绝。
+- 用融合体当教师回蒸到干净 RING-MINIT：`selftest3` 修绿，但 ring 只剩 33、花珠 **44.7%**、天火归零，拒绝。
+
 ## 决定与下一步
 
 - **暂不入池、不改冠军池、不继续加大 FC-G1 剂量。**
-- **本轮没有任何一枚同时保住 2P 强度、5P ring、珠经济和天火闭环；不把单项达标当三保全。**
+- **严格三保全没有干净候选；放宽天火后，65% 融合是唯一行为达标候选，但 `selftest3` 红，暂不入池。**
+- 下一轮若要把 65% 融合变成可用训练包，应做双父系回蒸或候选级 KL 巩固，并同时验收 ring@有ep、花珠率和 occasional 天火；不要再扫融合比例或单桌 v7 蒸馏。
 - v7-s20261125 是本轮唯一同时通过 `selftest3` 与 promote dry 的处理臂，但只有一个基座，且产品 `standard` rule 替身两粒不同向；入池前还需第二基座或真实浏览器配对复现。
 - 若继续“一包三保全”，下一轮不应再加教师或比例；应改为混合 `2:standard + 5:long` 的 PG，并在同一目标里显式优化 ring、花珠、天火闭环与 2P KL，先做 500/1000 局快照筛选。若仍失败，产品上更合理的是 2P/5P 分工或推理端路由。
 - 本轮可复用的正面结果是“补 `2:standard` + 自蒸馏”对照臂，以及 ringEcon+chain 保护臂的珠经济/天火保全；两者不能直接合并成已证候选。
@@ -160,5 +187,5 @@ Stage1 与 mirror 是不同装配，不能互校；表中只并排。天火=0 �
 
 - `validate.mjs --strict`、`check-lineage.mjs`、`selftest2` 37/37、browser-parity、meta-lint、`git diff --check` 均通过；候选 `selftest3`、promote dry 与 PG 快照结果逐臂记在正文，未把红臂或单项达标当绿。
 - 未跑整轮门禁；按仓规只做定向验证。
-- 训练与评测原件：`scratch/2p-strong-1124/`、`scratch/2p-v7-1124/`、`scratch/2p-preserve-1124/`、`scratch/arms/nov24-2pstrong-fsg2-*.bak(.meta.json)`、`scratch/arms/nov24-2pv7-fsg2-*.bak(.meta.json)`、`scratch/arms/nov24-2pkeep*`、`scratch/arms/nov24-2pring*`、`scratch/arms/nov24-fsspecialist-5long.bak`、`scratch/arms/nov24-2pbalanced-pg*`、`scratch/teacher-screen*-1124/`。
+- 训练与评测原件：`scratch/2p-strong-1124/`、`scratch/2p-v7-1124/`、`scratch/2p-preserve-1124/`、`scratch/arms/nov24-2pstrong-fsg2-*.bak(.meta.json)`、`scratch/arms/nov24-2pv7-fsg2-*.bak(.meta.json)`、`scratch/arms/nov24-2pkeep*`、`scratch/arms/nov24-2pring*`、`scratch/arms/nov24-2pfuse*`、`scratch/arms/nov24-fsspecialist-5long.bak`、`scratch/arms/nov24-2pbalanced-pg*`、`scratch/teacher-screen*-1124/`。
 - Arena B 条件留痕写入 `champion-map/data/arenaB-conditions-1118-page.tsv`。
