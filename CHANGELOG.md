@@ -4,6 +4,20 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.28 — 11-25（`ROD-DR` 入 `hard` / `PUR-DR` 入 `soft` ‖ 退役 `nov21-rod-tzt2d-r10` ‖ 全池 `28` 枚并集 `28/30`）
+
+**这一版是什么**：继续沿 `DR-R3E` 洁净底座攻克全池技能缺口与带伤替换，训出并入池 **`ROD-DR`**（[`docs/artifacts/ROD-DR.bak`](docs/artifacts/ROD-DR.bak)，`wid=c5f68b29031ab56c`）进 **`hard`** 并退役带 `seatKill=2` 的老避雷针包 `nov21-rod-tzt2d-r10`，再将首次打通全池净化 `≥3` 格覆盖、人席零漏格而 `2P` 偏弱的 **`PUR-DR`**（[`docs/artifacts/PUR-DR.bak`](docs/artifacts/PUR-DR.bak)，`wid=7fd8b3c1d487dcdd`）合入 **`soft`**；全池调至 **`28` 枚（`hard 15 / soft 13`）**，全池 Stage 1 有效并集由 `27/30` 升至 **`28/30`**（`hard 26/30`、`soft 25/30`，全池仅余 `dualGun, mirror` 未跨 `≥3` 格线）。
+
+- **`ROD-DR`（`hard` · 两粒种子复现后择强入池，`hard` 首获洁净避雷针覆盖）**：
+  - 配方：`up/teacher=pack:DR-R3E.bak`、`--teacher2=rod@0.35 (3/5/8P)`、`--teacher3=pack:T65-RINGBEAD.bak@0.25 (2:standard)`、`--rareOnly=rod,drain,ring@0.35`（`2000 组/240 步/lr=4e-4`），种子 1（`nov25-rod-dr-s25`）与种子 2（`nov25-rod-dr-s26` → `ROD-DR`）双双过 `selftest3 6/6 全绿`、`promote exit=0`、`Arena B +23.31/+23.35pt` 与 `seatKill=0`；
+  - `ROD-DR` 实测（[`docs/artifacts/promote-ROD-DR.txt`](docs/artifacts/promote-ROD-DR.txt)）：**`selftest3` 6/6 全绿（`0.00e+0`）**、`promote 0` 阻断（`G(multi)=4.12 / G(long)=5.97`、`S=1.814`、G4 `multi 0% / long 1%`、G5 `0%`、`环@安全 61.5%`）、`Arena B +23.3499pt`（6/6 正、极差 `34.10pt`、`H=60.0, S=1.48`、`a-long h2=89.50%`）、`90210/90211` **`seatKill=0`（全 28 格 `≤3.0%`）**、2P `rule 20.8% / legacy 19.8%`、`Stage 1` 并集 **`17/30`（`rod 14/120`, `drain 10/120`, `ring 31/120`, `bigT 8/120`）**、Stage 2 `24` 技。
+- **`PUR-DR`（`soft` · 补齐全池首个 `purify ≥3` 格载体）与退役 `nov21-rod-tzt2d-r10`**：
+  - [`docs/artifacts/PUR-DR.bak`](docs/artifacts/PUR-DR.bak)（[`docs/artifacts/promote-PUR-DR.txt`](docs/artifacts/promote-PUR-DR.txt)）：**`selftest3` 6/6 全绿（`0.00e+0`）**、`promote 0` 阻断（`G(multi)=4.25 / G(long)=4.64`、G4 `2.7%/0%`、G5 `0%`）、`Arena B +26.6586pt`（6/6 正、`H=59.3, S=1.45`）、`Stage 1` **`purify = 6/120`（`41` 次出手、`8` 非零格）/`drain 19/120`/`ring 44/120`**、`90210/90211` **`seatKill=0`**（`≤13.5%`）；因 `2P rule = 88.3%` 入 **`soft`** 补盲；
+  - 同期从 `soft` 退役 `nov21-rod-tzt2d-r10`（`seatKill=2`，移除其 Stage 1 raw）；使全池 `seatKill>0` 成员减为 2 枚（`hard` 持续保持 0 漏格）。
+- **2P 回合占比定位、消融发现与 28 池验证（见 [`docs/research/RESULTS-2026-11-25-pool-gap-and-2p.md`](docs/research/RESULTS-2026-11-25-pool-gap-and-2p.md)）**：
+  - 查明 `2:standard` 短局因回合数仅为 `long` 的约 1/5 在混合采样中被稀释；将抽样比重与教师配额提高至 `2:standard@10 + 0.90` 后，`nov25-purify-2p-s28` 把 2P 压至 `20.0%/12.5%` 并获 `Arena B +34.69pt`、`seatKill=0`（`≤4.0%`）；`nov25-fsg2-2p-s25` 虽将 `FS-G2` 2P 由 `59.3%` 降至 `16.5%` 且保住双闭环，但人席 `只枪压制` 达 `26%–44.5%` 拒入池；`nov25-taunt-2p-s25` 继承 `G5[long]=27%` 阻断；
+  - 28 池阶梯（`probe-diff-ladder --pool=1 --surrogate=rule`, 400 局/档）：`5P long` 困难 **`9.5%`** → 普通 **`22.8%`**（`5.1σ`）→ 简单 **`31.8%`**（`2.9σ`）；`5P multi` 困难 **`5.5%`** → 普通 **`17.8%`**（`5.4σ`）→ 简单 **`22.0%`**；`2P standard` 普通 `50.8%` / 简单 `51.8%` / 困难 `55.3%`。
+
 ## v2.1.27 — 11-25（路线 A 多师隔离补摄魂：`DR-R3E` 入 `hard`，填补 `hard` 带有效摄魂覆盖，全池 `27` 枚 `14/13`）
 
 **这一版是什么**：定位昨夜–午间摄魂（`drain`）训练失利的根因（`FS2-LE26` 在 `long` 40 局镜仅 `0.3%` 决策点达 `EP≥3`、`drainLegal=2`，属于状态不可达与 `--rareOnly` 饿死既有技能），改由 `selftest3` 全绿且原生具 `ring` / 高强度底盘的 [`docs/artifacts/nov22-ring3-gd6a18.bak`](docs/artifacts/nov22-ring3-gd6a18.bak) 起跑，在多师不冲突键道/桌形隔离下训出并优选种子 1 **`DR-R3E`**（[`docs/artifacts/DR-R3E.bak`](docs/artifacts/DR-R3E.bak)，`wid=eae4b0ad4013c202`）正式入 **`hard`**，使 `hard` 带重获 `drain ≥3 格` 有效覆盖，全池扩至 **`27` 枚（`hard 14 / soft 13`）**。

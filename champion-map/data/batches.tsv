@@ -122,3 +122,5 @@ measure-T65-RINGBEAD	a-v2-page-1109	A	-	-	measure-T65-RINGBEAD	T65-RINGBEAD-read
 measure-SOFT-RING-C3G25	a-v2-page-1109	A	-	-	measure-SOFT-RING-C3G25	SOFT-RING-C3G25-readings.tsv	32	2026-11-25T03:38:41.043Z	add-point
 measure-FS2-LE26	a-v2-page-1109	A	-	-	measure-FS2-LE26	FS2-LE26-readings.tsv	32	2026-11-25T03:57:30.332Z	add-point
 measure-DR-R3E	a-v2-page-1109	A	-	-	measure-DR-R3E	DR-R3E-readings.tsv	32	2026-11-25T07:16:28.657Z	add-point
+measure-ROD-DR	a-v2-page-1109	A	-	-	measure-ROD-DR	ROD-DR-readings.tsv	32	2026-11-25T08:25:34.022Z	add-point
+measure-PUR-DR	a-v2-page-1109	A	-	-	measure-PUR-DR	PUR-DR-readings.tsv	32	2026-11-25T08:43:20.708Z	add-point

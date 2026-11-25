@@ -123,3 +123,7 @@ FS2-LE26	docs/artifacts/FS2-LE26.bak	multi	200	90210	19	0	0	3	0	19	19	8.57142857
 FS2-LE26	docs/artifacts/FS2-LE26.bak	long	200	90210	7	1	0	2.5	0	7	7	3.5	7.0	全程刷反弹	2
 DR-R3E	docs/artifacts/DR-R3E.bak	multi	200	90210	0	0	0	3.5	0	0	0	0.50	3.5	只枪压制	3.4285714285714284
 DR-R3E	docs/artifacts/DR-R3E.bak	long	200	90210	0.5	1	0	1.5	0	0.5	0.5	0.57	1.5	只枪压制	3.142857142857143
+ROD-DR	docs/artifacts/ROD-DR.bak	multi	200	90210	0	0	0	0.5	0	0	0	0.07	0.5	只枪压制	3.142857142857143
+ROD-DR	docs/artifacts/ROD-DR.bak	long	200	90210	2	0	0	2.5	0	2	2	1.21	2.5	只枪压制	1.7142857142857142
+PUR-DR	docs/artifacts/PUR-DR.bak	multi	200	90210	0	0.5	0	11	0	0	0	1.64	11.0	只枪压制	4.928571428571429
+PUR-DR	docs/artifacts/PUR-DR.bak	long	200	90210	1	1	0	5	0	1	1	1.29	5.0	只枪压制	5.071428571428571
