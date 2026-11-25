@@ -181,3 +181,39 @@ E 解决的是“多人残局变弱”，不是“2P 页面变强”。两条线
 - 不在 --seed 未修前做“换 seed”因果结论（seed 已修，但后续仍要 paired）；
 - 不做 C/D 的换皮版本；
 - 不在 2P 方案未定时，把单枚 2P 专臂塞进通用 hard 池。
+
+---
+
+## 6. 当前池与产品面
+
+- 当前池 28 枚：hard 15 / soft 13；全池 Stage 1 有效并集 28/30，仅缺 dualGun、mirror。
+- 规则指纹 bfd49045；远端 dd01fd06（v2.1.28），gates/pages CI 已绿。
+- pool-add --audit 现读 arenaOverBand=28、decideBandPt=5.8：28 枚历史读数都超过当选判决窗口，单次读数不能当池内排序键。
+- FC-G1 是 hard 的 block + invited 成员；pool audit 的 blockedAuto=0 不等于它是普通 pass。
+- 天火闭环已接入第 7 道/L3，但 FIRESTORM_BLOCK=false：只记录，不阻断；用户已裁定不立硬准入门。
+- dualGun、mirror 仍是明确缺口；28/30 不能读成“全技能齐全”。
+
+## 7. 当天证据链的两处修正
+
+- DR-R3E 的 hostile 双过原始回执缺失；当前池复跑为 n3 7.5% / n5 27.5%，n3 低于 10% 线，已降级为待复核。
+- DR-R3E 的 promote 场B 1.16/局是 multi 口径；地图 allLong 的 long 场B 是 0.03/局，低于 0.3，long 无压清场未过。
+- 因此“五道全过”不能读成“双桌形全过”；旧摘要里的 hostile 双过不能再引用。
+
+## 8. 当前验证与工作树
+
+- 当前快速检查：validate 通过（canonical matched 998 / mismatch 0）、spec 81/81、land-recovered 零违例、pool audit 28 枚无 bad。
+- 以上不是整轮认证；本地最新文档修正之后还没有跑整轮。
+- 写档时工作树不干净：CHANGELOG、RESULTS-2026-11-25-drain-training、RESULTS-2026-11-25-pool-gap-and-2p 有未提交修正，evidence-2026-11-25-afternoon 未跟踪。本文只提交分析文档，不替这些修正做决定。
+
+## 9. 落地建议
+
+1. P0：先把 hostile 双过撤回、场B 拆成 multi/long、evidence 归档落盘，再跑一次 gate-all --np。
+2. P1：2P 只做 A 辅助 + B 主实验；B 单开受控 PG/门控 KL 臂，base 用现有 2P 最强冻结包。
+3. P1：E 单独做多人 alive=2 残局采集，不和真 2P 混训混报。
+4. P2：池只做覆盖/风格解释，不急排序；FC-G1 的 block+invited 单独确认；dualGun/mirror 作为明确缺口记录。
+5. P2：C/D 永久不做，换皮版本同样不做。
+
+## 10. 一句话结论
+
+2P 的方向不是再加一枚专臂，而是先修正证据，再用 PG/门控 KL 直接对 2P 结果付账；强教师只作辅助；多人残局单独走；独立子池和路由不做。
+
