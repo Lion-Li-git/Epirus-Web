@@ -265,7 +265,21 @@ if (PARENT_ARG) {
 const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unknown');
 const pointWid = widOf(packText);
 const lrow = { id: ID, fam: FAM, famLabel: FAMLAB, ts: String(meta.ts || statSync(PACK).mtime.toISOString()), metaSeed, nameSeed: '',
-  parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product' };
+  parent: parentId, parentOf: parentId, parentName: parentId, wid: pointWid, parentSrc, tsSrc: 'product',
+  parentOf2: '', parentName2: '', parentSrc2: '' };
+if (Array.isArray(meta.fusedFrom) && meta.fusedFrom.length >= 2) {
+  const fPaths = Array.isArray(meta.fusedPaths) ? meta.fusedPaths : [];
+  const f2 = String(meta.fusedFrom[1] || '').trim();
+  const up2 = normRel(fPaths[1] || '');
+  const p2Direct = resolveOnMap(up2, f2);
+  const p2Id = (p2Direct && dispIds.has(p2Direct)) ? p2Direct : (f2 ? findAncestorOnMap(f2, up2, ancDirs, resolveOnMap, rootDir) : '');
+  if (p2Id && p2Id !== ID && p2Id !== parentId) {
+    lrow.parentOf2 = p2Id;
+    lrow.parentName2 = p2Id;
+    lrow.parentSrc2 = 'soup';
+    if (lrow.parentOf) lrow.parentSrc = 'soup';
+  }
+}
 const ltab = linMain;
 for (const c of ['ruler_id', 'cell', 'horizon', 'value', 'n']) if (readTable(RD).ix[c] === undefined) { console.error('⛔ readings 缺列 ' + c); process.exit(2); }
 const RT = readTable(RD);

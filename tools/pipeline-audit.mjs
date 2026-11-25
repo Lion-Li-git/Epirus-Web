@@ -172,15 +172,19 @@ for (const id of ids) {
           add(id, 'parent', '父节点 META.ts(' + prow[lin.ix.ts] + ') 晚于本包(' + meta.ts + ') ⇒ 时间倒挂');
         }
       }
-      /* ⑤ soup.sources 逐源 */
+      /* ⑤ soup.sources 或 pack-fuse fusedFrom 逐源 */
+      const hasFuse = Array.isArray(meta.fusedFrom) && meta.fusedFrom.length >= 2;
       if (meta.soup && Array.isArray(meta.soup.sources)) {
         for (const s of meta.soup.sources) {
           if (s.path && !existsSync(s.path)) add(id, 'soup', '来源文件不存在：' + s.path);
           if (s.ts && meta.ts && tsMs(s.ts) > tsMs(meta.ts)) add(id, 'soup', '来源 ts(' + s.ts + ') 晚于本包 ⇒ 时间倒挂');
         }
         if (lf && lf[lin.ix.parentSrc] !== 'soup') add(id, 'soup', 'META 声明融合但 lineage parentSrc=' + lf[lin.ix.parentSrc] + ' ⇒ 表未按融合渲染');
+      } else if (hasFuse) {
+        if (lf && lf[lin.ix.parentSrc] !== 'soup') add(id, 'soup', 'META 声明双父融合(fusedFrom)但 lineage parentSrc=' + lf[lin.ix.parentSrc] + ' ⇒ 表未按融合渲染');
+        if (lf && (!lf[lin.ix.parentOf2] || lf[lin.ix.parentSrc2] !== 'soup')) add(id, 'soup', 'META 声明双父融合(fusedFrom)但缺少第二父边(parentOf2/parentSrc2=soup)');
       } else if (lf && lf[lin.ix.parentSrc] === 'soup') {
-        add(id, 'soup', 'lineage 声明融合（parentSrc=soup）但 META 无 soup.sources ⇒ 反向假账（MSB15-SOUPB 同款）');
+        add(id, 'soup', 'lineage 声明融合（parentSrc=soup）但 META 无 soup.sources/fusedFrom ⇒ 反向假账（MSB15-SOUPB 同款）');
       }
       /* ⑥⑦ 站点 */
       if (!cooOf[id]) add(id, 'coords', '未进图（coords 无行）');
