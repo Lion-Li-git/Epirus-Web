@@ -596,6 +596,11 @@ const _n = function (x, d) { return (isFinite(x) ? Number(Number(x).toFixed(d ==
  * ⇒ 保持 `false`。翻转条件不变：**等真有一个可上线候选过了它**。 */
 export const DENSITY_BLOCK = false;
 
+/* 天火闭环（2026-11-25 · 对齐珠经济第 6 道）：`FIRESTORM_BLOCK = false` 默认只记录不阻断；
+ * 判据按用户 11-23 夜裁定「宁可不贴，也不要出现不闭环」：贴出手 = 0 ⇒ 不适用（不碰不罚）；
+ * 贴出手 > 0 ⇒ 须同时满足 贴落地 > 0 且 局闭环率 ≥ 30%（贴过的局里至少一次真吃到符的引爆）且 空爆 ≤ 1/局。 */
+export const FIRESTORM_BLOCK = false;
+
 /* v1.5.168（§N25）：「全息屏障套给别人 > 6 次/局 ⇒ 硬门槛，`--force` 也不放行」的阈值单一来源。
  * 为什么现在抽出来：当选面要拿它当**预筛**（兑现广度不许把一包"送盾当主业"的候选换上来），
  * 而它在 `promote-champion` 里原本是一个字面量 —— 两处各写一个 6 = 本仓栽过四次的那类漂移。 */
@@ -753,9 +758,46 @@ export function feasibilityOf(o) {
     '、按ジ占比 ' + dRec.jiShare + '）⇒ "经济动作有出口"的第一个形态（**目前只记录不阻断**）');
   else notes.push('第6道（输出密度/经济出口）：珠经济**未闭环**（花珠率 ' + dRec.beadSpentRate + '（电 ' + (dRec.beadSpentElec != null ? dRec.beadSpentElec : '?') + ' / 爆 ' + (dRec.beadSpentBoom != null ? dRec.beadSpentBoom : '?') + '）' +
     '，按ジ占比 ' + dRec.jiShare + '）⇒ 记录不阻断 —— 连线上包都没过它（所以它现在没有判别力）');
+  const fsIn = o.firestorm || {};
+  const fRec = {
+    games: isFinite(fsIn.games) ? Number(fsIn.games) : null,
+    curseOk: isFinite(fsIn.curseOk) ? Number(fsIn.curseOk) : null,
+    curseLanded: isFinite(fsIn.curseLanded) ? Number(fsIn.curseLanded) : null,
+    firestormOk: isFinite(fsIn.firestormOk) ? Number(fsIn.firestormOk) : null,
+    firestormHits: isFinite(fsIn.firestormHits) ? Number(fsIn.firestormHits) : null,
+    emptyBoom: isFinite(fsIn.emptyBoom) ? Number(fsIn.emptyBoom) : null,
+    stickGames: isFinite(fsIn.stickGames) ? Number(fsIn.stickGames) : null,
+    loopGames: isFinite(fsIn.loopGames) ? Number(fsIn.loopGames) : null,
+    fsLegalDecisions: isFinite(fsIn.fsLegalDecisions) ? Number(fsIn.fsLegalDecisions) : null,
+    fsTakenWhenLegal: isFinite(fsIn.fsTakenWhenLegal) ? Number(fsIn.fsTakenWhenLegal) : null,
+    detRate: (fsIn.detRate != null && isFinite(fsIn.detRate)) ? _n(fsIn.detRate, 3) : null,
+    takeRate: (fsIn.takeRate != null && isFinite(fsIn.takeRate)) ? _n(fsIn.takeRate, 3) : null,
+    loopRate: (fsIn.loopRate != null && isFinite(fsIn.loopRate)) ? _n(fsIn.loopRate, 3) : null,
+    emptyBoomPerGame: (fsIn.emptyBoomPerGame != null && isFinite(fsIn.emptyBoomPerGame)) ? _n(fsIn.emptyBoomPerGame, 2) : null,
+    blocking: FIRESTORM_BLOCK
+  };
+  if (!isFinite(fsIn.curseOk)) {
+    fRec.firestormLoopClosed = null;
+    notes.push('第7道（天火贴/爆闭环）**探针缺失** ⇒ 未判定（不等于过）');
+  } else if (Number(fsIn.curseOk) === 0) {
+    fRec.firestormLoopClosed = 'NA';
+    notes.push('第7道（天火贴/爆闭环）：从不贴符（贴 0）⇒ 不适用（符合「宁可不贴」）');
+  } else {
+    const fsClosed = Number(fsIn.firestormHits) > 0 && Number(fsIn.stickGames) > 0 &&
+      isFinite(fsIn.loopRate) && Number(fsIn.loopRate) >= 0.30 &&
+      isFinite(fsIn.emptyBoomPerGame) && Number(fsIn.emptyBoomPerGame) <= 1;
+    fRec.firestormLoopClosed = fsClosed;
+    const fsMsg = '第7道（天火贴/爆闭环）：贴 ' + fRec.curseOk + ' / 爆 ' + fRec.firestormOk +
+      '（命中 ' + fRec.firestormHits + ' · 局闭环 ' + (fRec.loopRate != null ? (100 * fRec.loopRate).toFixed(0) + '%' : '—') +
+      ' · 空爆 ' + (fRec.emptyBoomPerGame != null ? fRec.emptyBoomPerGame : '?') + '/局）';
+    if (fsClosed) notes.push(fsMsg + ' ⇒ **闭环** ✓');
+    else if (FIRESTORM_BLOCK) fails.push(fsMsg + ' ⇒ **未闭环**');
+    else notes.push(fsMsg + ' ⇒ **未闭环**（目前只记录不阻断）');
+  }
   return {
     ok: fails.length === 0, fails: fails, notes: notes,
     density: dRec,
+    firestorm: fRec,
     seatSpread: _n(s.spread, 1), seatDecisive: _n(s.decisiveRate), seatVerdict: s.verdict || '?', seatBasis: s.basis || '',
     seatPct: (s.pct || []).map(function (x) { return _n(x, 1); }),
     G: _n(g.effSkills), Gkeys: (g.distinctKeys === undefined ? null : g.distinctKeys),
@@ -850,6 +892,70 @@ export function chargeProfile(W, params, mode, GAMES) {
     gained: gained, spent: spent, spentElec: spentElec, spentBoom: spentBoom, expired: expired,
     wasteRate: gained ? expired / gained : 0, spentRate: gained ? spent / gained : 0,
     roundsPerGame: rounds / Math.max(1, games), bySeat: bySeat
+  };
+}
+
+/* 天火贴/爆闭环探针（2026-11-25 · 对齐 `chargeProfile` 单一真源）：
+ * 同一张 5 席镜像自对局表（temp=0.15, mulberry32(13000+g) + slotSalt），按"贴出手 / 贴落地 / 引爆命中 /
+ * 空爆 / 局闭环 / 机会抓手率"同桌测量。R64 已过滤无可引爆符咒的天火 ⇒ fsLegalDecisions 即合法引爆机会。 */
+export function firestormProfile(W, params, mode, GAMES) {
+  const G = GAMES || 40;
+  const R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;
+  let curseOk = 0, curseLanded = 0, firestormOk = 0, firestormHits = 0, emptyBoom = 0;
+  let stickGames = 0, loopGames = 0, boomGames = 0, emptyBoomGames = 0;
+  let fsLegalDecisions = 0, fsTakenWhenLegal = 0;
+  const base = T.policyChooserN(params, 0.15);
+  const wrapped = function (st2, pid, legal) {
+    const got = base(st2, pid, legal);
+    if (Array.isArray(legal) && legal.some(function (l) { return l && l.key === R.SK.FIRESTORM; })) {
+      fsLegalDecisions++;
+      if ((got && (got.key || got)) === R.SK.FIRESTORM) fsTakenWhenLegal++;
+    }
+    return got;
+  };
+  for (let g = 0; g < G; g++) {
+    const st = S.createState(mode === 'long' ? 'long' : 'multi', { next: mulberry32(13000 + g) }, 5);
+    st.slotSalt = (Math.imul(g + 1, 0x9e3779b9) ^ 0x5bf03635) >>> 0;
+    Play.autoGameN(st, [wrapped, wrapped, wrapped, wrapped, wrapped]);
+    const gStick = [0, 0, 0, 0, 0], gHit = [0, 0, 0, 0, 0], gEmpty = [0, 0, 0, 0, 0];
+    for (const e of st.events) {
+      if (e.type === 'action' && e.outcome === 'ok') {
+        if (e.key === R.SK.CURSE) curseOk++;
+        else if (e.key === R.SK.FIRESTORM) firestormOk++;
+      } else if (e.type === 'curse') {
+        curseLanded++;
+        if (e.owner != null) gStick[e.owner]++;
+      } else if (e.type === 'firestorm') {
+        if ((e.n || 0) > 0) {
+          firestormHits += e.n;
+          if (e.pid != null) gHit[e.pid]++;
+        } else {
+          emptyBoom++;
+          if (e.pid != null) gEmpty[e.pid]++;
+        }
+      }
+    }
+    let anyBoom = false, anyEmpty = false;
+    for (let p = 0; p < 5; p++) {
+      if (gStick[p] > 0) {
+        stickGames++;
+        if (gHit[p] > 0) loopGames++;
+      }
+      if (gHit[p] > 0 || gEmpty[p] > 0) anyBoom = true;
+      if (gEmpty[p] > 0) anyEmpty = true;
+    }
+    if (anyBoom) boomGames++;
+    if (anyEmpty) emptyBoomGames++;
+  }
+  return {
+    games: G, curseOk: curseOk, curseLanded: curseLanded, firestormOk: firestormOk,
+    firestormHits: firestormHits, emptyBoom: emptyBoom, stickGames: stickGames, loopGames: loopGames,
+    boomGames: boomGames, emptyBoomGames: emptyBoomGames,
+    fsLegalDecisions: fsLegalDecisions, fsTakenWhenLegal: fsTakenWhenLegal,
+    detRate: curseOk > 0 ? firestormOk / curseOk : null,
+    takeRate: fsLegalDecisions > 0 ? fsTakenWhenLegal / fsLegalDecisions : null,
+    loopRate: stickGames > 0 ? loopGames / stickGames : null,
+    emptyBoomPerGame: G ? emptyBoom / G : 0
   };
 }
 

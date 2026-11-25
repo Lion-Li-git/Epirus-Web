@@ -26,7 +26,7 @@ import { rulesFingerprint, fingerprintOfBundle } from './rules-fingerprint.mjs';
 /* v1.5.18：体检指标（B/C/E/F/G）改走**共享库** —— 与 `tools/champ-audit.mjs` 同一份实现。
  * 抽取起因见 CHANGELOG v1.5.18：指标原先"只打印、不判定"（第三方复核 §7-4(1)），
  * 而把它变成阻断条件就必然要在两个工具里各写一遍 → 那正是这个项目栽过四次的事。 */
-import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, degeneracyVerdict } from './audit-lib.mjs';
+import { sandbox, selfPlay, fieldRate, reflectWall, seatSymmetry, aggressionProfile, feasibilityOf, sniperField, chargeProfile, firestormProfile, densityProfile, breadthProfile, feasPlan, HOLO_GIFT_MAX, extractJsonObject, parseMetaTolerant, degeneracyVerdict } from './audit-lib.mjs';
 /* v1.5.152（DS 09-22 · 用户裁定"把真桌 ε=0.2 接进体检，只记录不阻断"）：
  * **产品代理栏** —— 单一来源：借 `behavior-profile.mjs` 的 `fieldProfile`（不抄第二份实现；该模块被 import 时不跑 main）。
  * 依据（`docs/research/logs/RESEARCH-LOG-2026-09-22-ds.md` §7）：同一包同一 ε=0，**镜像**装配电磁炮 4.30 每局、
@@ -281,10 +281,12 @@ if (G_L < 3) fails.push('G(long) 有效技能数 ' + G_L.toFixed(2) + ' < 3（�
  * 两个量：① 珠经济**双向**（得珠 / 花珠率）② **输出密度**（每回合出手伤害 / 按ジ占比）。 */
 const dens = densityProfile(W, params, 'long', FEAS_N.density);
 const chgE = chargeProfile(W, params, 'long', FEAS_N.charge);
+const fsE = firestormProfile(W, params, 'long', FEAS_N.charge);
 const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
   density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chgE.gained, spentRate: chgE.spentRate,
     expiredPerGame: chgE.games ? chgE.expired / chgE.games : 0,
-    zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
+    zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate },
+  firestorm: fsE });
 console.log('   可行性〔五道地板：会几招 / 反弹墙 / 被围殴会还手 / 不偏座 / 收得了场〕（与训练落盘同源 · 样本量 ' + FEAS_N.tag + '）：' + (feas.ok ? '✅ 五道全过' : '✗ ' + feas.fails.join('；')) +
   /* ⚠ 2026-10-25「广度取 b」之后，这一行与下面的"广度"栏**可能不同判**：`feasibilityOf` 是**训练落盘口径**（吃 selfPlay 的 G），
    *   而 promote 的阻断 10-25 起改吃**两把量具取严**。两者不一致时必须在这里点名，否则读体检的人会拿"五道全过"当"能出厂"
@@ -474,6 +476,18 @@ console.log('   〔攒下来的珠有没有囤成过期废物〕珠经济（' + 
   (chg.gained > 0 && chg.spentRate >= 0.2 && chg.games && (chg.expired / chg.games) <= 1
     ? '（闭环 ✓：花/得 ' + (100 * chg.spentRate).toFixed(0) + '%、过期 ' + (chg.expired / chg.games).toFixed(1) + '/局）'
     : '（**未闭环**：这是"没长出能力"，不是"指标好看"）'));
+/* 天火闭环（2026-11-25 · 对齐珠经济第 6 道）：`FIRESTORM_BLOCK = false` 默认只记录不阻断 */
+const fsStatus = fsE.curseOk === 0
+  ? '（不适用：从不贴符，符合「宁可不贴」）'
+  : (feas.firestorm && feas.firestorm.firestormLoopClosed === true
+    ? '（闭环 ✓：局闭环 ' + (100 * fsE.loopRate).toFixed(0) + '%、空爆 ' + (fsE.games ? (fsE.emptyBoom / fsE.games).toFixed(1) : '—') + '/局）'
+    : '（**未闭环**：有贴但没引爆闭环）');
+console.log('   〔贴出的符有没有用天火引爆闭环〕天火经济（' + fsE.games + ' 局）：贴出手 ' + fsE.curseOk +
+  ' · 贴落地 ' + fsE.curseLanded + ' · **引爆 ' + fsE.firestormOk + '**（命中 ' + fsE.firestormHits +
+  ' / 空爆 ' + fsE.emptyBoom + '）· 引爆率 ' + (fsE.detRate != null ? (100 * fsE.detRate).toFixed(0) + '%' : '—') +
+  ' · 抓手率 ' + (fsE.takeRate != null ? (100 * fsE.takeRate).toFixed(0) + '%' : '—') +
+  '（机会 ' + fsE.fsLegalDecisions + '）· **局闭环 ' + (fsE.loopRate != null ? (100 * fsE.loopRate).toFixed(0) + '%' : '—') +
+  '** · 空爆 ' + (fsE.games ? (fsE.emptyBoom / fsE.games).toFixed(1) : '—') + '/局' + fsStatus);
 /* ===== v1.5.78（第七轮复核 §15-1）：把 **G4 克制表 / G5 破防反射** 接进阻断面 =====
  * 复核把这两条写成可跑代码（`tools/gate-drafts.mjs`）并**先证明了量具的判别力**：
  *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；

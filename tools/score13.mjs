@@ -60,6 +60,17 @@ export function parsePromote(txt) {
   /* 2026-10-28：珠这条改按**绝对颗数**判（用户：「或许可以按照绝对浪费数量来算？」）⇒ 要抓那句尾部的「过期 X/局」 */
   const expPg = t.match(/· 过期 ([\d.]+)\/局/);
   if (expPg) out.raw.expiredPerGame = Number(expPg[1]);
+  /* 天火闭环（2026-11-25 · 对齐珠经济口径）：天火经济（40 局）：贴出手 C · 贴落地 L · **引爆 F**（命中 H / 空爆 E）· ... · **局闭环 R%/—** · 空爆 X/局 */
+  const fs = t.match(/天火经济（\d+ 局）：贴出手 (\d+) · 贴落地 (\d+) · \*\*引爆 (\d+)\*\*（命中 (\d+) \/ 空爆 (\d+)）[^\n]*?\*\*局闭环 ([\d.]+%|—)\*\* · 空爆 ([\d.]+|—)\/局/);
+  if (fs) {
+    out.raw.fsCurseOk = Number(fs[1]);
+    out.raw.fsCurseLanded = Number(fs[2]);
+    out.raw.fsFirestormOk = Number(fs[3]);
+    out.raw.fsFirestormHits = Number(fs[4]);
+    out.raw.fsEmptyBoom = Number(fs[5]);
+    out.raw.fsLoopRate = fs[6] === '—' ? (out.raw.fsCurseOk > 0 ? 0 : null) : Number(fs[6].slice(0, -1));
+    out.raw.fsEmptyPerGame = fs[7] === '—' ? null : Number(fs[7]);
+  }
   /* 防御质量栏（`defense-quality.mjs` 的措辞）：⚠ **promote 默认那一栏是「攒钱者(banker)」装配 ⇒ 不能拿来立线**。
    *   实测（2026-10-28，池 30 枚同装配）：白防率 min 72.4 ‖ 中位 **89.4%** ‖ max 94.8，且倍差中位 0.65×(<1)
    *   ⇒ 「出了防御但没人打」在这张桌上是**装配产物**（探针自己的话：倍差≈1 时「空挡高只是没人打我，不许读成防得没道理」）。
@@ -192,7 +203,15 @@ function main() {
       [(function () { const n = parsePromote(SAMPLE_BEH_OK).raw; return n.g4Cells === null && n.g4CellsUnrun === false; })(),
         'T2 整句都没印（旧版 promote）⇒ g4Cells=null 且**不打**"读不出"旗（分母=没这条记录，不是门坏了）'],
       [verdict({ raw: Object.assign({}, f.raw, { g4Cells: [{ mean: 72.3 }] }), density: null, strength: 51.5 }, false).of === 12,
-        'T2 有读数也**不进 12 项分母**（只记录 ⇒ 分母还是 12）']
+        'T2 有读数也**不进 12 项分母**（只记录 ⇒ 分母还是 12）'],
+      [verdict({ raw: Object.assign({}, f.raw, parsePromote('天火经济（40 局）：贴出手 0 · 贴落地 0 · **引爆 0**（命中 0 / 空爆 0）· 引爆率 — · 抓手率 —（机会 0）· **局闭环 —** · 空爆 0.0/局').raw), density: null, strength: 51.5 }, true)
+        .rows.find(r => r.key === 'firestorm').ok === true, '天火 贴=0 ⇒ L3 判「不适用」（绿，符合宁可不贴）'],
+      [verdict({ raw: Object.assign({}, f.raw, parsePromote('天火经济（40 局）：贴出手 50 · 贴落地 30 · **引爆 25**（命中 24 / 空爆 1）· 引爆率 50% · 抓手率 60%（机会 40）· **局闭环 85%** · 空爆 0.1/局').raw), density: null, strength: 51.5 }, true)
+        .rows.find(r => r.key === 'firestorm').ok === true, '天火 贴>0 ∧ 局闭环 85% ∧ 空爆 0.1/局 ⇒ L3 闭环 ✓'],
+      [verdict({ raw: Object.assign({}, f.raw, parsePromote('天火经济（40 局）：贴出手 40 · 贴落地 35 · **引爆 4**（命中 4 / 空爆 0）· 引爆率 10% · 抓手率 5%（机会 80）· **局闭环 12%** · 空爆 0.0/局').raw), density: null, strength: 51.5 }, true)
+        .rows.find(r => r.key === 'firestorm').ok === false, '天火 贴>0 ∧ 局闭环 12% < 30% ⇒ L3 未闭环（❌）'],
+      [verdict({ raw: f.raw, density: null, strength: 51.5 }, true)
+        .rows.find(r => r.key === 'firestorm').ok === null, '天火 没印这一栏 ⇒ L3 读不出（null，不假绿）']
     ];
     let bad = 0;
     for (const [ok, name] of checks) { if (!ok) bad++; console.log((ok ? 'PASS ' : 'FAIL ') + name); }
