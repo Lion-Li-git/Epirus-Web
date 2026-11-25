@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov26-util-rod-head-s30 wid=7517ce21b786ba82
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-head
+[nov26-util-rod-head-s30] stage1 并集 17/30（自对局 11） 换招JS 0.0544 ‖ 15.5s → D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-head\nov26-util-rod-head-s30.json

@@ -1,0 +1,11 @@
+分片 0/1：1 批（校准 0）
+    · 隔离旧件 v7aim1f-31.bak（防冒充）
+    · 隔离旧件 v7aim1f-82.bak（防冒充）
+    · 隔离旧件 v7aim1f-93.bak（防冒充）
+  ▶ v7aim1f@caebdf45 seeds=31,82,93
+  ✗ v7aim1f-31 wid=8fab0c8e8c9832a1 ≠ 0660c3d11cf214c6
+  ✗ v7aim1f-82 wid=e75ea2f41e5b2a39 ≠ e4aecf1d62980acb
+  ✗ v7aim1f-93 wid=cebc716ad7ac6c06 ≠ 8a1dff1dd0cc48aa
+
+==== 分片 0 完成：0 命中 ====
+HITS	

@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov26-taunt-rod-s30 wid=e44cc69a1ac9b6e9
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-taunt
+[nov26-taunt-rod-s30] stage1 并集 20/30（自对局 17） 换招JS 0.1557 ‖ 13.6s → D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-taunt\nov26-taunt-rod-s30.json

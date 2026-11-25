@@ -1,0 +1,18 @@
+[imit] 主线程生效值 gens=0 frac=0 teacher=(默认 heavyfire) accepted=null override=false plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.06,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}
+[imit] 主线程生效值 gens=0 frac=0 teacher=(默认 heavyfire) accepted=null override=false plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.06,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}
+[imit] 主线程生效值 gens=0 frac=0 teacher=(默认 heavyfire) accepted=null override=false plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.06,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}
+[seat] 主线程生效值 SEAT_GAMES=24（原默认 6 局；门禁/落盘默认 60 局）
+[clear] 主线程生效值 CLEAR_W=0.1（封顶 /1，与 tgtBonus 同尺度；口径 = 收缩开始前由我打死的对手数）
+[imit] 主线程生效值 gens=125 frac=0.5 teacher=pickAimDefender accepted=true override=true plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0.12
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.3,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}
+[seat] 主线程生效值 SEAT_GAMES=24（原默认 6 局；门禁/落盘默认 60 局）
+[clear] 主线程生效值 CLEAR_W=0.1（封顶 /1，与 tgtBonus 同尺度；口径 = 收缩开始前由我打死的对手数）
+[imit] 主线程生效值 gens=125 frac=0.5 teacher=pickAimDefender accepted=true override=true plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0.12
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.3,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}
+[seat] 主线程生效值 SEAT_GAMES=24（原默认 6 局；门禁/落盘默认 60 局）
+[clear] 主线程生效值 CLEAR_W=0.1（封顶 /1，与 tgtBonus 同尺度；口径 = 收缩开始前由我打死的对手数）
+[imit] 主线程生效值 gens=125 frac=0.5 teacher=pickAimDefender accepted=true override=true plan=(无) 段数=0 only=(不过滤) subOnly=false β(gen0)=0.12
+[eco] 生效值: {"targetOverride":null,"capOverride":null,"divW":0.3,"divK":6,"divRoleW":0,"divCatW":0,"K_role":8,"divForceGens":0,"wallFilter":false,"stockBonus":0.05,"hoardPen":0.12,"hoardOnLeftover":false,"convRatio":false,"convOffense":false,"hoardCapMult":2,"blockW":0,"widthW":0,"bigcardW":0,"wallGames":3,"ringW":0.1,"at3":{"target":3,"cap":10},"at5long":{"target":5,"cap":20}}

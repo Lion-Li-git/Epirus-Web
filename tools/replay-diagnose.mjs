@@ -45,7 +45,10 @@ if (JOBS && existsSync(JOBS)) {
     seeds.forEach((s, i) => want.push({ batch: b, seed: s, id: ids[i] || (b + '-' + s), eras, arm: c[jh.arm] || b }));
   }
 } else if (ONLY.length) {
-  for (const b of ONLY) for (const [id, c] of L) if (id.startsWith(b + '-')) want.push({ batch: b, seed: c[lh.metaSeed] || '', id, eras: [], arm: b });
+  for (const b of ONLY) for (const [id, c] of L) if (id.startsWith(b + '-')) {
+    const suffix = /-(\d+)$/.exec(id);
+    want.push({ batch: b, seed: c[lh.metaSeed] || (suffix ? suffix[1] : ''), id, eras: [], arm: b });
+  }
 }
 if (!want.length) { console.log('没有要查的 (批,seed)：--jobs= 或 --batches= 给一个'); process.exit(0); }
 

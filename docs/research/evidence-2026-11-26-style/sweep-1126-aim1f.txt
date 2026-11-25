@@ -1,0 +1,8 @@
+分片 0/1：1 批（校准 0）
+  ▶ v7aim1f@caebdf45 seeds=31,82,93
+  ✗ v7aim1f-31 wid=6764990a157b0789 ≠ 0660c3d11cf214c6
+  ✗ v7aim1f-82 wid=14ea45adac0ca41c ≠ e4aecf1d62980acb
+  ✗ v7aim1f-93 wid=24b2087dba092371 ≠ 8a1dff1dd0cc48aa
+
+==== 分片 0 完成：0 命中 ====
+HITS	

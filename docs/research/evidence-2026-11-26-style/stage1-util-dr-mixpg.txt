@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov26-util-dr-mixpg-s30 wid=312d2869be11cf5c
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-mixpg
+[nov26-util-dr-mixpg-s30] stage1 并集 16/30（自对局 13） 换招JS 0.0721 ‖ 16.1s → D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-mixpg\nov26-util-dr-mixpg-s30.json

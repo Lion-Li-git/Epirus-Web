@@ -390,7 +390,9 @@ console.log('# pg-train（B 臂） ‖ 起点 ' + UP.replace(/^.*[\\/]/, '') + '
   (SHAPE_MODES.size ? ' ‖ shapeModes ' + [...SHAPE_MODES].join(',') : '') +
   (ONLY_SEG.length ? ' ‖ onlySeg ' + ONLY_SEG.join(',') : '') +
   ' ‖ 基线 ' + BASELINE + ' ‖ seed ' + SEED);
-console.log('  口径：arena2 mild(cap2/mix0.5) salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度');
+const arenaShapeTxt = A2.shapes.map((s) => s.n + ':' + s.mode + (s.weight > 1 ? '@' + s.weight : '')).join(',');
+const arenaPoolTxt = A2.roster ? A2.roster.map((r) => r.name).join(',') : 'mild(cap' + A2.stratCap + '/mix' + A2.stratMix + ')';
+console.log('  口径：arena2 ' + arenaPoolTxt + ' ‖ poolFp=' + String(A2.poolFp || '').slice(0, 8) + ' ‖ shapes=' + arenaShapeTxt + ' ‖ salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度');
 
 let HF = '';
 try { HF = widOf(readFileSync(UP, 'utf8')) || ''; } catch (e) { HF = ''; }

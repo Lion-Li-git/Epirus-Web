@@ -19,8 +19,9 @@ const ROOT = process.cwd();
 const lines = readFileSync(jobsFile, 'utf8').split('\n').filter((l) => l.trim());
 const head = lines[0].split('\t');
 const ix = Object.fromEntries(head.map((h, i) => [h, i]));
-const jobs = lines.slice(1).map((l) => {
+const jobs = lines.slice(1).map((l, li) => {
   const c = l.split('\t');
+  if (ix.env !== undefined && c.length <= ix.env) throw new Error('jobs 第 ' + (li + 2) + ' 行缺 env 列（当前 ' + c.length + ' 列 / 表头 ' + head.length + ' 列）⇒ 拒绝把 env 静默读成默认配置');
   return { batch: c[ix.batch], fam: c[ix.fam], era: c[ix.era], arm: c[ix.arm], seeds: (c[ix.seeds] || '').split(','), opps: c[ix.opps], mode: c[ix.mode], hot: c[ix.hot] || '', ids: (c[ix.ids] || '').split(','), paths: (c[ix.paths] || '').split(','), targets: (c[ix.targets] || '').split(','), calibSeed: c[ix.calibSeed] || '', calibWid: c[ix.calibWid] || '', calibPath: c[ix.calibPath] || '', env: (c[ix.env] !== undefined ? c[ix.env] : '') };
 }).filter((j) => j.era && j.batch);
 const mine = jobs.filter((_, k) => k % TOTAL === SHARD);

@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov26-util-dr-short40-s30 wid=10d89f8d5322360f
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-short
+[nov26-util-dr-short40-s30] stage1 并集 17/30（自对局 15） 换招JS 0.0782 ‖ 15.8s → D:\code\Epirus-Web\docs\research\evidence-2026-11-26-style\skill-report-short\nov26-util-dr-short40-s30.json

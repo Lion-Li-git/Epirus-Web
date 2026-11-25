@@ -1,0 +1,13 @@
+file:///D:/code/Epirus-Web/scratch/sweep-server-batches.mjs:24
+  if (ix.env !== undefined && c.length <= ix.env) throw new Error('jobs 第 ' + (li + 2) + ' 行缺 env 列（当前 ' + c.length + ' 列 / 表头 ' + head.length + ' 列）⇒ 拒绝把 env 静默读成默认配置');
+                                                        ^
+
+Error: jobs 第 2 行缺 env 列（当前 14 列 / 表头 15 列）⇒ 拒绝把 env 静默读成默认配置
+    at file:///D:/code/Epirus-Web/scratch/sweep-server-batches.mjs:24:57
+    at Array.map (<anonymous>)
+    at file:///D:/code/Epirus-Web/scratch/sweep-server-batches.mjs:22:29
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.20.0
