@@ -499,6 +499,7 @@ function selftest() {
     units.push(['扫描：只认 ok 的 charge、回合按 newturn 进格、失败那手不记', scanOk]);
     let bad = 0;
     for (const [nm, ok] of units) { console.log('  ' + (ok ? '✔' : '✘') + ' ' + nm); if (!ok) bad++; }
+    fail += bad;
   }
   console.log('[自证·B 阴性] fixed:gun —— 六条全 ✘');
   {
@@ -558,7 +559,19 @@ function selftest() {
       if (!ok) fail++;
     }
   }
-  console.log(fail === 0 ? '[自证] 五腿全过 ✔（A 阳性 / B 阴性 / C 确定性 / D 容器装载 / E miniT 语义方向）' : '[自证] ⛔ ' + fail + ' 项挂 ⇒ 尺作废，先修再测');
+  console.log('[自证·F transfer 回传] 已知答案事件流：只收本人收到的正数转移');
+  {
+    const row = replay({ picks: [{ pid: 0, key: 'transfer' }], marks: [0] }, [
+      { type: 'action', pid: 0, key: 'transfer', outcome: 'ok' },
+      { type: 'transfer', to: 0, amt: 2 },
+      { type: 'transfer', to: 1, amt: 7 },
+      { type: 'transfer', to: 0, amt: 0 },
+    ])[0];
+    const ok = !!row && row.ok && Array.isArray(row.transfered) && row.transfered.length === 1 && row.transfered[0].amt === 2;
+    console.log('  ' + (ok ? '✔' : '✘') + ' replay 回传 transfered=[{amt:2}]，拒收他人与零点数');
+    if (!ok) fail++;
+  }
+  console.log(fail === 0 ? '[自证] 六腿全过 ✔（A 阳性 / B 阴性 / C 确定性 / D 容器装载 / E miniT 语义方向 / F transfer 回传）' : '[自证] ⛔ ' + fail + ' 项挂 ⇒ 尺作废，先修再测');
   return fail === 0 ? 0 : 1;
 }
 

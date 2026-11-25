@@ -1,0 +1,310 @@
+{
+ "tool": "supfit-gd",
+ "tag": "nov25-tf2-rod-s26",
+ "parent": "docs/artifacts/ROD-DR.bak",
+ "seed": 20261126,
+ "collectionSeed": 2667729087,
+ "collectionSalt": 2229199725,
+ "lr": 0.00025,
+ "steps": 140,
+ "groups": 2000,
+ "trainG": 1497,
+ "testG": 503,
+ "objective": "cand",
+ "dagger": 1,
+ "dagTemp": 0.15,
+ "pool": 2000,
+ "shapeBal": 1,
+ "rolloutMode": "game",
+ "classPow": 0.5,
+ "classCap": 6,
+ "teacher": "pack:docs/artifacts/ROD-DR.bak",
+ "keySplit": 1,
+ "rareOnly": "transfer,rod,drain,ring",
+ "rareFrac": 0.35,
+ "arenaPool": "names:human:rule,human:legacy,aggro,targeter,ringspam,beadburst,wall,gunspam,heavyfire,deepsaver,snipespam,defend,pack:docs/artifacts/DR-R3E.bak,pack:docs/artifacts/FS2-LE26.bak",
+ "arenaShapes": "2:standard@2,3:multi,5:long@2,8:long",
+ "arenaShapeWeights": [
+  {
+   "shape": "2:standard",
+   "weight": 2
+  },
+  {
+   "shape": "3:multi",
+   "weight": 1
+  },
+  {
+   "shape": "5:long",
+   "weight": 2
+  },
+  {
+   "shape": "8:long",
+   "weight": 1
+  }
+ ],
+ "teacher2": "transfer2",
+ "teacher2frac": 0.4,
+ "teacher2keys": "transfer",
+ "teacher2shapes": "3:multi,3:long,5:long,8:long",
+ "teacher3": "pack:docs/artifacts/T65-RINGBEAD.bak",
+ "teacher3frac": 0.35,
+ "teacher3keys": null,
+ "teacher3shapes": "2:standard",
+ "teacher4": "ringEcon",
+ "teacher4frac": 0.15,
+ "teacher4keys": "ring",
+ "teacher4shapes": "3:long,5:long,8:long",
+ "shapeTeachers": null,
+ "playedAgree": {
+  "n": 14630,
+  "hit": 12926,
+  "stuckCharge": 3,
+  "missCharge": 6,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 3987,
+  "moved": 13,
+  "gone": 0,
+  "keys": 4000,
+  "rare": 18495,
+  "byKey": {
+   "ji": 1488,
+   "sword": 353,
+   "gun": 340,
+   "charge": 35,
+   "railgun": 31,
+   "snipe": 103,
+   "transfer": 257,
+   "reflect": 108,
+   "ring": 629,
+   "bigT": 3,
+   "drain": 103,
+   "guard": 320,
+   "holo": 3,
+   "bagua": 152,
+   "rod": 72,
+   "shift": 1,
+   "firestorm": 2
+  },
+  "byShape": {
+   "0": {
+    "n": 1334,
+    "ok": 1332,
+    "moved": 2,
+    "keys": {
+     "ji": 855,
+     "sword": 324,
+     "gun": 81,
+     "charge": 31,
+     "railgun": 31,
+     "snipe": 12
+    }
+   },
+   "1": {
+    "n": 666,
+    "ok": 666,
+    "moved": 0,
+    "keys": {
+     "transfer": 66,
+     "ji": 212,
+     "reflect": 51,
+     "gun": 91,
+     "snipe": 18,
+     "ring": 151,
+     "sword": 23,
+     "bigT": 1,
+     "drain": 42,
+     "guard": 4,
+     "holo": 1,
+     "bagua": 5,
+     "charge": 1
+    }
+   },
+   "2": {
+    "n": 1334,
+    "ok": 1329,
+    "moved": 5,
+    "keys": {
+     "transfer": 104,
+     "ji": 251,
+     "reflect": 35,
+     "gun": 95,
+     "guard": 248,
+     "ring": 339,
+     "snipe": 48,
+     "drain": 38,
+     "bagua": 113,
+     "holo": 1,
+     "sword": 3,
+     "rod": 52,
+     "charge": 3,
+     "shift": 1,
+     "firestorm": 2,
+     "bigT": 1
+    }
+   },
+   "3": {
+    "n": 666,
+    "ok": 660,
+    "moved": 6,
+    "keys": {
+     "ji": 170,
+     "gun": 73,
+     "sword": 3,
+     "reflect": 22,
+     "guard": 68,
+     "snipe": 25,
+     "transfer": 87,
+     "ring": 139,
+     "rod": 20,
+     "drain": 23,
+     "bagua": 34,
+     "bigT": 1,
+     "holo": 1
+    }
+   }
+  },
+  "t1Groups": 21748,
+  "t3Groups": 356,
+  "t3Hits": 968,
+  "t2Groups": 12028,
+  "t2Fallback": 21359,
+  "t2Hits": 561,
+  "t4Groups": 3600,
+  "t4Fallback": 5830,
+  "t4Hits": 291
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 1,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 1497,
+    "teacherAgree": 0.8131212723658051,
+    "teacherLl": -0.7871899680735989,
+    "studentAgree": null,
+    "studentN": 0
+   },
+   {
+    "round": 1,
+    "studentG": 2000,
+    "trainG": 2000,
+    "teacherAgree": 0.882703777335984,
+    "teacherLl": -0.4363834486220165,
+    "studentAgree": 0.8725099601593626,
+    "studentLl": -0.7625630448282567,
+    "studentN": 502
+   }
+  ],
+  "roundsMoved": [
+   {
+    "round": 1,
+    "moved": 10878,
+    "firstDiff": 0,
+    "dim": 16561
+   }
+  ],
+  "startAgree": 0.856858846918489,
+  "startLl": -2.7775330019060225,
+  "agree": 0.882703777335984,
+  "ll": -0.4363834486220165,
+  "wAgree": 0.870587087432257,
+  "nTest": 503,
+  "nTrain": 2000,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": 0.8725099601593626,
+  "studentN": 502,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 195,
+    "hit": 182
+   },
+   {
+    "key": "charge#elec#elec",
+    "n": 9,
+    "hit": 9
+   },
+   {
+    "key": "sword",
+    "n": 44,
+    "hit": 41
+   },
+   {
+    "key": "gun",
+    "n": 38,
+    "hit": 26
+   },
+   {
+    "key": "railgun",
+    "n": 3,
+    "hit": 3
+   },
+   {
+    "key": "snipe",
+    "n": 9,
+    "hit": 5
+   },
+   {
+    "key": "reflect",
+    "n": 14,
+    "hit": 13
+   },
+   {
+    "key": "ring",
+    "n": 67,
+    "hit": 64
+   },
+   {
+    "key": "bagua",
+    "n": 16,
+    "hit": 14
+   },
+   {
+    "key": "holo",
+    "n": 1,
+    "hit": 1
+   },
+   {
+    "key": "transfer",
+    "n": 57,
+    "hit": 41
+   },
+   {
+    "key": "drain",
+    "n": 7,
+    "hit": 5
+   },
+   {
+    "key": "guard",
+    "n": 34,
+    "hit": 32
+   },
+   {
+    "key": "rod",
+    "n": 9,
+    "hit": 8
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "docs/artifacts/ROD-DR.bak",
+  "gen": 2,
+  "recipe": {
+   "teacher": "chain-lib.pickChain",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib) + DAgger x1"
+  }
+ }
+}

@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { readTable } from '../map-table.mjs';
 import { loadRulers, currentRuler } from './rulers.mjs';
-import { buildView, DEFAULT_COMPARE } from './build-view.mjs';
+import { buildView, DEFAULT_COMPARE, VERSION_PROJ_COLS } from './build-view.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));
@@ -29,8 +29,8 @@ const h5 = read('readings/h5-frozen.tsv');
 const disp = read('display.tsv');
 if (errs.length) { console.error('⛔ ' + errs.join('\n⛔ ')); process.exit(2); }
 
-const regIds = new Set(), regStatus = {};
-for (const r of reg.rows) { const id = r[reg.ix.pack_id]; if (!id) errs.push('registry 空 pack_id'); else if (regIds.has(id)) errs.push('registry 重复 ' + id); else { regIds.add(id); regStatus[id] = r[reg.ix.status]; } }
+const regIds = new Set(), regStatus = {}, regVer = {};
+for (const r of reg.rows) { const id = r[reg.ix.pack_id]; if (!id) errs.push('registry 空 pack_id'); else if (regIds.has(id)) errs.push('registry 重复 ' + id); else { regIds.add(id); regStatus[id] = r[reg.ix.status]; regVer[id] = r[reg.ix.ver]; } }
 const rulerIds = new Set();
 for (const r of rulers.rows) {
   const id = r[rulers.ix.ruler_id];
@@ -71,6 +71,18 @@ for (const p of ['features.tsv', 'projections.tsv', 'readings/h5-frozen.tsv', 'd
   const idCol = t.ix.pack_id !== undefined ? t.ix.pack_id : t.ix.id;
   const s = new Set();
   for (const r of t.rows) { const id = r[idCol]; if (!regIds.has(id)) errs.push(p + ' 指向未登记 ' + id); if (s.has(id)) errs.push(p + ' 重复 ' + id); s.add(id); }
+}
+for (const t of [proj, disp]) {
+  const idCol = t.ix.pack_id !== undefined ? t.ix.pack_id : t.ix.id;
+  for (const c of VERSION_PROJ_COLS) if (t.ix[c] === undefined) errs.push((t === proj ? 'projections' : 'display') + ' 缺版本投影列 ' + c);
+  if (VERSION_PROJ_COLS.some((c) => t.ix[c] === undefined)) continue;
+  for (const r of t.rows) {
+    const id = r[idCol], suffix = regVer[id] === '2.0' ? '20' : '18';
+    const cols = ['xt' + suffix, 'yt' + suffix, 'xt3' + suffix, 'yt3' + suffix, 'zt3' + suffix];
+    for (const c of cols) if (!Number.isFinite(Number(r[t.ix[c]]))) errs.push(id + ' 版本投影缺数 ' + c);
+    const same3 = Math.abs(+r[t.ix['xt3' + suffix]] - +r[t.ix.xt3]) <= 1e-6 && Math.abs(+r[t.ix['yt3' + suffix]] - +r[t.ix.yt3]) <= 1e-6 && Math.abs(+r[t.ix['zt3' + suffix]] - +r[t.ix.zt3]) <= 1e-6;
+    if (same3) errs.push(id + ' 版本三维投影仍等于全库 fit');
+  }
 }
 /* 归档包只保留历史坐标，不要求补当前 A/B 16 格；否则 --strict 会把 19 枚已归档对照永久判红。 */
 const missing = [...regIds].filter((id) => regStatus[id] !== 'archived' && (!cover.has(id) || cover.get(id).n < 16));

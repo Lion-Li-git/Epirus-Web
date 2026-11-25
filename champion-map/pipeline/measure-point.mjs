@@ -13,6 +13,7 @@ import { execFileSync, execFile } from 'node:child_process';
 import { cpus } from 'node:os';
 import { promisify } from 'node:util';
 import { readTable, writeTable } from '../map-table.mjs';
+import { VERSION_PROJ_COLS } from './build-view.mjs';
 
 const execFileP = promisify(execFile);
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -388,20 +389,19 @@ if (!SKIP_PROJ) {
   if (pr) {
     for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3']) setD(c, pr[PT.ix[c]]);
     setD('x2', pr[PT.ix.xt]); setD('y2', pr[PT.ix.yt]);
-    setD('xt20', pr[PT.ix.xt]); setD('yt20', pr[PT.ix.yt]);
   }
 }
 /* 投影整表回写：proj-tsne 重排了全部坐标；把 927 行一起交给 add-point，避免新旧点混两套投影。 */
 let projFile = '';
 if (!SKIP_PROJ) {
   const PT = readTable(join(ST, ID + '-proj-input.tsv'));
-  const prh = ['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'];
+  const prh = ['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS);
   const prs = [prh];
   for (const r of PT.rows) {
     const id = r[PT.ix.id];
     if (!id) continue;
-    prs.push([id, r[PT.ix.xt], r[PT.ix.yt], r[PT.ix.xt3], r[PT.ix.yt3], r[PT.ix.zt3],
-      r[PT.ix.xt18], r[PT.ix.yt18], id === ID ? r[PT.ix.xt] : r[PT.ix.xt20], id === ID ? r[PT.ix.yt] : r[PT.ix.yt20]]);
+    prs.push([id, r[PT.ix.xt], r[PT.ix.yt], r[PT.ix.xt3], r[PT.ix.yt3], r[PT.ix.zt3]]
+      .concat(VERSION_PROJ_COLS.map((c) => r[PT.ix[c]] ?? '')));
   }
   projFile = join(ST, ID + '-projections.tsv');
   writeFileSync(projFile, prs.map((x) => x.join('\t')).join('\n') + '\n', 'utf8');

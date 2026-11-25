@@ -189,11 +189,11 @@ if (RULERINFO.champDirty) console.log('⚠ batches.tsv 的 champ 列把席位倍
   } }
 const PRESET = arg('preset', 'all');
 /* ===== 单页化（11-06 夜 · 用户点名「三个网页并成一个」）=====
- * `--projcols=1`：DATA 里带三套投影列（xt/yt = 全库 fit ‖ xt18/yt18 ‖ xt20/yt20，由
- * `scratch/zcode-1106/attach-projcols.mjs` 挂列），页内"版本"下拉**换投影**而不是换页：
- *   · 版本切换 = st.batch 过滤（原有页内过滤路）+ 把可见点的 x2/y2 换成那一版的投影列
- *     + 作废地图侧几何缓存（NBK/FL/壳链拓扑）+ 相机复位（= 重新适配）。
- *   · 谱系（时间×家族）/ 一维（F 序）/ 三维（x3y3z3 独立列）三张视图**不消费**这组列 ⇒ 不受影响。
+ * `--projcols=1`：DATA 里带三套投影列（xt/yt/xt3/yt3/zt3 = 全库 fit ‖ *18 ‖ *20，由
+ * `pipeline/rebuild-version-projections.mjs` 挂列），页内"版本"下拉**换投影**而不是换页：
+ *   · 版本切换 = st.batch 过滤（原有页内过滤路）+ 把可见点的 x2/y2 与 x3/y3/z3 换成那一版的投影列
+ *     + 作废地图/三维壳几何缓存 + 相机复位（= 重新适配）。
+ *   · 谱系（时间×家族）/ 一维（F 序）两张视图不消费这组列 ⇒ 不受影响。
  *   · SUBSETP（子集页判据域）从烘焙常量改成**运行时**：batch=all 判全套，1.8/2.0 走 NA_IN_SUBSET 跳过。
  * 换页那条路（--verpages=1）已随三张分页图一起退役，见下面 VERPAGES 那一行的说明。 */
 const PROJCOLS = arg('projcols', '0') === '1';
@@ -223,14 +223,14 @@ if (!CF) { console.error('⛔ --fit=' + FITARG + ' 三个候选路径都不存�
 if (!existsSync(CF)) { console.error('⛔ 没有 ' + CF + ' ⇒ 先跑 docs/artifacts/e287-out/e287-figs.mjs，再把落盘拷成 coords.tsv'); process.exit(2); }
 const t = readFileSync(CF, 'utf8').trim().split('\n'), head = t[0].split('\t');
 const rows = t.slice(1).map(l => { const c = l.split('\t'); const o = {}; head.forEach((k, i) => { o[k] = c[i]; }); return o; });
-/* 阶段 3 守卫：--projcols=1 要吃 18/20 四列；gen3 没有这四列 ⇒ 必须走 rebuild-map.mjs
- *   （rebuild-map 会先 build-view/data）。不许静默退回 xt/yt，否则 1.8/2.0 预设会混用两套坐标。 */
+/* 阶段 3 守卫：--projcols=1 要吃 18/20 的二维与三维十列；缺列就必须走 rebuild-map.mjs。
+ *   不许静默退回全库坐标，否则 1.8/2.0 预设会混用不同版本的 fit。 */
 if (PROJCOLS) {
-  const need = ['xt18', 'yt18', 'xt20', 'yt20'];
+  const need = ['xt18', 'yt18', 'xt318', 'yt318', 'zt318', 'xt20', 'yt20', 'xt320', 'yt320', 'zt320'];
   const miss = need.filter(c => head.indexOf(c) < 0);
   if (miss.length) {
     console.error('⛔ 表 ' + CF + ' 缺 18/20 投影列 ' + miss.join('/') + '（表头 ' + head.length + ' 列）' +
-      '\n       ⇒ --projcols=1 会退化成 xt/yt 一套坐标，1.8/2.0 预设就混轴了。' +
+      '\n       ⇒ --projcols=1 会退化成全库坐标，1.8/2.0 预设就混轴了。' +
       '\n         正路：node champion-map/rebuild-map.mjs（先 build-view/data 再 viewer）' +
       '\n         或：--fit=data/build/coords-view.tsv（页面吃的就是这张）‖ 确实不要分版投影：--projcols=0');
     process.exit(2);
@@ -627,7 +627,10 @@ const DATA = rows.map(r => ({
    *   嵌套 `}` 会把截断点提前、sh/sv 被切掉 ⇒ 门假红（实测踩过一次）。数组只有中括号，不犯这条。 */
   pj18: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt18 !== '' && r.xt18 !== undefined && r.xt18 != null && isFinite(+r.xt18)) ? [+r.xt18, +r.yt18] : null,
   pj20: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt20 !== '' && r.xt20 !== undefined && r.xt20 != null && isFinite(+r.xt20)) ? [+r.xt20, +r.yt20] : null,
+  pj318: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt318 !== '' && r.yt318 !== '' && r.zt318 !== '' && isFinite(+r.xt318) && isFinite(+r.yt318) && isFinite(+r.zt318)) ? [+r.xt318, +r.yt318, +r.zt318] : null,
+  pj320: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt320 !== '' && r.yt320 !== '' && r.zt320 !== '' && isFinite(+r.xt320) && isFinite(+r.yt320) && isFinite(+r.zt320)) ? [+r.xt320, +r.yt320, +r.zt320] : null,
   pjAll: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt) ? +r.xt : +r.x2, (PROJTSNE && r.yt) ? +r.yt : +r.y2] : null,
+  pj3All: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3, (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3] : null,
   x3: (PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, y3: (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3,
   z3: (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3,
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
@@ -965,19 +968,9 @@ var st = { mode: 'map', T: 0.10, color: 'F', size: 1, labels: 'champ', q: '', ft
   chain: 1,             /* §E763（用户 10-26 00:3x「其他三张图加上一个可开关的链条，只显示选中点的链，同时要显示链上点的标签」）
                          *   主语 = 一维带 / 地图 / 三维行为轴 这三张；**谱系图不在内**（它本来就把父边全画出来，那是 #edges 那一层）。
                          *   默认开 = 用户描述的"选中一个点之后可以显示"这件事必须第一次就成立；关掉是给嫌挤的人的退路。 */
-  iso: 0, isoT: 0.30,   /* §E306 过线曲面：0=关 1=半透壳 2=只描边；isoT = 局部占比阈值。
-                            §E312 默认从 0.5 降到 0.35：实测收缩后场的峰值只有 40%，50% 是"正确地什么都不画"，
-                            默认值必须落在有东西可画的那一段，否则用户第一次开壳就看到空图。*/
-  isoField: 'ok',       /* §E312 'ok' = 局部过线概率 ‖ 'pot' = 势（F）归一化 —— 同一个壳引擎换场 */
-  isoTok: 0.30, isoTpot: 0.67,
-                        /* §E312 阈值**按场各存一份**：两场的量纲不是一回事。§E314 头号尺换成线上口径之后，
-                           势场整条分布都挪了（先验 59%→63%、峰值 68%→70%）⇒ 旧默认 64% 离均值只剩 1pt，
-                           壳圈进 338 枚、纯度 31%→23% = 又变成"什么都没圈"。新默认由 iso-sweep.mjs（已同步换尺）定：
-                             ok 0.30 ⇒ 壳内 38 枚、纯度 66%（底率 16%）‖ 留一 27 枚里 3 枚 = 11%
-                             pot 0.67 ⇒ 壳内 122 枚、纯度 28% ‖ 留一 117 枚里 25 枚 = 21%（这条规则挑出来的最高档）
-                           ⇒ 反过来：**唯一"留一还站得住"的是势场那层**，过线场给的是形状、不是证据。
-                           M0=5 是为了削掉边缘的孤点岛：单枚过线点最多抬到 (1+5·0.157)/6 = 0.298 < 0.30
-                           ⇒ 一座壳至少要"几个过线的挤在一起"才长得出，用户看到的"只圈到边缘"那批岛就没了。*/
+  iso: 0, isoT: 0.40,   /* 0=关 1=半透壳 2=只描边；阈值按场分别保存。 */
+  isoField: 'ok',       /* ok = 局部过线概率 ‖ pot = 势（F）归一化 */
+  isoTok: 0.40, isoTpot: 0.50,
   ox: 0, oy: 0, k: 1, yaw: -Math.PI / 2, pit: Math.PI / 2, elev: 0, goodTop: true,
   ox3: 0, oy3: 0, zoom3: 1, hi: {}, bg: '#0f1522', ink: '#dce6f5', dim: '#9fb0cc',
   tKx: 1, tKy: 1, tX: 0, tY: 0,   /* §E312/§E314 谱系图那台相机（只影响 tree 视图；默认 1/1/0/0 = 与加相机之前逐像素相同）
@@ -1733,7 +1726,7 @@ var CHROMEVEC = 1;
 var BASEP = -1;
 /* §E677（用户 2026-10-21：「底率不是壳阈值」）：这句标签原来把**过线率**印在两种场的旁边 ——
  *   过线场还说得通（等值面的参照就是全库过线率），势场档就成了两个不相干的量并排：
- *   那条线是"归一化势 ≥ 67%"，而 25.5% 是"多少枚过了闸"，谁也不是谁的阈值。
+ *   那条线是"归一化势 ≥ 50%"，而全库过线率是"多少枚过了闸"，谁也不是谁的阈值。
  *   ⇒ 参照量**按场各给各的**，并且都取壳自己用的那个数（同一份算法，不另起第二把尺）：
  *     'ok'  ⇒ 参照 = 全库过线率（= isoBuild 的 base，也是「壳内纯度要赢过的那条线」）
  *     'pot' ⇒ 参照 = 全库平均势（= isoBuild 的 p0 在势场上的值）
@@ -3609,7 +3602,7 @@ function draw3b(fr) {
   for (i = 0; i < ls.length; i++) { var pp = scr[ls[i].i]; if (!pp) continue;
     putLabel(labOf(P[ls[i].i]), pp[0], pp[1], mustLabel(P[ls[i].i]), false, ls[i].i); }
   g.fillStyle = st.dim; g.font = (12 * devicePixelRatio) + 'px system-ui,sans-serif';
-  g.fillText('三维行为轴（x3/y3/z3）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 点颜色 = ' + colorTitle() + ' ⇒ 第三轴是行为不是深度' +
+  g.fillText('三维行为轴（版本 ' + (PCUR === 'all' ? '全部' : PCUR) + ' 独立 fit）· 左键拖动 = 平移 · 右键拖动 = 旋转 · 滚轮 = 缩放 · 点颜色 = ' + colorTitle() + ' ⇒ 第三轴是行为不是深度' +
     /* §E312 壳好不好必须当场给数，而且**两列一起给**：含自己那列与画出来的壳同口径但循环，留一那列才是"不是靠自己被圈进来"。
      *   只报一列就会被骗（iso-sweep.mjs 实测两列差一倍）⇒ 这也回答"壳到底有没有用"：留一塌到 0 就说明这层壳是自我照亮。*/
     (isoInfo ? ' ‖ 壳[' + (isoInfo.field === 'pot' ? '势' : '过线概率') + '] 阈值 ' + Math.round(st.isoT * 100) +
@@ -3994,7 +3987,7 @@ document.getElementById('batch').addEventListener('change', function () {
   /* 11-05 上午（用户）：版本 = **另一套投影** ⇒ 换版本就换页（页内坐标是本页这批点自己拟合出来的，拿去过滤另一批点是假坐标）。
    *   目标页就是本页（或 VER_PAGES 为空）时，退回原来的页内过滤，行为与旧版逐字同。
    *   11-06 夜（单页化）：PROJCOLS 页 = 页内**换投影**（VER_PAGES 必为空 ⇒ 本来就走这支）：
-   *   setProj 把可见点的 x2/y2 换成那一版自己的 fit 列并作废地图侧几何缓存 —— "换视图必须连坐标一起重算"
+   *   setProj 把可见点的 x2/y2 与 x3/y3/z3 换成那一版自己的 fit 列并作废几何缓存 —— "换视图必须连坐标一起重算"
    *   这条裁定在页内兑现，不再靠换页。 */
   var k = this.value, tp = (typeof VER_PAGES !== 'undefined' && VER_PAGES[k]) ? VER_PAGES[k] : '';
   if (tp && tp !== SELF_PAGE && !NAVLOCK) { location.href = tp; return; }
@@ -4003,19 +3996,16 @@ document.getElementById('batch').addEventListener('change', function () {
   recomputeVIS();
   if (st.iso) syncIso();
   buildFamBar(); paintSide(); req(); });
-/* ===== 单页化：换投影 = 换可见点的 x2/y2 + 作废地图侧几何缓存 + 相机复位 =====
- * 顺序照桌形切换那条路（§E623/§E617 家族）：坐标空间变了 ⇒
- *   · NBK（每格最近 12 名）是**纯几何**，按 x2/y2 算的 ⇒ 整表作废（ensureField 会按新几何重建）；
- *   · FL（底图位图）同理置 null；
- *   · FSRT/_FR/_EPR/_SCR 与壳链拓扑（LCHKEY）跟着桌形切换同款清键；
- *   · 相机走"复位视图"那支（出厂 = 全量适配）—— 换 fit 后旧缩放没有意义。
- * 谱系/一维/三维三张视图不消费 x2/y2 ⇒ 不动。 */
+/* ===== 单页化：换投影 = 换可见点的二维/三维坐标 + 作废几何缓存 + 相机复位 =====
+ * 地图与三维行为轴消费不同维度的 fit，但两者必须来自同一个版本子集。 */
 function setProj(kind) {
   if (!PROJCOLS) return;
   PCUR = (kind === '1.8' || kind === '2.0') ? kind : 'all';
   for (var i = 0; i < N; i++) {
     var q = PCUR === '1.8' ? P[i].pj18 : (PCUR === '2.0' ? P[i].pj20 : P[i].pjAll);
+    var q3 = PCUR === '1.8' ? P[i].pj318 : (PCUR === '2.0' ? P[i].pj320 : P[i].pj3All);
     if (q) { P[i].x2 = q[0]; P[i].y2 = q[1]; }
+    if (q3) { P[i].x3 = q3[0]; P[i].y3 = q3[1]; P[i].z3 = q3[2]; }
   }
   for (var kb in NBK) delete NBK[kb];
   FL = null;
@@ -4635,13 +4625,14 @@ var CHKDETAIL = 0;
   /* 装载时那一次 recomputeVIS 跑在深链之前 ⇒ 不补这一句，#flo=/#fhi= 只会重铺色带、不会真的少画点。 */
   if (WSEEN) recomputeVIS();
   /* §E312 两场各有各的刻度 ⇒ 深链只给 isof 不给 isot 时，必须把阈值换成**那场自己的**默认值
-   *   （#isof=pot 若沿用 ok 场的 30%，会把整片云圈进去、纯度退回底率 = 一张什么都没圈的壳）。
+   *   （#isof=pot 若沿用 ok 场的 40%，会把整片云圈进去、纯度退回底率 = 一张什么都没圈的壳）。
    *   两个都给时按字面 honored，并把这条线记进那一场的格子，回来切场不会丢。*/
   if (HT_SEEN) { if (st.isoField === 'pot') st.isoTpot = st.isoT; else st.isoTok = st.isoT; }
   else st.isoT = (st.isoField === 'pot' ? st.isoTpot : st.isoTok);
   if (st.mode === 'map') { var pp = st.elev < 0.5 ? FLAT : SOLID; st.yaw = pp.yaw; st.pit = pp.pit;
     document.getElementById('b3dt').textContent = st.elev < 0.5 ? '立体' : '平面'; } })();
 (function () { var b = document.getElementById('sortb'); if (b) b.textContent = '排序：' + (st.sortBy === 'time' ? '训出时刻' : 'F 名次'); })();   /* E399：放到深链解析之后，否则 #sort=time 时标签是假的 */
+if (PROJCOLS && typeof setProj === 'function') setProj(st.batch);
 fit0(); buildFamBar(); setBg(st.bg); setMode(st.mode); syncHdir(); paintCard(); paintSide(); floatBindAll();   /* §E462 三块浮层的拖动只绑一次（它们是常驻节点）*/
 /* E417 DS（缺口 A）：计数器**在 #perf>=1 就挂**（原来只在 #perf=2 的基准里挂 ⇒ #perf=1 下 OPSF 恒为 0）。 */
 if (PERFON >= 1) {
@@ -5973,17 +5964,17 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
    *     pot 场的壳由上面「壳内过线率 > 底率」与「同场」那两条覆盖，它们与选哪个场无关。*/
   var BWF = 'ok', BWT = (st.isoField === 'ok' ? st.isoT : st.isoTok);
   var _tbw1 = performance.now(); var BW1 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 1); BW1.ms = performance.now() - _tbw1;
-  var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.15); BW2.ms = performance.now() - _tbw2;   /* 11-11 重标定：926 点后 0.20 档丢 1 枚，拐点下移到 0.15 */
-  T('壳：带宽真的改场（c=1 → 0.15 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
+  var _tbw2 = performance.now(); var BW2 = isoBuild(SIGVAL, BWT, st.isoGN, BWF, 0.05); BW2.ms = performance.now() - _tbw2;
+  T('壳：带宽真的改场（c=1 → 0.05 ⇒ 漏画归零、误包下降、读数不许塌成空，且必须与 c=1 不是同一个数）‖ 钉在过线概率场上量（势场档不换主语）',
     BW2.miss === 0 && BW2.cov === BW2.nOk && (BW2.ins !== BW1.ins || BW2.cov !== BW1.cov) && BW2.bad < BW1.bad && BW2.quads.length > 0,
-    '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.15：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
+    '场=' + BWF + ' thr=' + BWT.toFixed(2) + ' ‖ c=0.05：壳内 ' + BW2.ins + ' ‖ 真过线 ' + BW2.cov + '/' + BW2.nOk + ' = ' + (BW2.ins ? (100 * BW2.cov / BW2.ins).toFixed(0) : '—') +
     '% ‖ 误包 ' + BW2.bad + '（c=1 是 ' + BW1.bad + '）‖ 漏画 ' + BW2.miss + '（c=1 是 ' + BW1.miss + '）‖ 片数 ' + BW2.quads.length +
     '（c=1 是 ' + BW1.quads.length + '）‖ 建壳 ' + BW2.ms.toFixed(0) + 'ms（c=1 是 ' + BW1.ms.toFixed(0) + 'ms）');
   st.mode = SNISO.mode; st.iso = SNISO.iso; st.elev = SNISO.elev;
   st.flo = SNISO.flo; st.fhi = SNISO.fhi; recomputeVIS(); draw(); paintWin();
   /* ===== §E677 一条腿管三件"改了但嘴上没说/说错"（用户 2026-10-21：「底率不是壳阈值」+「两把环跟着桌形换」）=====
    *   ① 换场 ⇒ 阈值必须换到**该场自己那一格**（两场刻度不同：沿用对方那条线 = 一张什么都没圈的壳）。
-   *      这里往两格里**故意写两个不同的值**再换场比对 —— 不拿默认值 0.30/0.67 不相等当证据（那是巧合，
+   *      这里往两格里**故意写两个不同的值**再换场比对 —— 不拿默认值 0.40/0.50 不相等当证据（那是巧合，
    *      哪天两场默认撞上了这条就白绿）。
    *   ② 换桌形 ⇒ 图例那串环计数必须**等于数据侧独立数出来的那一档**（不拿 ringTally 自己当自己的证据），
    *      且阈值标签里那句主语必须真的换了（标签换不了 = 主语是抄来的）。
@@ -5994,6 +5985,8 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     var S = { mode: st.mode, iso: st.iso, ftab: st.ftab, field: st.isoField, isoT: st.isoT, tok: st.isoTok, tpot: st.isoTpot };
     var bad = [], det = [];
     try {
+      if (!HT_SEEN && (Math.abs(st.isoTok - 0.40) > 1e-9 || Math.abs(st.isoTpot - 0.50) > 1e-9 || Math.abs(st.isoT - (st.isoField === 'pot' ? 0.50 : 0.40)) > 1e-9)) bad.push('默认阈值不是过线 40% / 势场 50%');
+      if (!HT_SEEN && String(document.getElementById('isot').value) !== '0.4') bad.push('阈值滑杆出厂值不是 0.4');
       st.mode = '3db'; st.iso = 1; recomputeVIS(); draw();
       /* ① 换场换格 */
       st.isoTok = 0.31; st.isoTpot = 0.68;
@@ -6036,6 +6029,40 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     recomputeVIS(); syncIso(); draw(); paintWin();
     T('壳标签与环主语自洽：换场换到该场自己那一格 ‖ 参照按场各给各的（势场档不许印过线率）‖ 换桌形环计数=独立数出来的 ‖ 拖滑杆标签跟着生效值',
       bad.length === 0, bad.join(' ‖ ') || det.join(' ‖ '));
+  })();
+  (function () {
+    if (!PROJCOLS) return;
+    var S3 = { mode: st.mode, iso: st.iso, batch: st.batch }, bad3 = [], det3 = [], sigs = {};
+    try {
+      st.mode = '3db'; st.iso = 0;
+      var batchSel = document.getElementById('batch');
+      var versions = ['all', '1.8', '2.0'];
+      for (var vi = 0; vi < versions.length; vi++) {
+        var ver = versions[vi];
+        batchSel.value = ver; batchSel.dispatchEvent(new Event('change', { bubbles: true })); draw();
+        var visible = 0, moved = 0, hash = 2166136261;
+        for (var pi = 0; pi < N; pi++) {
+          if (!VIS[pi]) continue;
+          visible++;
+          var d = P[pi], q = ver === '1.8' ? d.pj318 : (ver === '2.0' ? d.pj320 : d.pj3All);
+          if (!q || !isFinite(d.x3) || !isFinite(d.y3) || !isFinite(d.z3)) { bad3.push(ver + ' 缺三维 fit：' + d.id); continue; }
+          if (ver !== 'all' && (Math.abs(d.x3 - d.pj3All[0]) > 1e-6 || Math.abs(d.y3 - d.pj3All[1]) > 1e-6 || Math.abs(d.z3 - d.pj3All[2]) > 1e-6)) moved++;
+          hash ^= Math.round(d.x3 * 1e6) | 0; hash = Math.imul(hash, 16777619);
+          hash ^= Math.round(d.y3 * 1e6) | 0; hash = Math.imul(hash, 16777619);
+          hash ^= Math.round(d.z3 * 1e6) | 0; hash = Math.imul(hash, 16777619);
+        }
+        if (PCUR !== ver) bad3.push('版本切到 ' + ver + ' 而 PCUR=' + PCUR);
+        if (!visible) bad3.push(ver + ' 没有可见点');
+        if (ver !== 'all' && moved !== visible) bad3.push(ver + ' 仅 ' + moved + '/' + visible + ' 枚换了三维 fit');
+        sigs[ver] = hash >>> 0;
+        det3.push(ver + '=' + visible + ' 枚/换 fit ' + moved + '/hash ' + sigs[ver]);
+      }
+      if (sigs.all === sigs['1.8'] || sigs.all === sigs['2.0'] || sigs['1.8'] === sigs['2.0']) bad3.push('三个版本的三维坐标签名相同');
+    } catch (E) { bad3.push('这条腿自己抛了：' + String(E && E.message || E).slice(0, 90)); }
+    batchSel.value = S3.batch; batchSel.dispatchEvent(new Event('change', { bubbles: true }));
+    st.mode = S3.mode; st.iso = S3.iso; recomputeVIS(); draw();
+    T('三维行为轴：all/1.8/2.0 必须各自换用本版本 fit，不能共用全库投影',
+      bad3.length === 0, bad3.join(' ‖ ') || det3.join(' ‖ '));
   })();
   (function () {
     var SV = { mode: st.mode, iso: st.iso, batch: st.batch, field: st.isoField, isoT: st.isoT, flo: st.flo, fhi: st.fhi };
@@ -7170,7 +7197,7 @@ const html = '<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>
 '<button id="b3dt" title="同一张底，平面/立体无缝切换">立体</button>' +
 '<button id="bh" title="翻的只有高度方向；颜色恒为 红=F高">好在上 ⇅</button>' +
 '<button id="bisos" title="在三维行为轴里用闭合曲面圈出过线那一坨。三态：关 → 半透壳 → 只描边（壳永远画在点后面，点不会被挡）">过线曲面：关</button>' +
-'<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.3"><span id="isotv">30%</span></label>' +
+'<label id="isorow" style="display:none" title="壳的判据（两种场各有各的刻度，说明见右边那个下拉框）">壳阈值 <input type="range" id="isot" min="0.15" max="0.9" step="0.01" value="0.4"><span id="isotv">40%</span></label>' +
 '<label id="isobwrow" style="display:none" title="§E608 壳的**比较带宽** c = 核宽 / σ（σ = 显示度量第 6 近邻中位，现在印在下面那行读数里）。&#10;· c=1 = 今天这只壳：平滑的局部过线占比（M0 收缩 + 密度门都在）。&#10;· 往左收到 c→0 = 签名端：核里只剩自己那一枚 ⇒ 比值场退成 1-NN ⇒ 等值面就是 Voronoi 边界，每个过线点冒一个小泡、未过线一枚也不包（代价：壳碎成一片）。&#10;M0 与密度门跟着 c 线性退场 —— 它们是给「稀疏区一两个点就把比值抬到 1」打的补丁，小带宽天生不需要。&#10;⚠ 阈值这根滑杆不动（那是另一个所指）。⚠ 小 c 的泡比格子还小 ⇒ 要配 96~128 格，否则被退化片闸吃掉，看着像什么都没画。">带宽 <input type="range" id="isobw" min="0.05" max="1" step="0.01" value="0.6"><span id="isobwv">1.00（今天）</span><button id="bwToday" title="c=0.60 ‖ 回到装载时那一档（§E677 用户裁的默认带宽）。要恒等点 c=1 就把滑杆拉到右端。">默认壳 c=0.6</button><button id="bwSign" title="c=0.20 ‖ 实测这一档漏画归零（67→0）、误包 91→30，壳碎成一坨一坨各自抱住过线簇。再往左（c≤0.05）数值上才是签名端（误包 3→0），但那些小泡比格子还小 ⇒ 画出来像什么都没画（GN=72 只剩 310 片）">贴簇 c=0.2</button></label>' +
 '<label id="isognrow" style="display:none" title="壳的网格分辨率：格数越多壳越圆，但重建时间按立方涨（72 格实测约 0.2~0.3 秒，96 约 0.6 秒，128 约 1.5 秒；建一次就缓存，转视角/缩放每帧只重投影 ⇒ 嫌慢可以停在中档）">壳网格 <select id="isogn"><option value="52">52（旧默认·有棱面）</option><option value="72">72</option><option value="96">96</option><option value="128">128（最圆·最慢）</option></select> 场 <select id="isof" title="同一个壳引擎、两种场，默认阈值不同（都是从 iso-sweep.mjs 那张表定的，不是看着顺眼挑的）：&#10;· 过线概率（默认 30%）⇒ 壳 = 局部过线富集区。收缩后场峰值只有 42%，所以 50% 以上正确地什么都不画。&#10;· 势 F（默认 67%）⇒ 壳 = 预测势最高的一片。这条线只能落在均值 63% 与峰值 70% 之间，用 30% 会把整片云圈进去。&#10;两列读数（含自己 / 留一）就是判这层壳能不能当证据的地方：留一塌到 16% 上下 = 每枚点把自己照亮。"><option value="ok">过线概率</option><option value="pot">势（F）</option></select></label>' +
 '<button id="reset">复位视图</button>' +

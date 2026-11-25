@@ -20,6 +20,7 @@ const BCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) BCOLS.push(h[0] === 'short' ? 'P' + c + 'R' : 'P' + c + 'RL');
 const CCOLS = [];
 for (const h of HORIZONS) for (const c of CELLS) CCOLS.push(h[0] === 'short' ? 'C' + c + 'R' : 'C' + c + 'RL');
+export const VERSION_PROJ_COLS = ['xt18', 'yt18', 'xt318', 'yt318', 'zt318', 'xt20', 'yt20', 'xt320', 'yt320', 'zt320'];
 const HEAD = ['id'].concat(PCOLS, BCOLS, CCOLS);
 
 function toNum(v) { if (v === '' || v === undefined || v === null) return null; const n = Number(v); return isFinite(n) ? n : null; }
@@ -172,7 +173,7 @@ export function buildCoordsView(opts) {
     for (const c of ['S', 'Geff', 'rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg']) {
       if (f) set(row, c, f[feats.ix[c]]);
     }
-    for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20']) {
+    for (const c of ['xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS)) {
       if (p) set(row, c, p[projs.ix[c]]);
     }
     if (h) for (const c of ['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5']) set(row, c, h[h5.ix[c]]);
@@ -205,7 +206,7 @@ export function buildCoordsView(opts) {
     rows.push(row);
   }
   let maxD = 0, mism = 0;
-  const PROJ = new Set(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20']);
+  const PROJ = new Set(['xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS));
   for (let i = 0; i < rows.length; i++) {
     if (dispById.has(rows[i][0])) continue;
     const tr = tplById.get(rows[i][0]);

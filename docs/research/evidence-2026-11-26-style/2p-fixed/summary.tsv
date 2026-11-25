@@ -1,0 +1,7 @@
+surrogate	dose	candidate_mean	base_mean	delta_pt	interpretation
+rule	hard	32.6750	21.1250	11.5500	候选显著退化
+rule	regular	32.6750	21.1250	11.5500	候选显著退化
+rule	simple	40.3500	31.6000	8.7500	候选显著退化
+legacy	hard	17.4500	20.2500	-2.8000	候选改善
+legacy	regular	17.4500	20.2500	-2.8000	候选改善
+legacy	simple	17.6750	19.6750	-2.0000	候选改善

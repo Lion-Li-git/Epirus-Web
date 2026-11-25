@@ -39,8 +39,9 @@ else console.log('—— ① 历史戳检查：当前 B=' + (_b ? _b[0] : '?') +
 if (DRY) process.exit(0);
 /* ② 从 data/ 编译完整页面视图（canonical + display 模板）
  *    对照锚从 pipeline/build-view.mjs 的 DEFAULT_COMPARE 单源读取（gen10-de-1118），防止与无参 build-view 门禁漂移。 */
+run([join(HERE, 'pipeline/rebuild-version-projections.mjs'), '--data=' + DATA], '② 版本投影各自重算');
 run([join(HERE, 'pipeline/build-view.mjs'), '--data=' + DATA,
-  '--compare=' + DEFAULT_COMPARE], '② build-view 编译 coords-view');
+  '--compare=' + DEFAULT_COMPARE], '②b build-view 编译 coords-view');
 const viewPath = join(DATA, 'build/coords-view.tsv');
 if (!existsSync(viewPath)) { console.error('⛔ 没有 ' + viewPath + '（build-view 没产出）'); process.exit(2); }
 /* ③ 同步谱系总表（仅在默认 data/ 时运行：lineage.mjs 读写 data/page/lineage.tsv，防 registry/g3 改后生成物过期）
@@ -81,7 +82,7 @@ if (!SKIP_SHOT) {
     console.error('⛔ 页内自检不是 0 FAIL：' + (out.match(/断言：[^\n]*/) || ['（没找到断言行）'])[0]);
     process.exit(1);
   }
-  console.log('✅ rebuild-map 完成：data coords-view + index.html + 98/0 自检');
+  console.log('✅ rebuild-map 完成：data coords-view + index.html + 页内自检 0 FAIL');
 } else {
   console.log('✅ rebuild-map 完成（--skip-shot：未跑页内自检）');
 }

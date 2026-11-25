@@ -16,7 +16,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readTable, writeTable } from '../map-table.mjs';
 import { loadRulers } from './rulers.mjs';
-import { buildView, buildCoordsView } from './build-view.mjs';
+import { buildView, buildCoordsView, VERSION_PROJ_COLS } from './build-view.mjs';
 import { parseMeta, widOf } from '../pack-id.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
@@ -385,13 +385,20 @@ if (dispRow) {
   wt('feasibility.tsv', ft, ft.rows.concat([row]));
 }
 if (PJ) {
-  const pt = readTable(join(DATA, 'projections.tsv')), pj = readTable(PJ);
+  const pj = readTable(PJ);
+  const old = readTable(join(DATA, 'projections.tsv'));
+  const addCols = VERSION_PROJ_COLS.filter((c) => old.ix[c] === undefined && pj.ix[c] !== undefined);
+  const pt = addCols.length ? {
+    header: old.header.concat(addCols),
+    rows: old.rows.map((r) => r.concat(addCols.map(() => ''))),
+    ix: Object.fromEntries(old.header.concat(addCols).map((c, i) => [c, i])),
+  } : old;
   if (pj.header.join('\t') !== pt.header.join('\t')) { console.error('⛔ projections 表头不一致'); process.exit(2); }
   if (pj.rows.length !== reg.rows.length + 1) { console.error('⛔ projections 行数 ' + pj.rows.length + ' ≠ registry+1 ' + (reg.rows.length + 1)); process.exit(2); }
   wt('projections.tsv', pt, pj.rows);
 } else if (dispRow) {
   const pt = readTable(join(DATA, 'projections.tsv'));
-  const prow = [ID].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'].map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
+  const prow = [ID].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS).map((c) => display.ix[c] !== undefined ? dispRow[display.ix[c]] : ''));
   wt('projections.tsv', pt, pt.rows.concat([prow]));
 }
 try {

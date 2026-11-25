@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.31 — 11-26（三维行为轴按版本独立投影 ‖ 过线/势曲面默认 40%/50% ‖ transfer 计量回归腿）
+
+**这一版是什么**：修复冠军演化图版本切换只替换二维坐标、三维仍共用全库投影的问题；1.8 / 2.0 子集现在各自拟合二维与三维坐标，页面同步切换并重建三维曲面。过线曲面默认阈值由 30% 调到 40%，势曲面由 67% 调到 50%。`skill-mastery` 增加 transfer 已知答案回传腿，并修正 miniT 子断言未计入总失败的问题。
+
+- 投影生成链新增 [`champion-map/pipeline/rebuild-version-projections.mjs`](champion-map/pipeline/rebuild-version-projections.mjs)，接入 `rebuild-map`；1.8 `831/831`、2.0 `209/209` 枚三维坐标通过“不同于全库 fit”自证。
+- 页内自检新增三版本三维坐标签名与默认阈值断言；当前 `101 PASS / 0 FAIL`。40% 阈值下壳带宽对照改测滑杆下限 `c=0.05`，仍保持“漏画归零”原判据。
+- 31 池同 seed 回归：2P rule `47.475/49.338/54.500%`（6/8 seed 有序）、legacy `24.125/26.963/30.188%`（7/8）；5P multi `1.8/14.8/20.0%`、long `7.0/21.0/29.5%`。
+- holo/shift 双底座蒸馏均达到风格目标，但 DR 候选 2P rule 退化 `11.55pt`、ROD 候选 promote 偏座阻断，按预注册淘汰；**池成员与难度表未改**。
+- 证据：[`STATUS-2026-11-26-style-overnight.md`](docs/research/STATUS-2026-11-26-style-overnight.md)、[`evidence-2026-11-26-style/`](docs/research/evidence-2026-11-26-style/)。
+
 ## v2.1.30 — 11-25（`TF-DR` 入 `hard` ‖ `TF2-RD`/`TF2-DR` 入 `soft` ‖ 修复 `skill-mastery` `transfered` 漏字 ‖ 31 池 `16/15`）
 
 **这一版是什么**：修复 `skill-mastery.mjs` 的 `transfer` 回传字段缺失后，基于 `DR-R3E`/`ROD-DR` 洁净底座开展受控 `transfer` 蒸馏并将 3 枚短命名正式包按完整入池链收编：[`docs/artifacts/TF-DR.bak`](docs/artifacts/TF-DR.bak) 入 **`hard`**（恢复 `hard` 有效 `transfer` 覆盖至 `29/120` 格），[`docs/artifacts/TF2-RD.bak`](docs/artifacts/TF2-RD.bak) 与 [`docs/artifacts/TF2-DR.bak`](docs/artifacts/TF2-DR.bak) 入 **`soft`**（填补 `soft` `rod=0` 并扩充 `transfer`/长程广度），全池扩至 **`31` 枚（`hard 16 / soft 15`）**；另将 3 枚代表对照点 `TF-RDMX`、`TF2-RDC`、`PUR-2P` 测绘上 [`champion-map/index.html`](champion-map/index.html)。

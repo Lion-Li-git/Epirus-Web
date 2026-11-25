@@ -11,7 +11,7 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync, renameSync } from '
 import { join, resolve, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { readTable, writeTable } from '../map-table.mjs';
-import { buildView, buildCoordsView } from './build-view.mjs';
+import { buildView, buildCoordsView, VERSION_PROJ_COLS } from './build-view.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const FORCE = process.argv.includes('--force');
@@ -53,7 +53,7 @@ if (!f2) throw new Error('EXAM-BATCHES.tsv 没有 B 短夹具');
 
 const registry = [['pack_id', 'path', 'ver', 'fam', 'fam_label', 'lineage', 'ts', 'sha256', 'status']];
 const feats = [['pack_id', 'rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg', 'S', 'Geff']];
-const projs = [['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20']];
+const projs = [['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS)];
 const h5 = [['pack_id', 'H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5']];
 const rd = [['pack_id', 'ruler_id', 'cell', 'horizon', 'value', 'n', 'batch_id', 'note']];
 let shaN = 0;
@@ -66,7 +66,7 @@ for (const r of co.rows) {
   registry.push([id, path, clean(r[co.ix.ver]), clean(l.fam), clean(l.famLabel), clean(r[co.ix.lineage]), clean(l.ts), sha, 'active']);
   feats.push([id].concat(['rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread', 'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg', 'S', 'Geff'].map((c) => clean(r[co.ix[c]]))));
   const pr = pjById.get(id) || {};
-  projs.push([id].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3', 'xt18', 'yt18', 'xt20', 'yt20'].map((c) => clean(pr[pj.ix[c]]))));
+  projs.push([id].concat(['xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS).map((c) => clean(pr[pj.ix[c]]))));
   h5.push([id].concat(['H5', 'Hp5', 'Hlong5', 'Hplong5', 'Flong5'].map((c) => clean(r[co.ix[c]]))));
   for (const h of HOR) for (const cell of CELLS) {
     const suf = h[1];

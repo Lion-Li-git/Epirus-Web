@@ -1,0 +1,11 @@
+tier	metric	value
+hard	top5_ji_gun_reflect_snipe_sword_pct	66.03
+hard	nine_tank_transfer_laserEye_holo_ring_curse_shift_bigT_proto_pct	7.76
+hard	centroid_l1_min	0.1747
+hard	centroid_l1_median	0.2606
+hard	centroid_l1_max	0.4617
+soft	top5_ji_gun_reflect_snipe_sword_pct	64.50
+soft	nine_tank_transfer_laserEye_holo_ring_curse_shift_bigT_proto_pct	9.85
+soft	centroid_l1_min	0.2014
+soft	centroid_l1_median	0.3374
+soft	centroid_l1_max	0.8267

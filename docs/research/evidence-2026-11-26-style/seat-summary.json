@@ -1,0 +1,9 @@
+{
+  "candidate": "nov26-util-dr-s30",
+  "band": "hard",
+  "batches": [90210, 90211],
+  "gamesPerCell": 200,
+  "seatKill": 0,
+  "candidateMaxPct": 3.5,
+  "note": "带内参照取当前 hard 16 枚；候选多席最大 3.5%，两批均无 20pt 否决格。"
+}

@@ -1,0 +1,5 @@
+kind	surrogate	mode	hard_mean	regular_mean	simple_mean	ordered_seeds	note
+2p	rule	standard	47.4750	49.3375	54.5000	6/8	31池；seed 77000-77007；1000局/档
+2p	legacy	standard	24.1250	26.9625	30.1875	7/8	31池；seed 77000-77007；1000局/档
+5p	rule	multi	1.8000	14.8000	20.0000	1/1	31池；seed 77000；400局/档
+5p	rule	long	7.0000	21.0000	29.5000	1/1	31池；seed 77000；400局/档
