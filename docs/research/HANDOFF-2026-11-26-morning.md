@@ -18,9 +18,14 @@
 - 浏览器 `SMOKE OK`、`BATTLE OK`。
 - 以上均为定向验证，不是本地整轮门禁。
 
+## 提交状态
+
+- v2.1.31 已推送 main：`6928ac62`。
+- gates / pages / training CI 已触发，收工时仍在运行；下一班先看三条结论。
+
 ## 下一班
 
-1. 先读 [`RESULTS-2026-11-26-style-and-map.md`](RESULTS-2026-11-26-style-and-map.md) 与 [`STATUS-2026-11-26-style-overnight.md`](STATUS-2026-11-26-style-overnight.md)。
+1. 先看上述 CI，再读 [`RESULTS-2026-11-26-style-and-map.md`](RESULTS-2026-11-26-style-and-map.md) 与 [`STATUS-2026-11-26-style-overnight.md`](STATUS-2026-11-26-style-overnight.md)。
 2. 风格训练若重开，先解决 2P 保护；不要在本次失败配方上继续扫剂量。
 3. `dualGun / mirror` 已豁免，不为 `30/30` 凑覆盖。
 4. 31 池当前 hard 16 / soft 15；本轮无池表改动。
