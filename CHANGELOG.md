@@ -4,9 +4,9 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
-## v2.1.26 — 11-25（天火闭环对称接入第 7 道与 L3 ‖ `FS2-LE26` 入 `hard` / `SOFT-RING-C3G25` 入 `soft` 扩池至 `26` 枚）
+## v2.1.26 — 11-25（天火闭环对称接入第 7 道与 L3 ‖ `FS2-LE26` 入 `hard` / `SOFT-RING-C3G25` 入 `soft` ‖ `RING-MINIT-CONT` 下放平衡池 `13/13`）
 
-**这一版是什么**：按与「珠经济闭环（第 6 道 / `D78`）」相同的方式把「天火贴/爆闭环」接入全仓测评、体检与登记口径，并以洁净底座 `FS-G2` 配合桌形与行为隔离方案训出 **`FS2-LE26`**（[`docs/artifacts/FS2-LE26.bak`](docs/artifacts/FS2-LE26.bak)）入 `hard`、从昨夜副产物优选 **`SOFT-RING-C3G25`**（[`docs/artifacts/SOFT-RING-C3G25.bak`](docs/artifacts/SOFT-RING-C3G25.bak)）入 `soft`，全池由 `24` 枚（含此前合入的 [`docs/artifacts/T65-RINGBEAD.bak`](docs/artifacts/T65-RINGBEAD.bak)）扩至 **`26` 枚（`hard 14 / soft 12`）**。
+**这一版是什么**：按与「珠经济闭环（第 6 道 / `D78`）」相同的方式把「天火贴/爆闭环」接入全仓测评、体检与登记口径，并以洁净底座 `FS-G2` 配合桌形与行为隔离方案训出 **`FS2-LE26`**（[`docs/artifacts/FS2-LE26.bak`](docs/artifacts/FS2-LE26.bak)）入 `hard`、从昨夜副产物优选 **`SOFT-RING-C3G25`**（[`docs/artifacts/SOFT-RING-C3G25.bak`](docs/artifacts/SOFT-RING-C3G25.bak)）入 `soft`，并将人席 `seatKill=2` 且已被 `FS2-LE26`/`T65-RINGBEAD` 接班的 **`RING-MINIT-CONT`** 下放至 `soft`，全池由 `24` 枚（含此前合入的 [`docs/artifacts/T65-RINGBEAD.bak`](docs/artifacts/T65-RINGBEAD.bak)）整理为 **`26` 枚均衡双带（`hard 13 / soft 13`）**；同步补齐 [`tools/pool-add.mjs`](tools/pool-add.mjs) 入池/退役/刷新自动重烘 [`champion-map/skill-report.html`](champion-map/skill-report.html)。
 
 - **天火闭环接入（对齐珠闭环架构，默认只记录不阻断）**：
   - [`tools/audit-lib.mjs`](tools/audit-lib.mjs)：新增 `FIRESTORM_BLOCK = false` 与单一真源探针 `firestormProfile(W, params, mode, GAMES)`（同 `chargeProfile` `long` 40 局 × 5 席），统计 `curseOk` / `curseLanded` / `firestormOk` / `firestormHits` / `emptyBoom` / 局闭环率 `loopRate` / 合法机会抓手率 `takeRate`，并在 `feasibilityOf` 接入第 7 道（`curseOk === 0` 记 `NA` 免罚，`curseOk > 0` 按 `firestormHits > 0 && stickGames > 0 && loopRate ≥ 0.30 && emptyBoomPerGame ≤ 1` 判定，`o.firestorm` 缺失按 `null` 报「探针缺失」）；

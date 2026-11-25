@@ -93,6 +93,14 @@ function syncChart() {
     + (line ? '：' + line : String(r.stderr || '').trim().slice(0, 160))
     + '\n      手跑：node champion-map/pool-sync.mjs（D234⑩ 会在 CI 上因此判红）');
 }
+/* 正式入池/退役后同步重烘 champion-map/skill-report.html，避免 pool-members.tsv 已增删成员而页面停留在旧数量。 */
+function syncSkillPage() {
+  const r = spawnSync(process.execPath, ['champion-map/build-skill-page.mjs', '--quiet'], { cwd: ROOT, encoding: 'utf8' });
+  if (r.status === 0) console.log('   ↻ skill-report.html 已自动重烘');
+  else console.log('   ⚠ skill-report.html 没重烘成功（exit ' + r.status + '）：'
+    + String(r.stderr || '').trim().slice(0, 160)
+    + '\n      手跑：node champion-map/build-skill-page.mjs');
+}
 /* v1.8.38 后续（DS §四 · 用户 10-26 裁"小问题顺手做"）：这一度闸原来只 `git ls-files docs/artifacts`
  * ⇒ 住在 `champion-map/packs/` 的包**即使已跟踪也被报"不在 git 里"**，而它给的补救提示 `git add -f <PACK>`
  * 对那个路径又不生效（不在同一个 `ls-files` 输出域）⇒ 死路，逼人去造第二份 `.bak`。
@@ -305,7 +313,7 @@ if (has('refresh')) {
   if (has('dry')) { console.log('（--dry）要改 ' + changes.length + ' 行：\n   ' + (changes.join('\n   ') || '无')); }
   else { saveMap(t); console.log('✔ 已刷 champion-map/pool-members.tsv：改了 ' + changes.length + ' 行 ‖ 人席仍没量过的 ' + unknown + ' 枚');
     for (const c of changes) console.log('   · ' + c);
-    if (changes.length) syncChart(); }
+    if (changes.length) { syncChart(); syncSkillPage(); } }
   process.exit(0);
 }
 
@@ -328,6 +336,8 @@ if (arg('retire', '')) {
     rawNote = '（已删 raw：曾测于 ' + at + ' · 并集 ' + union + '/30；纯数字留在图列）';
   }
   console.log('✔ 退役 ' + rid + '（tier=' + row[3] + '，wid=' + String(row[1] || '').slice(0, 16) + '）已摘出池表；skill-report raw ' + rawNote);
+  syncChart();
+  syncSkillPage();
   console.log('   下一步：node tools/build-pool-bundle.mjs --split ‖ node champion-map/rebuild-map.mjs');
   process.exit(0);
 }
@@ -406,3 +416,4 @@ if (!has('no-census')) {
   }
 }
 syncChart();
+syncSkillPage();

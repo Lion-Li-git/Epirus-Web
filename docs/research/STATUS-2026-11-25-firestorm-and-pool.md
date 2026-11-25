@@ -36,10 +36,8 @@
      - `measure-point --bake`：`arenaB` `arS=+0.0831 / arL=+0.0733 / arR=+0.3019`，`mixedfix` `MxC=+0.0972 / MxCL=+0.1298`，`a-long h2=74.88%`，`H=51.5, S=2.00`；
      - Stage1：`union=14/30`，`1109` 贴 / `389` 爆（`loopRate=91%, takeRate=48%`），`selfPlay long 40` 打出 `290` 次 `laserEye`，`seatKill=0`，2P `vs rule` 替身 `21.0%`。
 
-## 四、26 成员冠军池复测基线（`hard 14 / soft 12`）
+## 四、26 成员均衡池与自动重烘（`hard 13 / soft 13`）
 
-- `probe-diff-ladder.mjs --pool=1 --surrogate=rule --games=1000`：
-  - `5P multi`：困难 **`5.3%`** → 普通 **`18.7%`**（`-13.40 ±2.84pt = 9.2σ`）→ 简单 **`24.2%`**（`+5.50 ±3.61pt = 3.0σ`）
-  - `5P long`：困难 **`9.6%`** → 普通 **`21.7%`**（`-12.10 ±3.20pt = 7.4σ`）→ 简单 **`30.4%`**（`+8.70 ±3.79pt = 4.5σ`）
-  - `2P standard`：困难 **`56.1%`**（24 池原为 `62.0%` 倒挂 `3.0σ`） vs 普通 **`54.4%`**（`+1.70 ±4.27pt = 0.8σ`） vs 简单 **`53.0%`**（`-1.40 ±4.32pt = 0.6σ`）
-- `champion-gate --pool --games=120`：产品档 12 项配额中 `聚能环 21/26`、`大雷 22/26`、`电磁炮 25/26`、`过载炮 11/26`、`小雷 11/26`、`原型制御 8/26`、`转移伤害 10/26`、`贴贴 20/26`、`天火 10/26`、`地雷 18/26`、`避雷针 15/26` 全达线，`激光眼 6/26`（`ε=0 5/26`）；`firestorm-closure.mjs` `26/26` 有报告、`18` 枚贴手 ≥3、`7` 枚不碰、`0` 缺报告。
+- 下放 `RING-MINIT-CONT`（`hard → soft`）：其 `seatKill=2`、`arR=-0.285`、`firestorm 25%` 未闭环，原有 `laserEye` / `drain` / `proto` 已分别由 `FS2-LE26`、`T65-RINGBEAD`、`OBS6E9` 承接，下放后 `hard` 零技能覆盖损失、零 `sk>0` 成员，两带数量平衡为 `hard 13 / soft 13`。
+- [`tools/pool-add.mjs`](../../tools/pool-add.mjs) 已新增 `syncSkillPage()`，入池 / `--retire` / `--refresh` 改表后自动调用 [`champion-map/build-skill-page.mjs`](../../champion-map/build-skill-page.mjs) 重烘 [`champion-map/skill-report.html`](../../champion-map/skill-report.html)；`build-skill-page.mjs` 亦已改以 `pool-members.tsv` 的 `tier` 为单一真源。
+- 平衡前 `14/12` 复测及 `13/13` 阶梯复测见对应门禁与交接输出。

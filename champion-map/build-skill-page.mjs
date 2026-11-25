@@ -63,6 +63,7 @@ export function bake(opts = {}) {
     const f = join(DATA_DIR, m.id + '.json');
     if (!existsSync(f)) { missing.push(m.id); continue; }
     const d = JSON.parse(readFileSync(f, 'utf8'));
+    d.tier = m.tier;   /* 单一真源：以 pool-members.tsv 最新带位为准，避免下放/调带后沿用旧 JSON 里的 tier */
     docs.push(d);
   }
   if (missing.length) console.error('⚠ 无 skill-report JSON（页里显示"未测"）：' + missing.join(', '));
