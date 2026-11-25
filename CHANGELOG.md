@@ -22,6 +22,7 @@
   - 同并录此前入 `hard` 的双亲融合包 [`docs/artifacts/T65-RINGBEAD.bak`](docs/artifacts/T65-RINGBEAD.bak)（`wid=00065fc589070d4e`，`4bcfdb17` 修复双亲谱系，`D82` 点名归档）；
   - `probe-diff-ladder`（1000 局/档 `vs rule`）：`5P multi` 困难 `5.3%` → 普通 `18.7%`（`9.2σ`）→ 简单 `24.2%`（`3.0σ`）；`5P long` 困难 `9.6%` → 普通 `21.7%`（`7.4σ`）→ 简单 `30.4%`（`4.5σ`）；`2P standard` 困难由 24 池的 `62.0%`（相对普通 `55.6%` 倒挂 `3.0σ`）收敛为 `56.1%`（相对普通 `54.4%` 差 `+1.70 ±4.27pt = 0.8σ`）。详情见 [`docs/research/STATUS-2026-11-25-firestorm-and-pool.md`](docs/research/STATUS-2026-11-25-firestorm-and-pool.md)。
 - **权重考古补账**：恢复 `v7b-43.bak` / `v7b-44.bak` / `v7b-45.bak` / `v7b-46.bak` 四枚历史权重，wid 全部命中；文件 SHA 与历史 registry 不同，按 `sha-diff-wid-same` 登记，未改写历史 SHA。
+- **摄魂训练研究**：`DRAIN-SOFT-SELF.bak` 双场 mastery 过线、2P 改善，但 ArenaB 仅 +2.23pt 且 G4/G5 未过，保留为 soft 研究候选、不入池；`supfit-gd` 新增教师零配额 fail-fast（exit 15），避免无声空转。
 
 ## v2.1.25 — 11-24（原位摘要日志与事件自动换行 ‖ 冠军加载/UI 防卡死 ‖ 图谱三父谱系与退图修复）
 

@@ -1401,6 +1401,14 @@ const groups = [];
 collectInto(groups, null, 300000);
 function shapeCov(list) { const m = {}; for (const g of list) m[g.shp] = (m[g.shp] || 0) + 1; const ks = Object.keys(m); return ks.length + '/' + A2.shapes.length + ' 形（逐形 ' + ks.map((k) => m[k]).join(',') + '）'; }
 if (groups.length < 60) { console.error('⛔ 只抓到 ' + groups.length + ' 组 ⇒ 不做'); process.exit(2); }
+const starvedTeachers = [];
+if (TEACHER2 && !(LABEL.t2Groups > 0)) starvedTeachers.push('teacher2=' + TEACHER2);
+if (TEACHER3 && !(LABEL.t3Groups > 0)) starvedTeachers.push('teacher3=' + TEACHER3);
+if (TEACHER4 && !(LABEL.t4Groups > 0)) starvedTeachers.push('teacher4=' + TEACHER4);
+if (starvedTeachers.length) {
+  console.error('⛔ 教师调度饥饿：' + starvedTeachers.join(' ‖ ') + ' ⇒ 配置了教师却分到 0 组，拒绝训练（先查形门/份额/优先级）');
+  process.exit(15);
+}
 let _splitCall = 0;
 function splitBucket75(arr, train, test) {
   if (!RARE.length) {

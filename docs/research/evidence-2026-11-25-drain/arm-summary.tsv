@@ -1,0 +1,7 @@
+arm	base	teachers	drain_labels	drain_heldout	drain_standard_n3_n5	drain_hostile_n3_n5	bead_expired_per_game	promote	arenaB_med	verdict
+fsg2-tz2c	FS2-LE26	FS2 self + TZ2C drain + T65 2P	144	36	0.000/0.025	0.000/0.000	0.5	not run	not run	labels learned, deployment failed; laser collapsed
+ring-fsg2-tz2c-self	RING-MINIT-CONT	FS2 + TZ2C drain + RING ring/proto + T65 2P	0	0	not run	not run	7.3	exit14	not run	teacher2 starved; bead smoke red
+ring-fsg2-tz2c	RING-MINIT-CONT	FS2 + TZ2C drain + T65 2P	144	36	not run	not run	6.0	exit14	not run	teacher schedule fixed; bead smoke red
+ring-self-tz2c	RING-MINIT-CONT	RING self + TZ2C drain + T65 2P	167	46	0.225/0.375	0.650/0.675	1.7	block G4/G5	2.2292	best soft reactive drain carrier; not hard
+ring-self-tz2c-pg400	RING self drain + PG400	KL self + dmgW0.005 + bead shaping	not run	not run	0.225/0.425	0.275/0.575	1.5	block G4/G5	-1.8914	PG strength route failed
+fsg2-tz2c-dag1	FS2-LE26	FS2 self + TZ2C drain + T65 2P + DAgger1	146	36	0.025/0.125	0.000/0.000	0.9	not run	not run	DAgger did not fix deployment; laser collapsed
