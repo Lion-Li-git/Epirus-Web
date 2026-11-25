@@ -4,6 +4,20 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.27 — 11-25（路线 A 多师隔离补摄魂：`DR-R3E` 入 `hard`，填补 `hard` 带有效摄魂覆盖，全池 `27` 枚 `14/13`）
+
+**这一版是什么**：定位昨夜–午间摄魂（`drain`）训练失利的根因（`FS2-LE26` 在 `long` 40 局镜仅 `0.3%` 决策点达 `EP≥3`、`drainLegal=2`，属于状态不可达与 `--rareOnly` 饿死既有技能），改由 `selftest3` 全绿且原生具 `ring` / 高强度底盘的 [`docs/artifacts/nov22-ring3-gd6a18.bak`](docs/artifacts/nov22-ring3-gd6a18.bak) 起跑，在多师不冲突键道/桌形隔离下训出并优选种子 1 **`DR-R3E`**（[`docs/artifacts/DR-R3E.bak`](docs/artifacts/DR-R3E.bak)，`wid=eae4b0ad4013c202`）正式入 **`hard`**，使 `hard` 带重获 `drain ≥3 格` 有效覆盖，全池扩至 **`27` 枚（`hard 14 / soft 13`）**。
+
+- **路线 A 受控两臂与跨种子复现**（详情见 [`docs/research/RESULTS-2026-11-25-drain-training.md`](docs/research/RESULTS-2026-11-25-drain-training.md)）：
+  - **底座与配方**：`up/teacher=pack:nov22-ring3-gd6a18.bak`，`2:standard` 配 `--teacher4=pack:T65-RINGBEAD.bak@0.25`，多人长程由 `--teacher2=drain@0.35 --teacher2keys=drain --teacher2Shapes=3:multi,3:long,5:long,8:long` 开摄魂窗，配 `--rareOnly=drain,ring --rareFrac=0.35`（`groups=2000, steps=240, lr=0.0004, dagger=1`）；其中 **A2 臂** 叠加 `--teacher3=ringEcon@0.17 --teacher3keys=ring --teacher3Shapes=3:long,5:long,8:long`，**A1 臂**（`nov25-r3-ringdrain-s25`）`T2=TZ2C@0.35(ring,drain)` 作为对照。
+  - **两粒种子实测**：A2 种子 1（`20261125` → **`DR-R3E`**）与种子 2（`20261126`）均在 `long` 代理局同步通过聚能环（`23`/`13` 段三连）、大雷（`25.0%`/`20.0%`）与摄魂（`17.5%`/`20.0%`），2P `standard vs rule` 均由亲代 `39.5%` 降至 `22.3%`/`22.5%`，且 `promote --dry --support=2` 均 `0` 阻断；择强选定种子 1（`selftest3` **6/6 全绿 `0.00e+0`**、`Arena B +27.50pt`、珠经济闭环）正式入 `hard`。
+- **`DR-R3E` 全维度验收入池（`hard 14 / soft 13`）**：
+  - `promote --dry --support=2`（[`docs/artifacts/promote-DR-R3E.txt`](docs/artifacts/promote-DR-R3E.txt)）：**`0` 阻断**（`✅ 五道全过`：`G(multi)=4.97 / G(long)=5.23`、`S=1.700`、墙 `17.10/局`、场A `30.2%`、反退化 `ok` `41.4%`、**珠闭环 ✓ `33.3%`（过期 `0.1/局`）**、G4 `multi 0% / long 12.3%`、G5 `0%`）；
+  - 演化图谱（`100 PASS / 0 FAIL`）：`arenaB` `arS=+0.1789 / arL=+0.1616 / arR=+0.5229`（6 粒中位 **`+27.5039pt`**），`mixedfix MxC=+0.2593 / MxCL=+0.2346`、`a-long h2=88.04% / h5=41.49% / h8=33.18%`、`H=56.8, S=1.59`；
+  - 人席与 Stage 1/2：`90210/90211` **`seatKill=0`**（`90210` `multi ≤3.5% / long ≤1.5%`，`90211` `multi ≤0.5% / long ≤6.0%`，`规则理解·自适应` 全 `0.0%`）；2P `standard` `rule 22.3% / legacy 20.5%`；Stage 1 并集 **`17/30`**（实池 `36.3%`、`drain` `7/120` 有效格 / `29/120` 非零 / `73` 次出手），Stage 2 `24` 技（消融 `10`、`drain rich Δ=+10.42% ±4.46%`）；
+  - 27 池阶梯（`probe-diff-ladder --pool=1 --surrogate=rule`, 400 局/档）：`5P long` 困难 **`5.8%`** → 普通 **`23.8%`**（`7.4σ`）→ 简单 **`33.8%`**（`3.2σ`）；`5P multi` 困难 **`4.8%`** → 普通 **`18.0%`**（`6.1σ`）→ 简单 **`20.0%`**；`2P standard` 困难 **`53.8%`** / 普通 **`54.3%`** / 简单 **`52.5%`**。
+- **工具修复**：补齐 [`champion-map/data/page/promote.tsv`](champion-map/data/page/promote.tsv) 末尾 6 行缺失尾列的格式使其与 6 列表头对齐。
+
 ## v2.1.26 — 11-25（天火闭环对称接入第 7 道与 L3 ‖ `FS2-LE26` 入 `hard` / `SOFT-RING-C3G25` 入 `soft` ‖ `RING-MINIT-CONT` 下放平衡池 `13/13`）
 
 **这一版是什么**：按与「珠经济闭环（第 6 道 / `D78`）」相同的方式把「天火贴/爆闭环」接入全仓测评、体检与登记口径，并以洁净底座 `FS-G2` 配合桌形与行为隔离方案训出 **`FS2-LE26`**（[`docs/artifacts/FS2-LE26.bak`](docs/artifacts/FS2-LE26.bak)）入 `hard`、从昨夜副产物优选 **`SOFT-RING-C3G25`**（[`docs/artifacts/SOFT-RING-C3G25.bak`](docs/artifacts/SOFT-RING-C3G25.bak)）入 `soft`，并将人席 `seatKill=2` 且已被 `FS2-LE26`/`T65-RINGBEAD` 接班的 **`RING-MINIT-CONT`** 下放至 `soft`，全池由 `24` 枚（含此前合入的 [`docs/artifacts/T65-RINGBEAD.bak`](docs/artifacts/T65-RINGBEAD.bak)）整理为 **`26` 枚均衡双带（`hard 13 / soft 13`）**；同步补齐 [`tools/pool-add.mjs`](tools/pool-add.mjs) 入池/退役/刷新自动重烘 [`champion-map/skill-report.html`](champion-map/skill-report.html)。

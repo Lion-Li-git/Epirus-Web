@@ -39,3 +39,17 @@
 3. RING 自锚能把摄魂推过 mastery，但强度与清场是独立问题；低剂量锚定 PG 只保行为，不修 G4/G5。
 4. 不再扫教师份额、seed 或 PG 剂量。下一轮要换机制：要么找“强且原生会 drain”的底座，要么做残血留 EP 的序列/状态干预。
 5. `supfit-gd` 新增教师调度饥饿 fail-fast：配置的 teacher2/3/4 分到 0 组时 `exit 15`，不再静默训练。
+
+## 午后复核与路线 A 突破（`nov22-ring3-gd6a18` + 多师分桌隔离）
+
+1. **根因量化（`long` 40 局镜）**：`FS2-LE26` 仅 **`0.3%`** 决策点处于 `EP≥3`（`ring/40g=0`、`drainLegal=2`、`drainTaken=0`），故 `--teacher2keys=drain` 因状态不可达与 `--rareOnly=drain` 饿死 `laserEye` 失败；`nov22-ring3-gd6a18.bak` 经 `selftest3` 全绿（`6/6, 0.00e+0`），具 `ArenaB +20.4pt` 与原生 `ring`（`EP≥3 = 1.4%`），2P `standard vs rule` 偏弱（`39.5%`）。
+2. **路线 A 两臂受控实验（`up=nov22-ring3-gd6a18` · `T4=T65-RINGBEAD@0.25@2:standard` · `--rareOnly=drain,ring --rareFrac=0.35` · `2000组/240步/lr=4e-4`）**：
+   - **A1（`scratch/arms/nov25-r3-ringdrain-s25.bak`）**：`T2=TZ2C@0.35 (ring,drain)`；`long mastery` 三项过线（`ring` 24 段 / `bigT` `42.5%–50.0%` / `drain` **`70.0%/60.0%`**，hostile 双过 `60.0%`）、2P `rule` `23.5%`、`Arena B(6粒) +17.45pt`、`90210/90211 seatKill=0`（最坏 `6.5%/6.0%`）、Stage1 `drain` `9/120`（`>=3`），但 `selftest3` 腿 C 红（`exit 8`）且反退化栏 `long gun 63.2%`。
+   - **A2（`scratch/arms/nov25-r3-econdrain-s25.bak` → 正式入 `hard`：`docs/artifacts/DR-R3E.bak`）**：`T2=drain@0.35 (drain)` + `T3=ringEcon@0.17 (ring)`；
+     - `selftest3` **6/6 全绿（`0.00e+0`）**；
+     - `promote --dry --support=2` **全过（`exit=0`）**：`G(multi)=4.97 / G(long)=5.23`（`S=1.700`）、**珠闭环 ✓（`33.3%`，过期 `0.1/局`）**、反退化 `ok`（`41.4%`）、G4 `multi 0% / long 12.3%`、G5 `0%`；
+     - `long mastery`（常模与 hostile 双过）：聚能环 `23` 段、大雷 `25.0%`、**摄魂 `17.5%/局`（`n=3 17.5%, n=5 30.0%`）**；
+     - `Arena B(6粒) +27.5039pt`（`arS=+0.1789 / arL=+0.1616 / arR=+0.5229`），`mixedfix MxC=+0.2593 / MxCL=+0.2346`、`H=56.8, S=1.59`；
+     - `Stage 1` 120 格：**并集 `17/30`（`realWin 36.3%`）**、`drain` `7/120`（`>=3`；非零 `29/120`、`73` 次出手、实池 `14/40` 格 `24` 次），`Stage 2` 24 技、`drain rich Δ=+10.42% ±4.46%`；
+     - 人席 `90210/90211` **`seatKill=0`**（`90210` 最坏 `3.5%/1.5%`，`90211` 最坏 `0.5%/6.0%`，`规则理解·自适应` 全 `0.0%`）；2P `standard` `rule 22.3% / legacy 20.5%`。
+3. **两粒种子复现（`nov25-r3-econdrain-s26`, `seed=20261126`）**：同一配方复现 `long mastery` 三项过线（`ring` 13 段 / `bigT` `20.0%` / `drain` **`20.0%/35.0%`**）、2P `rule 22.5%` 及 `promote exit=0`（`G4 long 9.7% / multi 0.7% / G5 0%`），但 `Arena B -18.78pt`、`selftest3 exit 8`；故择优将 `s25`（`DR-R3E`）正式合入 `hard` 带，全池增至 `27` 枚（`hard 14 / soft 13`），填补 `RING-MINIT-CONT` 下放后 `hard` 带缺失的 `drain ≥3 格` 覆盖。

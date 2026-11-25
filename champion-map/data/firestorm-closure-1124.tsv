@@ -1,4 +1,5 @@
 pack_id	tier	rulesFingerprint	measuredAt	cells	skillCover	curseOk	curseLanded	firestormOk	firestormHits	detRate	dudRate	fsLegalDecisions	fsTakenWhenLegal	takeRate	loopRate	noGrab	onlyStick	neverTouched
+DR-R3E	hard	bfd49045	2026-11-25T07:19	120	15	31	29	0	0	0.000000		52	0	0.000000	0.000000	1	1	0
 HL-G1	hard	bfd49045	2026-11-24T10:16	120	12	4	4	0	0	0.000000		2	0	0.000000	0.000000	0	1	0
 nov22-ring3-gd6a18	hard	bfd49045	2026-11-24T10:17	120	11	2	2	0	0	0.000000		0	0		0.000000	0	0	0
 R-GD12	hard	bfd49045	2026-11-24T10:18	120	11	3	3	0	0	0.000000		6	0	0.000000	0.000000	0	1	0

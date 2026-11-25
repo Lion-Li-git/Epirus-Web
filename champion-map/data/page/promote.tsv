@@ -304,9 +304,10 @@ RG-MN	pass	—
 HL-G1	pass	—			
 RG-CN	pass	—			
 FC-G1	block	behavior-gate			
-FC-S1	pass	—
-nov24-fsclose-f35	block	behavior-gate
-nov24-pierce3-20261101	pass	—
-TK-FS1	block	seat-symmetry
-TK-FS3	pass	—
-nov24-bandsym-jin	block	breadth-multi
+FC-S1	pass	—			
+nov24-fsclose-f35	block	behavior-gate			
+nov24-pierce3-20261101	pass	—			
+TK-FS1	block	seat-symmetry			
+TK-FS3	pass	—			
+nov24-bandsym-jin	block	breadth-multi			
+DR-R3E	pass	—			
