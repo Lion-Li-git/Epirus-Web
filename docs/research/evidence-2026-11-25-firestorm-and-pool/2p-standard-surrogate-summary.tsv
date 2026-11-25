@@ -1,0 +1,7 @@
+pack	surrogate	seed77000_pct	seed90210_pct	mean_pct	games_per_seed	mode	source
+FS2-LE26	rule	20.5	23.9	22.2	1000	standard	FS2-LE26-2p-standard-rule-s77000.txt;FS2-LE26-2p-standard-rule-s90210.txt
+FS2-LE26	legacy	20.4	22.4	21.4	1000	standard	FS2-LE26-2p-standard-legacy-s77000.txt;FS2-LE26-2p-standard-legacy-s90210.txt
+FS-G2	rule	60.7	61.3	61.0	1000	standard	FS-G2-2p-standard-rule-s77000.txt;FS-G2-2p-standard-rule-s90210.txt
+FS-G2	legacy	27.1	27.0	27.05	1000	standard	FS-G2-2p-standard-legacy-s77000.txt;FS-G2-2p-standard-legacy-s90210.txt
+SOFT-RING-C3G25	rule	12.4	16.3	14.35	1000	standard	SOFT-RING-C3G25-2p-standard-rule-s77000.txt;SOFT-RING-C3G25-2p-standard-rule-s90210.txt
+SOFT-RING-C3G25	legacy	34.4	37.6	36.0	1000	standard	SOFT-RING-C3G25-2p-standard-legacy-s77000.txt;SOFT-RING-C3G25-2p-standard-legacy-s90210.txt

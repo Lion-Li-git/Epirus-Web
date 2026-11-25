@@ -788,7 +788,7 @@ export function feasibilityOf(o) {
       isFinite(fsIn.emptyBoomPerGame) && Number(fsIn.emptyBoomPerGame) <= 1;
     fRec.firestormLoopClosed = fsClosed;
     const fsMsg = '第7道（天火贴/爆闭环）：贴 ' + fRec.curseOk + ' / 爆 ' + fRec.firestormOk +
-      '（命中 ' + fRec.firestormHits + ' · 局闭环 ' + (fRec.loopRate != null ? (100 * fRec.loopRate).toFixed(0) + '%' : '—') +
+      '（命中 ' + fRec.firestormHits + ' · 席局闭环 ' + (fRec.loopRate != null ? (100 * fRec.loopRate).toFixed(0) + '%' : '—') +
       ' · 空爆 ' + (fRec.emptyBoomPerGame != null ? fRec.emptyBoomPerGame : '?') + '/局）';
     if (fsClosed) notes.push(fsMsg + ' ⇒ **闭环** ✓');
     else if (FIRESTORM_BLOCK) fails.push(fsMsg + ' ⇒ **未闭环**');
@@ -897,7 +897,8 @@ export function chargeProfile(W, params, mode, GAMES) {
 
 /* 天火贴/爆闭环探针（2026-11-25 · 对齐 `chargeProfile` 单一真源）：
  * 同一张 5 席镜像自对局表（temp=0.15, mulberry32(13000+g) + slotSalt），按"贴出手 / 贴落地 / 引爆命中 /
- * 空爆 / 局闭环 / 机会抓手率"同桌测量。R64 已过滤无可引爆符咒的天火 ⇒ fsLegalDecisions 即合法引爆机会。 */
+ * 空爆 / 席局闭环 / 机会抓手率"同桌测量；loopRate = loopGames/stickGames，分母是席局不是物理对局。
+ * R64 已过滤无可引爆符咒的天火 ⇒ fsLegalDecisions 即合法引爆机会。 */
 export function firestormProfile(W, params, mode, GAMES) {
   const G = GAMES || 40;
   const R = W.EpirusRules, S = W.EpirusState, T = W.EpirusTrainer, Play = W.EpirusPlay;

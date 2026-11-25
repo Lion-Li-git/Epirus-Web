@@ -25,7 +25,7 @@ import { readFileSync, writeFileSync, appendFileSync, existsSync } from 'node:fs
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sandbox, loadChamp, selfPlay, reflectWall, seatSymmetry, aggressionProfile, densityProfile,
-  chargeProfile, firestormProfile, feasibilityOf, feasPlan, extractJsonObject } from '../tools/audit-lib.mjs';
+  chargeProfile, feasibilityOf, feasPlan, extractJsonObject } from '../tools/audit-lib.mjs';
 import { resolveTable, readTable, tableStamp } from './map-table.mjs';
 
 /* §E303 本目录从 docs/artifacts/e287-out/ 挪到仓库根 ⇒ 深度少两级，ROOT 与上面的 import 一起换。 */
@@ -117,11 +117,9 @@ todo.forEach((e, i) => {
     const ss = seatSymmetry(W, params, M_MAIN, FEAS_N.seat);
     const dens = densityProfile(W, params, LEG_M, FEAS_N.density);
     const chg = chargeProfile(W, params, LEG_M, FEAS_N.charge);
-    const fs = firestormProfile(W, params, LEG_M, FEAS_N.charge);
     const feas = feasibilityOf({ seat: ss, G: sp, G2: spL, G2name: 'long', wall: rw, aggr: agg,
       density: { dmgPerRound: dens.dmgPerRound, jiShare: dens.jiShare, gained: chg.gained, spentRate: chg.spentRate,
-        expiredPerGame: chg.games ? chg.expired / chg.games : 0, zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate },
-      firestorm: fs });
+        expiredPerGame: chg.games ? chg.expired / chg.games : 0, zeroAtkRate: dens.zeroAtkRate, zeroDealtRate: dens.zeroDealtRate } });
     rec.ok = feas.ok ? 1 : 0; rec.nFail = (feas.fails || []).length;
     rec.fails = String((feas.fails || []).join('；')).replace(/[\t\n]/g, ' ').slice(0, 150);
     rec.G = feas.G; rec.G2 = feas.G2; rec.wallDmg = feas.wallDmg; rec.fieldA = feas.fieldA;

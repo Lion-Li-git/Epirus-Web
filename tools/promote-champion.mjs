@@ -487,7 +487,8 @@ console.log('   〔贴出的符有没有用天火引爆闭环〕天火经济（'
   ' / 空爆 ' + fsE.emptyBoom + '）· 引爆率 ' + (fsE.detRate != null ? (100 * fsE.detRate).toFixed(0) + '%' : '—') +
   ' · 抓手率 ' + (fsE.takeRate != null ? (100 * fsE.takeRate).toFixed(0) + '%' : '—') +
   '（机会 ' + fsE.fsLegalDecisions + '）· **局闭环 ' + (fsE.loopRate != null ? (100 * fsE.loopRate).toFixed(0) + '%' : '—') +
-  '** · 空爆 ' + (fsE.games ? (fsE.emptyBoom / fsE.games).toFixed(1) : '—') + '/局' + fsStatus);
+  '** · 空爆 ' + (fsE.games ? (fsE.emptyBoom / fsE.games).toFixed(1) : '—') + '/局' +
+  '（闭环分母=席局 ' + fsE.loopGames + '/' + fsE.stickGames + '）' + fsStatus);
 /* ===== v1.5.78（第七轮复核 §15-1）：把 **G4 克制表 / G5 破防反射** 接进阻断面 =====
  * 复核把这两条写成可跑代码（`tools/gate-drafts.mjs`）并**先证明了量具的判别力**：
  *   线上包 G4 两模式 PASS（最克 22%/18%）、G5 PASS（防席 0%）；

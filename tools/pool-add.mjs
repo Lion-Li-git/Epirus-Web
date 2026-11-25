@@ -97,9 +97,12 @@ function syncChart() {
 function syncSkillPage() {
   const r = spawnSync(process.execPath, ['champion-map/build-skill-page.mjs', '--quiet'], { cwd: ROOT, encoding: 'utf8' });
   if (r.status === 0) console.log('   ↻ skill-report.html 已自动重烘');
-  else console.log('   ⚠ skill-report.html 没重烘成功（exit ' + r.status + '）：'
-    + String(r.stderr || '').trim().slice(0, 160)
-    + '\n      手跑：node champion-map/build-skill-page.mjs');
+  else {
+    console.error('   ⛔ skill-report.html 没重烘成功（exit ' + r.status + '）：'
+      + String(r.stderr || '').trim().slice(0, 160)
+      + '\n      手跑：node champion-map/build-skill-page.mjs');
+    process.exit(2);
+  }
 }
 /* v1.8.38 后续（DS §四 · 用户 10-26 裁"小问题顺手做"）：这一度闸原来只 `git ls-files docs/artifacts`
  * ⇒ 住在 `champion-map/packs/` 的包**即使已跟踪也被报"不在 git 里"**，而它给的补救提示 `git add -f <PACK>`

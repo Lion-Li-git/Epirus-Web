@@ -147,9 +147,9 @@ export const LINES = [
     rule: '≥ 40% 才叫会瞄 —— 四代包（含线上）全部 3.5~22.5% ⇒ 是「能力未长出」不是某包退化，做成阻断会把所有候选一起挡死',
     src: 'gate-drafts G6 · n=40', get: () => null, pass: () => null },
 
-  { key: 'firestorm', old: '火', layer: 'L3', dim: '天火闭环（宁可不贴，也不要出现不闭环）',
+  { key: 'firestorm', old: '火', layer: 'L3', dim: '天火席局闭环（宁可不贴，也不要出现不闭环）',
     name: '贴出去的符用天火引爆闭环（只记录）',
-    rule: '贴出手 = 0 ⇒ 不适用（不碰不罚）‖ 贴出手 > 0 ⇒ 贴落地 > 0 且 局闭环率 ≥ 30% 且 空爆 ≤ 1/局（**目前在 L3 只记录**）',
+    rule: '贴出手 = 0 ⇒ 不适用（不碰不罚）‖ 贴出手 > 0 ⇒ 贴落地 > 0 且 席局闭环率 ≥ 30% 且 空爆 ≤ 1/局（**目前在 L3 只记录**）',
     src: 'firestormProfile · 长程 · n=40（promote 第 7 道与天火经济栏）',
     get: r => (r.raw.fsLoopRate == null && r.raw.fsCurseOk == null ? null
       : (r.raw.fsCurseOk === 0 ? 'NA' : [r.raw.fsLoopRate, r.raw.fsEmptyPerGame])),
