@@ -124,3 +124,9 @@ measure-FS2-LE26	a-v2-page-1109	A	-	-	measure-FS2-LE26	FS2-LE26-readings.tsv	32	
 measure-DR-R3E	a-v2-page-1109	A	-	-	measure-DR-R3E	DR-R3E-readings.tsv	32	2026-11-25T07:16:28.657Z	add-point
 measure-ROD-DR	a-v2-page-1109	A	-	-	measure-ROD-DR	ROD-DR-readings.tsv	32	2026-11-25T08:25:34.022Z	add-point
 measure-PUR-DR	a-v2-page-1109	A	-	-	measure-PUR-DR	PUR-DR-readings.tsv	32	2026-11-25T08:43:20.708Z	add-point
+measure-TF-DR	a-v2-page-1109	A	-	-	measure-TF-DR	TF-DR-readings.tsv	32	2026-11-25T15:06:25.562Z	add-point
+measure-TF2-RD	a-v2-page-1109	A	-	-	measure-TF2-RD	TF2-RD-readings.tsv	32	2026-11-25T15:07:46.235Z	add-point
+measure-TF2-DR	a-v2-page-1109	A	-	-	measure-TF2-DR	TF2-DR-readings.tsv	32	2026-11-25T15:09:08.419Z	add-point
+measure-TF-RDMX	a-v2-page-1109	A	-	-	measure-TF-RDMX	TF-RDMX-readings.tsv	32	2026-11-25T15:14:20.655Z	add-point
+measure-TF2-RDC	a-v2-page-1109	A	-	-	measure-TF2-RDC	TF2-RDC-readings.tsv	32	2026-11-25T15:19:33.050Z	add-point
+measure-PUR-2P	a-v2-page-1109	A	-	-	measure-PUR-2P	PUR-2P-readings.tsv	32	2026-11-25T15:24:07.343Z	add-point

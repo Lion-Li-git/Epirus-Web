@@ -1,0 +1,7 @@
+id	path	mode	games	seed0	全程刷反弹	全程只防御	只攒不打(农民)	只枪压制	规则理解·自适应	攒钱+反弹(会玩)	重火力+反弹	六格均值	最大格	最大格是谁	和棋均值
+DR-R3E	docs/artifacts/DR-R3E.bak	multi	200	90211	0	0	0	0.5	0	0	0	0.07	0.5	只枪压制	4.357142857142857
+DR-R3E	docs/artifacts/DR-R3E.bak	long	200	90211	0	6	0	1	0	0	0	1.00	6.0	全程只防御	2.5714285714285716
+ROD-DR	docs/artifacts/ROD-DR.bak	multi	200	90211	0	0	0	1	0	0	0	0.14	1.0	只枪压制	4.642857142857143
+ROD-DR	docs/artifacts/ROD-DR.bak	long	200	90211	3	0	0	3	0	3	3	1.71	3.0	全程刷反弹	2.5
+PUR-DR	docs/artifacts/PUR-DR.bak	multi	200	90211	0	0	0	13.5	0	0	0	1.93	13.5	只枪压制	7.857142857142857
+PUR-DR	docs/artifacts/PUR-DR.bak	long	200	90211	3	0	0	4	0	3	3	1.86	4.0	只枪压制	5.5

@@ -1,0 +1,2 @@
+id	ok	nFail	fails	G	G2	wallDmg	fieldA	fieldBClears	seatVerdict	seatSpread	zeroAtkRate	recOk	recFails	oppsN	tag	legsMode
+DR-R3E	1	0		5.06		10.9	0.302	1.16	ok	11.5	0			0	n=20/aggr100/seat100	all-multi(反弹墙/密度/蓄能/场A/场B 都换 multi ‖ G2 与 G 同桌不判第二遍)

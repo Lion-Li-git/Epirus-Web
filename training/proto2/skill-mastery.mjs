@@ -150,7 +150,7 @@ export function replay(audGame, evs) {
       outcome: attempt ? attempt.outcome : 'no-attempt',
       attemptedKey: attempt ? attempt.key : null,
       ok: !!attempt && attempt.outcome === 'ok' && !voided,
-      voided, dmgToMe,
+      voided, dmgToMe, transfered,
     });
   }
   return rows;

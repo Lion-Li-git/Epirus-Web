@@ -3,6 +3,7 @@ AR-TK2	pass	—
 D4a	pass	—			
 day1119-cannon-pg	pass	—			
 DAY1119-PURIFY-T2B	pass	—			
+DR-R3E	pass	—			
 E3	pass	—			
 FS2-LE26	pass	—			
 night2-E1-det-strong	pass	—			
@@ -14,11 +15,16 @@ nov22-c3g-s300k	pass	—
 nov22-c4c-t20	pass	—			
 nov22-ring3-gd6a18	pass	—			
 nov22-tzt2d-stab	pass	—			
+PUR-DR	pass	—			
 R-s123	pass	—			
+ROD-DR	pass	—			
 S-s120	pass	—			
 SOFT-RING-C3G25	pass	—			
 T65-RINGBEAD	pass	—			
 T8-s114	pass	—			
+TF-DR	pass	—			
+TF2-DR	pass	—			
+TF2-RD	pass	—			
 TK-FS4	pass	—			
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
@@ -310,6 +316,6 @@ nov24-pierce3-20261101	pass	—
 TK-FS1	block	seat-symmetry			
 TK-FS3	pass	—			
 nov24-bandsym-jin	block	breadth-multi			
-DR-R3E	pass	—			
-ROD-DR	pass	—			
-PUR-DR	pass	—			
+TF-RDMX	pass	—			
+TF2-RDC	pass	—			
+PUR-2P	pass	—

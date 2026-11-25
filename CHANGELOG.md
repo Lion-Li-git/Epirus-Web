@@ -4,6 +4,29 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.30 — 11-25（`TF-DR` 入 `hard` ‖ `TF2-RD`/`TF2-DR` 入 `soft` ‖ 修复 `skill-mastery` `transfered` 漏字 ‖ 31 池 `16/15`）
+
+**这一版是什么**：修复 `skill-mastery.mjs` 的 `transfer` 回传字段缺失后，基于 `DR-R3E`/`ROD-DR` 洁净底座开展受控 `transfer` 蒸馏并将 3 枚短命名正式包按完整入池链收编：[`docs/artifacts/TF-DR.bak`](docs/artifacts/TF-DR.bak) 入 **`hard`**（恢复 `hard` 有效 `transfer` 覆盖至 `29/120` 格），[`docs/artifacts/TF2-RD.bak`](docs/artifacts/TF2-RD.bak) 与 [`docs/artifacts/TF2-DR.bak`](docs/artifacts/TF2-DR.bak) 入 **`soft`**（填补 `soft` `rod=0` 并扩充 `transfer`/长程广度），全池扩至 **`31` 枚（`hard 16 / soft 15`）**；另将 3 枚代表对照点 `TF-RDMX`、`TF2-RDC`、`PUR-2P` 测绘上 [`champion-map/index.html`](champion-map/index.html)。
+
+- **`TF-DR`（`hard` · `wid=ac6b3456fc2cebe4` · 亲代 `DR-R3E`）**：
+  - 配方：`MX6-GD-TF20` 单师多/长程 `transfer` + `T65-RINGBEAD@0.25 (2:standard)`，`groups=2000 / steps=180 / lr=3e-4 / rareOnly=transfer,ring@0.30`；
+  - 实测（[`docs/artifacts/promote-TF-DR.txt`](docs/artifacts/promote-TF-DR.txt)）：`promote --dry --support=2` **`0` 阻断**，`hostile skill-mastery` 同步通过 **✔ 会转移（`10.0%/局 · 50.0%`）** 与 **✔ 会聚能环（`2` 段）**；`Stage 1` 并集 **`17/30`**（`transfer 29/120 / 408` 次、`ring 30/120`、`bigT 20/120`、`drain 11/120`、`holo 9/120`），`Stage 2` **`25` 技（消融 `10`）**；演化图谱 `Arena B +27.4971pt`（`arS=+0.2869 / arL=+0.1180 / arR=+0.6819`、`MxC=+0.1992`、`okLong=1, okShort=1`）；`90210/90211` **`seatKill=0`**（`multi ≤3.5%` / `long ≤7.5%`，自适应 `0.0%`）；2P 四粒均值 `rule 27.75% / legacy 24.40%`。
+- **`TF2-RD` 与 `TF2-DR`（`soft` · `wid=ccc8268b8e386077` / `97430ee6cf744e0f`）**：
+  - [`docs/artifacts/TF2-RD.bak`](docs/artifacts/TF2-RD.bak)（亲代 `ROD-DR`）：`Stage 1` **`18/30`**（**`rod 13/120 / 344` 次** + **`transfer 11/120 / 86` 次** + `ring 29/120`），`Stage 2` `25` 技（消融 `9`），`promote exit=0`，`okLong=1, okShort=1`，`Arena B +23.7784pt`（`arR=+0.0348`），`90210/90211` `seatKill=0`（全格 `≤3.0%`），2P `rule 29.75% / legacy 22.75%`；
+  - [`docs/artifacts/TF2-DR.bak`](docs/artifacts/TF2-DR.bak)（亲代 `DR-R3E`）：`promote exit=0`（`G(long)=7.53 / S=2.054 / 7` 角色），`Stage 1` `16/30`（`transfer 3/120 / 32` 次），`Stage 2` `24` 技（消融 `8`），`Arena B +17.9278pt`（`arS=+0.1560 / arR=+0.3583`），`90210/90211` `seatKill=0`（`≤8.0%`），2P `rule 37.75% / legacy 25.75%`。
+- **代表对照点入图与工具修复**：
+  - 将 `TF-RDMX`（二跳 `ROD-DR + MX`：`transfer 21/120`、`arR=+0.2733`）、`TF2-RDC`（轻步坍缩对照：`selftest3` 全绿与 `transfer 25/120` 但 `arR=-0.4463`）、`PUR-2P`（`2:standard@10` 降稀释：`arR=+0.5229`）测绘入图（共计 `1040` 行）；
+  - 修复 [`training/proto2/skill-mastery.mjs`](training/proto2/skill-mastery.mjs#L153) `rows.push` 漏传 `transfered` 导致真受创转移恒为 `0` 的缺陷（`--selftest` 五腿全过）；证据与 31 池阶梯见 [`RESULTS-2026-11-25-transfer-admission.md`](docs/research/RESULTS-2026-11-25-transfer-admission.md)。
+
+## v2.1.29 — 11-25（2P 池级换带：`purify` 入 `hard` / `armor` 入 `soft`，修复三档次序）
+
+**这一版是什么**：按 28 包 2P 普查与 8 seed 临时带位实跑，将 [`docs/artifacts/nov21-purify-dsp0.bak`](docs/artifacts/nov21-purify-dsp0.bak) 从 `soft` 提到 `hard`，同时将 [`docs/artifacts/nov21-armor-tzt2d.bak`](docs/artifacts/nov21-armor-tzt2d.bak) 降到 `soft`；池仍为 **28 枚（hard 15 / soft 13）**。
+
+- **2P 三档实测（换带后同口径）**：rule `hard 49.16% / regular 52.10% / simple 56.08%`，legacy `23.50% / 27.43% / 30.76%`；两把尺均恢复 `hard < regular < simple`，普通档与换带前基本一致。5P multi `4.0/16.8/19.5%`、long `7.8/19.3/32.8%`，hard 与普通档均较换带前更强。
+- **准入与 5P 代价**：purify `promote --dry --support=2` 通过，hard 带 projected `seatKill=0`；成员 ArenaB 由 armor `−12.20pt` 换为 purify `+14.04pt`。
+- **覆盖代价**：hard 有效并集 `26→25`，`transfer` 从 7 格 / 76 手降为 0；soft 接回 armor，全池仍 `28/30`。转移伤害已登记为后续训练研究项，先量状态可达性与部署窗口，不直接加单步奖励。
+- 证据：[`RESULTS-2026-11-25-2p-census.md`](docs/research/RESULTS-2026-11-25-2p-census.md) 与 [`evidence-2026-11-25-2p-census/`](docs/research/evidence-2026-11-25-2p-census/)。
+
 ## v2.1.28 — 11-25（`ROD-DR` 入 `hard` / `PUR-DR` 入 `soft` ‖ 退役 `nov21-rod-tzt2d-r10` ‖ 全池 `28` 枚并集 `28/30`）
 
 **这一版是什么**：继续沿 `DR-R3E` 洁净底座攻克全池技能缺口与带伤替换，训出并入池 **`ROD-DR`**（[`docs/artifacts/ROD-DR.bak`](docs/artifacts/ROD-DR.bak)，`wid=c5f68b29031ab56c`）进 **`hard`** 并退役带 `seatKill=2` 的老避雷针包 `nov21-rod-tzt2d-r10`，再将首次打通全池净化 `≥3` 格覆盖、人席零漏格而 `2P` 偏弱的 **`PUR-DR`**（[`docs/artifacts/PUR-DR.bak`](docs/artifacts/PUR-DR.bak)，`wid=7fd8b3c1d487dcdd`）合入 **`soft`**；全池调至 **`28` 枚（`hard 15 / soft 13`）**，全池 Stage 1 有效并集由 `27/30` 升至 **`28/30`**（`hard 26/30`、`soft 25/30`，全池仅余 `dualGun, mirror` 未跨 `≥3` 格线）。
@@ -24,9 +47,9 @@
 
 - **路线 A 受控两臂与跨种子复现**（详情见 [`docs/research/RESULTS-2026-11-25-drain-training.md`](docs/research/RESULTS-2026-11-25-drain-training.md)）：
   - **底座与配方**：`up/teacher=pack:nov22-ring3-gd6a18.bak`，`2:standard` 配 `--teacher4=pack:T65-RINGBEAD.bak@0.25`，多人长程由 `--teacher2=drain@0.35 --teacher2keys=drain --teacher2Shapes=3:multi,3:long,5:long,8:long` 开摄魂窗，配 `--rareOnly=drain,ring --rareFrac=0.35`（`groups=2000, steps=240, lr=0.0004, dagger=1`）；其中 **A2 臂** 叠加 `--teacher3=ringEcon@0.17 --teacher3keys=ring --teacher3Shapes=3:long,5:long,8:long`，**A1 臂**（`nov25-r3-ringdrain-s25`）`T2=TZ2C@0.35(ring,drain)` 作为对照。
-  - **两粒种子实测**：A2 种子 1（`20261125` → **`DR-R3E`**）与种子 2（`20261126`）均在 `long` 代理局同步通过聚能环（`23`/`13` 段三连）、大雷（`25.0%`/`20.0%`）与摄魂（`17.5%`/`20.0%`），2P `standard vs rule` 均由亲代 `39.5%` 降至 `22.3%`/`22.5%`，且 `promote --dry --support=2` 均 `0` 阻断；择强选定种子 1（`selftest3` **6/6 全绿 `0.00e+0`**、`Arena B +27.50pt`、珠经济闭环）正式入 `hard`。
+  - **两粒种子实测**：A2 种子 1（`20261125` → **`DR-R3E`**）与种子 2（`20261126`）均在 `long` 代理局同步通过聚能环（`23`/`13` 段三连）、大雷（`25.0%`/`20.0%`）与摄魂（`17.5%`/`20.0%`），2P `standard vs rule` 均由亲代 `39.5%` 降至 `22.3%`/`22.5%`，且 `promote --dry --support=2` 均 `0` 阻断；择强选定种子 1（`selftest3` **6/6 全绿 `0.00e+0`**、`Arena B +27.50pt`、珠经济闭环）正式入 `hard`。历史摘要的 `hostile` 双过缺少原始回执，当前池复跑未复现（种子 1 `n3 7.5% < 10%`），已降级为待复核。
 - **`DR-R3E` 全维度验收入池（`hard 14 / soft 13`）**：
-  - `promote --dry --support=2`（[`docs/artifacts/promote-DR-R3E.txt`](docs/artifacts/promote-DR-R3E.txt)）：**`0` 阻断**（`✅ 五道全过`：`G(multi)=4.97 / G(long)=5.23`、`S=1.700`、墙 `17.10/局`、场A `30.2%`、反退化 `ok` `41.4%`、**珠闭环 ✓ `33.3%`（过期 `0.1/局`）**、G4 `multi 0% / long 12.3%`、G5 `0%`）；
+  - `promote --dry --support=2`（[`docs/artifacts/promote-DR-R3E.txt`](docs/artifacts/promote-DR-R3E.txt)）：**`0` 阻断**（`✅ 五道全过`：`G(multi)=4.97 / G(long)=5.23`、`S=1.700`、墙 `17.10/局`、场A `30.2%`、反退化 `ok` `41.4%`、**珠闭环 ✓ `33.3%`（过期 `0.1/局`）**、G4 `multi 0% / long 12.3%`、G5 `0%`）；**场B `1.16/局` 是 `multi` 口径**，地图 `allLong` 另登记 `场B 清场 0.03/局 < 0.3`（`okLong=0`），long 无压清场未过；
   - 演化图谱（`100 PASS / 0 FAIL`）：`arenaB` `arS=+0.1789 / arL=+0.1616 / arR=+0.5229`（6 粒中位 **`+27.5039pt`**），`mixedfix MxC=+0.2593 / MxCL=+0.2346`、`a-long h2=88.04% / h5=41.49% / h8=33.18%`、`H=56.8, S=1.59`；
   - 人席与 Stage 1/2：`90210/90211` **`seatKill=0`**（`90210` `multi ≤3.5% / long ≤1.5%`，`90211` `multi ≤0.5% / long ≤6.0%`，`规则理解·自适应` 全 `0.0%`）；2P `standard` `rule 22.3% / legacy 20.5%`；Stage 1 并集 **`17/30`**（实池 `36.3%`、`drain` `7/120` 有效格 / `29/120` 非零 / `73` 次出手），Stage 2 `24` 技（消融 `10`、`drain rich Δ=+10.42% ±4.46%`）；
   - 27 池阶梯（`probe-diff-ladder --pool=1 --surrogate=rule`, 400 局/档）：`5P long` 困难 **`5.8%`** → 普通 **`23.8%`**（`7.4σ`）→ 简单 **`33.8%`**（`3.2σ`）；`5P multi` 困难 **`4.8%`** → 普通 **`18.0%`**（`6.1σ`）→ 简单 **`20.0%`**；`2P standard` 困难 **`53.8%`** / 普通 **`54.3%`** / 简单 **`52.5%`**。

@@ -1033,3 +1033,9 @@ FS2-LE26	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T03:40:11.24
 DR-R3E	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T06:50:56.676Z	20261125		nov22-ring3-gd6a18	nov22-ring3-gd6a18	nov22-ring3-gd6a18	eae4b0ad4013c202																		seedpack-wid						
 ROD-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T08:00:34.870Z	20261126		DR-R3E	DR-R3E	DR-R3E	c5f68b29031ab56c																		seedpack-wid						
 PUR-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T07:58:27.436Z	20261125		DR-R3E	DR-R3E	DR-R3E	7fd8b3c1d487dcdd																		seedpack-wid						
+TF-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:32:47.732Z	20261127		DR-R3E	DR-R3E	DR-R3E	ac6b3456fc2cebe4																		seedpack-wid						
+TF2-RD	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:16:46.521Z	20261125		ROD-DR	ROD-DR	ROD-DR	ccc8268b8e386077																		seedpack-wid						
+TF2-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:26:23.410Z	20261126		DR-R3E	DR-R3E	DR-R3E	97430ee6cf744e0f																		seedpack-wid						
+TF-RDMX	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:16:47.918Z	20261125		ROD-DR	ROD-DR	ROD-DR	99026fd1f15d68cf																		seedpack-wid						
+TF2-RDC	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:25:29.394Z	20261126		ROD-DR	ROD-DR	ROD-DR	5fe330fa48e21c93																		seedpack-wid						
+PUR-2P	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T08:25:33.360Z	20261128		PUR-DR	PUR-DR	PUR-DR	25140b2b9bc576e6																		seedpack-wid						

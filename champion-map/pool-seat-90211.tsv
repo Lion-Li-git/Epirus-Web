@@ -127,3 +127,9 @@ ROD-DR	docs/artifacts/ROD-DR.bak	multi	200	90211	0	0	0	1	0	0	0	0.14	1.0	只枪�
 ROD-DR	docs/artifacts/ROD-DR.bak	long	200	90211	3	0	0	3	0	3	3	1.71	3.0	全程刷反弹	2.5
 PUR-DR	docs/artifacts/PUR-DR.bak	multi	200	90211	0	0	0	13.5	0	0	0	1.93	13.5	只枪压制	7.857142857142857
 PUR-DR	docs/artifacts/PUR-DR.bak	long	200	90211	3	0	0	4	0	3	3	1.86	4.0	只枪压制	5.5
+TF-DR	docs/artifacts/TF-DR.bak	multi	200	90211	0	3.5	0	0	0	0	0	0.50	3.5	全程只防御	11.857142857142858
+TF-DR	docs/artifacts/TF-DR.bak	long	200	90211	7.5	0	0	0	0	7.5	7.5	3.21	7.5	全程刷反弹	6.857142857142857
+TF2-RD	docs/artifacts/TF2-RD.bak	multi	200	90211	0	0	0	0.5	0	0	0	0.07	0.5	只枪压制	7
+TF2-RD	docs/artifacts/TF2-RD.bak	long	200	90211	0.5	0	0	3	0	0.5	0.5	0.64	3.0	只枪压制	2.2857142857142856
+TF2-DR	docs/artifacts/TF2-DR.bak	multi	200	90211	0	0	0	5.5	0	0	0	0.79	5.5	只枪压制	6
+TF2-DR	docs/artifacts/TF2-DR.bak	long	200	90211	2	0	0	8	0	2	2	2.00	8.0	只枪压制	4.142857142857143

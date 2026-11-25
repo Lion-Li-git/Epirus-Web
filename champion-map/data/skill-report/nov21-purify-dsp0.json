@@ -6182,7 +6182,7 @@
  },
  "id": "nov21-purify-dsp0",
  "wid": "b4a65ee4437584cf",
- "tier": "soft",
+ "tier": "hard",
  "rulesFingerprint": "bfd49045",
  "fixtureKey": "fx-pool1124a",
  "measuredAt": "2026-11-24T10:21:27.879Z",

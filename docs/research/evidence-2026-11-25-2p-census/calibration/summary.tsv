@@ -1,0 +1,5 @@
+surrogate	seed	pct	historical_pct	delta
+rule	77000	81.4	81.2	0.20
+rule	90210	79	79.8	-0.80
+legacy	77000	16.7	16.2	0.50
+legacy	90210	18.9	16.6	2.30

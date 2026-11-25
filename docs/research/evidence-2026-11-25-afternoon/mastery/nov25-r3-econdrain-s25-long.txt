@@ -1,0 +1,20 @@
+
+=== D:\code\Epirus-Web\docs\research\evidence-2026-11-25-afternoon\packs\nov25-r3-econdrain-s25.bak（D:\code\Epirus-Web\docs\research\evidence-2026-11-25-afternoon\packs\nov25-r3-econdrain-s25.bak） ===
+[桌 long × n=3/5 ‖ 40 局/格 ‖ t=0.15 ‖ arena2.v2 ‖ arena2.v2|pool=cc652985/20] ‖ miniT 语义口径 = predictive-2026-10-31（预示式代理；旧口径读数属换代前，不横比）
+  格          ring    bigT railgunlaserEye   miniT  cannon   prototransfer    holo   drain   胜%  净胜%  回合/局  三连(ring/can/canEp)
+  n=3       1.725   0.400   0.050   0.000   0.000   0.025   0.000   0.000   0.100   0.175 62.5%  62.5%      44  14/0/0
+  n=5       1.175   0.250   0.025   0.000   0.000   0.000   0.000   0.000   0.300   0.225 50.0%  47.5%      62  9/0/0
+  —— 判据（长程 PREREG §二）——
+  ✔ 会聚能环   23 段三连   [线：批内≥1]
+  ✔ 会大雷    25.0%/局   [线：0.2/局（各格）]
+  ✘ 会电磁炮   2.5%/局，浪费 100.0%   [线：0.35/局（各格） ∧ 珠浪费<50%]
+  ✘ 会激光眼   0.0%/局，打防席 0/0   [线：0.2/局（各格） ∧ 打防席≥1/2]
+  ✘ 会小雷    0.0%/局，语义**读不出**（这格一次 miniT 都没出手 ⇒ 分母 0，不是 0%）   [线：0.2/局（各格） ∧ 打 [ep≥2 ∧ 最近 4 回合蓄过珠] 的席≥1/2]
+  ✘ 会过载炮   0.0%/局（对 ep 顶 0 段）   [线：0.1/局（各格，第3下打ep顶）]
+  ✘ 会转移    0.0%/局，转移 0 点 / 0 次 ⇒ 转移率 0.0%（回本线 100% = 2.0 点/次）   [线：0.05/局（各格） ∧ 转移率≥50%]
+  ✔ 会摄魂    17.5%/局   [线：0.1/局（各格）]
+  ✘ 会天火    0.0%/局，引爆率 0.0%（0 引 / 7 贴，可>100%）   [线：0.2/局（各格） ∧ 引爆率≥75%]
+  珠经济（chargeProfile long 单源）：蓄能/局 0.1，得 3 花 0（电 0/爆 0）过期 3 ⇒ 浪费率 100.0%，花珠率 0.0%
+  观测列：proto 0 次（时机旗 被集火 0/ep顶 0/hp最低 0）‖ transfer 0 次（当回合真受创 0；旗 0/0/0）‖ holo（暂缓只记录）16 次
+
+[JSON] D:\code\Epirus-Web\docs\research\evidence-2026-11-25-afternoon\mastery\nov25-r3-econdrain-s25-long.json

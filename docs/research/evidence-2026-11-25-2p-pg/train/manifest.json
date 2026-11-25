@@ -1,0 +1,79 @@
+{
+  "finishedAt": "2026-11-25T12:33:58.446Z",
+  "jobs": [
+    {
+      "arm": "nov25-2ppg-roddr-s20261128",
+      "seed": 20261128,
+      "startedAt": "2026-11-25T12:33:43.137Z",
+      "finishedAt": "2026-11-25T12:33:58.351Z",
+      "exit": 0,
+      "ok": true,
+      "log": "docs/research/evidence-2026-11-25-2p-pg/train/nov25-2ppg-roddr-s20261128.txt",
+      "logSha256": "1ac5d273569f964a52d981104ca4771c1c06831186cb67d40ff50bbbd8a8e612",
+      "artifacts": [
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261128.bak",
+          "sha256": "a9f3d2f0ab49b2609aec83a3574f5383bc0ca5c135e13cb184cd8a7f694b554c",
+          "wid": "beddb8ddca5330f5"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261128.bak.meta.json",
+          "sha256": "143f67bb9de2e3c9b07c9002a5f32e48360f23564a4f2a28051c08e56fe25f40",
+          "wid": ""
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261128.seg500.bak",
+          "sha256": "99d104e4d96cc66fb04ac62af2aca2f246e0799caee20c2af23b8fc99e7da7b4",
+          "wid": "dd96e6098cfc79e1"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261128.seg1000.bak",
+          "sha256": "d3114df25b3515c598e08087a6a579dd9247d882eda306fe2d90ff6526304e3e",
+          "wid": "94b041b1b037d673"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261128.seg1500.bak",
+          "sha256": "713e39426a9b167a01dca5803658f95cbacef28dada3d0eda457848cd2bd8f7c",
+          "wid": "caf823a7a5cb0163"
+        }
+      ]
+    },
+    {
+      "arm": "nov25-2ppg-roddr-s20261129",
+      "seed": 20261129,
+      "startedAt": "2026-11-25T12:33:43.176Z",
+      "finishedAt": "2026-11-25T12:33:58.445Z",
+      "exit": 0,
+      "ok": true,
+      "log": "docs/research/evidence-2026-11-25-2p-pg/train/nov25-2ppg-roddr-s20261129.txt",
+      "logSha256": "40580acbb52ce186179610ac1160dc4ea3bbe60026c14854205899ec6aa7869e",
+      "artifacts": [
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261129.bak",
+          "sha256": "2d2fa96e0b5efed819573576b385505ae38599cf10861391b08054449759c78c",
+          "wid": "bbd6d86f7ff5841f"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261129.bak.meta.json",
+          "sha256": "d12b8600e9607f8c43b6eea0bbbe017eb50b240bab6a83158503cf0d82089792",
+          "wid": ""
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261129.seg500.bak",
+          "sha256": "87a90fe25b8082837eaaee05e5c01c379add9f4c1c98ad8b4fcf141a8c6896f9",
+          "wid": "a08fa6e56c49cbef"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261129.seg1000.bak",
+          "sha256": "4ead121a475befc3b476a614b1e94101e04492d4fd259d8f8dfcf18886dd872d",
+          "wid": "2c86d2405b8be3be"
+        },
+        {
+          "file": "docs/research/evidence-2026-11-25-2p-pg/packs/nov25-2ppg-roddr-s20261129.seg1500.bak",
+          "sha256": "73968db9e2f0b36312abeae4679f63e295a05004e3df05bcd0ced72b6cd2aa38",
+          "wid": "fb63b7413cab7df7"
+        }
+      ]
+    }
+  ]
+}

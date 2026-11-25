@@ -44,11 +44,11 @@
 
 1. **根因量化（`long` 40 局镜）**：`FS2-LE26` 仅 **`0.3%`** 决策点处于 `EP≥3`（`ring/40g=0`、`drainLegal=2`、`drainTaken=0`），故 `--teacher2keys=drain` 因状态不可达与 `--rareOnly=drain` 饿死 `laserEye` 失败；`nov22-ring3-gd6a18.bak` 经 `selftest3` 全绿（`6/6, 0.00e+0`），具 `ArenaB +20.4pt` 与原生 `ring`（`EP≥3 = 1.4%`），2P `standard vs rule` 偏弱（`39.5%`）。
 2. **路线 A 两臂受控实验（`up=nov22-ring3-gd6a18` · `T4=T65-RINGBEAD@0.25@2:standard` · `--rareOnly=drain,ring --rareFrac=0.35` · `2000组/240步/lr=4e-4`）**：
-   - **A1（`scratch/arms/nov25-r3-ringdrain-s25.bak`）**：`T2=TZ2C@0.35 (ring,drain)`；`long mastery` 三项过线（`ring` 24 段 / `bigT` `42.5%–50.0%` / `drain` **`70.0%/60.0%`**，hostile 双过 `60.0%`）、2P `rule` `23.5%`、`Arena B(6粒) +17.45pt`、`90210/90211 seatKill=0`（最坏 `6.5%/6.0%`）、Stage1 `drain` `9/120`（`>=3`），但 `selftest3` 腿 C 红（`exit 8`）且反退化栏 `long gun 63.2%`。
+   - **A1（`scratch/arms/nov25-r3-ringdrain-s25.bak`）**：`T2=TZ2C@0.35 (ring,drain)`；`long mastery` 三项过线（`ring` 24 段 / `bigT` `42.5%–50.0%` / `drain` **`70.0%/60.0%`**）、2P `rule` `23.5%`、`Arena B(6粒) +17.45pt`、`90210/90211 seatKill=0`（最坏 `6.5%/6.0%`）、Stage1 `drain` `9/120`（`>=3`），但 `selftest3` 腿 C 红（`exit 8`）且反退化栏 `long gun 63.2%`。历史摘要另称 hostile 双过 `60.0%`，但原始回执未落盘；当前池复跑为 `n3 12.5% / n5 0%`，**未复现双过**，该读数降级为待复核。
    - **A2（`scratch/arms/nov25-r3-econdrain-s25.bak` → 正式入 `hard`：`docs/artifacts/DR-R3E.bak`）**：`T2=drain@0.35 (drain)` + `T3=ringEcon@0.17 (ring)`；
      - `selftest3` **6/6 全绿（`0.00e+0`）**；
-     - `promote --dry --support=2` **全过（`exit=0`）**：`G(multi)=4.97 / G(long)=5.23`（`S=1.700`）、**珠闭环 ✓（`33.3%`，过期 `0.1/局`）**、反退化 `ok`（`41.4%`）、G4 `multi 0% / long 12.3%`、G5 `0%`；
-     - `long mastery`（常模与 hostile 双过）：聚能环 `23` 段、大雷 `25.0%`、**摄魂 `17.5%/局`（`n=3 17.5%, n=5 30.0%`）**；
+     - `promote --dry --support=2` **全过（`exit=0`）**：`G(multi)=4.97 / G(long)=5.23`（`S=1.700`）、**珠闭环 ✓（`33.3%`，过期 `0.1/局`）**、反退化 `ok`（`41.4%`）、G4 `multi 0% / long 12.3%`、G5 `0%`；**这里的场B `1.16/局` 是 `multi` 口径**。地图 `allLong` 复核另登记 `场B 清场 0.03/局 < 0.3`（`okLong=0`，见 `champion-map/data/feasibility.tsv`），因此“五道全过”不能读成双桌形全过，long 无压清场仍是短板；
+     - `long mastery` 历史摘要：聚能环 `23` 段、大雷 `25.0%`、**摄魂 `17.5%/局`（`n=3 17.5%, n=5 30.0%`）**；当时另称 hostile 双过，但原始回执未落盘。当前池复跑 hostile 摄魂为 **`n3 7.5% / n5 27.5%`**，`n3 < 10%` 线，**“hostile 双过”未复现，降级为待复核**；
      - `Arena B(6粒) +27.5039pt`（`arS=+0.1789 / arL=+0.1616 / arR=+0.5229`），`mixedfix MxC=+0.2593 / MxCL=+0.2346`、`H=56.8, S=1.59`；
      - `Stage 1` 120 格：**并集 `17/30`（`realWin 36.3%`）**、`drain` `7/120`（`>=3`；非零 `29/120`、`73` 次出手、实池 `14/40` 格 `24` 次），`Stage 2` 24 技、`drain rich Δ=+10.42% ±4.46%`；
      - 人席 `90210/90211` **`seatKill=0`**（`90210` 最坏 `3.5%/1.5%`，`90211` 最坏 `0.5%/6.0%`，`规则理解·自适应` 全 `0.0%`）；2P `standard` `rule 22.3% / legacy 20.5%`。

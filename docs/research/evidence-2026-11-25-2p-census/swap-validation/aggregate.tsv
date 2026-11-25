@@ -1,0 +1,9 @@
+candidate	surrogate	sparring_mean	regular_mean	hard_mean	gap1_mean	gap2_mean	ordered_seeds
+armor-mx6	rule	55.6500	52.4000	50.5750	1.8250	3.2500	5
+armor-mx6	legacy	30.2125	27.3875	24.0625	3.3250	2.8250	7
+armor-purify	rule	56.0750	52.1000	49.1625	2.9375	3.9750	5
+armor-purify	legacy	30.7625	27.4250	23.5000	3.9250	3.3375	8
+rgd12-purify	rule	54.0750	52.5375	51.2625	1.2750	1.5375	4
+rgd12-purify	legacy	28.5250	27.4000	26.2000	1.2000	1.1250	3
+hlg1-purify	rule	53.7875	52.2750	50.7875	1.4875	1.5125	5
+hlg1-purify	legacy	28.2125	27.4125	26.0000	1.4125	0.8000	3

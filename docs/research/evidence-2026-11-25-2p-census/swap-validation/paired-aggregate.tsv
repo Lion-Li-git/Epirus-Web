@@ -1,0 +1,9 @@
+candidate	surrogate	gap1_mean	gap1_positive	gap1_2sigma	gap2_mean	gap2_positive	gap2_2sigma
+armor-mx6	rule	1.825	6	1	3.250	7	2
+armor-mx6	legacy	3.325	7	4	2.825	8	3
+armor-purify	rule	2.938	6	3	3.975	7	4
+armor-purify	legacy	3.925	8	5	3.337	8	3
+rgd12-purify	rule	1.275	5	0	1.537	6	0
+rgd12-purify	legacy	1.200	5	0	1.125	6	0
+hlg1-purify	rule	1.487	6	1	1.513	6	0
+hlg1-purify	legacy	1.413	5	1	0.800	6	0
