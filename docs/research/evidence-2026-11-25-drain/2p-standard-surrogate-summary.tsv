@@ -1,0 +1,3 @@
+pack	surrogate	seed77000_pct	seed90210_pct	mean_pct	games_per_seed	mode	source
+RING-MINIT-CONT	rule	33.1	37.2	35.15	1000	standard	RING-MINIT-CONT-2p-standard-rule-s77000.txt;RING-MINIT-CONT-2p-standard-rule-s90210.txt
+RING-MINIT-CONT	legacy	18.5	18.9	18.7	1000	standard	RING-MINIT-CONT-2p-standard-legacy-s77000.txt;RING-MINIT-CONT-2p-standard-legacy-s90210.txt

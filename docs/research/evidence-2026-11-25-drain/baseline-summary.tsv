@@ -1,0 +1,4 @@
+pack	selftest3	drain_long_n3	drain_long_n5	drain_hostile_n3	drain_hostile_n5	rule_2p_mean_pct	legacy_2p_mean_pct	arenaB_med	seatKill	role
+FS2-LE26	pass	0.000	0.000	0.000	0.000	22.2	21.4	14.5168	0	strong base
+RING-MINIT-CONT	pass	0.075	0.125	0.225	0.300	35.15	18.7	2.2957	2	drain carrier/fallback base
+TZ2C	fail-legC	0.225	0.675	1.875	0.550					fail2	frozen drain teacher only

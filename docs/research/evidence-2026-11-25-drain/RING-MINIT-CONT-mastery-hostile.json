@@ -1,0 +1,236 @@
+{
+ "meta": {
+  "tool": "skill-mastery",
+  "table": "long",
+  "n": [
+   3,
+   5
+  ],
+  "games": 40,
+  "temp": 0.15,
+  "arena2": "v2",
+  "prereg": "PREREG-2026-10-30-LONGSKILL-zcode.md"
+ },
+ "packs": [
+  {
+   "label": "docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak",
+   "spec": "docs/artifacts/obs6-coldstart/RING-MINIT-CONT.bak",
+   "fp": "arena2.v2|pool=90cdb4c7/0|poolSeed=20261029|shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi|roster=gunspam,heavyfire,aggro,targeter|highN=1|regen=0|stratified=0",
+   "bead": {
+    "games": 20,
+    "charges": 65,
+    "chargesPerGame": 3.25,
+    "gained": 65,
+    "spent": 44,
+    "spentElec": 13,
+    "spentBoom": 31,
+    "expired": 20,
+    "wasteRate": 0.3076923076923077,
+    "spentRate": 0.676923076923077,
+    "roundsPerGame": 49.8,
+    "bySeat": [
+     18,
+     12,
+     9,
+     18,
+     8
+    ]
+   },
+   "cells": [
+    {
+     "n": 3,
+     "table": "long",
+     "games": 40,
+     "rounds": 1285,
+     "win": 11,
+     "clean": 11,
+     "okUses": {
+      "ji": 405,
+      "reflect": 79,
+      "gun": 27,
+      "bagua": 1,
+      "proto": 65,
+      "snipe": 19,
+      "charge": 37,
+      "laserEye": 15,
+      "ring": 12,
+      "bigT": 3,
+      "sword": 40,
+      "drain": 9,
+      "guard": 1,
+      "railgun": 7
+     },
+     "attempts": {
+      "ji": 405,
+      "reflect": 79,
+      "gun": 39,
+      "bagua": 1,
+      "proto": 65,
+      "snipe": 28,
+      "charge": 37,
+      "laserEye": 15,
+      "ring": 12,
+      "bigT": 3,
+      "sword": 55,
+      "drain": 9,
+      "guard": 1,
+      "railgun": 7
+     },
+     "ringRuns": [
+      3,
+      3,
+      3,
+      3
+     ],
+     "chains": {
+      "ring": 4,
+      "cannon": 0,
+      "cannonEpMax": 0
+     },
+     "sem": {
+      "laserEyeHit": 0,
+      "laserEyeN": 15,
+      "miniTHit": 0,
+      "miniTN": 0
+     },
+     "obs": {
+      "proto": 65,
+      "transfer": 0,
+      "transferHit": 0,
+      "transferAmt": 0,
+      "dmgIn": 174,
+      "holo": 0,
+      "protoHeat": 5,
+      "protoLead": 49,
+      "protoLow": 15,
+      "tHeat": 0,
+      "tLead": 0,
+      "tLow": 0,
+      "holoTargets": {}
+     }
+    },
+    {
+     "n": 5,
+     "table": "long",
+     "games": 40,
+     "rounds": 1878,
+     "win": 3,
+     "clean": 3,
+     "okUses": {
+      "ji": 294,
+      "reflect": 70,
+      "gun": 58,
+      "charge": 18,
+      "laserEye": 14,
+      "proto": 52,
+      "sword": 7,
+      "snipe": 11,
+      "bagua": 10,
+      "drain": 12,
+      "railgun": 2,
+      "ring": 12
+     },
+     "attempts": {
+      "ji": 294,
+      "reflect": 70,
+      "gun": 64,
+      "charge": 18,
+      "laserEye": 14,
+      "proto": 52,
+      "sword": 9,
+      "snipe": 19,
+      "bagua": 10,
+      "drain": 12,
+      "railgun": 2,
+      "ring": 12
+     },
+     "ringRuns": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+     ],
+     "chains": {
+      "ring": 0,
+      "cannon": 0,
+      "cannonEpMax": 0
+     },
+     "sem": {
+      "laserEyeHit": 0,
+      "laserEyeN": 14,
+      "miniTHit": 0,
+      "miniTN": 0
+     },
+     "obs": {
+      "proto": 52,
+      "transfer": 0,
+      "transferHit": 0,
+      "transferAmt": 0,
+      "dmgIn": 189,
+      "holo": 0,
+      "protoHeat": 12,
+      "protoLead": 40,
+      "protoLow": 13,
+      "tHeat": 0,
+      "tLead": 0,
+      "tLow": 0,
+      "holoTargets": {}
+     }
+    }
+   ],
+   "verdict": {
+    "ring": {
+     "pass": true,
+     "actual": "4 段三连",
+     "line": "批内≥1"
+    },
+    "bigT": {
+     "pass": false,
+     "actual": "0.0%/局",
+     "line": "0.2/局（各格）"
+    },
+    "railgun": {
+     "pass": false,
+     "actual": "5.0%/局，浪费 30.8%",
+     "line": "0.35/局（各格） ∧ 珠浪费<50%"
+    },
+    "laserEye": {
+     "pass": false,
+     "actual": "35.0%/局，打防席 0/29",
+     "line": "0.2/局（各格） ∧ 打防席≥1/2"
+    },
+    "miniT": {
+     "pass": false,
+     "unreadable": true,
+     "actual": "0.0%/局，语义**读不出**（这格一次 miniT 都没出手 ⇒ 分母 0，不是 0%）",
+     "line": "0.2/局（各格） ∧ 打 [ep≥2 ∧ 最近 4 回合蓄过珠] 的席≥1/2",
+     "semEra": "predictive-2026-10-31"
+    },
+    "cannon": {
+     "pass": false,
+     "actual": "0.0%/局（对 ep 顶 0 段）",
+     "line": "0.1/局（各格，第3下打ep顶）"
+    },
+    "transfer": {
+     "pass": false,
+     "unreadable": true,
+     "actual": "0.0%/局，转移 0 点 / 0 次 ⇒ 转移率 0.0%（回本线 100% = 2.0 点/次）",
+     "line": "0.05/局（各格） ∧ 转移率≥50%"
+    },
+    "drain": {
+     "pass": true,
+     "actual": "22.5%/局",
+     "line": "0.1/局（各格）"
+    },
+    "firestorm": {
+     "pass": false,
+     "unreadable": true,
+     "actual": "0.0%/局，引爆率 0.0%（0 引 / 0 贴，可>100%）",
+     "line": "0.2/局（各格） ∧ 引爆率≥75%"
+    }
+   }
+  }
+ ]
+}
