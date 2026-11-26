@@ -1,0 +1,40 @@
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":0.75,"avgR":19.5,"dose":0.0901,"doseN":24269},{"id":"lv:regular","pct":12,"avgR":19.3,"dose":0.0891,"doseN":20189},{"id":"lv:sparring","pct":14.75,"avgR":18.6,"dose":0.2,"doseN":17047}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":0,"avgR":19.1,"dose":0.09,"doseN":24085},{"id":"lv:regular","pct":13,"avgR":18.5,"dose":0.0889,"doseN":19665},{"id":"lv:sparring","pct":20,"avgR":18.4,"dose":0.2,"doseN":16729}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":0.25,"avgR":19.4,"dose":0.0901,"doseN":24209},{"id":"lv:regular","pct":11.25,"avgR":18.2,"dose":0.0887,"doseN":19550},{"id":"lv:sparring","pct":20.75,"avgR":17.7,"dose":0.2,"doseN":16145}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":1.25,"avgR":19.4,"dose":0.0902,"doseN":24435},{"id":"lv:regular","pct":11.75,"avgR":18.7,"dose":0.0891,"doseN":19831},{"id":"lv:sparring","pct":18.5,"avgR":18.2,"dose":0.2,"doseN":16289}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":1,"avgR":19.2,"dose":0.09,"doseN":24023},{"id":"lv:regular","pct":14,"avgR":18.9,"dose":0.089,"doseN":19701},{"id":"lv:sparring","pct":19,"avgR":18,"dose":0.2,"doseN":16241}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":1.25,"avgR":19,"dose":0.09,"doseN":24052},{"id":"lv:regular","pct":17.25,"avgR":18.4,"dose":0.0887,"doseN":19383},{"id":"lv:sparring","pct":20.75,"avgR":18.2,"dose":0.2,"doseN":16481}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":0.5,"avgR":19.4,"dose":0.0901,"doseN":24364},{"id":"lv:regular","pct":13.75,"avgR":19,"dose":0.0891,"doseN":19955},{"id":"lv:sparring","pct":15.5,"avgR":18,"dose":0.2,"doseN":16357}]}
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=p=0.35[st:mix,st:toolkit] ‖ lv:regular=p=0.1[st:toolkit] ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":5,"mode":"multi","pack":"3P","games":400,"rows":[{"id":"lv:hard","pct":0.5,"avgR":18.8,"dose":0.0899,"doseN":23840},{"id":"lv:regular","pct":10.75,"avgR":18.7,"dose":0.0888,"doseN":19656},{"id":"lv:sparring","pct":19,"avgR":17.9,"dose":0.2,"doseN":16109}]}

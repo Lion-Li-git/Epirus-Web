@@ -627,3 +627,16 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-26T13:46:59.795Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	85200	page	data/arena-league-1118-page.tsv	0.191041	0.056344
 2026-11-26T13:47:06.353Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	86200	page	data/arena-league-1118-page.tsv	0.174567	0.064947
 2026-11-26T13:47:13.176Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	87200	page	data/arena-league-1118-page.tsv	0.521255	0.161893
+2026-11-26T15:34:19.725Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	82200	page	data/arena-league-1118-page.tsv	0.415052	0.118814
+2026-11-26T15:34:22.215Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	83200	page	data/arena-league-1118-page.tsv	-0.012428	-0.001882
+2026-11-26T15:34:24.759Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	84200	page	data/arena-league-1118-page.tsv	0.430631	0.139867
+2026-11-26T15:34:27.178Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	85200	page	data/arena-league-1118-page.tsv	0.071254	0.021283
+2026-11-26T15:34:29.739Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	86200	page	data/arena-league-1118-page.tsv	0.616050	0.198624
+2026-11-26T15:34:32.295Z	nov26-tank-pgdr-t4	scratch/arms/nov26-tank-pgdr-t4.bak	c4431bca904f5ecd	87200	page	data/arena-league-1118-page.tsv	0.357942	0.100337
+2026-11-26T15:37:36.373Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	82200	page	data/arena-league-1118-page.tsv	0.415052	0.118814
+2026-11-26T15:44:27.200Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	82200	page	data/arena-league-1118-page.tsv	0.415052	0.118814
+2026-11-26T15:44:29.671Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	83200	page	data/arena-league-1118-page.tsv	-0.012428	-0.001882
+2026-11-26T15:44:32.199Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	84200	page	data/arena-league-1118-page.tsv	0.430631	0.139867
+2026-11-26T15:44:34.611Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	85200	page	data/arena-league-1118-page.tsv	0.071254	0.021283
+2026-11-26T15:44:37.108Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	86200	page	data/arena-league-1118-page.tsv	0.616050	0.198624
+2026-11-26T15:44:39.638Z	TK-PG	docs/artifacts/TK-PG.bak	c4431bca904f5ecd	87200	page	data/arena-league-1118-page.tsv	0.357942	0.100337

@@ -35,6 +35,7 @@ TF-DR	pass	—
 TF2-DR	pass	—			
 TF2-RD	pass	—			
 TK-FS4	pass	—			
+TK-PG	pass	—			
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
 night2-S3	block	G5/long 清不了防席（它夺冠 28%） · G5/multi 清不了防席（它夺冠 61%）		61	

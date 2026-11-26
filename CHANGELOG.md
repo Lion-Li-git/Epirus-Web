@@ -4,6 +4,19 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.36 — 11-27（**`TK-PG`** 入 `soft` 替换退役 **`MX8-R6C-KL`** ‖ 人数剖面量具与坦克覆盖修正）
+
+**这一版是什么**：按 `2/3/5/8P` 拆开技能使用与兑现，确认电磁炮在 2P 最少、随人数上升属正常形状；`PG-CN` 的真实缺口在 8P 电珠闭环（`5/29`），不是 2P。坦克覆盖线经 `FS-G2 → T1 → T2` 得到绿色坦克教师，再低剂量蒸回绿色 `PG-DR`，得到 **`TK-PG`**（[`docs/artifacts/TK-PG.bak`](docs/artifacts/TK-PG.bak) · `wid=4fb5b59cb4e5a446`）入 **`soft`**，替换高废珠的 `MX8-R6C-KL`；全池维持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。
+
+- **`TK-PG` 入 `soft` 替换退役 `MX8-R6C-KL`**：
+  - 配方：`PG-DR` 绿底座 + `nov26-tank-fsg2-t2` 只借 `tank`（3/5/8P、教师比例 `0.10`、`1000` 组 / `80` 步 / `lr=1e-4` / `seed=20261165`）；
+  - `Stage 1`：胜率 **`48.5%`**、并集 **`18/30`**、坦克 **`27` 次 / `13` 格 / `95.8%` 兑现**、电珠闭环 **`40.8% (51/125)`**；
+  - `2P` 四 seed：rule hard **`18.8%`** / simple **`27.7%`**，legacy hard **`19.0%`** / simple **`19.6%`**；
+  - `6` 粒 `Arena B +21.4494pt`（极差 `49.2045pt`）；`promote --dry --support=2` **0 阻断**（G4 long `19.7%` / multi `9.3%`，G5 long `17%` / multi `0%`）；`90210/90211 seatKill=0`；落图 `H=53.5 / S=1.41`。
+- **替换净变化**：`MX8-R6C-KL` 废珠 `93.3%` → `TK-PG 59.2%`；soft `Arena B` 中位 **`2.3→4.1pt`**；hard/soft 覆盖并集仍各 **`27`**，全池有效并集 **`29/30`** 不变。
+- **人数剖面量具**：新增 `shape-skill-profile.mjs`、`railgun-window-diagnostic.mjs`、`tank-transfer-window-diagnostic.mjs`、`transfer-outcome-diagnostic.mjs`，证据落 `docs/research/evidence-2026-11-26-value-coverage/`。电磁炮全池 `uses/game` 随人数上升；坦克瓶颈是选择窗口而非结算；TF-DR 长程转移兑现偏低。
+- **替换后阶梯**：2P 八 seed rule `32.3% < 44.5% < 56.9%`、legacy `20.5% < 26.0% < 29.3%`；5P 八 seed（每 seed 400 局/档）multi `0.7% < 13.0% < 18.5%`，long `1.7% < 15.5% < 26.1%`。对比替换前，5P hard 不变；multi 普通 `-0.44pt`、简单 `+0.47pt`；long 普通 `-1.34pt`、简单 `-0.41pt`。
+
 ## v2.1.35 — 11-26（**`PG-CN`** 真电珠闭环入 `hard` 替换 **`CN-DR`** ‖ 重构 `skill-report.html` 闭环口径标签 ‖ 夹具 `fx-pool1126d`）
 
 **这一版是什么**：在查清 [`CN-DR`](docs/artifacts/CN-DR.bak) 只少按 `charge`（`99` 次仅 `10/10` 在 `2:multi` 花掉，`3/5/8P` 因 `railgun=0` 导致 **`0/89`** 未闭环）后，先向 `PG-DR` 借 `charge/railgun` 唤醒 `CN-DR` 3/5/8P 电磁炮通道（`nov26-cnrg-r1`，`G5 1%/0%`, `2P 14.0%`, `railgun 27`），再接两段 `--beadSpendW=0.50 --penDeadElec=0.70 --lamExp=1.10` Stage C PG，训成 **`PG-CN`**（[`docs/artifacts/PG-CN.bak`](docs/artifacts/PG-CN.bak) · `wid=7e2ac4666074c364`）正式替换退役 `CN-DR`；同步重构 [`champion-map/build-skill-page.mjs`](champion-map/build-skill-page.mjs) 消除两类闭环混读。全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。

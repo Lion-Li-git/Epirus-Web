@@ -298,21 +298,6 @@ MX8-R6B-KL	soft	24	firestorm	games	32	32	0	1	1	2:long:28/28,2:multi:2/2,3:long:1
 MX8-R6B-KL	soft	24	rod	games	1	1	0		0	3:long:1/1
 MX8-R6B-KL	soft	24	armor	games	1	0	1		0	5:long:0/1
 MX8-R6B-KL	soft	24	tank	games	1	1	0		0	3:long:1/1
-MX8-R6C-KL	soft	24	sword	games	607	542	65	0.8929159802306426	1	2:long:130/135,2:multi:68/78,3:long:61/75,3:multi:38/41,5:long:47/61,5:multi:54/57,8:long:80/90,8:multi:64/70
-MX8-R6C-KL	soft	24	gun	games	670	588	82	0.8776119402985074	1	2:long:89/97,2:multi:38/48,3:long:119/139,3:multi:76/87,5:long:113/121,5:multi:31/39,8:long:81/90,8:multi:41/49
-MX8-R6C-KL	soft	24	snipe	games	523	378	145	0.722753346080306	1	2:long:44/54,2:multi:52/72,3:long:35/48,3:multi:86/106,5:long:12/26,5:multi:56/103,8:long:37/45,8:multi:56/69
-MX8-R6C-KL	soft	24	charge	events	4794	295	4474	0.061535252398831876	1	2:long:13/441,2:multi:1/21,3:long:37/1157,3:multi:21/340,5:long:59/1380,5:multi:51/258,8:long:54/1013,8:multi:59/184
-MX8-R6C-KL	soft	24	bagua	games	476	162	314	0.3403361344537815	1	2:long:25/97,2:multi:0/4,3:long:37/95,3:multi:4/17,5:long:41/113,5:multi:2/17,8:long:50/105,8:multi:3/28
-MX8-R6C-KL	soft	24	guard	games	403	90	313	0.22332506203473945	1	2:long:22/89,2:multi:0/11,3:long:18/74,3:multi:5/19,5:long:22/66,5:multi:3/31,8:long:18/73,8:multi:2/40
-MX8-R6C-KL	soft	24	reflect	games	592	190	402	0.32094594594594594	1	2:long:46/67,2:multi:3/28,3:long:35/95,3:multi:24/121,5:long:28/79,5:multi:14/53,8:long:26/88,8:multi:14/61
-MX8-R6C-KL	soft	24	railgun	games	158	149	9	0.9430379746835443	1	2:long:13/13,2:multi:1/1,3:long:28/29,3:multi:14/16,5:long:20/21,5:multi:23/24,8:long:18/22,8:multi:32/32
-MX8-R6C-KL	soft	24	holo	games	45	2	43	0.044444444444444446	1	3:long:0/25,5:long:0/7,5:multi:0/3,8:long:2/7,8:multi:0/3
-MX8-R6C-KL	soft	24	shift	games	185	63	122	0.34054054054054056	1	3:long:6/21,3:multi:0/1,5:long:13/50,5:multi:1/11,8:long:39/76,8:multi:4/26
-MX8-R6C-KL	soft	24	tank	games	5	5	0		0	2:multi:3/3,5:multi:2/2
-MX8-R6C-KL	soft	24	bigT	games	95	74	21	0.7789473684210526	1	2:long:11/11,2:multi:60/77,3:multi:3/3,5:long:0/1,8:long:0/1,8:multi:0/2
-MX8-R6C-KL	soft	24	proto	games	6	4	2		0	5:long:0/1,5:multi:1/2,8:multi:3/3
-MX8-R6C-KL	soft	24	armor	games	3	0	3		0	3:long:0/1,3:multi:0/1,5:multi:0/1
-MX8-R6C-KL	soft	24	curse	games	12	0	12		0	2:long:0/10,3:multi:0/1,8:multi:0/1
 MX8-TN35-KL3	soft	24	sword	games	574	516	58	0.8989547038327527	1	2:long:104/120,2:multi:102/103,3:long:86/95,3:multi:38/42,5:long:83/91,5:multi:29/31,8:long:59/73,8:multi:15/19
 MX8-TN35-KL3	soft	24	gun	games	904	765	139	0.8462389380530974	1	2:long:113/137,2:multi:73/84,3:long:90/113,3:multi:79/99,5:long:123/142,5:multi:71/78,8:long:127/141,8:multi:89/110
 MX8-TN35-KL3	soft	24	charge	events	3466	301	3132	0.08684362377380266	1	2:long:2/416,2:multi:1/72,3:long:74/975,3:multi:24/206,5:long:40/779,5:multi:8/127,8:long:111/686,8:multi:41/205
@@ -449,3 +434,17 @@ TF2-RD	soft	25	transfer	games	75	28	47	0.37333333333333335	1	2:multi:23/23,3:lon
 TF2-RD	soft	25	curse	games	19	8	11		0	3:long:0/2,5:long:6/8,5:multi:0/3,8:long:2/3,8:multi:0/3
 TF2-RD	soft	25	holo	games	16	1	15		0	3:multi:0/1,5:long:0/4,8:long:1/8,8:multi:0/3
 TF2-RD	soft	25	shift	games	16	5	11		0	2:long:0/2,3:long:0/4,5:long:1/4,8:long:3/4,8:multi:1/2
+TK-PG	soft	24	snipe	games	814	687	127	0.8439803439803439	1	2:long:109/130,2:multi:113/131,3:long:67/76,3:multi:66/98,5:long:84/85,5:multi:79/102,8:long:81/93,8:multi:88/99
+TK-PG	soft	24	guard	games	446	145	301	0.3251121076233184	1	2:long:20/39,2:multi:7/7,3:long:44/116,3:multi:18/63,5:long:28/84,5:multi:8/36,8:long:13/69,8:multi:7/32
+TK-PG	soft	24	gun	games	999	838	161	0.8388388388388388	1	2:long:109/140,2:multi:99/111,3:long:134/148,3:multi:125/137,5:long:115/136,5:multi:83/112,8:long:96/122,8:multi:77/93
+TK-PG	soft	24	reflect	games	953	350	603	0.3672612801678909	1	2:long:40/74,2:multi:30/62,3:long:59/142,3:multi:37/132,5:long:50/133,5:multi:48/137,8:long:43/136,8:multi:43/137
+TK-PG	soft	24	sword	games	469	365	104	0.7782515991471215	1	2:long:46/80,2:multi:51/71,3:long:68/79,3:multi:45/56,5:long:70/78,5:multi:28/37,8:long:34/40,8:multi:23/28
+TK-PG	soft	24	charge	events	125	51	72	0.408	1	2:long:10/11,2:multi:10/10,3:long:8/21,3:multi:1/3,5:long:13/21,5:multi:3/26,8:long:6/21,8:multi:0/12
+TK-PG	soft	24	bagua	games	685	137	548	0.2	1	2:long:3/46,2:multi:1/8,3:long:25/120,3:multi:15/76,5:long:20/129,5:multi:13/92,8:long:33/118,8:multi:27/96
+TK-PG	soft	24	bigT	games	60	45	15	0.75	1	3:long:11/12,3:multi:5/8,5:long:12/13,5:multi:7/10,8:long:9/16,8:multi:1/1
+TK-PG	soft	24	holo	games	241	4	237	0.016597510373443983	1	3:long:0/30,3:multi:0/17,5:long:2/62,5:multi:1/40,8:long:0/44,8:multi:1/48
+TK-PG	soft	24	railgun	games	47	40	7	0.851063829787234	1	2:long:10/10,2:multi:10/10,3:long:7/7,3:multi:0/1,5:long:9/11,5:multi:2/3,8:long:2/5
+TK-PG	soft	24	shift	games	15	1	14		0	3:long:0/1,5:long:0/3,5:multi:0/6,8:long:1/4,8:multi:0/1
+TK-PG	soft	24	tank	games	24	23	1	0.9583333333333334	1	3:long:1/1,5:long:5/5,8:long:8/9,8:multi:9/9
+TK-PG	soft	24	armor	games	21	2	19	0.09523809523809523	1	5:long:0/3,5:multi:0/6,8:long:2/9,8:multi:0/3
+TK-PG	soft	24	curse	games	9	0	9		0	5:long:0/4,8:long:0/5

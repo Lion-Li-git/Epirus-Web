@@ -7043,42 +7043,30 @@
  "tier": "hard",
  "rulesFingerprint": "bfd49045",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-26T13:50:58.677Z",
- "stageSec": 37.6,
+ "measuredAt": "2026-11-26T16:27:40.901Z",
+ "stageSec": 2,
  "stage2": {
   "shortlist": [
-   "tank",
-   "jinshield",
-   "armor",
-   "miniT",
-   "rod",
-   "firestorm",
-   "taunt",
-   "purify"
+   "guard",
+   "reflect",
+   "bagua"
   ],
   "selected": [
    "charge",
    "ring",
    "gun",
    "sword",
-   "tank",
    "snipe",
    "guard",
    "reflect",
    "bagua",
    "shift",
-   "jinshield",
-   "armor",
    "holo",
    "drain",
    "railgun",
-   "miniT",
    "bigT",
-   "rod",
    "curse",
-   "firestorm",
-   "taunt",
-   "purify"
+   "taunt"
   ],
   "inUse": [
    "ring",
@@ -7104,30 +7092,6 @@
       "deltaLost": 0,
       "se": 0,
       "forceHit": null
-     }
-    ]
-   },
-   {
-    "key": "tank",
-    "name": "坦克",
-    "stratum": "break",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 12,
-      "delta": -0.5833333333333334,
-      "se": 0.14864709750264077,
-      "forceHit": 0.9378238341968912
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 12,
-      "delta": -0.5,
-      "se": 0.15075567228888181,
-      "forceHit": 0.9378238341968912
      }
     ]
    },
@@ -7172,30 +7136,6 @@
     ]
    },
    {
-    "key": "miniT",
-    "name": "雷击之枪",
-    "stratum": "counter",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 12,
-      "delta": -1,
-      "se": 0,
-      "forceHit": 0.9461883408071748
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 12,
-      "delta": -0.16666666666666666,
-      "se": 0.11236664374387367,
-      "forceHit": 0.9461883408071748
-     }
-    ]
-   },
-   {
     "key": "bigT",
     "name": "真正的落雷",
     "stratum": "counter",
@@ -7208,54 +7148,6 @@
       "deltaLost": 0,
       "se": 0,
       "forceHit": null
-     }
-    ]
-   },
-   {
-    "key": "rod",
-    "name": "避雷针",
-    "stratum": "counter",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 12,
-      "delta": -0.9166666666666666,
-      "se": 0.08333333333333338,
-      "forceHit": 0.9666666666666667
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 12,
-      "delta": 0,
-      "se": 0,
-      "forceHit": 0.9666666666666667
-     }
-    ]
-   },
-   {
-    "key": "firestorm",
-    "name": "天火",
-    "stratum": "aoe",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 48,
-      "delta": -0.3333333333333333,
-      "se": 0.09096280381830256,
-      "forceHit": 1
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 48,
-      "delta": -0.08333333333333333,
-      "se": 0.06545891823395295,
-      "forceHit": 1
      }
     ]
    },
@@ -7280,30 +7172,6 @@
       "delta": 0,
       "se": 0,
       "forceHit": 0.06896551724137931
-     }
-    ]
-   },
-   {
-    "key": "purify",
-    "name": "净化",
-    "stratum": "react",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 12,
-      "delta": -0.6666666666666666,
-      "se": 0.1421338109037403,
-      "forceHit": 0.9302325581395349
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 12,
-      "delta": 0,
-      "se": 0,
-      "forceHit": 0.9302325581395349
      }
     ]
    },
@@ -7380,54 +7248,6 @@
     ]
    },
    {
-    "key": "jinshield",
-    "name": "金刚盾",
-    "stratum": "util",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 12,
-      "delta": -0.5833333333333334,
-      "se": 0.14864709750264077,
-      "forceHit": 0.9444444444444444
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 12,
-      "delta": -0.4166666666666667,
-      "se": 0.19299604852813632,
-      "forceHit": 0.9444444444444444
-     }
-    ]
-   },
-   {
-    "key": "armor",
-    "name": "藤甲",
-    "stratum": "util",
-    "inUse": false,
-    "arms": [
-     {
-      "kind": "forced",
-      "econ": "rich",
-      "games": 48,
-      "delta": -0.0625,
-      "se": 0.0692298694401126,
-      "forceHit": 0.8943862987630827
-     },
-     {
-      "kind": "forced",
-      "econ": "native",
-      "games": 48,
-      "delta": 0.08333333333333333,
-      "se": 0.0884927639253034,
-      "forceHit": 0.8943862987630827
-     }
-    ]
-   },
-   {
     "key": "holo",
     "name": "全息屏障",
     "stratum": "util",
@@ -7446,7 +7266,7 @@
       "econ": "native",
       "games": 12,
       "delta": -0.5,
-      "se": 0.15075567228888181,
+      "se": 0.19462473604038075,
       "forceHit": 0.8117647058823529
      }
     ]
