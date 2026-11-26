@@ -5,7 +5,7 @@
  *   node tools/pool-xray.mjs                    # 全池扫描（skill-report JSON 有货的才出覆盖列）
  *   node tools/pool-xray.mjs --cov-th=3         # 「跨环境会用」的格命中阈值（默认 3）
  * 数据源：pool-members.tsv（带/名册）‖ arena-noise-floor-1118.tsv（arenaB）‖ data/skill-report/<id>.json（coverage）。
- * 判读纪律：arenaB 极差随批数增大，中位/单粒要分开读（POOL-CONTRACT §5.2）；coverage 是 fx-pool1124a 口径，
+ * 判读纪律：arenaB 极差随批数增大，中位/单粒要分开读（POOL-CONTRACT §5.2）；coverage 随 fixtures.tsv（现役 fx-pool1126a）口径，
  *   夹具换代后旧 JSON 不与新 JSON 混表（AGENTS 8）。
  */
 import { readFileSync, existsSync } from 'node:fs';

@@ -46,7 +46,22 @@ const DATA_DIR = join(ROOT, arg('out', 'champion-map/data/skill-report'));
 const POOL_TSV = join(ROOT, 'champion-map/data/page/pool-members.tsv');
 /* ① 命名（PLAN §1.6）：合并尺 = pool-skill-report；产物页 = champion-map/skill-report.html */
 
-const FIXTURE_KEY = 'fx-pool1124a';   /* 11-24：池 25→23 后 hard 头 4 + soft 头 1 真包夹具已变 ⇒ 换列族，不与 fx-pool1119a 混表（AGENTS §7） */
+const FIXTURES_TSV = join(ROOT, 'champion-map/data/skill-report/fixtures.tsv');
+function readFixturesSpec() {
+  const rows = readFileSync(FIXTURES_TSV, 'utf8').split('\n').map(s => s.replace(/\r/g, '').trim()).filter(s => s && !s.startsWith('#'));
+  const kv = {};
+  for (const r of rows) {
+    const [k, v] = r.split('\t');
+    if (k && v != null) kv[k] = v.trim();
+  }
+  if (!kv.fixtureKey || !kv['real-opponents']) {
+    console.error('⛔ fixtures.tsv 缺 fixtureKey 或 real-opponents 列');
+    process.exit(2);
+  }
+  const realOpps = kv['real-opponents'].split(',').map(s => s.trim()).filter(Boolean);
+  return { fixtureKey: kv.fixtureKey, realOpps };
+}
+const { fixtureKey: FIXTURE_KEY, realOpps: DECLARED_REAL_OPPS } = readFixturesSpec();   /* 单一真源在 fixtures.tsv，防池滚动后静默混用旧 fixtureKey（AGENTS §7/§8） */
 /* 观察层脚本对手（承 crossenv 11-16 的 10 名单，全部在 OPP_SPECS） */
 const CENSUS_SCRIPTS = ['gunspam', 'wall', 'baguaspam', 'guardgun', 'heavyfire', 'deepsaver', 'ringspam', 'tankline', 'targeter', 'beadburst'];
 /* 真包对手 = 现役池 hard 带前 4 + soft 带前 1（表序；随池滚动，fixtureKey 换代 ⇒ 换列族） */
@@ -382,7 +397,17 @@ function main() {
     if (typeof byName[nm] !== 'string') { console.error('⛔ 观察层脚本对手不在 OPP_SPECS：' + nm); process.exit(2); }
     return { name: nm, kind: 'script', fn: byName[nm] };
   });
-  for (const f of realPackFixtures(pool)) oppDesc.push({ name: f.id, kind: 'real', path: f.path });
+  const realFixtures = realPackFixtures(pool);
+  if (STAGE === 1) {
+    const curReal = realFixtures.map(f => f.id).sort().join(',');
+    const decReal = [...DECLARED_REAL_OPPS].sort().join(',');
+    if (curReal !== decReal) {
+      console.error('⛔ 现役池真包夹具已变：' + curReal + ' !== fixtures.tsv 声明的 ' + decReal +
+        '\n   ⇒ 先更新 champion-map/data/skill-report/fixtures.tsv 的 fixtureKey 与 real-opponents 再重扫（AGENTS §7/§8）');
+      process.exit(2);
+    }
+  }
+  for (const f of realFixtures) oppDesc.push({ name: f.id, kind: 'real', path: f.path });
   const ids = pickPacks(pool, arg('pack', ''), arg('packs', ''), has('all-pool'));
   /* 只给 `--candidate=` 而不给 `--pack/--all-pool` 以前是**静默空转**：候选进了内存表、
    *   `pickPacks` 却不认它 ⇒ `ids=[]`、一个 `runOne` 都不跑、目录都不建、退出码 0。

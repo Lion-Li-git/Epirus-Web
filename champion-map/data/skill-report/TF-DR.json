@@ -6618,9 +6618,9 @@
  "wid": "ac6b3456fc2cebe4",
  "tier": "hard",
  "rulesFingerprint": "bfd49045",
- "fixtureKey": "fx-pool1124a",
- "measuredAt": "2026-11-25T15:25:58.326Z",
- "stageSec": 7.1,
+ "fixtureKey": "fx-pool1126a",
+ "measuredAt": "2026-11-26T06:32:51.418Z",
+ "stageSec": 20.4,
  "stage2": {
   "shortlist": [
    "tank",

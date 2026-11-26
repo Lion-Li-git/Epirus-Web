@@ -20,6 +20,7 @@
 - **测绘链修复与清理**：
   - 修复 [`champion-map/pipeline/measure-point.mjs`](champion-map/pipeline/measure-point.mjs#L397-L406) 生成投影表头顺序与 `champion-map/data/projections.tsv` 不一致的问题（改为动态读取现役表头列序）；地图四视图 `101 PASS / 0 FAIL`。
   - 家族图分类校正：`fam25` 扩为「2.0 obs6.5 强包底座与多技能协同演进」，将 `DR-R3E` 续训/对照线与 `T65-RINGBEAD`、`FS2-LE26`、`SOFT-RING-C3G25` 共 15 枚从 `fam24` 迁入；池内 `fam24/fam25` 由 `27/4` 调整为 `14/17`，自动归族规则同步扩展。
+  - `skill-report` 夹具收口至 **`fx-pool1126a`**：修复 [`tools/pool-skill-report.mjs`](tools/pool-skill-report.mjs) 从 [`fixtures.tsv`](champion-map/data/skill-report/fixtures.tsv) 单源读取 `fixtureKey` 与 `real-opponents`（`AR-TK2,DR-R3E,FC-G1,FS-G2,FS2-LE26`）并在真包夹具漂移时 fail-fast；重扫全池 34 枚 Stage 1 统一成套真包读数，重烘 [`champion-map/skill-report.html`](champion-map/skill-report.html) 与 [`firestorm-closure-1124.tsv`](champion-map/data/firestorm-closure-1124.tsv)（同时补录行为多样性与 `RG-CN` 非 DR 复现研究结论见 [`RESULTS-2026-11-26-diversity-replication.md`](docs/research/RESULTS-2026-11-26-diversity-replication.md)）。
   - 清理遗留仓外 worktree（`srv-wt-s0-caebdf45`）、9 个临时 `%TEMP%/epirus-*` 目录（经回收站），退池的 `nov22-c3g-s300k` 原始 `skill-report` JSON 同步备份至仓外隔离目录。详情见 [`RESULTS-2026-11-26-hard-2p-upgrades.md`](docs/research/RESULTS-2026-11-26-hard-2p-upgrades.md)。
 
 ## v2.1.31 — 11-26（三维行为轴按版本独立投影 ‖ 过线/势曲面默认 40%/50% ‖ transfer 计量回归腿）

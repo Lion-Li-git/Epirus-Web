@@ -6384,9 +6384,9 @@
  "wid": "c5f68b29031ab56c",
  "tier": "hard",
  "rulesFingerprint": "bfd49045",
- "fixtureKey": "fx-pool1124a",
- "measuredAt": "2026-11-25T08:26:36.128Z",
- "stageSec": 9.3,
+ "fixtureKey": "fx-pool1126a",
+ "measuredAt": "2026-11-26T06:32:49.517Z",
+ "stageSec": 20.2,
  "stage2": {
   "shortlist": [
    "tank",

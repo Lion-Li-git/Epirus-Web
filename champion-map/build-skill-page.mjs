@@ -68,6 +68,8 @@ export function bake(opts = {}) {
   }
   if (missing.length) console.error('⚠ 无 skill-report JSON（页里显示"未测"）：' + missing.join(', '));
   const fps = [...new Set(docs.map(d => d.rulesFingerprint).filter(Boolean))];
+  const fxKeys = [...new Set(docs.map(d => d.fixtureKey).filter(Boolean))];
+  if (fxKeys.length > 1) console.error('⚠ skill-report 存在多代 fixtureKey 混表：' + fxKeys.join(', ') + ' ⇒ 应执行 pool-skill-report --stage=1 --all-pool 统一');
   /* 指纹新鲜度：raw 里的指纹 vs **现算**规则指纹（tools/rules-fingerprint.mjs 唯一登记处） */
   let bundleFp = null;
   try { bundleFp = rulesFingerprint(); } catch (e) { bundleFp = null; }
@@ -235,7 +237,7 @@ export function bake(opts = {}) {
   html += '<h1>Epirus 池级 Skill-Report</h1>';
   html += '<div class="sub">困难 / 简单两带逐包的跨环境覆盖（观察层）与分层强度（强度层）。数据真源 <code>data/skill-report/&lt;id&gt;.json</code>；本页为烘焙产物，不许手改。· <a href="index.html">← 返回冠军演化图</a> · <a href="trends.html">A/B 趋势 ↗</a></div>';
   html += '<div>'
-    + '<span class="stamp">fixture <b>' + esc((docs[0] && docs[0].fixtureKey) || '—') + '</b></span>'
+    + '<span class="stamp">fixture <b>' + esc(fxKeys.join(' / ') || '—') + '</b></span>'
     + '<span class="stamp">规则指纹 <b>' + esc(bundleFp || '—') + '</b></span>'
     + '<span class="stamp">在池 <b>' + docs.length + '/' + pool.length + '</b> 枚已测</span>'
     + '<span class="stamp">烘焙 <b>' + esc(builtAt.slice(0, 16).replace('T', ' ')) + '</b></span>'

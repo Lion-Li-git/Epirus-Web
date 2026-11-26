@@ -6463,9 +6463,9 @@
  "wid": "7fd8b3c1d487dcdd",
  "tier": "soft",
  "rulesFingerprint": "bfd49045",
- "fixtureKey": "fx-pool1124a",
- "measuredAt": "2026-11-25T08:44:34.763Z",
- "stageSec": 6.7,
+ "fixtureKey": "fx-pool1126a",
+ "measuredAt": "2026-11-26T06:33:29.142Z",
+ "stageSec": 20.7,
  "stage2": {
   "shortlist": [
    "tank",
