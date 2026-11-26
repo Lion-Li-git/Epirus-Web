@@ -1,0 +1,21 @@
+# selftest3 ‖ MT-DR.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.926（逐坐标 16561 里可分辨 3084）‖ 判定 3126 ‖ 不进判定 13980（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# pg-train（B 臂） ‖ 起点 MT-DR.bak ‖ 面=obs6 ‖ 局 3000 ‖ 批 48 ‖ lr 0.0003 ‖ temp 0.5 ‖ λc 0.005 ‖ λf 0.02 ‖ λexp 0.5 ‖ 死电罚 0.3 ‖ beadSpendW 0.3 ‖ shapeModes multi,long ‖ 基线 mean ‖ seed 20261170
+  口径：arena2 champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random ‖ poolFp=cc652985 ‖ shapes=2:standard,3:multi,5:multi,5:long@2,8:multi,8:long ‖ salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度
+  ⚑ seg 快照（600 局）→ scratch/arms/nov26-mtdr-bead-w3.seg600.bak
+  ⚑ P-B2 快照（1/3 预算）→ scratch/arms/nov26-mtdr-bead-w3-8k.bak
+  局 1200 ‖ 步 25 ‖ 平均净分 0.387 ‖ 炮 0.01/局 ‖ 纪律蓄 0.03/局 ‖ 死电 0.13/局 ‖ 花珠 0.01/废珠 0.15 ‖ 熵 0.123nats ‖ zip坏 0/1200 ‖ 锚L1 0.051
+  ⚑ seg 快照（1200 局）→ scratch/arms/nov26-mtdr-bead-w3.seg1200.bak
+  ⚑ seg 快照（1800 局）→ scratch/arms/nov26-mtdr-bead-w3.seg1800.bak
+  局 2400 ‖ 步 50 ‖ 平均净分 0.397 ‖ 炮 0.01/局 ‖ 纪律蓄 0.03/局 ‖ 死电 0.11/局 ‖ 花珠 0.01/废珠 0.13 ‖ 熵 0.121nats ‖ zip坏 0/2400 ‖ 锚L1 0.055
+  ⚑ seg 快照（2400 局）→ scratch/arms/nov26-mtdr-bead-w3.seg2400.bak
+  局 3000 ‖ 步 63 ‖ 平均净分 0.392 ‖ 炮 0.00/局 ‖ 纪律蓄 0.02/局 ‖ 死电 0.10/局 ‖ 花珠 0.01/废珠 0.11 ‖ 熵 0.121nats ‖ zip坏 0/3000 ‖ 锚L1 0.050
+  ⚑ seg 快照（3000 局）→ scratch/arms/nov26-mtdr-bead-w3.seg3000.bak
+  终：局 3000 ‖ 平均净分 0.392 ‖ 炮/局 0.004 ‖ 纪律蓄/局 0.025 ‖ 死电/局 0.097 ‖ 花珠/废珠 0.01/0.11 ‖ zip 坏 0/3000 ‖ 耗时 59s
+  产物 → scratch/arms/nov26-mtdr-bead-w3.bak
