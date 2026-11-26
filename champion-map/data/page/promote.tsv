@@ -5,9 +5,11 @@ day1119-cannon-pg	pass	—
 DAY1119-PURIFY-T2B	pass	—			
 DR-R3E	pass	—			
 E3	pass	—			
+FS-DR	pass	—			
 FS2-LE26	pass	—			
 JN-DR	pass	—			
 MN-DR	pass	—			
+MN-DR-recheck	pass	—			
 MT-DR	pass	—			
 night2-E1-det-strong	pass	—			
 night2-X2b-fuse	pass	—			
@@ -321,4 +323,4 @@ TK-FS1	block	seat-symmetry
 TK-FS3	pass	—			
 nov24-bandsym-jin	block	breadth-multi			
 TF-RDMX	pass	—			
-TF2-RDC	pass	—			
+TF2-RDC	pass	—

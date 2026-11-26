@@ -203,24 +203,32 @@ function stage1(W, pack, oppDesc, gamesCensus) {
         {
           const used = new Set(), paid = new Set(), holoTargets = new Set(), tauntTargets = new Set();
           let gStick = 0, gBoomHit = 0, gBoomEmpty = 0;
+          const roundActors = new Set();
           for (const e of ((r.state && r.state.events) || [])) {
-            if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
-              if (closureKeys.has(e.key) && e.key !== R.SK.CURSE) used.add(e.key);
-              if (e.key === R.SK.TAUNT && e.target != null) tauntTargets.add(e.target);
-              if (e.key === R.SK.CURSE) curseStats.curseOk++;
-              else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
+            if (e.type === 'action') {
+              if (roundActors.has(e.pid)) roundActors.clear();
+              roundActors.add(e.pid);
+              if (e.pid === seat && e.outcome === 'ok') {
+                if (closureKeys.has(e.key) && e.key !== R.SK.CURSE) used.add(e.key);
+                if (e.key === R.SK.TAUNT && e.target != null) tauntTargets.add(e.target);
+                if (e.key === R.SK.CURSE) curseStats.curseOk++;
+                else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
+              }
             } else if (e.type === 'curse' && e.owner === seat) {
               gStick++;
               curseStats.curseLanded++;
             } else if (e.type === 'firestorm' && e.pid === seat) {
               if ((e.n || 0) > 0) { gBoomHit++; paid.add(R.SK.FIRESTORM); } else gBoomEmpty++;
               curseStats.firestormHits += (e.n || 0);
-            } else if (e.type === 'mine' && e.from === seat) {
+            } else if (e.type === 'mine' && (e.from === seat || (Array.isArray(e.from) && e.from.includes(seat)))) {
               paid.add(R.SK.MINE);
+            } else if (e.type === 'rod' && e.mode === 'A' && Array.isArray(e.pids) && e.pids.includes(seat) && e.voided && e.voided.length > 0) {
+              paid.add(R.SK.ROD);
             } else if (e.type === 'rodBlock' && e.pid === seat) {
               paid.add(R.SK.ROD);
-            } else if (e.type === 'tauntCheck' && e.pid != null && tauntTargets.has(e.pid) && e.ok) {
-              paid.add(R.SK.TAUNT);
+            } else if (e.type === 'tauntCheck' && e.pid != null && tauntTargets.has(e.pid)) {
+              /* !e.ok = 对手违约并被「挑衅违约」直扣 1 血；e.ok 仅在挑衅者未先阵亡（非 impossible）时计作逼出合规攻击 */
+              if (!e.ok || roundActors.has(seat)) paid.add(R.SK.TAUNT);
             } else if (e.type === 'holoSet' && e.pid === seat) {
               used.add(R.SK.HOLO);
               if (e.target != null) holoTargets.add(e.target);

@@ -132,8 +132,10 @@ t('D234 §E590 冠军池装配契约：成员必须在册 · bundle 与表同权
    *   11-06 晨：原候选 L5-1200-s13 实测主体席只有 10%，随机席 20%，锚会因夹具过弱而假红；
    *   D1200-s13 同条件实测 27.5% vs 12.5%，故统一用它。
    *   2026-11-13：优先级/镜面/避雷针/地雷规则结算重构后 KDG-B-Q-s13 与 rand 打平（15.83% vs 15.83%），
-   *   改用同池在册 hard 成员 WSEL9-200（⑥b 25.00% vs rand 15.83% 差 -9.17pt；⑥c 22.50% vs 14.17% 极差 8.33pt）。 */
-  const POOL_FIXTURE = 'docs/artifacts/night-adapt/WSEL9-200.js';
+   *   改用同池在册 hard 成员 WSEL9-200（⑥b 25.00% vs rand 15.83% 差 -9.17pt；⑥c 22.50% vs 14.17% 极差 8.33pt）。
+   *   2026-11-26（v2.1.33）：hard 全员换代为 2.0/obs6 且 FS-DR 替换 FC-G1 后，旧 v7 夹具 WSEL9-200 对现役 hard 跌至 6.67% < rand 7.50%；
+   *   按 AGENTS §10 提案并经用户批准，改用在册现役 hard 成员 DR-R3E.bak（⑥b 22.50% vs rand 6.67% 差 -15.83pt；⑥c 15.83% vs 7.50% 极差 8.33pt）。 */
+  const POOL_FIXTURE = 'docs/artifacts/DR-R3E.bak';
   const prPair = spawnSync(process.execPath, [PB, '--subject=' + POOL_FIXTURE, '--ref=' + POOL_FIXTURE,
     '--batches=6', '--games=20', '--modes=multi'], { encoding: 'utf8', timeout: 300000 });
   eq(prPair.status, 0, '⑥b 主体席尺（同枚两臂）必须跑成（实测 exit=' + prPair.status + ' ‖ ' + String(prPair.stderr || '').slice(-240) + '）');

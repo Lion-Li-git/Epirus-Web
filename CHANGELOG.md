@@ -4,6 +4,22 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.33 — 11-26（A1 `rod`/`mine`/`taunt` 归因修正 ‖ A2 `use-value` `N=100` 全通过 ‖ **`FS-DR`** 入 `hard` 替换退役 **`FC-G1`** ‖ 夹具 `fx-pool1126b`）
+
+**这一版是什么**：修复 [`tools/pool-skill-report.mjs`](tools/pool-skill-report.mjs) 中三类技能结算归因漏计（`rod` mode A `voided`、`mine` 间接伤害数组 `e.from`、`tauntCheck` 守约与违规并记），完成 `N=100` 版 `use-value` 单点替换反事实先导验证，并训成低废珠电火双闭环新包 [`docs/artifacts/FS-DR.bak`](docs/artifacts/FS-DR.bak) 正式入 **`hard`**，同时将高废珠低胜率（`99.4%` / `36.4%` / `invited=1 block`）的 `FC-G1` 走完整退役流移出冠军池；全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。
+
+- **A1 事件归因修复与全池复核**：
+  - `ROD-DR` `rod` 闭环从 `1/78 (1.3%)` 修正至 `12/79 (15.2%)`（`2:multi 10/10`），`MN-DR` `mine` 为 `28/106 (26.4%)`，`nov21-taunt-dsp0b` `taunt` 从 `180/811 (22.2%)` 修正至 `792/792 (100%)`；退池前在 `fx-pool1126a` 上通过 `A1_VALIDATE_OK packs=34 legacyFieldsIdentical=15 chargeLedgerReconciled=34 holoPositiveControl=46/151`。
+- **A2 `use-value` 先导（`N=100` · [`probe-use-value-pilot.mjs`](docs/research/evidence-2026-11-26-value-coverage/probe-use-value-pilot.mjs)）**：
+  - 4 项对照全部通过：`selfMaxAbs=0`、正对照 `snipe vs 4×guard` `+1.9625 ±0.1710`（`n=80`）、死卡 `deadCharge` `+0.00875 ±0.01042`（`n=1600`, 95% CI 覆盖 0）、跨种子 `Spearman=0.8419`（23 格）；检出 `FC-G1 curse`（`-0.295 / -0.258`, 95% CI 全负）与 `MX8-R6C-KL charge`（`-0.1725 / -0.1925`）负价值动作。
+- **`FS-DR` 入 `hard` 替换退役 `FC-G1`**：
+  - [`docs/artifacts/FS-DR.bak`](docs/artifacts/FS-DR.bak)（`wid=c46104966cb681fb`）通过无 `charge` 键冲突的多教师蒸馏保留 `FS2-LE26` `boom→laserEye` 闭环：`promote --dry --support=2` **0 阻断**（`A 60.4%`, `G(multi)=4.92/G(long)=5.30`, 珠闭环 `65.7%`, 天火 `27/27` 闭环 `79%`），`90210/90211` `seatKill=0`，测绘入图 `Arena B +14.4545pt`（6 粒 floor / `H=60.8, arR=+0.2733`），`fx-pool1126b` Stage 1 `15/30`（`charge` 废珠 `53.9%` vs `FC-G1` `99.4%`、`firestorm 233/233`、引爆率 `86%`、局闭环 `92%`）。
+  - `FC-G1.json` 依 `AGENTS.md §24` 备份至仓外隔离目录后按 `pool-add --retire=FC-G1` 清退，夹具升代为 `fx-pool1126b`（`AR-TK2,DR-R3E,FS-DR,FS-G2,FS2-LE26`）；同步经用户批准将 `D234 ⑥b/⑥c` 在册测试锚由早期 v7 `WSEL9-200.js` 升级为现役 `2.0` `hard` 成员 [`docs/artifacts/DR-R3E.bak`](docs/artifacts/DR-R3E.bak)（`22.50%` vs `rand 6.67%`，`15.83pt`）。
+- **终态 `34` 池（`17/17`）与难度阶梯（`probe-diff-ladder --pool=1`）**：
+  - 带内并集与底座：`hard` 17 枚（`arenaB` 中位 `16.6pt`、Stage 1 并集 `27` 技），`soft` 17 枚（`arenaB` 中位 `2.3pt`、并集 `27` 技）。
+  - `2P`（1500 局，`seed=95001`）：`rule` `37.4% < 46.1% < 59.5%`（`-8.73pt 5.1σ` / `+13.33pt 7.5σ`）；`legacy` `21.0% < 25.9% < 30.3%`（`-4.93pt 3.5σ` / `+4.33pt 2.8σ`）。
+  - `5P`：`multi`（800 局，`seed=95002`）`3.1% < 13.4% < 16.5%`；`long`（400 局，`seed=95001`）`6.8% < 9.0% < 17.3%`。详情见 [`RESULTS-2026-11-26-value-coverage.md`](docs/research/RESULTS-2026-11-26-value-coverage.md)。
+
 ## v2.1.32 — 11-26（`MT-DR`/`JN-DR`/`MN-DR`/`PUR-2P` 升级 `hard` ‖ 退役 `nov22-c3g-s300k` ‖ 34 池 `17/17` ‖ 修复 `measure-point` 投影表头顺序）
 
 **这一版是什么**：在保持单一统一池（`D-34`/`D-35`）下，基于洁净 `DR-R3E` 底座以 `--rolloutMode=game` + 单技能 `--rareOnly` + `2:standard@4` + `T65-RINGBEAD@0.80` 训成并接纳 4 枚强 `2P` 替代包入 **`hard`**：[`docs/artifacts/MT-DR.bak`](docs/artifacts/MT-DR.bak)（补回 `hard` 缺失的 `miniT`）、[`docs/artifacts/JN-DR.bak`](docs/artifacts/JN-DR.bak)（替代 `OBS6E9`）、[`docs/artifacts/MN-DR.bak`](docs/artifacts/MN-DR.bak)（替代 `RG-MN`）与 [`docs/artifacts/PUR-2P.bak`](docs/artifacts/PUR-2P.bak)（替代 `R-GD12`）；`OBS6E9`/`RG-MN`/`R-GD12` 下放 `soft`，同时退役在新 `soft` 带标尺下触发 `seatKill=3`（`D234` 阻断）的 `nov22-c3g-s300k`，全池调整为 **`34` 枚（`hard 17 / soft 17`）**。

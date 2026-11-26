@@ -10,10 +10,11 @@ const PACKS = [
   { id: 'MX8-R6C-KL', path: 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak' },
   { id: 'FC-G1', path: 'docs/artifacts/FC-G1.bak' },
 ];
-const SKILLS = ['charge', 'rod', 'holo', 'firestorm'];
+const SKILLS = ['charge', 'gun', 'sword', 'guard', 'reflect', 'bagua', 'snipe', 'curse', 'firestorm', 'holo'];
 const OPPONENTS = ['gunspam', 'wall', 'heavyfire', 'balanced'];
 const N = Number(process.env.A2_N || 100), R = Number(process.env.A2_R || 4), SEED_SETS = [95001, 95002], MAX_GAMES = Number(process.env.A2_MAX_GAMES || 600);
-const DEAD_GAMES = Number(process.env.A2_DEAD_GAMES || 40), DEAD_R = Number(process.env.A2_DEAD_R || 2);
+const DEAD_GAMES = Number(process.env.A2_DEAD_GAMES || 400), DEAD_R = Number(process.env.A2_DEAD_R || 4);
+const POS_GAMES = Number(process.env.A2_POS_GAMES || 40);
 
 function samplePack(W, params, targets, seedSet) {
   const T = W.EpirusTrainer, S = W.EpirusState, Play = W.EpirusPlay, B = W.EpirusBots;
@@ -153,10 +154,51 @@ for (let g = 0; g < DEAD_GAMES; g++) {
   }
 }
 const dead = meanSE(deadDiffs);
-const labels = [...new Set(rows.map((r) => r.pack + ':' + r.skill))].filter((k) => bySeed.has(k + ':' + SEED_SETS[0]) && bySeed.has(k + ':' + SEED_SETS[1]));
+
+const posOpp = Array.from({ length: 4 }, () => () => ({ key: 'guard', target: null, target2: null, bead: null }));
+const posDiffs = [];
+for (let g = 0; g < POS_GAMES; g++) {
+  const seed = (89000 + g * 977) >>> 0, st = S.createState('multi', { next: mulberry32(seed) }, 5), seat = g % 5;
+  let sample = null;
+  const sniper = (state, pid, legal) => {
+    const sn = legal.find((l) => l.key === 'snipe' && l.affordable);
+    const pick = sn || { key: 'ji', target: null, target2: null, bead: null };
+    if (pid === seat && sn && !sample) { const snap = S.cloneState(state); snap.rng = null; sample = { state: snap, pick: { ...pick }, seat }; }
+    return pick;
+  };
+  Play.autoGameN(st, Array.from({ length: 5 }, (_, pid) => pid === seat ? sniper : posOpp[pid < seat ? pid : pid - 1]));
+  if (!sample) continue;
+  for (let r = 0; r < 2; r++) {
+    const s2 = (seed + r * 2 + 1) >>> 0;
+    const branch = (useSnipe) => {
+      const st2 = S.cloneState(sample.state);
+      st2.rng = { next: mulberry32(s2) };
+      let first = true;
+      const champ = (state, pid, legal) => {
+        if (first) { first = false; return useSnipe ? sample.pick : { key: 'ji', target: null, target2: null, bead: null }; }
+        return { key: 'guard', target: null, target2: null, bead: null };
+      };
+      Play.autoGameN(st2, Array.from({ length: 5 }, (_, pid) => pid === sample.seat ? champ : posOpp[pid < sample.seat ? pid : pid - 1]));
+      return 5 - T.rankOf(st2, sample.seat, s2) + 1;
+    };
+    posDiffs.push(branch(true) - branch(false));
+  }
+}
+const pos = meanSE(posDiffs);
+
+const byKey = new Map(rows.map((r) => [r.pack + ':' + r.skill + ':' + r.seedSet, r]));
+const labels = [...new Set(rows.map((r) => r.pack + ':' + r.skill))].filter((k) => {
+  const r0 = byKey.get(k + ':' + SEED_SETS[0]), r1 = byKey.get(k + ':' + SEED_SETS[1]);
+  return r0 && r1 && r0.n >= 20 && r1.n >= 20;
+});
 const a = labels.map((k) => bySeed.get(k + ':' + SEED_SETS[0])), b = labels.map((k) => bySeed.get(k + ':' + SEED_SETS[1]));
 const rho = labels.length >= 3 ? spearman(a, b) : null;
 const header = ['pack', 'skill', 'seedSet', 'n', 'mean', 'se', 'lo', 'hi'];
 writeFileSync(OUT + '/use-value-pilot.tsv', header.join('\t') + '\n' + rows.map((r) => header.map((k) => r[k]).join('\t')).join('\n') + '\n');
-console.log(JSON.stringify({ selfMaxAbs: selfMax, selfPass: selfMax === 0, deadCharge: dead, deadPass: dead.mean <= 0, spearman: rho, stabilityPass: rho != null && rho >= 0.8 }, null, 2));
+console.log(JSON.stringify({
+  selfMaxAbs: selfMax, selfPass: selfMax === 0,
+  posGunVsWall: pos, posPass: pos.lo > 0,
+  deadCharge: dead, deadPass: dead.lo <= 0 && Math.abs(dead.mean) < 0.05,
+  spearmanCells: labels.length, spearman: rho, stabilityPass: rho != null && rho >= 0.8
+}, null, 2));
 console.table(rows);

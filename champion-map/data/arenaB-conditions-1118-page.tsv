@@ -575,3 +575,10 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-26T03:33:36.759Z	PUR-2P	docs/artifacts/PUR-2P.bak	af8cc5eca1a1c883	85200	page	data/arena-league-1118-page.tsv	0.471981	0.130054
 2026-11-26T03:33:39.689Z	PUR-2P	docs/artifacts/PUR-2P.bak	af8cc5eca1a1c883	86200	page	data/arena-league-1118-page.tsv	0.456077	0.152159
 2026-11-26T03:33:42.376Z	PUR-2P	docs/artifacts/PUR-2P.bak	af8cc5eca1a1c883	87200	page	data/arena-league-1118-page.tsv	0.187007	0.070741
+2026-11-26T10:24:41.169Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	82200	page	data/arena-league-1118-page.tsv	0.303192	0.068519
+2026-11-26T10:26:58.094Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	82200	page	data/arena-league-1118-page.tsv	0.303192	0.068519
+2026-11-26T10:27:00.935Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	83200	page	data/arena-league-1118-page.tsv	0.343184	0.095950
+2026-11-26T10:27:03.825Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	84200	page	data/arena-league-1118-page.tsv	-0.109723	-0.022503
+2026-11-26T10:27:06.924Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	85200	page	data/arena-league-1118-page.tsv	-0.255560	-0.072351
+2026-11-26T10:27:09.828Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	86200	page	data/arena-league-1118-page.tsv	0.232740	0.068829
+2026-11-26T10:27:12.648Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	87200	page	data/arena-league-1118-page.tsv	0.244979	0.064833
