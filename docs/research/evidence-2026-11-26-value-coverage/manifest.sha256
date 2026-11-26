@@ -23,6 +23,7 @@ ac77a9e2aa286b1fbaef7c58cf0fcfb86cc3ee5de941ff45c7ce38fd689dbba9 *docs/research/
 9df835d4f00d258b8982d2a6c8e5640563968e3282e2535e938bffc8ce360aa5 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/t4.json
 e0133902782aec1babeefc1a0be26663bef922e88a09da2753f22d3d15fff9fc *docs/research/evidence-2026-11-26-value-coverage/arm-meta/t5.json
 fe8acea755f1ece9c46e2a8c7f3270bb61aa1224b047d56a0e709724ecab84d5 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/t6.json
+4a13f76db8ba36cc60460650689eb750da42c08c70bca0ad0cbbe6de550ec75d *docs/research/evidence-2026-11-26-value-coverage/arm-meta/t7.json
 7d4ac932806bcfd9c1706675065a2809dd559e219a44f14845d7461f36f93e76 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w1.json
 414ae31a0d12d28c14d483f69c7ecd30bfbf8b9f89a45273f251ffb1bbfe8843 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w2.json
 252bf70a0ab3cf68a6f0a117f32a4ac82f835e667f761765982d3f3945f32510 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w3.json
@@ -51,10 +52,14 @@ d7e8bcc4ac30d2c417b64b4a4703c511b1447b57b1f3e0c0d5374d3be44effc3 *docs/research/
 c68ac6c12032158103b4675e8132b5b920e949baa2ecd3e94b02f3bf38af021b *docs/research/evidence-2026-11-26-value-coverage/replacement-candidates.tsv
 a41cf3f98d849f7918a33f7256e84e68eb4c3cbe80ce44c22c477fa1bfc4875f *docs/research/evidence-2026-11-26-value-coverage/replacement-priority.mjs
 eda69029575cb4cf26e0946dfdcd5a7567e58715931f5db1a0d34f47e324ec16 *docs/research/evidence-2026-11-26-value-coverage/replacement-priority.tsv
+4433db9071c0b8b43aa96364d37b66b8f30305dde9c8c5bc47a2197e28adda4b *docs/research/evidence-2026-11-26-value-coverage/selftest3-pool-census.txt
+e8457b4dddd594503c6fca014ca0fb1fafa992c7b293c4ae90a6a12c0325e8db *docs/research/evidence-2026-11-26-value-coverage/selftest3-pool-summary.tsv
 58c4d0f16dbe8af3ad46b0fa644eb5c5bead545efa06c0715b198a50276543ca *docs/research/evidence-2026-11-26-value-coverage/shape-skill-per-pack.tsv
 1a84e8fe819a7b085eb670cd221af4102cc70f3d9b54422f3f98022f727e3724 *docs/research/evidence-2026-11-26-value-coverage/shape-skill-profile.log
 4dd50ce2a8e998b098b23f7e6ce5862633503cd352852f6a6e76439a4166be06 *docs/research/evidence-2026-11-26-value-coverage/shape-skill-profile.mjs
 a269bf7d83f2ef5cf5b757a686fb7ef6144ef148adb1800ed05d5db68ea96134 *docs/research/evidence-2026-11-26-value-coverage/shape-skill-profile.tsv
+bae772b9a663fe948209afc9c62240d5262158c90c454d9491d03c2f8e8ac491 *docs/research/evidence-2026-11-26-value-coverage/soft-5p-long-correlations.tsv
+8f894ec5cf86f907a65aca4ca4455cc02235d9a2e20ff57bb62bd765e29bd57f *docs/research/evidence-2026-11-26-value-coverage/soft-5p-long-features.tsv
 14cc7620d1f3bdcc22b3549617f31bfe46dbf0da95ef4407f35d79990ba3965f *docs/research/evidence-2026-11-26-value-coverage/tank-transfer-window-diagnostic.mjs
 3c7f6c31a13abbeb3cd967ca0b81b4caf08b1fcaac7df1e308a288d9d74bdc7a *docs/research/evidence-2026-11-26-value-coverage/tank-transfer-window-diagnostic.tsv
 cbf9cf4d0047ec10527be93361c1b8fac76254934bbee8356b518bfa36bae2bf *docs/research/evidence-2026-11-26-value-coverage/train-logs/r1.log
@@ -66,6 +71,7 @@ f5d9d058c3cb3b693f82a2e72e2ebb4e760cc24b117ee185f5bc45ac04b0f9af *docs/research/
 25fea12312ea428252a8b19cc1eb57a7d2411d695a9c300a85b4be74de06ee58 *docs/research/evidence-2026-11-26-value-coverage/train-logs/t4.log
 9dce6b600d9b97f2d52954e239617fa6a7f0fe2061c7fdd4d768b35bbb7f60fe *docs/research/evidence-2026-11-26-value-coverage/train-logs/t5.log
 e1c56e747671bf386dcd4dd2437e870a4281903e390a1cad997d9e2a823ba372 *docs/research/evidence-2026-11-26-value-coverage/train-logs/t6.log
+eaa213ad68fbe2cc24266f13f1438f8009b8ee757defab63201e48598293ce06 *docs/research/evidence-2026-11-26-value-coverage/train-logs/t7.log
 71597c6fac285e109d3ce8b5ddc5fc1ee2d4eff35e326fbc9541f78b4a8266fb *docs/research/evidence-2026-11-26-value-coverage/train-logs/w1.log
 62fe88b9befb36138eaff33196ef710d8e660e77604fd4c7d41fcd17acb838b8 *docs/research/evidence-2026-11-26-value-coverage/train-logs/w2.log
 08d17e08b197302a26cc80b5f7ed7720e6469f3794939238518e59cb32499144 *docs/research/evidence-2026-11-26-value-coverage/train-logs/w3.log

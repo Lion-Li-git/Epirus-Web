@@ -106,6 +106,7 @@
 - T5（T4 同剂量换 T3 教师）：坦克 40 次 / 19 格 / 97.2%，电珠闭环 65.0%，胜率 46.8%；2P rule hard `22.5%` / simple `30.7%`，legacy hard `14.9%` / simple `16.0%`；promote 0 阻断，Arena B +5.91pt，seatKill=0。但 5P long 单包 38.5%，比 MSB11/RINGB11/AR-TK2 都弱，暂不入池。
 - T6（PUR-DR + T5 坦克教师）：淘汰。selftest3 腿 C NaN，净化覆盖 8→6 格、兑现 38/40→2/7，立身技能被拆。
 - R3（RINGB11 railgun 教师 → PG-DR）：淘汰。教师标签 railgun 154 次，部署仅 33 次 / 5 格，3P 归零；状态机会不足，不加剂量。
+- T7（OBS6E9 强长程坦克教师 → PG-DR）：淘汰。教师命中 tank 仅 6 次、标签 2 次，部署坦克 0；坦克线收口。
 - 5P long 带级归因：当前 hard 单带替身夺冠 1.5%，soft 单带 24.5%；混合普通 16.3%、简单 23.8%。低档回退主要来自 soft 带变软，不是 hard 不够强。
 - 5P 八种子复核：multi 普通 `-0.44pt`、简单 `+0.47pt`；long 普通 `-1.34pt`、简单 `-0.41pt`；hard 不变。long 普通档确有约 `2.6σ` 软化，其余在噪声内。
 - 同抽签替换模拟：MX8→TK-PG 的 5P long 普通 `-1.06pt（4.4σ）`、简单 `-0.06pt`；RINGB11→TK-PG 为普通 `-0.88pt`、简单 `+0.38pt`，但会移除最强 railgun 载体且原废珠更低，故保留 MX8 替换。
@@ -114,7 +115,7 @@
 - 最终验证：池审计 `34 / 17+17 / bad=[]`，`probe-pool` 通过；D234、D82、D8 与 meta 组定向全绿（不是整轮）；v2.1.36 两条 CI 成功。
 
 ### DOING
-- 无；训练与入池线已收口，等待最终研究提交与交接。
+- 无；训练线全部收口，整理最终证据与交接。
 
 ### NEXT
-- 下一班优先处理 soft 5P long 弱成员（AR-TK2/RINGB11/MX8-R6B/MSB11），但先解决“强坦克候选会伤 5P long”的矛盾；不再重跑今晚已淘汰的 taunt/T3/T6/R3/W3 配方。
+- 下一班先读 `selftest3-pool-census.txt` 选绿色起点；soft 5P long 弱成员修复必须同时守坦克覆盖与电珠闭环，探索性相关已落 `soft-5p-long-correlations.tsv`。不再重复今晚已淘汰的 taunt/T3/T6/R3/W3/T7 配方。
