@@ -1,0 +1,3 @@
+A1_VALIDATE_OK packs=34 legacyFieldsIdentical=15 chargeLedgerReconciled=34 holoPositiveControl=46/151
+closure rows=449
+priority rows=34 candidate rows=68

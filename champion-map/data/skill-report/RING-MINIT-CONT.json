@@ -53,6 +53,694 @@
   },
   "totalCells": 120,
   "decN": 28435,
+  "closure": {
+   "snipe": {
+    "uses": 790,
+    "paid": 656,
+    "wasted": 134,
+    "unit": "games",
+    "byShape": {
+     "2:multi": {
+      "uses": 103,
+      "paid": 83,
+      "wasted": 20,
+      "rate": 0.8058252427184466
+     },
+     "2:long": {
+      "uses": 96,
+      "paid": 88,
+      "wasted": 8,
+      "rate": 0.9166666666666666
+     },
+     "3:multi": {
+      "uses": 71,
+      "paid": 64,
+      "wasted": 7,
+      "rate": 0.9014084507042254
+     },
+     "3:long": {
+      "uses": 110,
+      "paid": 90,
+      "wasted": 20,
+      "rate": 0.8181818181818182
+     },
+     "5:multi": {
+      "uses": 79,
+      "paid": 71,
+      "wasted": 8,
+      "rate": 0.8987341772151899
+     },
+     "5:long": {
+      "uses": 73,
+      "paid": 69,
+      "wasted": 4,
+      "rate": 0.9452054794520548
+     },
+     "8:multi": {
+      "uses": 136,
+      "paid": 96,
+      "wasted": 40,
+      "rate": 0.7058823529411765
+     },
+     "8:long": {
+      "uses": 122,
+      "paid": 95,
+      "wasted": 27,
+      "rate": 0.7786885245901639
+     }
+    },
+    "rate": 0.830379746835443,
+    "readable": true
+   },
+   "gun": {
+    "uses": 660,
+    "paid": 537,
+    "wasted": 123,
+    "unit": "games",
+    "byShape": {
+     "2:multi": {
+      "uses": 93,
+      "paid": 49,
+      "wasted": 44,
+      "rate": 0.5268817204301075
+     },
+     "2:long": {
+      "uses": 131,
+      "paid": 108,
+      "wasted": 23,
+      "rate": 0.8244274809160306
+     },
+     "3:multi": {
+      "uses": 103,
+      "paid": 85,
+      "wasted": 18,
+      "rate": 0.8252427184466019
+     },
+     "3:long": {
+      "uses": 96,
+      "paid": 86,
+      "wasted": 10,
+      "rate": 0.8958333333333334
+     },
+     "5:multi": {
+      "uses": 76,
+      "paid": 69,
+      "wasted": 7,
+      "rate": 0.9078947368421053
+     },
+     "5:long": {
+      "uses": 73,
+      "paid": 70,
+      "wasted": 3,
+      "rate": 0.958904109589041
+     },
+     "8:multi": {
+      "uses": 49,
+      "paid": 39,
+      "wasted": 10,
+      "rate": 0.7959183673469388
+     },
+     "8:long": {
+      "uses": 39,
+      "paid": 31,
+      "wasted": 8,
+      "rate": 0.7948717948717948
+     }
+    },
+    "rate": 0.8136363636363636,
+    "readable": true
+   },
+   "reflect": {
+    "uses": 846,
+    "paid": 235,
+    "wasted": 611,
+    "unit": "games",
+    "byShape": {
+     "2:multi": {
+      "uses": 65,
+      "paid": 19,
+      "wasted": 46,
+      "rate": 0.2923076923076923
+     },
+     "2:long": {
+      "uses": 84,
+      "paid": 52,
+      "wasted": 32,
+      "rate": 0.6190476190476191
+     },
+     "3:multi": {
+      "uses": 132,
+      "paid": 29,
+      "wasted": 103,
+      "rate": 0.2196969696969697
+     },
+     "3:long": {
+      "uses": 121,
+      "paid": 39,
+      "wasted": 82,
+      "rate": 0.32231404958677684
+     },
+     "5:multi": {
+      "uses": 141,
+      "paid": 28,
+      "wasted": 113,
+      "rate": 0.19858156028368795
+     },
+     "5:long": {
+      "uses": 144,
+      "paid": 35,
+      "wasted": 109,
+      "rate": 0.24305555555555555
+     },
+     "8:long": {
+      "uses": 77,
+      "paid": 16,
+      "wasted": 61,
+      "rate": 0.2077922077922078
+     },
+     "8:multi": {
+      "uses": 82,
+      "paid": 17,
+      "wasted": 65,
+      "rate": 0.2073170731707317
+     }
+    },
+    "rate": 0.2777777777777778,
+    "readable": true
+   },
+   "sword": {
+    "uses": 456,
+    "paid": 378,
+    "wasted": 78,
+    "unit": "games",
+    "byShape": {
+     "2:multi": {
+      "uses": 88,
+      "paid": 65,
+      "wasted": 23,
+      "rate": 0.7386363636363636
+     },
+     "3:multi": {
+      "uses": 44,
+      "paid": 34,
+      "wasted": 10,
+      "rate": 0.7727272727272727
+     },
+     "3:long": {
+      "uses": 92,
+      "paid": 82,
+      "wasted": 10,
+      "rate": 0.8913043478260869
+     },
+     "5:multi": {
+      "uses": 24,
+      "paid": 24,
+      "wasted": 0,
+      "rate": 1
+     },
+     "5:long": {
+      "uses": 38,
+      "paid": 30,
+      "wasted": 8,
+      "rate": 0.7894736842105263
+     },
+     "8:multi": {
+      "uses": 20,
+      "paid": 17,
+      "wasted": 3,
+      "rate": 0.85
+     },
+     "8:long": {
+      "uses": 30,
+      "paid": 28,
+      "wasted": 2,
+      "rate": 0.9333333333333333
+     },
+     "2:long": {
+      "uses": 120,
+      "paid": 98,
+      "wasted": 22,
+      "rate": 0.8166666666666667
+     }
+    },
+    "rate": 0.8289473684210527,
+    "readable": true
+   },
+   "charge": {
+    "uses": 535,
+    "paid": 294,
+    "wasted": 239,
+    "unit": "events",
+    "byShape": {
+     "2:multi": {
+      "uses": 43,
+      "paid": 17,
+      "wasted": 26,
+      "rate": 0.3953488372093023
+     },
+     "2:long": {
+      "uses": 7,
+      "paid": 6,
+      "wasted": 1,
+      "rate": null
+     },
+     "3:multi": {
+      "uses": 57,
+      "paid": 32,
+      "wasted": 25,
+      "rate": 0.5614035087719298
+     },
+     "3:long": {
+      "uses": 116,
+      "paid": 44,
+      "wasted": 72,
+      "rate": 0.3793103448275862
+     },
+     "5:multi": {
+      "uses": 55,
+      "paid": 17,
+      "wasted": 38,
+      "rate": 0.3090909090909091
+     },
+     "5:long": {
+      "uses": 83,
+      "paid": 59,
+      "wasted": 24,
+      "rate": 0.7108433734939759
+     },
+     "8:multi": {
+      "uses": 42,
+      "paid": 26,
+      "wasted": 15,
+      "rate": 0.6190476190476191
+     },
+     "8:long": {
+      "uses": 132,
+      "paid": 93,
+      "wasted": 38,
+      "rate": 0.7045454545454546
+     }
+    },
+    "rate": 0.5495327102803739,
+    "readable": true
+   },
+   "proto": {
+    "uses": 622,
+    "paid": 207,
+    "wasted": 415,
+    "unit": "games",
+    "byShape": {
+     "3:multi": {
+      "uses": 73,
+      "paid": 33,
+      "wasted": 40,
+      "rate": 0.4520547945205479
+     },
+     "3:long": {
+      "uses": 115,
+      "paid": 44,
+      "wasted": 71,
+      "rate": 0.3826086956521739
+     },
+     "5:multi": {
+      "uses": 47,
+      "paid": 19,
+      "wasted": 28,
+      "rate": 0.40425531914893614
+     },
+     "5:long": {
+      "uses": 96,
+      "paid": 32,
+      "wasted": 64,
+      "rate": 0.3333333333333333
+     },
+     "8:multi": {
+      "uses": 45,
+      "paid": 8,
+      "wasted": 37,
+      "rate": 0.17777777777777778
+     },
+     "8:long": {
+      "uses": 80,
+      "paid": 32,
+      "wasted": 48,
+      "rate": 0.4
+     },
+     "2:long": {
+      "uses": 70,
+      "paid": 12,
+      "wasted": 58,
+      "rate": 0.17142857142857143
+     },
+     "2:multi": {
+      "uses": 96,
+      "paid": 27,
+      "wasted": 69,
+      "rate": 0.28125
+     }
+    },
+    "rate": 0.3327974276527331,
+    "readable": true
+   },
+   "holo": {
+    "uses": 6,
+    "paid": 1,
+    "wasted": 5,
+    "unit": "games",
+    "byShape": {
+     "3:multi": {
+      "uses": 3,
+      "paid": 0,
+      "wasted": 3,
+      "rate": null
+     },
+     "8:long": {
+      "uses": 1,
+      "paid": 1,
+      "wasted": 0,
+      "rate": null
+     },
+     "3:long": {
+      "uses": 2,
+      "paid": 0,
+      "wasted": 2,
+      "rate": null
+     }
+    },
+    "rate": null,
+    "readable": false
+   },
+   "guard": {
+    "uses": 139,
+    "paid": 37,
+    "wasted": 102,
+    "unit": "games",
+    "byShape": {
+     "3:multi": {
+      "uses": 33,
+      "paid": 8,
+      "wasted": 25,
+      "rate": 0.24242424242424243
+     },
+     "3:long": {
+      "uses": 20,
+      "paid": 5,
+      "wasted": 15,
+      "rate": 0.25
+     },
+     "5:multi": {
+      "uses": 12,
+      "paid": 1,
+      "wasted": 11,
+      "rate": null
+     },
+     "8:multi": {
+      "uses": 3,
+      "paid": 0,
+      "wasted": 3,
+      "rate": null
+     },
+     "2:multi": {
+      "uses": 13,
+      "paid": 8,
+      "wasted": 5,
+      "rate": null
+     },
+     "2:long": {
+      "uses": 20,
+      "paid": 5,
+      "wasted": 15,
+      "rate": 0.25
+     },
+     "5:long": {
+      "uses": 31,
+      "paid": 8,
+      "wasted": 23,
+      "rate": 0.25806451612903225
+     },
+     "8:long": {
+      "uses": 7,
+      "paid": 2,
+      "wasted": 5,
+      "rate": null
+     }
+    },
+    "rate": 0.26618705035971224,
+    "readable": true
+   },
+   "bigT": {
+    "uses": 105,
+    "paid": 67,
+    "wasted": 38,
+    "unit": "games",
+    "byShape": {
+     "3:long": {
+      "uses": 19,
+      "paid": 16,
+      "wasted": 3,
+      "rate": null
+     },
+     "5:long": {
+      "uses": 30,
+      "paid": 18,
+      "wasted": 12,
+      "rate": 0.6
+     },
+     "8:multi": {
+      "uses": 10,
+      "paid": 9,
+      "wasted": 1,
+      "rate": null
+     },
+     "8:long": {
+      "uses": 33,
+      "paid": 17,
+      "wasted": 16,
+      "rate": 0.5151515151515151
+     },
+     "2:long": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     },
+     "5:multi": {
+      "uses": 10,
+      "paid": 5,
+      "wasted": 5,
+      "rate": null
+     },
+     "2:multi": {
+      "uses": 1,
+      "paid": 1,
+      "wasted": 0,
+      "rate": null
+     },
+     "3:multi": {
+      "uses": 1,
+      "paid": 1,
+      "wasted": 0,
+      "rate": null
+     }
+    },
+    "rate": 0.638095238095238,
+    "readable": true
+   },
+   "bagua": {
+    "uses": 174,
+    "paid": 47,
+    "wasted": 127,
+    "unit": "games",
+    "byShape": {
+     "5:multi": {
+      "uses": 14,
+      "paid": 5,
+      "wasted": 9,
+      "rate": null
+     },
+     "5:long": {
+      "uses": 52,
+      "paid": 10,
+      "wasted": 42,
+      "rate": 0.19230769230769232
+     },
+     "8:multi": {
+      "uses": 3,
+      "paid": 2,
+      "wasted": 1,
+      "rate": null
+     },
+     "8:long": {
+      "uses": 7,
+      "paid": 3,
+      "wasted": 4,
+      "rate": null
+     },
+     "2:long": {
+      "uses": 71,
+      "paid": 24,
+      "wasted": 47,
+      "rate": 0.3380281690140845
+     },
+     "3:multi": {
+      "uses": 7,
+      "paid": 0,
+      "wasted": 7,
+      "rate": null
+     },
+     "3:long": {
+      "uses": 17,
+      "paid": 3,
+      "wasted": 14,
+      "rate": null
+     },
+     "2:multi": {
+      "uses": 3,
+      "paid": 0,
+      "wasted": 3,
+      "rate": null
+     }
+    },
+    "rate": 0.27011494252873564,
+    "readable": true
+   },
+   "railgun": {
+    "uses": 108,
+    "paid": 95,
+    "wasted": 13,
+    "unit": "games",
+    "byShape": {
+     "5:multi": {
+      "uses": 10,
+      "paid": 10,
+      "wasted": 0,
+      "rate": null
+     },
+     "5:long": {
+      "uses": 15,
+      "paid": 15,
+      "wasted": 0,
+      "rate": null
+     },
+     "8:long": {
+      "uses": 9,
+      "paid": 9,
+      "wasted": 0,
+      "rate": null
+     },
+     "3:long": {
+      "uses": 14,
+      "paid": 14,
+      "wasted": 0,
+      "rate": null
+     },
+     "8:multi": {
+      "uses": 14,
+      "paid": 14,
+      "wasted": 0,
+      "rate": null
+     },
+     "2:multi": {
+      "uses": 17,
+      "paid": 9,
+      "wasted": 8,
+      "rate": null
+     },
+     "2:long": {
+      "uses": 4,
+      "paid": 3,
+      "wasted": 1,
+      "rate": null
+     },
+     "3:multi": {
+      "uses": 25,
+      "paid": 21,
+      "wasted": 4,
+      "rate": 0.84
+     }
+    },
+    "rate": 0.8796296296296297,
+    "readable": true
+   },
+   "taunt": {
+    "uses": 1,
+    "paid": 0,
+    "wasted": 1,
+    "unit": "games",
+    "byShape": {
+     "8:multi": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     }
+    },
+    "rate": null,
+    "readable": false
+   },
+   "curse": {
+    "uses": 18,
+    "paid": 0,
+    "wasted": 18,
+    "unit": "games",
+    "byShape": {
+     "8:long": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     },
+     "2:long": {
+      "uses": 2,
+      "paid": 0,
+      "wasted": 2,
+      "rate": null
+     },
+     "8:multi": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     },
+     "3:long": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     },
+     "5:long": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     },
+     "2:multi": {
+      "uses": 12,
+      "paid": 0,
+      "wasted": 12,
+      "rate": null
+     }
+    },
+    "rate": null,
+    "readable": false
+   },
+   "miniT": {
+    "uses": 1,
+    "paid": 0,
+    "wasted": 1,
+    "unit": "games",
+    "byShape": {
+     "3:long": {
+      "uses": 1,
+      "paid": 0,
+      "wasted": 1,
+      "rate": null
+     }
+    },
+    "rate": null,
+    "readable": false
+   }
+  },
   "switchJs": 0.0653,
   "switchJsCells": 12,
   "winRate": 0.4017,
@@ -7056,8 +7744,8 @@
  "tier": "soft",
  "rulesFingerprint": "bfd49045",
  "fixtureKey": "fx-pool1126a",
- "measuredAt": "2026-11-26T06:33:30.372Z",
- "stageSec": 20.1,
+ "measuredAt": "2026-11-26T09:29:21.755Z",
+ "stageSec": 15.5,
  "stage2": {
   "shortlist": [
    "tank",

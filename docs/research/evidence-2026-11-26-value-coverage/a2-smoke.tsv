@@ -1,0 +1,25 @@
+pack	skill	seedSet	n	mean	se	lo	hi
+DR-R3E	charge	95001	1	0	0	0	0
+DR-R3E	rod	95001	0				
+DR-R3E	holo	95001	0				
+DR-R3E	firestorm	95001	0				
+MX8-R6C-KL	charge	95001	1	0	0	0	0
+MX8-R6C-KL	rod	95001	0				
+MX8-R6C-KL	holo	95001	0				
+MX8-R6C-KL	firestorm	95001	0				
+FC-G1	charge	95001	0				
+FC-G1	rod	95001	0				
+FC-G1	holo	95001	0				
+FC-G1	firestorm	95001	1	3	0	3	3
+DR-R3E	charge	95002	1	0	0	0	0
+DR-R3E	rod	95002	0				
+DR-R3E	holo	95002	0				
+DR-R3E	firestorm	95002	0				
+MX8-R6C-KL	charge	95002	1	0	0	0	0
+MX8-R6C-KL	rod	95002	0				
+MX8-R6C-KL	holo	95002	0				
+MX8-R6C-KL	firestorm	95002	0				
+FC-G1	charge	95002	0				
+FC-G1	rod	95002	0				
+FC-G1	holo	95002	0				
+FC-G1	firestorm	95002	0				

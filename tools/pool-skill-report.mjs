@@ -113,6 +113,27 @@ function pickPacks(pool, argPack, argPacks, allPool) {
 /* ===== Stage 1 观察层（机制逐字承 probe-crossenv-skill.mjs evalPack；夹具钉现役） =====
  * ⚠ 对手 chooser 必须在**被测包同一个沙箱**里构建（policy 推理与引擎缓存不能跨 W 混用）
  *   ⇒ 这里收描述符（{name, kind:'script'|'real', fn|path}），chooser 在本函数内建。 */
+function closureRow(uses, paid, wasted, unit) {
+  return { uses, paid, wasted, unit, rate: uses >= 20 ? paid / uses : null, readable: uses >= 20 };
+}
+
+function aggregateClosure(cells) {
+  const out = {};
+  for (const c of cells) for (const [k, v] of Object.entries(c.closure || {})) {
+    const shape = c.n + ':' + c.mode;
+    const a = out[k] || (out[k] = { uses: 0, paid: 0, wasted: 0, unit: v.unit, byShape: {} });
+    a.uses += v.uses; a.paid += v.paid; a.wasted += v.wasted;
+    const s = a.byShape[shape] || (a.byShape[shape] = { uses: 0, paid: 0, wasted: 0 });
+    s.uses += v.uses; s.paid += v.paid; s.wasted += v.wasted;
+  }
+  for (const v of Object.values(out)) {
+    v.rate = v.uses >= 20 ? v.paid / v.uses : null;
+    v.readable = v.uses >= 20;
+    for (const s of Object.values(v.byShape)) s.rate = s.uses >= 20 ? s.paid / s.uses : null;
+  }
+  return out;
+}
+
 function stage1(W, pack, oppDesc, gamesCensus) {
   const R = W.EpirusRules, T = W.EpirusTrainer, B = W.EpirusBots;
   const params = loadChamp(W, pack.path);
@@ -161,10 +182,14 @@ function stage1(W, pack, oppDesc, gamesCensus) {
     return got;
   };
   const NS = [2, 3, 5, 8], MODES = ['multi', 'long'];
+  const closureKeys = new Set([R.SK.CURSE, R.SK.FIRESTORM, R.SK.MINE, R.SK.TAUNT, R.SK.ROD, R.SK.HOLO,
+    R.SK.TRANSFER, R.SK.PURIFY, R.SK.GUARD, R.SK.REFLECT, R.SK.BAGUA, R.SK.SHIFT, R.SK.JINSHIELD,
+    R.SK.ARMOR, R.SK.PROTO, R.SK.GUN, R.SK.SWORD, R.SK.SNIPE, R.SK.TANK, R.SK.RAILGUN, R.SK.MINI_T, R.SK.BIG_T]);
   const cells = [];
   for (const [oname, oppCh, isReal] of oppChoosers) {
     for (const n of NS) for (const mode of MODES) {
-      const cell = { opp: oname, real: isReal, n, mode, games: 0, win: 0, keys: {}, buckets: {} };
+      const cell = { opp: oname, real: isReal, n, mode, games: 0, win: 0, keys: {}, buckets: {}, closure: {},
+        bead: { elecGained: 0, elecSpent: 0, elecExpired: 0, boomGained: 0, boomSpent: 0, boomExpired: 0 } };
       curCell = cell;
       for (let g = 0; g < gamesCensus; g++) {
         const seat = g % n;
@@ -176,36 +201,75 @@ function stage1(W, pack, oppDesc, gamesCensus) {
         cell.win += T.rankOf(r.state, seat, gseed) === 1 ? 1 : 0;
         /* 闭环按局判定（第二遍扫同一份 events，不改上面那台的任何计数 ⇒ 老读数逐字不动） */
         {
+          const used = new Set(), paid = new Set(), holoTargets = new Set(), tauntTargets = new Set();
           let gStick = 0, gBoomHit = 0, gBoomEmpty = 0;
           for (const e of ((r.state && r.state.events) || [])) {
-            if (e.type === 'curse' && e.owner === seat) gStick++;
-            else if (e.type === 'firestorm' && e.pid === seat) { if ((e.n || 0) > 0) gBoomHit++; else gBoomEmpty++; }
+            if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
+              if (closureKeys.has(e.key) && e.key !== R.SK.CURSE) used.add(e.key);
+              if (e.key === R.SK.TAUNT && e.target != null) tauntTargets.add(e.target);
+              if (e.key === R.SK.CURSE) curseStats.curseOk++;
+              else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
+            } else if (e.type === 'curse' && e.owner === seat) {
+              gStick++;
+              curseStats.curseLanded++;
+            } else if (e.type === 'firestorm' && e.pid === seat) {
+              if ((e.n || 0) > 0) { gBoomHit++; paid.add(R.SK.FIRESTORM); } else gBoomEmpty++;
+              curseStats.firestormHits += (e.n || 0);
+            } else if (e.type === 'mine' && e.from === seat) {
+              paid.add(R.SK.MINE);
+            } else if (e.type === 'rodBlock' && e.pid === seat) {
+              paid.add(R.SK.ROD);
+            } else if (e.type === 'tauntCheck' && e.pid != null && tauntTargets.has(e.pid) && e.ok) {
+              paid.add(R.SK.TAUNT);
+            } else if (e.type === 'holoSet' && e.pid === seat) {
+              used.add(R.SK.HOLO);
+              if (e.target != null) holoTargets.add(e.target);
+            } else if (e.type === 'transfer' && e.to === seat && e.dest != null && (e.amt || 0) > 0) {
+              paid.add(R.SK.TRANSFER);
+            } else if (e.type === 'purify' && e.pid === seat) {
+              if ((e.curses || 0) > 0) paid.add(R.SK.PURIFY);
+            } else if ((e.type === 'blocked' || e.type === 'reflect') && (e.amt || 0) > 0) {
+              const by = e.by;
+              if ((by === '原型制御' || by === 'proto') && holoTargets.has(e.to)) paid.add(R.SK.HOLO);
+              if (e.to !== seat) continue;
+              if (by === '防御') paid.add(R.SK.GUARD);
+              else if (by === '反弹' || by === 'reflect') paid.add(R.SK.REFLECT);
+              else if (by === '藤甲' || by === 'armor') paid.add(R.SK.ARMOR);
+              else if (by === '八卦阵') { paid.add(R.SK.BAGUA); paid.add(R.SK.SHIFT); }
+              else if (by === '金刚盾') paid.add(R.SK.JINSHIELD);
+              else if (by === '原型制御' || by === 'proto') paid.add(R.SK.PROTO);
+            } else if (e.type === 'damage' && e.source === seat && (e.amt || 0) > 0 && closureKeys.has(e.via)) {
+              paid.add(e.via);
+            } else if (e.type === 'bead' && e.pid === seat) {
+              const cnt = Math.abs(e.delta || 0);
+              const bucket = (e.delta || 0) > 0 ? 'Gained' : 'Spent';
+              if (e.kind === 'boom') { bead['boom' + bucket] += cnt; cell.bead['boom' + bucket] += cnt; }
+              else { bead['elec' + bucket] += cnt; cell.bead['elec' + bucket] += cnt; }
+            } else if (e.type === 'beadExpire' && e.pid === seat) {
+              const cnt = Math.abs(e.n != null ? e.n : (e.delta != null ? e.delta : 1));
+              if (e.kind === 'boom') { bead.boomExpired += cnt; cell.bead.boomExpired += cnt; }
+              else { bead.elecExpired += cnt; cell.bead.elecExpired += cnt; }
+            }
           }
-          if (gStick) { curseStats.stickGames++; if (gBoomHit) curseStats.loopGames++; }
+          for (const k of used) {
+            const row = cell.closure[k] || (cell.closure[k] = { uses: 0, paid: 0, wasted: 0, unit: 'games' });
+            row.uses++;
+            if (paid.has(k)) row.paid++; else row.wasted++;
+          }
+          if (gStick) {
+            curseStats.stickGames++;
+            if (gBoomHit) curseStats.loopGames++;
+            const row = cell.closure[R.SK.CURSE] || (cell.closure[R.SK.CURSE] = { uses: 0, paid: 0, wasted: 0, unit: 'games' });
+            row.uses++;
+            if (gBoomHit) row.paid++; else row.wasted++;
+          }
           if (gBoomHit || gBoomEmpty) curseStats.boomGames++;
           curseStats.emptyBoomGames += gBoomEmpty;
         }
-        for (const e of ((r.state && r.state.events) || [])) {
-          if (e.type === 'action' && e.pid === seat && e.outcome === 'ok') {
-            if (e.key === R.SK.CURSE) curseStats.curseOk++;
-            else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
-          } else if (e.type === 'curse' && e.owner === seat) {
-            curseStats.curseLanded++;
-          } else if (e.type === 'firestorm' && e.pid === seat) {
-            curseStats.firestormHits += (e.n || 0);
-          } else if (e.type === 'bead' && e.pid === seat) {
-            const cnt = Math.abs(e.delta || 0);
-            if ((e.delta || 0) > 0) {
-              if (e.kind === 'boom') bead.boomGained += cnt; else bead.elecGained += cnt;
-            } else if ((e.delta || 0) < 0) {
-              if (e.kind === 'boom') bead.boomSpent += cnt; else bead.elecSpent += cnt;
-            }
-          } else if (e.type === 'beadExpire' && e.pid === seat) {
-            const cnt = Math.abs(e.n != null ? e.n : (e.delta != null ? e.delta : 1));
-            if (e.kind === 'boom') bead.boomExpired += cnt; else bead.elecExpired += cnt;
-          }
-        }
       }
+      const cb = cell.bead;
+      cell.closure.charge = closureRow(cb.elecGained + cb.boomGained, cb.elecSpent + cb.boomSpent,
+        cb.elecExpired + cb.boomExpired, 'events');
       cells.push(cell);
     }
   }
@@ -213,6 +277,8 @@ function stage1(W, pack, oppDesc, gamesCensus) {
   const union = new Set(); for (const c of cells) for (const k of Object.keys(c.keys)) union.add(k);
   const coverage = {};
   for (const k of union) coverage[k] = cells.filter(c => (c.keys[k] || 0) >= COVERTH).length;
+  const closure = aggregateClosure(cells);
+  for (const c of cells) { delete c.closure; delete c.bead; }
   const mk = real => {
     const m = {};
     for (const c of cells.filter(c => c.real === real)) {
@@ -241,7 +307,7 @@ function stage1(W, pack, oppDesc, gamesCensus) {
     unionN: union.size, selfUnionN: selfKeys.size,
     envOnlySkills: [...union].filter(k => !selfKeys.has(k)),
     selfOnlySkills: [...selfKeys].filter(k => !union.has(k)),
-    coverage, totalUses, totalCells: cells.length, decN,
+    coverage, totalUses, totalCells: cells.length, decN, closure,
     switchJs: pairN ? +(pairSum / pairN).toFixed(4) : null, switchJsCells: pairN,
     winRate: +(cells.reduce((a, c) => a + c.win, 0) / cells.reduce((a, c) => a + c.games, 0)).toFixed(4),
     bead, curseStats,
