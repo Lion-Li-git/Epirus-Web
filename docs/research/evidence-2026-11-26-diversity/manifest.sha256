@@ -1,0 +1,14 @@
+15886aead1e8f5793847ce014179cb1ac0dc7388c6b1696848f479ec56df22fb *docs/research/evidence-2026-11-26-diversity/rgcn-base-2p-rule.txt
+66471fa1a9ceb75f31227437a50ad30bd208e592fdd3653ddfd0cf776716fa9b *docs/research/evidence-2026-11-26-diversity/rgcn-base-2p-legacy.txt
+20cc435dcff47270434c247af85aa203bc8f5369688f47cfaae7d28382bd2546 *docs/research/evidence-2026-11-26-diversity/pool-diversity.mjs
+a6930329ac95c7eee720e787308473a74e9b7f3f395eea9983c8c7c9b44b0a15 *docs/research/evidence-2026-11-26-diversity/fixture-audit.tsv
+b12b3974c3b226e1c18acb2e20cc4ba5d9babcac1b2a8645637aa92bd9d91893 *docs/research/evidence-2026-11-26-diversity/pairwise-l1.tsv
+3448356334cef3249d6d4a6314034910402454aeea90bf3ccae2a5f724d37630 *docs/research/evidence-2026-11-26-diversity/per-pack.tsv
+3e7a8bea8bdfef82a7fdbaaeef177e9e9f38922dbd64d595f899b4ae27dd4483 *docs/research/evidence-2026-11-26-diversity/summary.tsv
+008db11c7785f6a52846d1219409975dcbac78b1ae9cd9f9faeb85f401390368 *docs/research/evidence-2026-11-26-diversity/run.log
+eab245d70ac915c98388b8817be31c634bb5e753f19975309326a573c7139f58 *docs/research/evidence-2026-11-26-diversity/train-rgcn-minit.log
+c755a231b7625ca41a41abcc12cf452ed8cd4a86dbea4df639a7a81e641e85a2 *docs/research/evidence-2026-11-26-diversity/selftest3-rgcn-minit.txt
+9002dec1f1afbbae7e15c5b82a3ddc97583274b3fab07f77c1b0c43f5244b02a *docs/research/evidence-2026-11-26-diversity/skill-report/nov26-rgcn-minit-s27.json
+79e640f6e31e452b9e1d73eecbfbf43e6e8867e00534fd325a4296cda5a80bb1 *docs/research/evidence-2026-11-26-diversity/stage1-rgcn-minit.log
+00d6799b3fb0f31a56ca7f6aebb057fafbeacf1f2d0f03af09fddfa2549c4c1c *docs/research/evidence-2026-11-26-diversity/rgcn-minit-2p-rule.txt
+8ad92ca3498322216c08d1021cb88d4ac461f2f81b59bd08cf1953d79dddd9a4 *docs/research/evidence-2026-11-26-diversity/rgcn-minit-2p-legacy.txt
