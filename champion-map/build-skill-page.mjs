@@ -172,7 +172,7 @@ export function bake(opts = {}) {
   function packCard(d) {
     const s1 = d.stage1;
     const fresh = !bundleFp || !d.rulesFingerprint || d.rulesFingerprint === bundleFp;
-    let h = '<div class="pcard" data-union="' + (s1 ? s1.unionN : -1) + '" data-tier="' + esc(d.tier) + '">';
+    let h = '<div class="pcard" id="pack-' + esc(d.id) + '" data-union="' + (s1 ? s1.unionN : -1) + '" data-tier="' + esc(d.tier) + '">';
     h += '<div class="phead"><b class="pid">' + esc(d.id) + '</b><span class="chip ' + (d.tier === 'hard' ? 'ch' : 'cs') + '">' + (d.tier === 'hard' ? '困难' : '简单') + '</span>'
       + '<span class="fresh ' + (fresh ? 'fok' : 'fexp') + '" title="rulesFingerprint ' + esc(d.rulesFingerprint || '—') + ' vs bundle ' + esc(bundleFp || '—') + '">' + (fresh ? '新鲜' : '指纹过期') + '</span>'
       + '<span class="when">' + esc((d.measuredAt || '').slice(0, 16).replace('T', ' ')) + '</span></div>';
@@ -206,8 +206,78 @@ export function bake(opts = {}) {
       const ok = q.atLeast1 ? cnt >= 1 : (cnt / Math.max(1, a.n)) >= q.min;
       return '<span class="q ' + (ok ? 'qok' : 'qbad') + '" title="' + esc(q.name) + ' ' + cnt + '/' + a.n + ' 包有跨环境使用（观察层口径）">' + esc(q.name) + ' ' + cnt + '/' + a.n + '</span>';
     }).join('');
-    let h = '<section><div class="bhead"><h2>' + esc(label) + '<span class="bn">' + list.length + ' 枚 · 池级并集 ' + a.union.length + '/30</span></h2><div class="quotas">' + quotaRows + '</div></div>';
+    let h = '<section data-band="' + esc(name) + '"><div class="bhead"><h2>' + esc(label) + '<span class="bn">' + list.length + ' 枚 · 池级并集 ' + a.union.length + '/30</span></h2><div class="quotas">' + quotaRows + '</div></div>';
     h += '<div class="pgrid">' + list.map(packCard).join('') + '</div></section>';
+    return h;
+  }
+
+  function overviewSection(allDocs) {
+    const bandOfDoc = d => (d.tier === 'hard' ? 'hard' : 'soft');
+    const ordered = [...bands.hard, ...bands.soft];
+    const fmtUse = r => {
+      if (!r || r <= 0) return '—';
+      const p = r * 100;
+      if (p < 0.01) return '<0.01%';
+      if (p < 0.1) return p.toFixed(2) + '%';
+      if (p < 10) return p.toFixed(1) + '%';
+      return p.toFixed(1) + '%';
+    };
+    const fmtCov = (c, tot) => !c ? '—' : Math.round(100 * c / Math.max(1, tot)) + '%';
+    const heatBg = (frac, isCov) => {
+      if (!frac || frac <= 0) return '';
+      const t = isCov ? Math.min(1, frac) : Math.min(1, Math.pow(frac / 0.35, 0.45));
+      const a = (0.10 + t * 0.48).toFixed(2);
+      return 'background:rgba(45,212,191,' + a + ');color:' + (t > 0.62 ? '#ecfffb' : '#dfe3ec');
+    };
+    let h = '<section class="ovsec"><div class="bhead"><h2>技能 × 冠军包使用率总览<span class="bn">' + ordered.length + ' 枚 × ' + SK30.length + ' 技（列按困难/简单分带，点击列名跳至单包卡片）</span></h2>'
+      + '<div class="mtoggle"><button type="button" class="on" data-metric="use">出手占比 (手数/总决策)</button><button type="button" data-metric="cov">环境覆盖率 (≥3手格/120)</button></div></div>';
+    h += '<div class="ovwrap"><table class="ovtab" id="ovtab"><thead><tr><th class="sticky">技能</th><th class="sumcol">在用包</th><th class="sumcol">全池均值</th>';
+    for (const d of ordered) {
+      const b = bandOfDoc(d);
+      h += '<th data-tier="' + b + '" class="pcol ' + (b === 'hard' ? 'ph' : 'ps') + '"><a href="#pack-' + esc(d.id) + '" title="' + esc(d.id) + '（' + (b === 'hard' ? '困难' : '简单') + ' · 并集 ' + (d.stage1 ? d.stage1.unionN : '?') + '/30）">' + esc(d.id) + '</a></th>';
+    }
+    h += '</tr></thead><tbody>';
+    for (const s of SK30) {
+      let activePacks = 0, useSum = 0, covSum = 0, measuredPacks = 0;
+      for (const d of ordered) {
+        if (!d.stage1) continue;
+        measuredPacks++;
+        const uses = (d.stage1.totalUses && d.stage1.totalUses[s.key]) || 0;
+        const dec = Math.max(1, d.stage1.decN || 0);
+        const cov = (d.stage1.coverage && d.stage1.coverage[s.key]) || 0;
+        const tot = Math.max(1, d.stage1.totalCells || 120);
+        if (uses > 0) activePacks++;
+        useSum += uses / dec;
+        covSum += cov / tot;
+      }
+      const meanUse = measuredPacks ? useSum / measuredPacks : 0;
+      const meanCov = measuredPacks ? covSum / measuredPacks : 0;
+      const deadCls = DEAD_CARDS.includes(s.key) && activePacks === 0 ? ' ovdead' : '';
+      h += '<tr class="' + deadCls.trim() + '"><td class="sticky skname" title="' + esc(s.name) + ' (' + esc(s.key) + ')"><b>' + esc(s.name) + '</b> <code>' + esc(s.key) + '</code></td>'
+        + '<td class="sumcol">' + activePacks + '/' + measuredPacks + '</td>'
+        + '<td class="sumcol mcell" data-utext="' + fmtUse(meanUse) + '" data-ctext="' + fmtCov(meanCov * 120, 120) + '">' + fmtUse(meanUse) + '</td>';
+      for (const d of ordered) {
+        const b = bandOfDoc(d);
+        if (!d.stage1) { h += '<td data-tier="' + b + '" class="zero">—</td>'; continue; }
+        const uses = (d.stage1.totalUses && d.stage1.totalUses[s.key]) || 0;
+        const dec = Math.max(1, d.stage1.decN || 0);
+        const cov = (d.stage1.coverage && d.stage1.coverage[s.key]) || 0;
+        const tot = Math.max(1, d.stage1.totalCells || 120);
+        const uFrac = uses / dec;
+        const cFrac = cov / tot;
+        const uTxt = fmtUse(uFrac);
+        const cTxt = fmtCov(cov, tot);
+        const uStyle = heatBg(uFrac, false);
+        const cStyle = heatBg(cFrac, true);
+        h += '<td data-tier="' + b + '" class="mcell' + (uses === 0 ? ' zero' : '') + '"'
+          + ' style="' + uStyle + '" data-ustyle="' + uStyle + '" data-cstyle="' + cStyle + '"'
+          + ' data-utext="' + uTxt + '" data-ctext="' + cTxt + '"'
+          + ' title="' + esc(d.id) + ' · ' + esc(s.name) + '（' + esc(s.key) + '）：出手 ' + uses + '/' + dec + '（' + uTxt + '）‖ 覆盖 ' + cov + '/' + tot + ' 格（' + cTxt + '）">'
+          + uTxt + '</td>';
+      }
+      h += '</tr>';
+    }
+    h += '</tbody></table></div></section>';
     return h;
   }
 
@@ -232,6 +302,16 @@ export function bake(opts = {}) {
   html += '.pos{color:#5ee0b8}.neg{color:#f08c8c}.pos i,.neg i{font-style:normal;opacity:.7;font-size:10px}';
   html += '.tag{font-size:10px;padding:1px 7px;border-radius:9px;font-weight:700}.vmain{background:#123a2b;color:#4fd6a2}.vlearn{background:#3a2c10;color:#f5b95e}.vpit{background:#3a1a1a;color:#f08c8c}.vnoise{background:#232b3d;color:#9aa3ba}.vna{background:#20242e;color:#69718a}.v0{background:#232b3d;color:#8b93a7}.ban{color:#f5b95e;font-size:10px}';
   html += '.filters{display:flex;gap:8px;margin:0 0 6px}button{background:#141926;border:1px solid #232b3d;color:#9aa3ba;border-radius:6px;padding:3px 12px;font-size:12px;cursor:pointer}button.on{border-color:#2dd4bf;color:#2dd4bf}';
+  html += '.mtoggle{display:flex;gap:6px}.ovwrap{overflow-x:auto;border:1px solid #1e2534;border-radius:10px;background:#10141d}';
+  html += '.ovtab{border-collapse:collapse;font-size:11px;white-space:nowrap;width:100%}';
+  html += '.ovtab th,.ovtab td{padding:4px 7px;border-bottom:1px solid #182030;border-right:1px solid #141b28;text-align:right;font-variant-numeric:tabular-nums}';
+  html += '.ovtab th{background:#121723;color:#9aa3ba;font-weight:600;position:sticky;top:0;z-index:2}';
+  html += '.ovtab .sticky{position:sticky;left:0;background:#10141d;z-index:3;text-align:left;min-width:138px;border-right:1px solid #263147}';
+  html += '.ovtab thead .sticky{background:#121723;z-index:4}';
+  html += '.ovtab .sumcol{background:#111622;color:#cfd6e6;text-align:right}';
+  html += '.ovtab .skname b{color:#e8ecf5;font-weight:600}.ovtab .skname code{color:#6f7891;font-size:10px}';
+  html += '.ovtab th.pcol a{color:inherit}.ovtab th.ph{color:#f5b95e}.ovtab th.ps{color:#5ee0b8}';
+  html += '.ovtab td.zero{color:#3c4559}.ovtab tr.ovdead td.sticky b{color:#f08c8c}';
   html += 'footer{margin-top:26px;color:#5b6377;font-size:11px}';
   html += '</style></head><body>';
   html += '<h1>Epirus 池级 Skill-Report</h1>';
@@ -242,11 +322,12 @@ export function bake(opts = {}) {
     + '<span class="stamp">在池 <b>' + docs.length + '/' + pool.length + '</b> 枚已测</span>'
     + '<span class="stamp">烘焙 <b>' + esc(builtAt.slice(0, 16).replace('T', ' ')) + '</b></span>'
     + '</div>';
-  html += '<div class="filters"><button class="on" data-f="all">全部</button><button data-f="hard">困难带</button><button data-f="soft">简单带</button><span class="sub" style="margin:0 0 0 10px;align-self:center">热力 = 每技能环境覆盖格数（/120，≥3 格判"在该环境会用"）；虚线框 = 死卡短名单且 0 覆盖</span></div>';
+  html += '<div class="filters"><button class="on" data-f="all">全部</button><button data-f="hard">困难带</button><button data-f="soft">简单带</button><span class="sub" style="margin:0 0 0 10px;align-self:center">先看上方 30 技 × ' + docs.length + ' 包总览矩阵（默认出手占比），再看下方逐包热力（≥3 手覆盖 /120 格，虚线框=死卡 0 覆盖）与分层强度</span></div>';
+  html += overviewSection(docs);
   html += bandSection('hard', '困难 · 冠军带', bands.hard, agg.hard);
   html += bandSection('soft', '简单 · 陪练带', bands.soft, agg.soft);
-  html += '<footer>口径注记：覆盖/并集/换招JS = Stage 1 观察层（fixtures.tsv 声明的对手矩阵 × 2/3/5/8 人 × multi/long × 10 局/格，ε=0.15 冠军自由发挥）；Δ_rich=富裕经济强制/消融配对差（潜力），Δ_nat=原生经济（实际含机会成本）；判语先过 |Δ|&gt;1.96·SE（承 skill-report v1.5.190 Q-9 纪律）。配额行 = 观察层口径的方向读数，验收以 tools/champion-gate.mjs 为准。</footer>';
-  html += '<script>(function(){var bs=document.querySelectorAll(".filters button");bs.forEach(function(b){b.onclick=function(){bs.forEach(function(x){x.classList.remove("on")});b.classList.add("on");var f=b.dataset.f;document.querySelectorAll("section").forEach(function(s,i){s.style.display=(f==="all"||["hard","soft"][i]===f)?"":"none"});};});})();</script>';
+  html += '<footer>口径注记：总览默认出手占比 = Stage 1 观察层各包总出手数/总决策数，也可切换覆盖率（≥3手格/120）；逐包覆盖/并集/换招JS = Stage 1 观察层（fixtures.tsv 声明的对手矩阵 × 2/3/5/8 人 × multi/long × 10 局/格，ε=0.15 冠军自由发挥）；Δ_rich=富裕经济强制/消融配对差（潜力），Δ_nat=原生经济（实际含机会成本）；判语先过 |Δ|&gt;1.96·SE（承 skill-report v1.5.190 Q-9 纪律）。配额行 = 观察层口径的方向读数，验收以 tools/champion-gate.mjs 为准。</footer>';
+  html += '<script>(function(){var bs=document.querySelectorAll(".filters button");bs.forEach(function(b){b.onclick=function(){bs.forEach(function(x){x.classList.remove("on")});b.classList.add("on");var f=b.dataset.f;document.querySelectorAll("section[data-band]").forEach(function(s){s.style.display=(f==="all"||s.dataset.band===f)?"":"none"});document.querySelectorAll("#ovtab [data-tier]").forEach(function(c){c.style.display=(f==="all"||c.dataset.tier===f)?"":"none"});};});var ms=document.querySelectorAll(".mtoggle button");ms.forEach(function(b){b.onclick=function(){ms.forEach(function(x){x.classList.remove("on")});b.classList.add("on");var m=b.dataset.metric;document.querySelectorAll("#ovtab .mcell").forEach(function(td){td.textContent=(m==="cov"?td.dataset.ctext:td.dataset.utext);if(td.dataset.cstyle!=null){td.setAttribute("style",m==="cov"?td.dataset.cstyle:td.dataset.ustyle);var z=(td.textContent==="—");td.classList.toggle("zero",z);}var s=document.querySelector(".filters button.on");if(s&&s.dataset.f!=="all"&&td.dataset.tier&&td.dataset.tier!==s.dataset.f)td.style.display="none";});};});})();</script>';
   html += '</body></html>';
   const out = join(ROOT, 'champion-map/skill-report.html');
   writeFileSync(out, html, 'utf8');
