@@ -147,3 +147,5 @@ CN-DR	docs/artifacts/CN-DR.bak	multi	200	90211	0	0.5	0	0	0	0	0	0.07	0.5	全程�
 CN-DR	docs/artifacts/CN-DR.bak	long	200	90211	3.5	0.5	0	1.5	0	3.5	3.5	1.79	3.5	全程刷反弹	1.8571428571428572
 PG-DR	docs/artifacts/PG-DR.bak	multi	200	90211	0	1.5	0	2.5	0	0	0	0.57	2.5	只枪压制	13.142857142857142
 PG-DR	docs/artifacts/PG-DR.bak	long	200	90211	3	0.5	0	0.5	0	3	3	1.43	3.0	全程刷反弹	2.4285714285714284
+PG-CN	docs/artifacts/PG-CN.bak	multi	200	90211	0	0	0	3.5	0	0	0	0.50	3.5	只枪压制	5.142857142857143
+PG-CN	docs/artifacts/PG-CN.bak	long	200	90211	9	0	0	0	0	9	9	3.86	9.0	全程刷反弹	2.2857142857142856

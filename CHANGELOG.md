@@ -4,6 +4,19 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.35 — 11-26（**`PG-CN`** 真电珠闭环入 `hard` 替换 **`CN-DR`** ‖ 重构 `skill-report.html` 闭环口径标签 ‖ 夹具 `fx-pool1126d`）
+
+**这一版是什么**：在查清 [`CN-DR`](docs/artifacts/CN-DR.bak) 只少按 `charge`（`99` 次仅 `10/10` 在 `2:multi` 花掉，`3/5/8P` 因 `railgun=0` 导致 **`0/89`** 未闭环）后，先向 `PG-DR` 借 `charge/railgun` 唤醒 `CN-DR` 3/5/8P 电磁炮通道（`nov26-cnrg-r1`，`G5 1%/0%`, `2P 14.0%`, `railgun 27`），再接两段 `--beadSpendW=0.50 --penDeadElec=0.70 --lamExp=1.10` Stage C PG，训成 **`PG-CN`**（[`docs/artifacts/PG-CN.bak`](docs/artifacts/PG-CN.bak) · `wid=7e2ac4666074c364`）正式替换退役 `CN-DR`；同步重构 [`champion-map/build-skill-page.mjs`](champion-map/build-skill-page.mjs) 消除两类闭环混读。全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。
+
+- **`PG-CN` 入 `hard` 替换退役 `CN-DR`（`fx-pool1126d` · `AR-TK2,DR-R3E,FS-DR,FS-G2,FS2-LE26`）**：
+  - `Stage 1`：**胜率 `57.3%`**、`17/30`（`Stage 2 = 25 技 消融 6`）、**`电珠闭环 50.5%`（`56/111`，仅过期 `53`）**、**`贴爆闭环 50%`（`5/10` 局）**、完整保留 `cannon 151 (18 格)`；
+  - `2P`（300g `95001`）：`rule 19.3% / legacy 16.0%`；`6` 粒 `Arena B +30.3824pt`（`6/6` 正 `[17.49 .. 57.65]pt`）；`promote --dry --support=2` **0 阻断**（`G4 0%/4.3%`、`G5 1%/0%`）；`90210/90211 seatKill=0`；图坐标 `H=49.7 / S=1.76`。
+  - `CN-DR.json` 依 `AGENTS.md §24` 备份至仓外隔离目录后 `pool-add --retire=CN-DR`（`.bak` 保留在 `docs/artifacts/`），`fixtures.tsv` 升代为 `fx-pool1126d`。
+- **重构 [`champion-map/build-skill-page.mjs`](champion-map/build-skill-page.mjs) 闭环视图标签**：
+  - 每张卡片顶部新增 `.clbar` 摘要条，显式分列 **`电珠闭环`** / **`爆珠闭环`** / **`贴爆闭环`**；
+  - Stage 2 `贴贴/天火` 行统一改名为 **`贴爆闭环`**（不再与 `电珠闭环` 混名），`蓄能` 行直接标注 `电珠闭环 / 爆珠闭环` 并为普查占比 `< 1%` 落入 `强制` 的条目加 `<1%` 悬停提示。
+- **更新池结构与难度阶梯（`fx-pool1126d`）**：`hard` `arenaB` 中位 **`17.9pt`**、并集 `27` 技；`probe-diff-ladder --pool=1`：`2P rule 33.7% < 43.4% < 59.5%`（`5.9σ / 8.9σ`）、`2P legacy 21.8% < 24.7% < 30.3%`、`5P multi 3.0% < 12.4% < 16.5%`、`5P long 4.0% < 6.3% < 17.3%`。
+
 ## v2.1.34 — 11-26（修复 `pg-train.mjs` 反 REINFORCE 负号 ‖ **`CN-DR` / `PG-DR`** 入 `hard` 替换退役 **`RG-CN` / `nov21-purify-dsp0`** ‖ 修复查看器 3D `roundTrip` 隔离 ‖ 夹具 `fx-pool1126c`）
 
 **这一版是什么**：定位并修复 [`training/proto2/pg-train.mjs`](training/proto2/pg-train.mjs) 中长期潜伏的 REINFORCE 梯度反号 Bug（使带惩罚的 PG 从“越罚越死电”恢复为真正压低电珠浪费），在此基础上训成 [`docs/artifacts/CN-DR.bak`](docs/artifacts/CN-DR.bak) 与 [`docs/artifacts/PG-DR.bak`](docs/artifacts/PG-DR.bak) 正式入 **`hard`**，替代高废珠低胜率（`95.6% / 44.3%` 与 `97.3% / 41.5%`）的退役旧包 `RG-CN` 与 `nov21-purify-dsp0`；同时修复 [`champion-map/viewer.mjs`](champion-map/viewer.mjs) `roundTrip()` 颜色状态隔离与补加 PG 梯度符号门禁，全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。

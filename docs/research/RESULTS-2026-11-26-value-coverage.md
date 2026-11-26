@@ -2,7 +2,7 @@
 
 > **对应计划**：[`PLAN-2026-11-26-value-coverage.md`](PLAN-2026-11-26-value-coverage.md) · [`PREREG-2026-11-26-use-value-pilot.md`](PREREG-2026-11-26-use-value-pilot.md)  
 > **证据目录**：[`evidence-2026-11-26-value-coverage/`](evidence-2026-11-26-value-coverage/)  
-> **状态**：**已完成并收口至 `v2.1.34`**（v2.1.33 完成 A1/A2 与 `FS-DR` 替换 `FC-G1` · v2.1.34 修复 [`training/proto2/pg-train.mjs`](../../training/proto2/pg-train.mjs) 反 REINFORCE 梯度符号并完成 `CN-DR` / `PG-DR` 替换退役 `RG-CN` / `nov21-purify-dsp0`，全池维持 `34` 枚 `17/17`）。
+> **状态**：**已完成并收口至 `v2.1.35`**（v2.1.33 完成 A1/A2 与 `FS-DR` 替换 `FC-G1` · v2.1.34 修复 [`training/proto2/pg-train.mjs`](../../training/proto2/pg-train.mjs) 反 REINFORCE 梯度符号并纳入 `PG-DR` · v2.1.35 用真电珠闭环 **`PG-CN`** 替换 `CN-DR` 并重构 `skill-report.html` 闭环口径显示，全池维持 `34` 枚 `17/17`）。
 
 ---
 
@@ -91,4 +91,17 @@
   - `2P legacy`（1500g `95001`）：困难 **`21.7%`** < 普通 **`25.0%`** < 简单 **`30.3%`**（`-3.27 ±2.70pt, 2.4σ` / `+5.27 ±3.03pt, 3.4σ`）；
   - `5P multi`（800g `95002`）：困难 **`2.5%`** < 普通 **`11.4%`** < 简单 **`16.5%`**（`-8.88 ±2.44pt, 7.1σ` / `+5.13 ±3.37pt, 3.0σ`）；
   - `5P long`（400g `95001`）：困难 **`3.0%`** < 普通 **`8.0%`** < 简单 **`17.3%`**（`-5.00 ±3.06pt, 3.2σ` / `+9.25 ±4.09pt, 4.4σ`）。
-- **下轮优先队列（[`replacement-priority.tsv`](evidence-2026-11-26-value-coverage/replacement-priority.tsv)）**：`hard` 侧高废珠前排现剩 `nov21-taunt-dsp0b`（`97.8%`）、`TF-DR`（`94.0%`）、`MN-DR`（`91.9%`）、`MT-DR`（`91.0%`）；`soft` 侧仍为 `MX8-R6C-KL`（保 `armor/rod` 覆盖下升级）。
+- **下轮优先队列（[`replacement-priority.tsv`](evidence-2026-11-26-value-coverage/replacement-priority.tsv)）**：`hard` 侧高废珠前排现剩 `nov21-taunt-dsp0b`（`97.8%`）、`TF-DR`（`94.0%`）、`MN-DR`（`91.8%`）、`MT-DR`（`91.2%`）；`soft` 侧仍为 `MX8-R6C-KL`（保 `armor/rod` 覆盖下升级）。
+
+---
+
+## 6. `v2.1.35` 收口：`PG-CN` 补全 `3/5/8P` 电珠闭环＆重构 `skill-report.html` 闭环口径
+
+- **根因诊断**：[`CN-DR`](../artifacts/CN-DR.bak) 对 `RG-CN` 只砍掉了蓄电频次（`1587 → 99`，过期 `1517 → 86`），但全游戏唯一消费电珠的技能只有 `railgun`（[`js/core/state.js:157`](../../js/core/state.js#L157)），`CN-DR` 在 `3/5/8P` 的 `railgun` 出手为 `0`（仅 `2:multi 10/10`），直接再跑 PG 无法采样花珠（电珠闭环仍停 `10%`）。
+- **两步解法与入池验证（[`PG-CN.bak`](../artifacts/PG-CN.bak) · `wid=7e2ac4666074c364`）**：
+  1. 先以 `CN-DR`（`G5 0%/0%`）为底、`3:multi,5:long,8:long` 向 `PG-DR` 借 `charge,railgun` 唤醒 `3/5/8P` 电磁炮（`nov26-cnrg-r1`，`G4 0.7%/0%`, `G5 1%/0%`, `2P 14.0%`）；
+  2. 再以 `nov26-pgcn2-pg.seg1800` 接两段 `--beadSpendW=0.50 --penDeadElec=0.70 --lamExp=1.10 --klModes=standard` Stage C PG，训得 `PG-CN`（`nov26-pgcn2-pg3.seg2400`）：
+     - `fx-pool1126d` `Stage 1`：**胜率 `57.3%`**、`17/30`、`Stage 2 = 25 技 消融 6`、**`电珠闭环 50.5% (56/111, 仅过期 53)`**、**`贴爆闭环 50% (5/10)`**、`cannon 151 (18 格)`；
+     - `2P 19.3%/16.0%`，6 粒 `Arena B +30.3824pt`（6/6 正，`H=49.7/S=1.76`），`promote --dry --support=2` **0 阻断**，`90210/90211 seatKill=0`。
+  3. `CN-DR.json` 依 `AGENTS.md §24` 备份至仓外隔离目录后退池，`fx-pool1126d`（`AR-TK2,DR-R3E,FS-DR,FS-G2,FS2-LE26`）全池阶梯：`2P rule 33.7% < 43.4% < 59.5%`、`2P legacy 21.8% < 24.7% < 30.3%`、`5P multi 3.0% < 12.4% < 16.5%`、`5P long 4.0% < 6.3% < 17.3%`。
+- **页面消除混读（[`champion-map/build-skill-page.mjs`](../../champion-map/build-skill-page.mjs)）**：新增单卡顶部 `.clbar` 显式拆分 `电珠闭环` / `爆珠闭环` / `贴爆闭环`，将 `贴贴/天火` 的 `局闭环` 统一正名为 `贴爆闭环`，并区分 `<1%` 占比进入 `强制` 对照的 `蓄能` 行与真正闭环率。

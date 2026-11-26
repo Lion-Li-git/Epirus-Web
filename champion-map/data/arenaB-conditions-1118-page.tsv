@@ -614,3 +614,16 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-26T11:58:13.195Z	PG-DR	docs/artifacts/PG-DR.bak	ca640d94f51088ef	85200	page	data/arena-league-1118-page.tsv	0.071254	0.017965
 2026-11-26T11:58:16.703Z	PG-DR	docs/artifacts/PG-DR.bak	ca640d94f51088ef	86200	page	data/arena-league-1118-page.tsv	0.174567	0.061470
 2026-11-26T11:58:20.160Z	PG-DR	docs/artifacts/PG-DR.bak	ca640d94f51088ef	87200	page	data/arena-league-1118-page.tsv	0.067556	0.036598
+2026-11-26T13:36:50.017Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	82200	page	data/arena-league-1118-page.tsv	0.682622	0.221122
+2026-11-26T13:36:53.764Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	83200	page	data/arena-league-1118-page.tsv	0.343184	0.105615
+2026-11-26T13:36:57.431Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	84200	page	data/arena-league-1118-page.tsv	0.142928	0.053739
+2026-11-26T13:37:01.081Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	85200	page	data/arena-league-1118-page.tsv	0.191041	0.056344
+2026-11-26T13:37:04.668Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	86200	page	data/arena-league-1118-page.tsv	0.174567	0.064947
+2026-11-26T13:37:08.314Z	PG-CN	scratch/arms/nov26-pgcn2-pg3.seg2400.bak	3ad6ae77a3f5f287	87200	page	data/arena-league-1118-page.tsv	0.521255	0.161893
+2026-11-26T13:44:03.522Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	82200	page	data/arena-league-1118-page.tsv	0.682622	0.221122
+2026-11-26T13:46:40.040Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	82200	page	data/arena-league-1118-page.tsv	0.682622	0.221122
+2026-11-26T13:46:46.937Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	83200	page	data/arena-league-1118-page.tsv	0.343184	0.105615
+2026-11-26T13:46:53.444Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	84200	page	data/arena-league-1118-page.tsv	0.142928	0.053739
+2026-11-26T13:46:59.795Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	85200	page	data/arena-league-1118-page.tsv	0.191041	0.056344
+2026-11-26T13:47:06.353Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	86200	page	data/arena-league-1118-page.tsv	0.174567	0.064947
+2026-11-26T13:47:13.176Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	87200	page	data/arena-league-1118-page.tsv	0.521255	0.161893

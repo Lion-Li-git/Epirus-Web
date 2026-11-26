@@ -104,22 +104,34 @@ export function bake(opts = {}) {
     return s + (se > 0 ? '<i>±' + (se * 196).toFixed(1) + '</i>' : '');
   };
 
-  function strengthRows(d) {
-    if (!d.stage2) return '<div class="none">强度层未测（入池时跑 Stage 2）</div>';
-    const cs = (d.stage1 && d.stage1.curseStats) || {};
-    const bds = (d.stage1 && d.stage1.bead) || null;
-    const curseOk = cs.curseOk != null ? cs.curseOk : ((d.stage1 && d.stage1.totalUses && d.stage1.totalUses.curse) || 0);
-    const fireOk = cs.firestormOk != null ? cs.firestormOk : ((d.stage1 && d.stage1.totalUses && d.stage1.totalUses.firestorm) || 0);
+  function closureMeta(d) {
+    const s1 = d.stage1 || {};
+    const cs = s1.curseStats || {};
+    const bds = s1.bead || null;
+    const curseOk = cs.curseOk != null ? cs.curseOk : ((s1.totalUses && s1.totalUses.curse) || 0);
+    const fireOk = cs.firestormOk != null ? cs.firestormOk : ((s1.totalUses && s1.totalUses.firestorm) || 0);
     const fireHits = cs.firestormHits || 0;
     const curseLanded = cs.curseLanded != null ? cs.curseLanded : curseOk;
     const blocked = Math.max(0, curseOk - curseLanded);
     const blockedPct = curseOk > 0 ? Math.round(100 * blocked / curseOk) : 0;
     const loopRate = cs.stickGames > 0 ? cs.loopGames / cs.stickGames : null;
     const takeRate = cs.fsLegalDecisions > 0 ? cs.fsTakenWhenLegal / cs.fsLegalDecisions : null;
-    const loopPct = loopRate == null ? '—' : Math.round(100 * loopRate) + '%';
-    const takePct = takeRate == null ? '—' : Math.round(100 * takeRate) + '%';
-    const detRate = curseOk > 0 ? fireOk / curseOk : (fireOk > 0 ? 1 : 0);
-    const detPct = Math.round(100 * detRate);
+    const elecRate = bds && bds.elecGained > 0 ? bds.elecSpent / bds.elecGained : null;
+    const boomRate = bds && bds.boomGained > 0 ? bds.boomSpent / bds.boomGained : null;
+    return {
+      cs, bds, curseOk, fireOk, fireHits, curseLanded, blocked, blockedPct,
+      loopRate, takeRate, elecRate, boomRate,
+      loopPct: loopRate == null ? '—' : Math.round(100 * loopRate) + '%',
+      takePct: takeRate == null ? '—' : Math.round(100 * takeRate) + '%',
+      elecPct: elecRate == null ? '—' : Math.round(100 * elecRate) + '%',
+      boomPct: boomRate == null ? '—' : Math.round(100 * boomRate) + '%',
+    };
+  }
+  const rateCls = (r, hi = 0.5, lo = 0.25) => (r == null ? '' : (r >= hi ? 'pos' : (r < lo ? 'neg' : '')));
+
+  function strengthRows(d, cm) {
+    if (!d.stage2) return '<div class="none">强度层未测（入池时跑 Stage 2）</div>';
+    const { cs, bds, curseOk, fireOk, fireHits, curseLanded, blocked, blockedPct, loopRate, elecRate, boomRate, loopPct, takePct, elecPct, boomPct } = cm;
     const rows = [...d.stage2.results].sort((a, b) => a.key.localeCompare(b.key));
     let h = '<table class="stab"><tr><th>技能</th><th>层</th><th>口径</th><th>Δ_rich</th><th>Δ_nat/Δ_lost</th><th>判语</th></tr>';
     for (const r of rows) {
@@ -147,21 +159,21 @@ export function bake(opts = {}) {
       let extra = '';
       if (r.key === 'curse' && curseOk >= 3) {
         const notes = [];
-        if (loopRate != null && loopRate < 0.25) notes.push('局闭环 ' + loopPct);
+        if (loopRate != null && loopRate < 0.25) notes.push('贴爆闭环 ' + loopPct);
         if (blockedPct >= 25) notes.push('被盾挡 ' + blockedPct + '%');
-        if (notes.length) extra = ' <span class="tag ' + (loopRate != null && loopRate < 0.25 ? 'vpit' : 'v0') + '" title="贴=' + curseOk + ' / 落=' + curseLanded + ' / 闭环局=' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '">' + notes.join(' · ') + '</span>';
+        if (notes.length) extra = ' <span class="tag ' + (loopRate != null && loopRate < 0.25 ? 'vpit' : 'v0') + '" title="贴=' + curseOk + ' / 落=' + curseLanded + ' / 贴爆闭环局=' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '">' + notes.join(' · ') + '</span>';
       } else if (r.key === 'firestorm' && (curseOk > 0 || fireOk > 0)) {
-        const dc = (loopRate != null && loopRate < 0.25) ? 'neg' : (loopRate != null && loopRate >= 0.75 ? 'pos' : '');
-        extra = '<div class="subinfo">局闭环 <b class="' + dc + '">' + loopPct + '</b>（' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '局）'
+        extra = '<div class="subinfo">贴爆闭环 <b class="' + rateCls(loopRate, 0.75, 0.25) + '">' + loopPct + '</b>（' + (cs.loopGames || 0) + '/' + (cs.stickGames || 0) + '局）'
           + ' · 抓手 <b>' + takePct + '</b>（' + (cs.fsTakenWhenLegal || 0) + '/' + (cs.fsLegalDecisions || 0) + '次）'
           + ' · 被盾挡 <b>' + blockedPct + '%</b>（' + blocked + '/' + curseOk + '贴）'
           + (fireHits ? ' · ' + fireHits + ' 伤' : '') + '</div>';
       } else if (r.key === 'charge' && bds) {
-        const ep = bds.elecGained > 0 ? Math.round(100 * bds.elecSpent / bds.elecGained) + '%' : '—';
-        const bp = bds.boomGained > 0 ? Math.round(100 * bds.boomSpent / bds.boomGained) + '%' : '—';
-        extra = '<div class="subinfo">电珠 <b>' + ep + '</b>（' + bds.elecSpent + '/' + bds.elecGained + '）· 爆珠 <b>' + bp + '</b>（' + bds.boomSpent + '/' + bds.boomGained + '）</div>';
+        extra = '<div class="subinfo">电珠闭环 <b class="' + rateCls(elecRate, 0.5, 0.25) + '">' + elecPct + '</b>（' + bds.elecSpent + '/' + bds.elecGained + (bds.elecExpired ? ' · 过期' + bds.elecExpired : '') + '）'
+          + ' · 爆珠闭环 <b class="' + rateCls(boomRate, 0.5, 0.25) + '">' + boomPct + '</b>（' + bds.boomSpent + '/' + bds.boomGained + '）</div>';
       }
-      h += '<tr><td>' + esc(r.name) + '</td><td>' + esc(r.stratum) + '</td><td>' + (r.inUse ? '<b class="ban">消融</b>' : '强制') + '</td>'
+      const modeCell = r.inUse ? '<b class="ban">消融</b>'
+        : '<span title="普查决策占比 < 1% 未走消融，此处为强制连按对照（真闭环率见右侧 subinfo 与卡片顶部闭环条）">强制<i class="lowu">&lt;1%</i></span>';
+      h += '<tr><td>' + esc(r.name) + '</td><td>' + esc(r.stratum) + '</td><td>' + modeCell + '</td>'
         + '<td class="' + (rich && rich.delta > 0 ? 'pos' : 'neg') + '">' + deltaFmt(rich && rich.delta, rich && rich.se) + '</td>'
         + '<td class="' + ((nat ? nat.delta : (ban ? ban.deltaLost : 0)) > 0 ? 'pos' : 'neg') + '">' + deltaFmt(nat ? nat.delta : (ban ? ban.deltaLost : null), nat ? nat.se : (ban ? ban.se : 0)) + '</td>'
         + '<td><span class="tag ' + vcls + '">' + verdict + '</span>' + extra + '</td></tr>';
@@ -171,6 +183,7 @@ export function bake(opts = {}) {
 
   function packCard(d) {
     const s1 = d.stage1;
+    const cm = closureMeta(d);
     const fresh = !bundleFp || !d.rulesFingerprint || d.rulesFingerprint === bundleFp;
     let h = '<div class="pcard" id="pack-' + esc(d.id) + '" data-union="' + (s1 ? s1.unionN : -1) + '" data-tier="' + esc(d.tier) + '">';
     h += '<div class="phead"><b class="pid">' + esc(d.id) + '</b><span class="chip ' + (d.tier === 'hard' ? 'ch' : 'cs') + '">' + (d.tier === 'hard' ? '困难' : '简单') + '</span>'
@@ -184,6 +197,13 @@ export function bake(opts = {}) {
       + '<span class="m"><b>' + (s1.switchJs == null ? '—' : s1.switchJs) + '</b>换招JS</span>'
       + '<span class="m"><b>' + fmtPct(s1.winRate) + '</b>胜率</span>'
       + '</div>';
+    const clParts = [];
+    if (cm.bds && cm.bds.elecGained > 0) clParts.push('<span>电珠闭环 <b class="' + rateCls(cm.elecRate, 0.5, 0.25) + '">' + cm.elecPct + '</b>（' + cm.bds.elecSpent + '/' + cm.bds.elecGained + '）</span>');
+    else clParts.push('<span class="mute">电珠闭环 —（未蓄电珠）</span>');
+    if (cm.bds && cm.bds.boomGained > 0) clParts.push('<span>爆珠闭环 <b class="' + rateCls(cm.boomRate, 0.5, 0.25) + '">' + cm.boomPct + '</b>（' + cm.bds.boomSpent + '/' + cm.bds.boomGained + '）</span>');
+    if (cm.cs.stickGames > 0 || (cm.cs.fsLegalDecisions || 0) > 0) clParts.push('<span>贴爆闭环 <b class="' + rateCls(cm.loopRate, 0.75, 0.25) + '">' + cm.loopPct + '</b>（' + (cm.cs.loopGames || 0) + '/' + (cm.cs.stickGames || 0) + '局）</span>');
+    else clParts.push('<span class="mute">贴爆闭环 —（未贴咒）</span>');
+    h += '<div class="clbar">' + clParts.join(' · ') + '</div>';
     if (s1.envOnlySkills.length) h += '<div class="envonly">镜像看不见但环境会：' + s1.envOnlySkills.map(k => '<i title="' + esc(keyName[k] || k) + '">' + esc(keyName[k] || k) + '</i>').join('') + '</div>';
     h += '<div class="heat">';
     for (const s of SK30) {
@@ -193,7 +213,7 @@ export function bake(opts = {}) {
       h += '<span class="cell' + dead + '" style="' + covColor(cov) + '" title="' + esc(s.name) + '（' + s.key + '）· 覆盖 ' + cov + '/120 格 · ' + uses + ' 手' + (dead ? ' · 死卡短名单' : '') + '">' + esc(s.key.slice(0, 5)) + '</span>';
     }
     h += '</div>';
-    h += strengthRows(d);
+    h += strengthRows(d, cm);
     h += '</div>';
     return h;
   }
@@ -295,6 +315,7 @@ export function bake(opts = {}) {
   html += '.fresh{font-size:10px;padding:1px 7px;border-radius:9px}.fok{background:#122b24;color:#4fd6a2}.fexp{background:#3a1515;color:#f08c8c}.when{margin-left:auto;font-size:10px;color:#69718a}';
   html += '.mrow{display:flex;gap:14px;margin:6px 0 8px}.m{font-size:11px;color:#7f879b}.m b{font-size:15px;color:#e8ecf5;margin-right:3px;font-weight:700}';
   html += '.envonly{font-size:11px;color:#8fb7ff;margin:2px 0 6px}.envonly i{font-style:normal;background:#152036;border-radius:4px;padding:1px 5px;margin-right:4px}';
+  html += '.clbar{font-size:11px;color:#9aa3ba;background:#131824;border:1px solid #1d2536;border-radius:6px;padding:3px 8px;margin:2px 0 7px}.clbar .mute{color:#5e677d}.lowu{font-style:normal;font-size:9px;opacity:.65;margin-left:2px}';
   html += '.subinfo{font-size:10px;color:#8b93a7;margin-top:2px;line-height:1.35}';
   html += '.heat{display:flex;flex-wrap:wrap;gap:3px;margin:6px 0 10px}.cell{font-size:9px;padding:2px 4px;border-radius:4px;letter-spacing:.2px}.cell.dead{outline:1px dashed #7d3b3b}';
   html += '.none{color:#69718a;font-size:12px;padding:6px 0}';
