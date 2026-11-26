@@ -1,5 +1,6 @@
 id	verdict	blocks	g4worst	g5worst	holoOther
 AR-TK2	pass	—			
+CN-DR	pass	—			
 D4a	pass	—			
 day1119-cannon-pg	pass	—			
 DAY1119-PURIFY-T2B	pass	—			
@@ -20,6 +21,7 @@ nov22-c3g-s300k	pass	—
 nov22-c4c-t20	pass	—			
 nov22-ring3-gd6a18	pass	—			
 nov22-tzt2d-stab	pass	—			
+PG-DR	pass	—			
 PUR-2P	pass	—			
 PUR-DR	pass	—			
 R-s123	pass	—			

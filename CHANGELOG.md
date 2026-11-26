@@ -4,6 +4,21 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.34 — 11-26（修复 `pg-train.mjs` 反 REINFORCE 负号 ‖ **`CN-DR` / `PG-DR`** 入 `hard` 替换退役 **`RG-CN` / `nov21-purify-dsp0`** ‖ 修复查看器 3D `roundTrip` 隔离 ‖ 夹具 `fx-pool1126c`）
+
+**这一版是什么**：定位并修复 [`training/proto2/pg-train.mjs`](training/proto2/pg-train.mjs) 中长期潜伏的 REINFORCE 梯度反号 Bug（使带惩罚的 PG 从“越罚越死电”恢复为真正压低电珠浪费），在此基础上训成 [`docs/artifacts/CN-DR.bak`](docs/artifacts/CN-DR.bak) 与 [`docs/artifacts/PG-DR.bak`](docs/artifacts/PG-DR.bak) 正式入 **`hard`**，替代高废珠低胜率（`95.6% / 44.3%` 与 `97.3% / 41.5%`）的退役旧包 `RG-CN` 与 `nov21-purify-dsp0`；同时修复 [`champion-map/viewer.mjs`](champion-map/viewer.mjs) `roundTrip()` 颜色状态隔离与补加 PG 梯度符号门禁，全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。
+
+- **修复 [`training/proto2/pg-train.mjs`](training/proto2/pg-train.mjs#L517-L518) REINFORCE 梯度反号 Bug + 门禁锁死**：
+  - `dLogPi` 返回 `+∂logπ/∂logits`，而 `pg-train.mjs` 第 518 行原写作 `g[j] *= A`（漏负号），与下方 `pv[d] -= LR*step` 组成**反 REINFORCE**（越惩罚 `死电/局` 反而从 `0.65` 翻倍至 `1.24`）；改为 `g[j] *= -A;` 后，`DR-R3E` PG 首臂（`--klModes=standard --lamExp=0.90 --penDeadElec=0.50 --beadSpendW=0.15`）将 `死电/局` 压至 `0.049`、电珠过期率由 `77.6%` 降至 `32.6%`，对照 `FS2-LE26` 同配方总废珠降至 `10.8%`。
+  - 在 [`tools/gates/meta-repo.mjs`](tools/gates/meta-repo.mjs) `L3` 补入静态 + `pg-lib.mjs` 数值符号步进回归断言，防止再次反号。
+- **`CN-DR`（`wid=7b92bfbbfdc5d756`）入 `hard` 替换退役 `RG-CN`**：
+  - 双教师蒸馏（`DR-R3E` 底 + `nov26-pg-rgcn-s1.seg2400` + `T65 2:standard@0.80`）：`fx-pool1126c` Stage 1 **`51.3%`**、`18/30`（`Stage 2 = 25 技`，保留 `hard` 唯一 `cannon`），电珠过期 `86`（较 `RG-CN` `1517` 降 `17.6×`），`bigT 67/95 (70.5%)`、`firestorm 17/22 (77.3%)`；`2P` 由 `77.0%` 改善至 `19.0% / 16.3%`；6 粒 `Arena B +30.9588pt`（6/6 正）；`promote --dry --support=2` **0 阻断**，`seatKill=0`，落图 `H=49 / S=1.77`。
+- **`PG-DR`（`wid=93064163aa5e563b`）入 `hard` 替换退役 `nov21-purify-dsp0`**：
+  - 修号后 PG（`--klModes=standard --lamExp=0.90 --penDeadElec=0.50 --beadSpendW=0.15`）+ `DR-R3E` 短程 2P 抛光：`fx-pool1126c` Stage 1 `16/30`（`Stage 2 = 24 技`），`charge` `84` 次得珠 **`65` 已花 / `19` 过期（花珠闭环 `77.4%`、废珠 `22.6%`，`2:long 14/14, 2:multi 20/20`）** vs `nov21-purify-dsp0` `97.3% (1821)`；`2P 21.0% / 18.7%`；6 粒 `Arena B +15.9117pt`；`promote` **0 阻断**，`seatKill=0`，落图 `H=58.3 / S=1.46`。
+- **修复 [`champion-map/viewer.mjs`](champion-map/viewer.mjs#L6251-L6320) 3D 自检隔离 + 全池与难度阶梯提升（`fx-pool1126c`）**：
+  - `roundTrip()` 临时切 `st.mode = 'map'` 时未隔离 `st.color = 'fam'`，导致 `mode=tree`/`3db` 下沿用 `'F'` 热力图把 `v7wall-31` 选中环冲淡（`30% < 50%`）；补齐 `bak.color` 保存/恢复后 4 视图 `map-selfcheck` 全绿 `101 PASS / 0 FAIL`。
+  - 更新池结构（`hard 17 / soft 17`, `hard arenaB 中位 17.9pt`, `bad=[]`）下 `probe-diff-ladder.mjs --pool=1` 全部四把尺明显改善：`2P rule 32.8% < 45.5% < 59.5%`（`7.7σ / 7.7σ`）、`2P legacy 21.7% < 25.0% < 30.3%`、`5P multi 2.5% < 11.4% < 16.5%`、`5P long 3.0% < 8.0% < 17.3%`。
+
 ## v2.1.33 — 11-26（A1 `rod`/`mine`/`taunt` 归因修正 ‖ A2 `use-value` `N=100` 全通过 ‖ **`FS-DR`** 入 `hard` 替换退役 **`FC-G1`** ‖ 夹具 `fx-pool1126b`）
 
 **这一版是什么**：修复 [`tools/pool-skill-report.mjs`](tools/pool-skill-report.mjs) 中三类技能结算归因漏计（`rod` mode A `voided`、`mine` 间接伤害数组 `e.from`、`tauntCheck` 守约与违规并记），完成 `N=100` 版 `use-value` 单点替换反事实先导验证，并训成低废珠电火双闭环新包 [`docs/artifacts/FS-DR.bak`](docs/artifacts/FS-DR.bak) 正式入 **`hard`**，同时将高废珠低胜率（`99.4%` / `36.4%` / `invited=1 block`）的 `FC-G1` 走完整退役流移出冠军池；全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。

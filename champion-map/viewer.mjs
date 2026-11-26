@@ -6249,7 +6249,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     return n >= 6 && DCD >= (isCh ? 50 : 20) ? [sx / n, sy / n, n] : null;
   }
   function roundTrip(setup) {
-    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels, chain: st.chain };
+    var bak = { mode: st.mode, e: st.elev, z: st.zoom3, k: st.k, iso: st.iso, labels: st.labels, chain: st.chain, color: st.color };
     /* §E449 标签钉成"不标"：这条的派发点是从**选中环的像素**反算出来的，而 labels=all 时近处点的名字会把选中环糊掉半圈
      *   ⇒ 可见弧的质心不再等于点心（实测三枚全错位，环心与 scr 差 +7/+5/-7px，按质心点下去选中了邻居）。
      *   这个病是真的，但它归"被别人的名字压住的点"那条量（上一段，出厂档实测 cov），不归指针换算这条：
@@ -6259,6 +6259,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
      *   不关掉它，差分里混进整条链 ⇒ 环心质心被拖走（实测指针往返四张图全红、"落点离环心 -1px"）。
      *   ⇒ 这条不是绕过红，是把"这一层不参与本次测量"写进测量条件；链自己的两帧差分由 §E763 那条判据管。 */
     st.chain = 0; LCHKEY = '#reset';
+    st.color = 'fam';
     setup();
     var rr = cv.getBoundingClientRect(), lo = -1, hi = -1, loY = -12, hiY = 1e9, fails = [], n = 0, dd = [];
     var loC = -1, loCY = -12;   /* 最靠下的那枚冠军（专门给它留一个名额，见下面 §E449 那段） */
@@ -6313,6 +6314,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     }
     st.sel = null; st.mode = bak.mode; st.elev = bak.e; st.zoom3 = bak.z; st.k = bak.k; st.iso = bak.iso;
     st.labels = bak.labels;
+    st.color = bak.color;
     st.chain = bak.chain; LCHKEY = '#reset';   /* §E763：与上面那条隔离成对，不许把链留在关掉的状态离开这条判据 */
     recomputeVIS(); draw();
     return { ok: fails.length === 0 && n >= 2 && nLinp >= 1,

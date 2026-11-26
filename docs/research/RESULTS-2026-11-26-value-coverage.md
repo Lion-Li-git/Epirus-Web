@@ -2,7 +2,7 @@
 
 > **对应计划**：[`PLAN-2026-11-26-value-coverage.md`](PLAN-2026-11-26-value-coverage.md) · [`PREREG-2026-11-26-use-value-pilot.md`](PREREG-2026-11-26-use-value-pilot.md)  
 > **证据目录**：[`evidence-2026-11-26-value-coverage/`](evidence-2026-11-26-value-coverage/)  
-> **状态**：**已完成并收口至 `v2.1.33`**（A1 归因修复与全池验证完成 · A2 `N=100` 完整先导通过全部对照 · `FS-DR` 完整走完入池链并替代退役 `FC-G1`，全池维持 `34` 枚 `17/17`）。
+> **状态**：**已完成并收口至 `v2.1.34`**（v2.1.33 完成 A1/A2 与 `FS-DR` 替换 `FC-G1` · v2.1.34 修复 [`training/proto2/pg-train.mjs`](../../training/proto2/pg-train.mjs) 反 REINFORCE 梯度符号并完成 `CN-DR` / `PG-DR` 替换退役 `RG-CN` / `nov21-purify-dsp0`，全池维持 `34` 枚 `17/17`）。
 
 ---
 
@@ -69,3 +69,26 @@
 1. `hard` 侧高废珠载体（`nov21-taunt-dsp0b` `97.8%`、`nov21-purify-dsp0` `97.3%`、`RG-CN` `95.6%`）做净收益与珠闭环蒸馏；
 2. `soft` 侧 `MX8-R6C-KL`（A2 已证 `charge`/`guard` 负收益 + 高废珠 `93.3%`）在保住 `armor`/`rod` 覆盖的前提下替换升级；
 3. 将 `probe-use-value-pilot.mjs` 中的 `use-value` 反事实诊查纳入后续候选包筛查流程。
+
+---
+
+## 5. `v2.1.34` 续波：修复 `pg-train.mjs` 梯度反号 Bug ＆ `CN-DR` / `PG-DR` 替换 `RG-CN` / `nov21-purify-dsp0`
+
+### 5.1 根因定位：`training/proto2/pg-train.mjs` 反 REINFORCE 符号翻转
+- **现象**：按 §4 队列向 `DR-R3E` / `RG-CN` 施加 `--penDeadElec` / `--lamExp` 后，`死电/局` 不降反倍增（`0.65 → 1.24`），且总净分退化。
+- **定位与验证**：[`training/proto2/pg-lib.mjs`](../../training/proto2/pg-lib.mjs) `dLogPi` 返回 **`+∂logπ/∂logits`**（`selftest3` 六腿核实与 `DR-R3E` 单步试探证实：`pv -= 0.0001*grad` 不升反降，`pv += 0.0001*grad` 将被选动作概率从 `0` 升至 `0.314870`）；`pg-train.mjs` KL 锚（`-qk·u`）与 `supfit-gd.mjs`（`-w·u`）均已取负以配合 Adam 的 `pv[d] -= LR*step`，唯独第 518 行 REINFORCE 写作 `g[j] *= A`（漏负号）。
+- **修复与锁死**：在 [`pg-train.mjs`](../../training/proto2/pg-train.mjs#L517-L518) 改为 `g[j] *= -A;`，并在 [`tools/gates/meta-repo.mjs`](../../tools/gates/meta-repo.mjs) `L3` 加静态正则与 `pg-lib.mjs` 单步上升数值回归门。修号后同配方立即奏效：`DR-R3E` 首臂（`nov26-pg-dr-s2`，`--klModes=standard --lamExp=0.90 --penDeadElec=0.50 --beadSpendW=0.15`）将 `死电/局` 压至 `0.049`、电珠过期 `267 (77.6%) → 30 (32.6%)`；对照 `FS2-LE26` 同配方将总废珠率压至 `10.8%`（`boom 658/647/6`, `fs 225/225`）。
+
+### 5.2 两枚入 `hard` 替代包验证与退池交接（`fx-pool1126c`）
+- **`CN-DR`（[`docs/artifacts/CN-DR.bak`](../artifacts/CN-DR.bak) · `wid=7b92bfbbfdc5d756`，替 `RG-CN`）**：`DR-R3E` 底 + PG 减珠 `nov26-pg-rgcn-s1.seg2400` + `T65(2:standard@0.80)`；6 粒 `Arena B +30.9588pt`（6/6 正，较 `RG-CN -1.99pt` 大幅跃升）、`fx-pool1126c` Stage 1 **`51.3%`** / `18/30` / `Stage 2 = 25 技`、`elec` 过期 `86`（较 `RG-CN 1517` 降 `17.6×`）、保留 `hard` 唯一 `cannon` 覆盖，`2P 19.0%/16.3%`（原 `RG-CN 77.0%`），`promote` **0 阻断**、`seatKill=0`、`H=49 / S=1.77`。
+- **`PG-DR`（[`docs/artifacts/PG-DR.bak`](../artifacts/PG-DR.bak) · `wid=93064163aa5e563b`，替 `nov21-purify-dsp0`）**：`nov26-pg-dr-s2.seg2400` + `DR-R3E(2:standard@0.85)` 短程 2P 抛光；6 粒 `Arena B +15.9117pt`（`H=58.3 / S=1.46`）、`fx-pool1126c` Stage 1 `16/30` / `Stage 2 = 24 技`、`charge` `84` 次得珠 **`65` 已花 / `19` 过期（花珠闭环 `77.4%`、废珠 `22.6%`）**（原 `nov21-purify-dsp0 97.3% / 1821 过期`），`2P 21.0%/18.7%`，`promote` **0 阻断**、`seatKill=0`。
+- 退役两包的 `.json` 均先备份至仓外隔离目录 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-26\champion-map\data\skill-report\` 再执行 `pool-add --retire`（`.bak` 保留在 `docs/artifacts/`），同时修复 [`champion-map/viewer.mjs`](../../champion-map/viewer.mjs) `roundTrip()` 的 `st.color = 'fam'` 隔离（4 视图 `map-selfcheck` 均 `101 PASS / 0 FAIL`）。
+
+### 5.3 `fx-pool1126c` 更新后 `34` 池结构与难度阶梯（`hard 17 / soft 17` · `bad=[]`）
+- **带内指标（`pool-xray` / `diversity-full`）**：`hard`（17 枚）`arenaB` 中位升至 **`17.9pt`**（v2.1.33 `16.6pt`），并集维持 **`27` 技**，簇内成对 L1 中位 `0.292`（质心 `0.215`）；`soft`（17 枚）`arenaB` 中位 **`2.3pt`**，并集 **`27` 技**，簇内成对 L1 中位 `0.454`。
+- **难度阶梯（`probe-diff-ladder.mjs --pool=1`）**：
+  - `2P rule`（1500g `95001`）：困难 **`32.8%`** < 普通 **`45.5%`** < 简单 **`59.5%`**（`-12.67 ±3.21pt, 7.7σ` / `+14.00 ±3.54pt, 7.7σ`）；
+  - `2P legacy`（1500g `95001`）：困难 **`21.7%`** < 普通 **`25.0%`** < 简单 **`30.3%`**（`-3.27 ±2.70pt, 2.4σ` / `+5.27 ±3.03pt, 3.4σ`）；
+  - `5P multi`（800g `95002`）：困难 **`2.5%`** < 普通 **`11.4%`** < 简单 **`16.5%`**（`-8.88 ±2.44pt, 7.1σ` / `+5.13 ±3.37pt, 3.0σ`）；
+  - `5P long`（400g `95001`）：困难 **`3.0%`** < 普通 **`8.0%`** < 简单 **`17.3%`**（`-5.00 ±3.06pt, 3.2σ` / `+9.25 ±4.09pt, 4.4σ`）。
+- **下轮优先队列（[`replacement-priority.tsv`](evidence-2026-11-26-value-coverage/replacement-priority.tsv)）**：`hard` 侧高废珠前排现剩 `nov21-taunt-dsp0b`（`97.8%`）、`TF-DR`（`94.0%`）、`MN-DR`（`91.9%`）、`MT-DR`（`91.0%`）；`soft` 侧仍为 `MX8-R6C-KL`（保 `armor/rod` 覆盖下升级）。

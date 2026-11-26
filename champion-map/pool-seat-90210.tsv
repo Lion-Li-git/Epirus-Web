@@ -143,3 +143,7 @@ PUR-2P	docs/artifacts/PUR-2P.bak	multi	200	90210	0	0	0	0	0	0	0	0.00	0.0	全程�
 PUR-2P	docs/artifacts/PUR-2P.bak	long	200	90210	4	0	0	0	0	4	4	1.71	4.0	全程刷反弹	6
 FS-DR	docs/artifacts/FS-DR.bak	multi	200	90210	0	8	0	13	1	0	0	3.14	13.0	只枪压制	4
 FS-DR	docs/artifacts/FS-DR.bak	long	200	90210	4.5	0.5	0	4	0.5	4.5	4.5	2.64	4.5	全程刷反弹	3.4285714285714284
+CN-DR	docs/artifacts/CN-DR.bak	multi	200	90210	0	0.5	0	0	0	0	0	0.07	0.5	全程只防御	3.2857142857142856
+CN-DR	docs/artifacts/CN-DR.bak	long	200	90210	5	0	0	0.5	0	5	5	2.21	5.0	全程刷反弹	1.1428571428571428
+PG-DR	docs/artifacts/PG-DR.bak	multi	200	90210	0	0.5	0	1	0	0	0	0.21	1.0	只枪压制	10.857142857142858
+PG-DR	docs/artifacts/PG-DR.bak	long	200	90210	3.5	0	0	0	0	3.5	3.5	1.50	3.5	全程刷反弹	2.857142857142857

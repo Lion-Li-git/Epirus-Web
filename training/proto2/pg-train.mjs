@@ -514,7 +514,8 @@ while (games < GAMES) {
     const act = tapeForward(tp, pv, ly);
     const t = tailOf(act.logits, tp.keys, TEMP);
     const g = dLogPi(d.idx, act.logits, tp.keys, TEMP, t);
-    for (let j = 0; j < g.length; j++) g[j] *= A;
+    /* dLogPi 返回 +∂logπ/∂logits，下方 Adam 做 pv -= LR*grad（与 supfit-gd 的 -w·dLogPi 及 KL 锚的 -qk·dLogKeyP 同口径：最小化损失 J_loss = -A·logπ ⇒ 乘 -A）。 */
+    for (let j = 0; j < g.length; j++) g[j] *= -A;
     tapeBackward(tp, pv, ly, act, g, grad);
     if ((KL_W > 0 || KL_CAND > 0) && inKl) {
       /* 锚共用一次冻结前向（klW/klCand 同一次 act0，不双付费）。用未 drop 的 d.tape：锚不跟随 dropout 噪声。 */

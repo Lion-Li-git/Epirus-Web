@@ -127,6 +127,22 @@ t('L3 复现工具必须保留冷/热启动断言（v1.5.128 诚实化：原名�
     'WR_TOL 不得在引擎内读 env（CLI 沙箱无 process => 两条路取到不同值）');
   ok(evo.indexOf('setWrTol') >= 0, 'WR_TOL 应由调用方通过 setWrTol 显式传入');
 
+  /* v2.1.34：「PG 加罚珠后死电反而翻倍」的根因 = pg-train.mjs 反传前少了一个负号（反 REINFORCE）：
+   *   dLogPi 返回 +∂logπ/∂logits，KL 锚与 supfit-gd 均取负（-qk·u / -w·u）配合下方 `pv[d] -= LR*step`。
+   *   若直接 `g[j] *= A` 则最小化 +A·logπ（越奖越降概率）。 */
+  const pgTrain = readFileSync('training/proto2/pg-train.mjs', 'utf8');
+  ok(/g\[j\]\s*\*=\s*-A\b/.test(pgTrain),
+    'pg-train.mjs 传给 tapeBackward 的 REINFORCE 梯度必须乘 -A（否则与 pv -= LR*step 同号 = 反 REINFORCE）');
+  const signProbe = spawnSync(process.execPath, ['--input-type=module', '-e',
+    "import { tailOf, dLogPi } from './training/proto2/pg-lib.mjs';" +
+    "const logits = new Float64Array([0, 0.2, -0.3]), keys = ['charge','gun','guard'], A = 1.5, lr = 0.05;" +
+    "const t0 = tailOf(logits, keys, 1), g = dLogPi(0, logits, keys, 1, t0);" +
+    "const l2 = new Float64Array(logits); for (let j = 0; j < g.length; j++) l2[j] -= lr * (-A * g[j]);" +
+    "const p0 = t0.probs[0], p1 = tailOf(l2, keys, 1).probs[0];" +
+    "if (!(p1 > p0)) { console.error('sign_fail', p0, p1); process.exit(1); }"
+  ], { encoding: 'utf8' });
+  eq(signProbe.status, 0, 'pg-lib dLogPi 沿 -(-A*g) 下降一步必须提升正优势动作概率：' + (signProbe.stderr || ''));
+
   /* v1.3.56：「浏览器训练不可复现」的根因不是随机源，是**输入没被记录**：
    * 浏览器按钮走 Node 服务，而 index.html 的"从头训练"默认不勾 ⇒ 默认热启动，
    * 种群围绕 js/bundled-champion*.js 长出来。那个文件会随每次训练变化 ⇒ 输入变了。
