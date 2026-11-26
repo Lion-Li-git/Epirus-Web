@@ -133,3 +133,11 @@ TF2-RD	docs/artifacts/TF2-RD.bak	multi	200	90211	0	0	0	0.5	0	0	0	0.07	0.5	只枪
 TF2-RD	docs/artifacts/TF2-RD.bak	long	200	90211	0.5	0	0	3	0	0.5	0.5	0.64	3.0	只枪压制	2.2857142857142856
 TF2-DR	docs/artifacts/TF2-DR.bak	multi	200	90211	0	0	0	5.5	0	0	0	0.79	5.5	只枪压制	6
 TF2-DR	docs/artifacts/TF2-DR.bak	long	200	90211	2	0	0	8	0	2	2	2.00	8.0	只枪压制	4.142857142857143
+MT-DR	docs/artifacts/MT-DR.bak	multi	200	90211	0	0	0	5.5	0.5	0	0	0.86	5.5	只枪压制	7.857142857142857
+MT-DR	docs/artifacts/MT-DR.bak	long	200	90211	0	0	0	1	0	0	0	0.14	1.0	只枪压制	5
+JN-DR	docs/artifacts/JN-DR.bak	multi	200	90211	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	19.142857142857142
+JN-DR	docs/artifacts/JN-DR.bak	long	200	90211	1	0	0	0	0	1	1	0.43	1.0	全程刷反弹	5.428571428571429
+MN-DR	docs/artifacts/MN-DR.bak	multi	200	90211	0	0	0	1	0	0	0	0.14	1.0	只枪压制	7.142857142857143
+MN-DR	docs/artifacts/MN-DR.bak	long	200	90211	1.5	0	0	0	0	1.5	1.5	0.64	1.5	全程刷反弹	7.571428571428571
+PUR-2P	docs/artifacts/PUR-2P.bak	multi	200	90211	0	0	0	0	0	0	0	0.00	0.0	全程刷反弹	9.714285714285714
+PUR-2P	docs/artifacts/PUR-2P.bak	long	200	90211	3	0	0	0	0	3	3	1.29	3.0	全程刷反弹	5.142857142857143

@@ -6,6 +6,9 @@ DAY1119-PURIFY-T2B	pass	—
 DR-R3E	pass	—			
 E3	pass	—			
 FS2-LE26	pass	—			
+JN-DR	pass	—			
+MN-DR	pass	—			
+MT-DR	pass	—			
 night2-E1-det-strong	pass	—			
 night2-X2b-fuse	pass	—			
 nov21-armor-tzt2d	pass	—			
@@ -15,6 +18,7 @@ nov22-c3g-s300k	pass	—
 nov22-c4c-t20	pass	—			
 nov22-ring3-gd6a18	pass	—			
 nov22-tzt2d-stab	pass	—			
+PUR-2P	pass	—			
 PUR-DR	pass	—			
 R-s123	pass	—			
 ROD-DR	pass	—			
@@ -318,4 +322,3 @@ TK-FS3	pass	—
 nov24-bandsym-jin	block	breadth-multi			
 TF-RDMX	pass	—			
 TF2-RDC	pass	—			
-PUR-2P	pass	—

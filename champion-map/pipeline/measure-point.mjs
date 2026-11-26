@@ -395,13 +395,13 @@ if (!SKIP_PROJ) {
 let projFile = '';
 if (!SKIP_PROJ) {
   const PT = readTable(join(ST, ID + '-proj-input.tsv'));
-  const prh = ['pack_id', 'xt', 'yt', 'xt3', 'yt3', 'zt3'].concat(VERSION_PROJ_COLS);
+  const curProjHdr = readTable(join(HERE, 'data/projections.tsv')).header;
+  const prh = curProjHdr.concat(VERSION_PROJ_COLS.filter((c) => !curProjHdr.includes(c)));
   const prs = [prh];
   for (const r of PT.rows) {
     const id = r[PT.ix.id];
     if (!id) continue;
-    prs.push([id, r[PT.ix.xt], r[PT.ix.yt], r[PT.ix.xt3], r[PT.ix.yt3], r[PT.ix.zt3]]
-      .concat(VERSION_PROJ_COLS.map((c) => r[PT.ix[c]] ?? '')));
+    prs.push(prh.map((c) => c === 'pack_id' ? id : (PT.ix[c] !== undefined ? (r[PT.ix[c]] ?? '') : '')));
   }
   projFile = join(ST, ID + '-projections.tsv');
   writeFileSync(projFile, prs.map((x) => x.join('\t')).join('\n') + '\n', 'utf8');

@@ -68,3 +68,6 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-25T15:09:26.339Z	TF-RDMX	scratch/arms/TF-RDMX.bak	ea39a67841c2c3ca	82200	exam	data/arena-league-1118.tsv	0.412239	0.139722
 2026-11-25T15:14:39.043Z	TF2-RDC	scratch/arms/TF2-RDC.bak	127c9085246741e6	82200	exam	data/arena-league-1118.tsv	0.061943	0.019554
 2026-11-25T15:19:48.096Z	PUR-2P	scratch/arms/PUR-2P.bak	af8cc5eca1a1c883	82200	exam	data/arena-league-1118.tsv	0.412239	0.121883
+2026-11-26T03:25:03.381Z	MT-DR	docs/artifacts/MT-DR.bak	00845dfa3bbedf73	82200	exam	data/arena-league-1118.tsv	0.521934	0.162373
+2026-11-26T03:26:21.011Z	JN-DR	docs/artifacts/JN-DR.bak	9f5bbfa2e4fe96c6	82200	exam	data/arena-league-1118.tsv	0.521934	0.154181
+2026-11-26T03:27:58.230Z	MN-DR	docs/artifacts/MN-DR.bak	5514214440b96bb0	82200	exam	data/arena-league-1118.tsv	0.467431	0.143729

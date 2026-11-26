@@ -4,6 +4,23 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.32 — 11-26（`MT-DR`/`JN-DR`/`MN-DR`/`PUR-2P` 升级 `hard` ‖ 退役 `nov22-c3g-s300k` ‖ 34 池 `17/17` ‖ 修复 `measure-point` 投影表头顺序）
+
+**这一版是什么**：在保持单一统一池（`D-34`/`D-35`）下，基于洁净 `DR-R3E` 底座以 `--rolloutMode=game` + 单技能 `--rareOnly` + `2:standard@4` + `T65-RINGBEAD@0.80` 训成并接纳 4 枚强 `2P` 替代包入 **`hard`**：[`docs/artifacts/MT-DR.bak`](docs/artifacts/MT-DR.bak)（补回 `hard` 缺失的 `miniT`）、[`docs/artifacts/JN-DR.bak`](docs/artifacts/JN-DR.bak)（替代 `OBS6E9`）、[`docs/artifacts/MN-DR.bak`](docs/artifacts/MN-DR.bak)（替代 `RG-MN`）与 [`docs/artifacts/PUR-2P.bak`](docs/artifacts/PUR-2P.bak)（替代 `R-GD12`）；`OBS6E9`/`RG-MN`/`R-GD12` 下放 `soft`，同时退役在新 `soft` 带标尺下触发 `seatKill=3`（`D234` 阻断）的 `nov22-c3g-s300k`，全池调整为 **`34` 枚（`hard 17 / soft 17`）**。
+
+- **4 枚 `hard` 新包（`v:92 / S1o`，`promote --dry --support=2` 0 阻断，`90210/90211` `seatKill=0`）**：
+  - `MT-DR`（`wid=dc222c8e7a090b40`）：`Stage 1` 并集 `16/30`（`miniT 5/120` 36 次，恢复 `hard miniT` 有效覆盖），`Arena B +28.12pt`（6/6 正），`2P` 500 局（`seed=95001`）`rule 17.4% / legacy 19.2%`，`G4 0%/1%` / `G5 0%/0%`。
+  - `JN-DR`（`wid=27923b8d6ee584e8`）：`Stage 1` `18/30`（`jinshield 25/120` 445 次 + `miniT 3/120` 37 次），`Arena B +37.43pt`（6/6 正），`2P` `rule 21.8% / legacy 12.4%`（原 `OBS6E9` `93.0% / 28.8%`），`G4 0%/2.3%` / `G5 0%/1%`。
+  - `MN-DR`（`wid=452ae508bd062653`）：`Stage 1` `15/30`（`mine 14/120` 129 次），`Arena B +13.59pt`，`2P` `rule 22.0% / legacy 19.6%`（原 `RG-MN` `89.4% / 41.6%`），`G4 0%/0.3%` / `G5 0%/0%`。
+  - `PUR-2P`（`wid=25140b2b9bc576e6`）：`Stage 1` `17/30`（`purify 1/120`、`rod 2/120`、`ring 14/120`），`Arena B +34.69pt`（6/6 正），`2P` `rule 16.2% / legacy 13.6%`（原 `R-GD12` `62.6% / 14.6%`），`G4 0%/0%` / `G5 0%/0%`。
+- **终态 `34` 池并集与难度阶梯（统一池）**：
+  - `Stage 1` 有效并集（`>=3` 格）：全池 `28/30`，`hard (17)` `27/30`（恢复 `miniT`，仅 `armor`/`mine`/`purify` 等稀有卡池内互有侧重）。
+  - `2P`（1500 局，`seed=95001`）：`rule` `困难 37.5% < 普通 46.4% < 简单 59.5%`（`-8.87 ±3.34pt 5.2σ` / `+13.07 ±3.51pt 7.3σ`）；`legacy` `21.3% < 25.9% < 30.3%`（`-4.60 ±2.73pt 3.3σ` / `+4.33 ±3.02pt 2.8σ`）。
+  - `5P`：`multi` 800 局（`seed=95002`）`2.8% < 12.5% < 16.5%`；`long` 400 局（`seed=95001`）`6.8% < 9.5% < 17.3%`。
+- **测绘链修复与清理**：
+  - 修复 [`champion-map/pipeline/measure-point.mjs`](champion-map/pipeline/measure-point.mjs#L397-L406) 生成投影表头顺序与 `champion-map/data/projections.tsv` 不一致的问题（改为动态读取现役表头列序）；地图四视图 `101 PASS / 0 FAIL`。
+  - 清理遗留仓外 worktree（`srv-wt-s0-caebdf45`）、9 个临时 `%TEMP%/epirus-*` 目录（经回收站），退池的 `nov22-c3g-s300k` 原始 `skill-report` JSON 同步备份至仓外隔离目录。详情见 [`RESULTS-2026-11-26-hard-2p-upgrades.md`](docs/research/RESULTS-2026-11-26-hard-2p-upgrades.md)。
+
 ## v2.1.31 — 11-26（三维行为轴按版本独立投影 ‖ 过线/势曲面默认 40%/50% ‖ transfer 计量回归腿）
 
 **这一版是什么**：修复冠军演化图版本切换只替换二维坐标、三维仍共用全库投影的问题；1.8 / 2.0 子集现在各自拟合二维与三维坐标，页面同步切换并重建三维曲面。过线曲面默认阈值由 30% 调到 40%，势曲面由 67% 调到 50%。`skill-mastery` 增加 transfer 已知答案回传腿，并修正 miniT 子断言未计入总失败的问题。
