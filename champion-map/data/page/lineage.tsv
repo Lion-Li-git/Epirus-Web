@@ -1000,45 +1000,45 @@ P9-CN-MINI-CONT	22	2.0 obs6 v7 蒸馏（11-14）	2026-11-18T08:12:38	77206	CONT	
 night2-S6	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-18T19:27:55	20261031	S6	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	d12c18baca6c1eab	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 night2-X2b-fuse	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-18T23:20:27	20261122	fuse	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	629d4ae567266821	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 day1119-cannon-pg	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-19T03:47:18	7	pg	MX8-R6C-KL	MX8-R6C-KL	MX8-R6C-KL	ae28c0aaf8bf6098	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
-night2-E1-det-strong	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-19T16:18:10	2026112001	strong	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	862e0ef47bcf06f7	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+night2-E1-det-strong	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-19T16:18:10	2026112001	strong	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	862e0ef47bcf06f7	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov21-purify-dsp0	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-21T08:36:57	20261031	dsp0	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	b4a65ee4437584cf	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov21-taunt-dsp0b	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-21T08:55:00	20261031	dsp0b	EQ-S4-E9	EQ-S4-E9	EQ-S4-E9	db7883520de2e2fe	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov21-rod-tzt2d-r10	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-21T13:04:58	20261031	r10	TZT2D	TZT2D	TZT2D	da2981d21406ca06	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 nov22-tzt2d-stab	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-21T18:32:41	20261031	stab	TZT2D	TZT2D	TZT2D	d8966a8cfcb0610f	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 nov21-armor-tzt2d	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-21T15:27:28	20261031	tzt2d	TZT2D	TZT2D	TZT2D	7819b2196ba23fca	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
-nov22-c3g-s300k	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-21T22:54:17	7	s300k	night2-E1-det-strong	night2-E1-det-strong	night2-E1-det-strong	39f605c3f8b9a62c	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+nov22-c3g-s300k	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-21T22:54:17	7	s300k	night2-E1-det-strong	night2-E1-det-strong	night2-E1-det-strong	39f605c3f8b9a62c	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov22-c4c-t20	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-22T04:13:45	20261031	t20	TZT2D	TZT2D	TZT2D	e658497a05bf30b2	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 R-GD12	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-22T06:10:51	20261031	GD12	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	7e55abc3894ca3e2	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 AR-TK2	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-22T06:04:52	20261031	TK2	TZT2D	TZT2D	TZT2D	b5d4cbc6af57bbdd	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
 AR-TK3	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-22T07:05:36	20261031	TK3	TZT2D	TZT2D	TZT2D	2c6c00374c900142	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
-nov22-c3b-kw100	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-21T20:17:40	7	kw100	night2-E1-det-strong	night2-E1-det-strong	night2-E1-det-strong	b5f790da01cbe960	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+nov22-c3b-kw100	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-21T20:17:40	7	kw100	night2-E1-det-strong	night2-E1-det-strong	night2-E1-det-strong	b5f790da01cbe960	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov22-ring3-gd6a18	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-22T13:34:39	20261031	gd6a18	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	a64b53c90367221a	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-FS-G2	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-23T06:41:57	20261031	G2	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	892ba770d1dfca0b	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+FS-G2	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-23T06:41:57	20261031	G2	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	892ba770d1dfca0b	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 CN-G1	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T07:17:46	20261031	G1	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	a3f63c60a01e4f35	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 MN-G1	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T07:47:30	20261031	G1	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	79e3b76bbf41c67a	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 RG-MN	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T08:27:26	20261031	MN	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	7e4628cbec354183	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 HL-G1	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T09:02:58	20261031	G1	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	803f773db2e563f0	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 RG-CN	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T09:26:06	20261031	CN	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	6f926e8b926fa719	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-FC-G1	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-23T19:41:38	20261103	G1	RG-CN	RG-CN	RG-CN	cd0d19ba78e411cf	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-FC-S1	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-23T21:50:40	20261101	S1	MX8-CN-M	MX8-CN-M	MX8-CN-M	9390478ce2e1ba00	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
-TK-FS4	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-24T03:30:14	20261031	FS4	FS-G2	FS-G2	FS-G2	ac126b3320bd4ed5	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-nov24-fsclose-f35	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-23T16:44:13	20261031	f35	RG-CN	RG-CN	RG-CN	fb1faed43876e347	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-nov24-pierce3-20261101	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-23T18:50:07	20261101	20261101	RG-CN	RG-CN	RG-CN	8907dfc2ed48eb51	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-TK-FS1	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-24T03:20:41	20261031	FS1	FS-G2	FS-G2	FS-G2	8b8ae7364cb50487	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-TK-FS3	25	2.0 obs6.5 天火闭环与双协同演进	2026-11-24T03:31:07	20261031	FS3	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	81f1b883d7242adb	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+FC-G1	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-23T19:41:38	20261103	G1	RG-CN	RG-CN	RG-CN	cd0d19ba78e411cf	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+FC-S1	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-23T21:50:40	20261101	S1	MX8-CN-M	MX8-CN-M	MX8-CN-M	9390478ce2e1ba00	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	seedpack-wid						
+TK-FS4	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-24T03:30:14	20261031	FS4	FS-G2	FS-G2	FS-G2	ac126b3320bd4ed5	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+nov24-fsclose-f35	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-23T16:44:13	20261031	f35	RG-CN	RG-CN	RG-CN	fb1faed43876e347	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+nov24-pierce3-20261101	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-23T18:50:07	20261101	20261101	RG-CN	RG-CN	RG-CN	8907dfc2ed48eb51	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+TK-FS1	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-24T03:20:41	20261031	FS1	FS-G2	FS-G2	FS-G2	8b8ae7364cb50487	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
+TK-FS3	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-24T03:31:07	20261031	FS3	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	EQ-S4-GD6ATEACH	81f1b883d7242adb	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
 nov24-bandsym-jin	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-23T18:26:44	20261031	jin	MX6-GD-TF20	MX6-GD-TF20	MX6-GD-TF20	33e6610b59f47ad4	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	hash						
-T65-RINGBEAD	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-24T14:24:09.430Z	unknown		RING-MINIT-CONT	RING-MINIT-CONT	RING-MINIT-CONT	00065fc589070d4e																		soup	FS-G2	FS-G2	soup			
-SOFT-RING-C3G25	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-24T17:42:44.057Z	20261125		nov22-c3g-s300k	nov22-c3g-s300k	nov22-c3g-s300k	8c7030eb03258b17																		seedpack-wid						
-FS2-LE26	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T03:40:11.249Z	20261126		FS-G2	FS-G2	FS-G2	56806d43e003f89b																		seedpack-wid						
-DR-R3E	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T06:50:56.676Z	20261125		nov22-ring3-gd6a18	nov22-ring3-gd6a18	nov22-ring3-gd6a18	eae4b0ad4013c202																		seedpack-wid						
-ROD-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T08:00:34.870Z	20261126		DR-R3E	DR-R3E	DR-R3E	c5f68b29031ab56c																		seedpack-wid						
-PUR-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T07:58:27.436Z	20261125		DR-R3E	DR-R3E	DR-R3E	7fd8b3c1d487dcdd																		seedpack-wid						
-TF-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:32:47.732Z	20261127		DR-R3E	DR-R3E	DR-R3E	ac6b3456fc2cebe4																		seedpack-wid						
-TF2-RD	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:16:46.521Z	20261125		ROD-DR	ROD-DR	ROD-DR	ccc8268b8e386077																		seedpack-wid						
-TF2-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:26:23.410Z	20261126		DR-R3E	DR-R3E	DR-R3E	97430ee6cf744e0f																		seedpack-wid						
-TF-RDMX	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:16:47.918Z	20261125		ROD-DR	ROD-DR	ROD-DR	99026fd1f15d68cf																		seedpack-wid						
-TF2-RDC	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T14:25:29.394Z	20261126		ROD-DR	ROD-DR	ROD-DR	5fe330fa48e21c93																		seedpack-wid						
-PUR-2P	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-25T08:25:33.360Z	20261128		PUR-DR	PUR-DR	PUR-DR	25140b2b9bc576e6																		seedpack-wid						
-MT-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-26T02:56:46.938Z	20261127		DR-R3E	DR-R3E	DR-R3E	dc222c8e7a090b40																		seedpack-wid						
-JN-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-26T02:59:25.410Z	20261126		DR-R3E	DR-R3E	DR-R3E	27923b8d6ee584e8																		seedpack-wid						
-MN-DR	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-26T02:48:01.635Z	20261126		DR-R3E	DR-R3E	DR-R3E	452ae508bd062653																		seedpack-wid						
+T65-RINGBEAD	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-24T14:24:09.430Z	unknown		RING-MINIT-CONT	RING-MINIT-CONT	RING-MINIT-CONT	00065fc589070d4e																		soup	FS-G2	FS-G2	soup			
+SOFT-RING-C3G25	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-24T17:42:44.057Z	20261125		nov22-c3g-s300k	nov22-c3g-s300k	nov22-c3g-s300k	8c7030eb03258b17																		seedpack-wid						
+FS2-LE26	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T03:40:11.249Z	20261126		FS-G2	FS-G2	FS-G2	56806d43e003f89b																		seedpack-wid						
+DR-R3E	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T06:50:56.676Z	20261125		nov22-ring3-gd6a18	nov22-ring3-gd6a18	nov22-ring3-gd6a18	eae4b0ad4013c202																		seedpack-wid						
+ROD-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T08:00:34.870Z	20261126		DR-R3E	DR-R3E	DR-R3E	c5f68b29031ab56c																		seedpack-wid						
+PUR-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T07:58:27.436Z	20261125		DR-R3E	DR-R3E	DR-R3E	7fd8b3c1d487dcdd																		seedpack-wid						
+TF-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T14:32:47.732Z	20261127		DR-R3E	DR-R3E	DR-R3E	ac6b3456fc2cebe4																		seedpack-wid						
+TF2-RD	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T14:16:46.521Z	20261125		ROD-DR	ROD-DR	ROD-DR	ccc8268b8e386077																		seedpack-wid						
+TF2-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T14:26:23.410Z	20261126		DR-R3E	DR-R3E	DR-R3E	97430ee6cf744e0f																		seedpack-wid						
+TF-RDMX	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T14:16:47.918Z	20261125		ROD-DR	ROD-DR	ROD-DR	99026fd1f15d68cf																		seedpack-wid						
+TF2-RDC	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T14:25:29.394Z	20261126		ROD-DR	ROD-DR	ROD-DR	5fe330fa48e21c93																		seedpack-wid						
+PUR-2P	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-25T08:25:33.360Z	20261128		PUR-DR	PUR-DR	PUR-DR	25140b2b9bc576e6																		seedpack-wid						
+MT-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-26T02:56:46.938Z	20261127		DR-R3E	DR-R3E	DR-R3E	dc222c8e7a090b40																		seedpack-wid						
+JN-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-26T02:59:25.410Z	20261126		DR-R3E	DR-R3E	DR-R3E	27923b8d6ee584e8																		seedpack-wid						
+MN-DR	25	2.0 obs6.5 强包底座与多技能协同演进	2026-11-26T02:48:01.635Z	20261126		DR-R3E	DR-R3E	DR-R3E	452ae508bd062653																		seedpack-wid						

@@ -19,6 +19,7 @@
   - `5P`：`multi` 800 局（`seed=95002`）`2.8% < 12.5% < 16.5%`；`long` 400 局（`seed=95001`）`6.8% < 9.5% < 17.3%`。
 - **测绘链修复与清理**：
   - 修复 [`champion-map/pipeline/measure-point.mjs`](champion-map/pipeline/measure-point.mjs#L397-L406) 生成投影表头顺序与 `champion-map/data/projections.tsv` 不一致的问题（改为动态读取现役表头列序）；地图四视图 `101 PASS / 0 FAIL`。
+  - 家族图分类校正：`fam25` 扩为「2.0 obs6.5 强包底座与多技能协同演进」，将 `DR-R3E` 续训/对照线与 `T65-RINGBEAD`、`FS2-LE26`、`SOFT-RING-C3G25` 共 15 枚从 `fam24` 迁入；池内 `fam24/fam25` 由 `27/4` 调整为 `14/17`，自动归族规则同步扩展。
   - 清理遗留仓外 worktree（`srv-wt-s0-caebdf45`）、9 个临时 `%TEMP%/epirus-*` 目录（经回收站），退池的 `nov22-c3g-s300k` 原始 `skill-report` JSON 同步备份至仓外隔离目录。详情见 [`RESULTS-2026-11-26-hard-2p-upgrades.md`](docs/research/RESULTS-2026-11-26-hard-2p-upgrades.md)。
 
 ## v2.1.31 — 11-26（三维行为轴按版本独立投影 ‖ 过线/势曲面默认 40%/50% ‖ transfer 计量回归腿）

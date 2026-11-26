@@ -121,8 +121,8 @@ function autoFamLabel(id, dims, m) {
     if (/^(OBS6-SHAPEDIST-V3|OBS6B2|DIV-V3-|OBS6-UNIFIED-|EQ-|BASE-)/.test(id)) {
       return '2.0 obs6.5 V3 路由与统一单包（11-16）';
     }
-    if (/^(FS-|FC-|TK-FS|night2-E1|nov22-c3|nov24-(?:fsclose|pierce))/.test(id)) {
-      return '2.0 obs6.5 天火闭环与双协同演进';
+    if (/^(FS-|FS2-|FC-|TK-FS|T65-RINGBEAD|SOFT-RING-C3G|DR-|ROD-DR|PUR-DR|PUR-2P|TF(?:2)?-(?:DR|RD|RDMX|RDC)|MT-DR|JN-DR|MN-DR|night2-E1|nov22-c3|nov24-(?:fsclose|pierce))/.test(id)) {
+      return '2.0 obs6.5 强包底座与多技能协同演进';
     }
     if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|RG-|CN-G|MN-G|HL-G|night2-|day1119-|nov2\d-)/.test(id)
         || (m && (m.rareOnly || m.teacher2keys || m.tool === 'pg-train' || (m.games && !m.teacher)))
