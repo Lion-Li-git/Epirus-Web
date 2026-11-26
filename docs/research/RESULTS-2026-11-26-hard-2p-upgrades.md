@@ -1,6 +1,6 @@
 # 2026-11-26 `hard` 2P 短板替换与 `17/17` 池收编（v2.1.32）
 
-> 结论先行：不拆池、不按人数路由（遵守 `D-34`/`D-35`），沿 `DR-R3E` 洁净底座以 `--rolloutMode=game` + 单技能 `--rareOnly` + `2:standard` 配比训出 **`MT-DR`**、**`JN-DR`**、**`MN-DR`** 与 **`PUR-2P`**（[`MT-DR.bak`](../artifacts/MT-DR.bak) / [`JN-DR.bak`](../artifacts/JN-DR.bak) / [`MN-DR.bak`](../artifacts/MN-DR.bak) / [`PUR-2P.bak`](../artifacts/PUR-2P.bak)）入 **`hard`**，将 `2P` 弱包 `OBS6E9`、`RG-MN`、`R-GD12` 下放 **`soft`** 并退役在新标尺下 `seatKill=3` 触发 `D234` 阻断的 `nov22-c3g-s300k`。终态全池 **34 枚（`hard 17 / soft 17`）**，`pool-add --audit` 与四视图 `map-selfcheck` 全绿；`2P rule` `困难` 档由 `v2.1.31` 的 `47.5%` 改善至 **`37.5%`**，四条 `2P`/`5P` 阶梯全部严格单调。
+> 结论先行：不拆池、不按人数路由（遵守 `D-34`/`D-35`），沿 `DR-R3E` 洁净底座以 `--rolloutMode=game` + 单技能 `--rareOnly` + `2:standard` 配比训出 **`MT-DR`**、**`JN-DR`**、**`MN-DR`** 与 **`PUR-2P`**（[`MT-DR.bak`](../artifacts/MT-DR.bak) / [`JN-DR.bak`](../artifacts/JN-DR.bak) / [`MN-DR.bak`](../artifacts/MN-DR.bak) / [`PUR-2P.bak`](../artifacts/PUR-2P.bak)）入 **`hard`**，将 `2P` 弱包 `OBS6E9`、`RG-MN`、`R-GD12` 下放 **`soft`** 并退役在新标尺下 `seatKill=3` 触发 `D234` 阻断的 `nov22-c3g-s300k`。终态全池 **34 枚（`hard 17 / soft 17`）**，`pool-add --audit` 与四视图 `map-selfcheck` 全绿；`2P rule` `困难` 档由 `v2.1.31` 的 `47.5%` 改善至 **`37.5%`**。两条 2P 阶梯与两条 5P 阶梯严格单调；`5P multi` 400 局那组的普通/简单档差 `0.25pt (0.1σ)`，按噪声内并列读。
 
 ---
 
@@ -30,6 +30,8 @@
 | `R-GD12` | `hard` → `soft` | `7e55abc3894ca3e2` | `13/30`（`ring 33/120`、`railgun 30`） | `+15.8858` | `62.6%` | `14.6%` | `pass` | `0` |
 
 > 淘汰探索臂说明（保留于 `scratch/arms/`，未入池）：`nov26-cn2-s25`（高剂量 `cannon 84/120`）在 `Arena B` 退化至 `-16.54pt` 并刷 `90210` 反弹格；以 `RG-CN` 为师的 `--rolloutMode=game` 臂未传出 `cannon`，暂继续由现役 `RG-CN` 在 `hard` 承载 `cannon`。
+
+> `MN-DR` 复核：promote 回执中的「五道地板 · 场B清场 0/局」是**只记录诊断项**，不是 promote 的实际阻断集合；实际阻断走 G4/G5。2026-11-26 复跑 [`promote-MN-DR-recheck.txt`](../artifacts/promote-MN-DR-recheck.txt) 为 exit 0、G4/G5 全过。
 
 ---
 
