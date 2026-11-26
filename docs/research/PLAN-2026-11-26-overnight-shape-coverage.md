@@ -115,7 +115,7 @@
 - 最终验证：池审计 `34 / 17+17 / bad=[]`，`probe-pool` 通过；D234、D82、D8 与 meta 组定向全绿（不是整轮）；v2.1.36 两条 CI 成功。
 
 ### DOING
-- 无；训练线全部收口，整理最终证据与交接。
+- 无；W4 已淘汰，高废珠与坦克训练线全部收口，保留 TK-PG 作为唯一新增覆盖。
 
 ### NEXT
-- 下一班先读 `selftest3-pool-census.txt` 选绿色起点；soft 5P long 弱成员修复必须同时守坦克覆盖与电珠闭环，探索性相关已落 `soft-5p-long-correlations.tsv`。不再重复今晚已淘汰的 taunt/T3/T6/R3/W3/T7 配方。
+- 下一班先读 `selftest3-pool-census.txt` 选绿色起点；soft 5P long 弱成员修复必须同时守坦克覆盖与电珠闭环，探索性相关已落 `soft-5p-long-correlations.tsv`。不再重复今晚已淘汰的 taunt/T3/T6/R3/W3/T7/W4 配方。

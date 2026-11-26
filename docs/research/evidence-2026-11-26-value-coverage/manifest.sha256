@@ -27,6 +27,8 @@ fe8acea755f1ece9c46e2a8c7f3270bb61aa1224b047d56a0e709724ecab84d5 *docs/research/
 7d4ac932806bcfd9c1706675065a2809dd559e219a44f14845d7461f36f93e76 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w1.json
 414ae31a0d12d28c14d483f69c7ecd30bfbf8b9f89a45273f251ffb1bbfe8843 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w2.json
 252bf70a0ab3cf68a6f0a117f32a4ac82f835e667f761765982d3f3945f32510 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w3.json
+58dbb9a3ff858d000a826761021c8d982020bdc353063e81a25955050f814fb3 *docs/research/evidence-2026-11-26-value-coverage/arm-meta/w4.json
+04716db17e2bd757e32646b9c91c3b35f3193be23bdbcf814e1eab83801daa70 *docs/research/evidence-2026-11-26-value-coverage/arm-results-summary.tsv
 d761f83d8ed010f1f65dad74e22793ced4ec46df78ec1c4d3f8f2772517a1d33 *docs/research/evidence-2026-11-26-value-coverage/closure-table.mjs
 47376eb87498d52395aca71f6f8d51ef24d31e15842734ab4db2bb881d7c4e85 *docs/research/evidence-2026-11-26-value-coverage/closure.tsv
 3859ea875c8d33366f86b5a453ca05f64d1e2e5c285ed5ef1a6fba703cc67901 *docs/research/evidence-2026-11-26-value-coverage/compare-shape-candidate.mjs
@@ -43,7 +45,12 @@ d4fda716212d7f203253758ef7ddc3937f41dde666d1c5a1dc1cd115aa890f5e *docs/research/
 c360ea549a24e30cc656a93d123bfe44467f03d32fdab9a551ea0c21c4040640 *docs/research/evidence-2026-11-26-value-coverage/ladder-current-multi.txt
 621d83d9660b9892d2ee38791dd3f769ef4883eea59a3f725121a3f70d76c835 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-2p-legacy.txt
 5cd2a7e2666022d1595257c12499f87fd419c36c92521d2e3bfa664720b98ac2 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-2p-rule.txt
+58bc563284e6544f0c43d6e2cfe57cbcef4d50e8efb2754b6cb5888b5e9d481c *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-artk2-2p-rule.txt
+b07a9325faf4721757b1b58799ef48b01fc55ea6b0c3ef126dc63086d8a9e133 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-artk2-long.txt
 f7ea4de417fc48e2fc9dc454ac1a2a4186ed3a8000aaa021388a72e9d92335a9 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-long.txt
+6ace63b595fef89b81afb3ca8c5f34e061cdcec98675878c7f20584f392b698b *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-msb11-2p-rule.txt
+336eb73fd4e011f055649c21fc9a6ce4ddddbce9438231d2e7cd74415cd69c83 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-msb11-long.txt
+385850ff0f58dea3034279d0e66165cd63f75702aaafcf0588bbadb361330ad1 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-ringb11-2p-rule.txt
 076cb244b3282b6cc08bae173de2cfa9ba8a3c0fbd365ac506634416aefeae13 *docs/research/evidence-2026-11-26-value-coverage/ladder-replacement-ringb11-long.txt
 d7e8bcc4ac30d2c417b64b4a4703c511b1447b57b1f3e0c0d5374d3be44effc3 *docs/research/evidence-2026-11-26-value-coverage/probe-use-value-pilot.mjs
 2c186eebcc812b2306ea68c0c3598eb90f0676e52edd064281881db89cd38886 *docs/research/evidence-2026-11-26-value-coverage/railgun-shape-check.tsv
@@ -60,6 +67,7 @@ e8457b4dddd594503c6fca014ca0fb1fafa992c7b293c4ae90a6a12c0325e8db *docs/research/
 a269bf7d83f2ef5cf5b757a686fb7ef6144ef148adb1800ed05d5db68ea96134 *docs/research/evidence-2026-11-26-value-coverage/shape-skill-profile.tsv
 bae772b9a663fe948209afc9c62240d5262158c90c454d9491d03c2f8e8ac491 *docs/research/evidence-2026-11-26-value-coverage/soft-5p-long-correlations.tsv
 8f894ec5cf86f907a65aca4ca4455cc02235d9a2e20ff57bb62bd765e29bd57f *docs/research/evidence-2026-11-26-value-coverage/soft-5p-long-features.tsv
+1a89a5428f4a1031adfa5ac1451d3a6ad59be34ffcd11c6646255a947205bee3 *docs/research/evidence-2026-11-26-value-coverage/soft-replacement-matrix.tsv
 14cc7620d1f3bdcc22b3549617f31bfe46dbf0da95ef4407f35d79990ba3965f *docs/research/evidence-2026-11-26-value-coverage/tank-transfer-window-diagnostic.mjs
 3c7f6c31a13abbeb3cd967ca0b81b4caf08b1fcaac7df1e308a288d9d74bdc7a *docs/research/evidence-2026-11-26-value-coverage/tank-transfer-window-diagnostic.tsv
 cbf9cf4d0047ec10527be93361c1b8fac76254934bbee8356b518bfa36bae2bf *docs/research/evidence-2026-11-26-value-coverage/train-logs/r1.log
@@ -75,6 +83,7 @@ eaa213ad68fbe2cc24266f13f1438f8009b8ee757defab63201e48598293ce06 *docs/research/
 71597c6fac285e109d3ce8b5ddc5fc1ee2d4eff35e326fbc9541f78b4a8266fb *docs/research/evidence-2026-11-26-value-coverage/train-logs/w1.log
 62fe88b9befb36138eaff33196ef710d8e660e77604fd4c7d41fcd17acb838b8 *docs/research/evidence-2026-11-26-value-coverage/train-logs/w2.log
 08d17e08b197302a26cc80b5f7ed7720e6469f3794939238518e59cb32499144 *docs/research/evidence-2026-11-26-value-coverage/train-logs/w3.log
+cead151ced4e158425114fe6fff9ced713cd19bc936738cf5a59a6f8ff44a0fe *docs/research/evidence-2026-11-26-value-coverage/train-logs/w4.log
 e4baf97426eb5e65d1d3051c08c8769a3a89a48335f008b988fdbbc4021d68fb *docs/research/evidence-2026-11-26-value-coverage/transfer-outcome-diagnostic.mjs
 2e85ab66c417e47bb3eb9c8e7a192178c0ca4d4da88609471c09ece1b1c96107 *docs/research/evidence-2026-11-26-value-coverage/transfer-outcome-diagnostic.tsv
 7eaeedb1c83c62f861af66fc1c41cfd6c70f84639c48dfee2d9814ab753c06fd *docs/research/evidence-2026-11-26-value-coverage/use-value-pilot.tsv

@@ -1,0 +1,15 @@
+arm	base	teacher	decision	key_reason
+R1	PG-DR	shape PG	reject	3P charge events 0; 8P only 8; fewer charges not closure
+R2	PG-DR	FS2 charge/railgun	reject	charge events 84->3799 but only 67 paid; win 52.1->39.8
+T1	FS-G2	TK-FS4 tank	reject	tank 185/49 cells but charge closure 58.0->9.3
+T2	T1	PG bead repair	reject	tank 213/56 cells but charge closure only 15.3
+T3	PG-DR	T2 tank	reject	tank 586/66 cells but 2P hard/regular 71-75%; ladder inverted
+T4	PG-DR	T2 tank low dose	admit as TK-PG	tank 27/13 cells, charge closure 40.8, 2P ordered, Arena +21.45
+T5	PG-DR	T3 tank low dose	reject	tank 40/19 cells but 5P long 38.5 worse than soft targets
+T6	PUR-DR	T5 tank	reject	selftest3 NaN; purify coverage 8->6 cells and paid 38/40->2/7
+T7	PG-DR	OBS6E9 tank	reject	teacher tank hits 6, labels 2, deployed tank 0
+R3	PG-DR	RINGB11 railgun	reject	teacher railgun labels 154, deployed 33 uses/5 cells; 3P zero
+W1	PG-DR	taunt 0.25	reject	taunt 83 cells but win 37.0, charge closure 12.9
+W2	PG-DR	taunt 0.10	reject	taunt 54 cells but win 41.2, charge closure 22.4
+W3	MT-DR	PG bead repair	reject	waste 91.2->74 not <=60; miniT cells 14->11
+W4	PG-DR	TF2-RD transfer	reject	teacher transfer labels 116 but deployed transfer 0; win 38.2

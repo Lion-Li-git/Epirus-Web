@@ -131,6 +131,7 @@
 - R3（RINGB11 railgun 教师 → PG-DR）：教师标签 railgun `154` 次，部署仅 `33` 次 / `5` 格，3P 归零，淘汰。
 - T7（OBS6E9 强长程坦克教师 → PG-DR）：教师命中 tank `6` 次、标签 `2` 次，部署坦克 `0`，淘汰；坦克线收口。
 - W3（MT-DR PG 珠经济修复）：废珠 `91.2%→74%`，未达 60% 目标；miniT 有效格 `14→11`，属于少蓄少废，淘汰。
+- W4（TF2-RD transfer 教师 → PG-DR）：教师标签 transfer `116` 次，学生自访 `0%`、部署 `0`，胜率 `38.2%`，淘汰；高废珠训练线全部收口。
 
 ### 7.3 `TK-PG` 入池与净变化
 
@@ -145,6 +146,7 @@
 ### 7.4 后续
 
 - 防御消融：PG-DR 禁 guard/reflect/bagua 分别掉 `25.0/16.7/8.3pt`；TK-PG 禁 guard 掉 `8.3pt`、reflect 约 0、bagua 反增 `8.3pt`（12 局小样本）。防御并非整体白给，今晚不开 defTax 压制臂。
+- soft 同抽签替换矩阵：MX8→TK-PG 的 5P long 普通/简单 `-1.06/-0.06pt`、2P rule 普通/简单 `-0.88/-1.75pt`；RINGB11 为 `-0.88/+0.38pt`、`-0.98/-1.71pt`；MSB11 为 `-0.88/-0.31pt`、`-1.41/-2.35pt`；AR-TK2 为 `-1.19/-1.84pt`、`-2.47/-3.40pt`。MX8 与 RINGB11 的难度代价接近，但 MX8 原废珠 93.3% 且 A2 已证 charge/guard 负收益，故仍选 MX8，保留最强 railgun 载体 RINGB11。
 - 全池 `selftest3` 普查：34 枚中 17 绿 / 17 红；hard `8/9`、soft `9/8`。红只禁止继续梯度训练，不单独否决冻结推理；下一班选起点先查 `selftest3-pool-census.txt`，不再现场撞门。
 - soft 5P long 探索性相关（n=17）：`tankShare` 与长程替身夺冠率 Spearman `+0.59`（坦克越多、长程越软）；`chargeClosure` 为 `-0.36`（闭环越好、长程越强）；`chargeShare` Pearson `+0.46`。样本小、多比较，只作为下一班假设：坦克候选必须同时保住电珠闭环，不能只看坦克格数。
 - 高废珠前排仍为 `nov21-taunt-dsp0b 97.8%`、`TF-DR 94.0%`、`MN-DR 91.8%`、`MT-DR 91.2%`。

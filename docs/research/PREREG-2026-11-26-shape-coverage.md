@@ -81,6 +81,14 @@
 - 池内坦克总使用向转移伤害同量级靠拢；中间目标 ≥800 次、非零格 ≥180（若合法窗口诊断证明不可达，只允许在开臂前修订一次并留痕）。
 - 坦克兑现率 ≥80%；天火闭环、2P、5P low-tier 不退化。
 
+### W4（TF2-RD transfer 闭环教师）
+- 起点：绿色 `PG-DR.bak`；TF2-RD 只借 `transfer`，比例 `0.10`、`1000` 组 / `80` 步 / `lr=1e-4`，教师桌限定 3/5/8P；2P 不借教师。
+- 目标：transfer 兑现率高于 TF-DR 的 21.1%，废珠不高于 PG-DR 超过 5pt，2P rule 八 seed 退化 ≤3pt。只跑一枚。
+- 结果：淘汰。教师标签 transfer 116 次，学生自访 transfer 0%，部署 0；Stage 1 胜率 38.2%。
+
+### W4 达标与止损
+- transfer 兑现率 >21.1%；废珠不高于 PG-DR 超过 5pt；2P rule 八 seed 退化 ≤3pt；promote/Arena/seat 走完整链。
+
 ### R3（RINGB11 railgun 载体修复）
 - 起点：绿色 `PG-DR.bak`；RINGB11 只借 `railgun`，教师桌限定 3/5/8P，比例 `0.10`、`1000` 组 / `80` 步 / `lr=1e-4`；2P 不借教师。
 - 目标：保留 PG-DR 的 2P/珠经济，同时把 RINGB11 的高人数 railgun 覆盖带回来，作为 RINGB11 的潜在替代者。只跑一枚。
