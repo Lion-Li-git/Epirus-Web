@@ -472,6 +472,7 @@ node tools/pool-add.mjs --audit
 - Phase 1 结果见 [`RESULTS-2026-11-28-phase1-baseline.md`](RESULTS-2026-11-28-phase1-baseline.md)。
 - Phase 2 已完成：`L1B-S600` 完整链通过并原位替换 `RING-MINIT-CONT`，v2.1.45 池维持 35 枚 `17/18`；全矩阵与产品 `seed=77000` 四桌形全部保序。
 - Phase 2 结果见 [`RESULTS-2026-11-28-phase2-fallout.md`](RESULTS-2026-11-28-phase2-fallout.md)。
+- Phase 3 A 线已完成并淘汰：A1 全部快照花珠绝对量仅 A0 的 13.1–19.7%，属于“少蓄少废”假改善；不开第二起点。结果见 [`RESULTS-2026-11-28-dr-r3e-stage-c.md`](RESULTS-2026-11-28-dr-r3e-stage-c.md)。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -481,5 +482,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 01:25 起进入 Phase 3 A 线：先跑 `DR-R3E` 同 seed Stage C 对照 A0 与处理 A1，首件落盘立即验血统。
-- `MSB11` 的 100% 废珠率分母只有 1，不按比率列为训练优先；A 线第二起点只在 A1 有信号后从绿色 `JN-DR`/`FS-DR` 选择。
+- 01:30 起进入 Phase 4：先做金刚盾主动判定、全息与天火转移的新规则窗口诊断；15 分钟无明确窗口则不硬开训。
+- A 线已收口，不再扫 lr/KL/seed；`MSB11` 的 100% 废珠率分母只有 1，继续排除在训练优先之外。

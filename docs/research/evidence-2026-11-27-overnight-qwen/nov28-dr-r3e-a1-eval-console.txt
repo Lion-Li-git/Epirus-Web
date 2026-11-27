@@ -1,0 +1,4 @@
+A1-S600	win=0.4967	union=17	charge=22/66	expired=43	drain=4
+A1-S1200	win=0.4925	union=17	charge=36/102	expired=63	drain=4
+A1-S2400	win=0.5133	union=16	charge=24/55	expired=29	drain=7
+A1-SEND	win=0.5133	union=16	charge=24/55	expired=29	drain=7

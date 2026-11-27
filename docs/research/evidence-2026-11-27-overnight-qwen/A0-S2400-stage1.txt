@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov28-dr-r3e-a0.seg2400 wid=679951f0e6fde3c0
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-A0-S2400
+[nov28-dr-r3e-a0.seg2400] stage1 并集 19/30（自对局 15） 换招JS 0.0799 ‖ 14.1s → D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-A0-S2400\nov28-dr-r3e-a0.seg2400.json

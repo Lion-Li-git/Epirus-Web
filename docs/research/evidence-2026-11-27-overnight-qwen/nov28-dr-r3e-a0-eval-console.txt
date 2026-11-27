@@ -1,0 +1,4 @@
+A0-S600	win=0.5075	union=17	charge=131/425	expired=290	drain=12
+A0-S1200	win=0.505	union=17	charge=183/545	expired=358	drain=9
+A0-S2400	win=0.4958	union=19	charge=183/924	expired=729	drain=7
+A0-SEND	win=0.4958	union=19	charge=183/924	expired=729	drain=7
