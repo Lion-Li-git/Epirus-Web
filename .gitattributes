@@ -19,4 +19,7 @@ scratch/**/*.js binary
 # TSV 行尾 tab 表示末尾空列，属于表结构；不按行尾空白告警。
 champion-map/data/*.tsv whitespace=-blank-at-eol
 champion-map/data/page/*.tsv whitespace=-blank-at-eol
+
+# 生成册由 knobs.mjs 逐字节比对；Windows  checkout 若转 CRLF 会本地假红。
+training/TRAINING-KNOBS.md -text
 champion-map/data/readings/*.tsv whitespace=-blank-at-eol
