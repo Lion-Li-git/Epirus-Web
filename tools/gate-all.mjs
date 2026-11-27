@@ -81,7 +81,7 @@ if (process.argv.includes('--auto')) {
     /* v2.0.2（11-07）：**训练面不再有 `train` 组** —— 训练那 8 个部分文件 10-27/10-31 已按用户裁定整组删除，
      * runner 的 CUM 只剩 meta/ship/ui/probe/engine。这里原来仍返回 'train' ⇒ `--auto` 发出 `--group=train` ⇒
      * runner 直接 `⛔ 不认识`（exit 2，**一条门都没跑**）。Qoder 在 v2.0.2 撞上并按「坏命令」记档、用 probe 绕过。
-     * v2.0.7（11-13 用户裁定）：**训练侧门禁不进主门禁/CI** —— 只在跑训练时开（train-selftest / knobs --check）。
+     * v2.0.7（11-13 用户裁定）：**训练侧门禁不进主门禁 `gates.yml`** —— 由 `training.yml` 独立跑（train-selftest / knobs --check）。
      *   ⇒ 这里**不补** `training/` 映射：training/** 改动落到底部 meta（仓库纪律那 16 条，管 CHANGELOG/.bak 记账），
      *     这是**有意的少跑**，不是缺口；搬走前的死路径（tools/train-3p ‖ tools/train-best）从正则里摘除。
      *   js/train/ ‖ js/bundled* 仍是**产品面**（浏览器 bundle + 玩家 AI，probe 组的门在读它们）⇒ probe 路由保留；
