@@ -477,6 +477,8 @@ node tools/pool-add.mjs --audit
 - Phase 6 已完成：`L1B-S1200` 原位替换 `RINGB11`，v2.1.46 池维持 35 枚 `17/18`；全矩阵与产品 `seed=77000` 四桌形全部保序，覆盖只增不减。
 - Phase 6 结果见 [`RESULTS-2026-11-28-phase6-soft-screen.md`](RESULTS-2026-11-28-phase6-soft-screen.md)。
 - transfer 状态窗诊断完成：`TF-DR` 长程兑现 0–12.5%，`AR-TK2` 条件兑现更高；不开 transfer 训练。结果见 [`RESULTS-2026-11-28-transfer-window.md`](RESULTS-2026-11-28-transfer-window.md)。
+- dualGun/mirror 诊断完成：全池仅 1 次有效双枪、0 次镜面；不开载体训练。结果见 [`RESULTS-2026-11-28-dualgun-mirror.md`](RESULTS-2026-11-28-dualgun-mirror.md)。
+- 最终交接见 [`HANDOFF-2026-11-28-morning.md`](HANDOFF-2026-11-28-morning.md)。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -486,5 +488,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 01:58 起进入 Phase 8/9：整理最终 HANDOFF、P3 工程债务清单与 dualGun/mirror 状态窗诊断；不再主动改池。
-- A/B 线均已收口，不再扫 lr/KL/seed；`MSB11` 的 100% 废珠率分母只有 1，继续排除在训练优先之外。
+- 02:03 起收口：等待 `aef11ee9` CI 回执；本班不再主动改池或开新训练臂。
+- A/B 线均已收口，不再扫 lr/KL/seed；下一班若要继续训练，先提出清单外的新假设。
