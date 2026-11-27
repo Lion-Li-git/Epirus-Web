@@ -502,7 +502,8 @@ t('N21 大雷不失效/不禁用小雷（非空版）：小雷打第三方时大
   S.attemptAction(st, 1, R.SK.MINI_T, { target: 2 });     // 小雷 pri5 -> **P2**（不干扰 P0 的大雷）
   S.attemptAction(st, 2, R.SK.JI, {});
   X.resolveActions(st);
-  ok(st.events.some(function (e) { return e.type === 'ban'; }), '大雷应已结算并发出 ban 事件（否则用例又是空的）');
+  ok(st.events.some(function (e) { return e.type === 'damage' && e.via === R.SK.BIG_T && e.to === 1; }), '大雷应已结算命中 P1（否则用例又是空的）');
+  eq(st.events.filter(function (e) { return e.type === 'ban' && e.pid === 1; }).length, 0, '小雷豁免大雷禁用时不应发出虚假 ban 事件');
   eq(st.p[1].cooldown[R.SK.MINI_T] || 0, 0, '小雷不应被大雷禁用');
 
   // 对照组：目标用普通技能（激光剑）时**应当**被禁用
@@ -535,7 +536,7 @@ t('N22 大雷效果传导（用户 a,b,c,d 例子）：b/c/d 各受 2 点；c �
   eq(st.p[2].cooldown[R.SK.JI] || 0, 0, 'ジ 不进 3 回合禁用');
 });
 
-t('N22b 防御族可格挡大雷；藤甲（有作用目标）本人免伤、伤害落到其目标', function () {
+t('N22b 防御族可格挡大雷（反弹挡下不反击、不进 3 回合禁用）', function () {
   // 直接命中：b 用反弹 -> 应挡住那 2 点（且不触发反弹反击）
   const st = S.createState('multi', { next: mulberry32(43) }, 3);
   for (let i2 = 0; i2 < 3; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
@@ -548,24 +549,35 @@ t('N22b 防御族可格挡大雷；藤甲（有作用目标）本人免伤、伤
   eq(st.p[0].hp, 8, '大雷不被反弹反击（反弹不触发）');
   ok((st.p[1].cooldown[R.SK.REFLECT] || 0) === 0, '防御族不进 3 回合禁用');
 });
-t('N22c 【覆盖传导链中的防御】链上成员用藤甲：本人免伤、2 点落到其作用目标', function () {
-  /* 为什么需要这条：N22 的链条里没有防御者，N22b 测的是**直接目标**的防御（走另一分支），
-   * 两者都测不到"传导链成员用防御"这段新代码（反证已证：关掉豁免它们仍通过）。 */
+t('N22c 【覆盖传导链中的防御】链上成员用藤甲/金刚盾：本人格挡免伤、不向目标转嫁连带伤害、不进 3 回合禁用', function () {
+  /* 2026-11-27 用户裁定：取消大雷连带转向，连带对象使用藤甲/金刚盾时直接按自身防御矩阵格挡，
+   * 不再把 2 点连带转嫁到其声明目标身上（且不进 3 回合禁用，与直击目标对称）。 */
   const st = S.createState('multi', { next: mulberry32(47) }, 4);
   for (let i2 = 0; i2 < 4; i2++) { st.p[i2].hp = 8; st.p[i2].ep = 9; }
   X.startTurn(st);
   S.attemptAction(st, 0, R.SK.BIG_T, { target: 1 });        // a 大雷 -> b
   S.attemptAction(st, 1, R.SK.TRANSFER, { target: 2 });     // b 转移 -> c   => c 进链
-  S.attemptAction(st, 2, R.SK.ARMOR, { target: 3 });        // c 藤甲 -> d  （防御族 + 有作用目标）
-  S.attemptAction(st, 3, R.SK.JI, {});                      // d 只出ジ（不是链成员，只作为藤甲目标）
+  S.attemptAction(st, 2, R.SK.ARMOR, { target: 3 });        // c 藤甲 -> d
+  S.attemptAction(st, 3, R.SK.JI, {});                      // d 只出ジ
   X.resolveActions(st);
   eq(st.p[1].hp, 6, 'b（大雷目标）受 2 点');
-  eq(st.p[2].hp, 8, 'c（链上成员，用防御）本人免伤');
-  eq(st.p[3].hp, 6, 'd 作为藤甲的作用目标，吃到那 2 点传导伤害');
-  /* 注意：**不**断言"防御族不进 3 回合禁用"——用户说的"防住大雷"指格挡那 2 点伤害，
-   * 而 R23' 明确"2 电被挡但禁用目标用的原型制御仍生效" ⇒ 防御族**仍会被禁用**。
-   * 我曾在此写错断言，直接把 R23' 撞成 spec 36/37。 */
-  ok((st.p[2].cooldown[R.SK.ARMOR] || 0) > 0, '防御族仍会被禁用 3 回合（与 R23 注释同口径）');
+  eq(st.p[2].hp, 8, 'c（链上成员，用藤甲）本人格挡免伤');
+  eq(st.p[3].hp, 8, 'd 不再吃额外转嫁来的 2 点传导伤害');
+  ok((st.p[2].cooldown[R.SK.ARMOR] || 0) === 0, '藤甲挡下连带后不进 3 回合禁用');
+
+  // 边界对照：A 大雷 -> B，同时 C 直接对 B 用藤甲 / 金刚盾 ⇒ B 只吃直击 2 点，不叠加连带
+  for (const defKey of [R.SK.ARMOR, R.SK.JINSHIELD]) {
+    const st2 = S.createState('multi', { next: function () { return 0.9; } }, 3);
+    for (let i2 = 0; i2 < 3; i2++) { st2.p[i2].hp = 8; st2.p[i2].ep = 9; }
+    X.startTurn(st2);
+    S.attemptAction(st2, 0, R.SK.BIG_T, { target: 1 });
+    S.attemptAction(st2, 1, R.SK.JI, {});
+    S.attemptAction(st2, 2, defKey, { target: 1 });
+    X.resolveActions(st2);
+    eq(st2.p[1].hp, 6, defKey + ': B 只吃直击 2 点，不再因 C 的连带叠加');
+    eq(st2.p[2].hp, 8, defKey + ': C 自己挡下连带 2 点');
+    ok((st2.p[2].cooldown[defKey] || 0) === 0, defKey + ': C 挡下连带后不进 3 回合禁用');
+  }
 });
 t('N23 单个激光眼即失效原型制御（用户裁定：单发破全防御族）', function () {
   const st = S.createState('multi', { next: mulberry32(53) }, 3);
@@ -971,16 +983,27 @@ t('D23 镜面反射：没有"无可复制" + 优先级裁定（大雷 pri4 先�
   eq(st.p[0].boom, 1, '复制蓄能应得使用者自己选的爆珠');
   eq(st.p[0].elec, 0, '不得因为 t1 蓄了电珠就白拿电珠（那等于泄漏隐藏信息）');
 
-  /* ⑤ 唯一的合法"无可复制"：t1 本回合行动已被作废 */
+  /* ⑤ 来源被作废仍可复制；只有 t1 未成功出招（如能量不足）才是"无可复制" */
   st = mk4();
   S.attemptAction(st, 1, R.SK.GUN, { target: 3 });        // t1 用枪
   S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
-  S.attemptAction(st, 2, R.SK.GUN, { target: 0 });        // 用它验证"确实没拿到任何架势"
+  S.attemptAction(st, 2, R.SK.JI, {});
   S.attemptAction(st, 3, R.SK.MINI_T, { target: 1 });     // 小雷作废 t1 的枪
   X.resolveActions(st);
-  eq(cnt(st, 'mirrorNoEffect'), 1, 't1 被作废 ⇒ 唯一合法的"无可复制"');
-  eq(cnt(st, 'mirrorCopySelf'), 0, 't1 被作废时不该复制任何东西');
-  eq(st.p[0].hp, 2, '没拿到架势 ⇒ 枪照常命中');
+  ok(st.actions[1].voided, '前置：t1 的枪必须已被小雷作废');
+  eq(cnt(st, 'mirrorNoEffect'), 0, '来源被作废不影响镜面复制');
+  eq(st.p[2].hp, 2, '镜面复制被小雷作废的枪仍命中 P2');
+
+  st = mk4();
+  st.p[1].ep = 0;
+  S.attemptAction(st, 1, R.SK.GUN, { target: 3 });        // insufficient
+  S.attemptAction(st, 0, R.SK.MIRROR, { target: 1, target2: 2 });
+  S.attemptAction(st, 2, R.SK.JI, {});
+  S.attemptAction(st, 3, R.SK.JI, {});
+  X.resolveActions(st);
+  eq(cnt(st, 'mirrorNoEffect'), 1, 't1 未成功出招 ⇒ 合法的"无可复制"');
+  eq(cnt(st, 'mirrorCopySelf'), 0, 't1 未出招时不该复制任何东西');
+  eq(st.p[2].hp, 3, '无可复制 ⇒ 目标不受伤');
 
   /* ⑥ 穷举守门：技能表里**每一个**技能都必须被显式归类（新增技能必须决定它怎么被复制）。
    *    注意：与复制技能按同一规则结算，含高/低优先级与对外非伤技能，唯一例外是无隐藏技互镜/空符天火无效。 */

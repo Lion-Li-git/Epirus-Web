@@ -381,15 +381,19 @@ t('D126 R48「回魂复活回合」只免**花费**、不免**条件**（v1.5.16
    * 行为变化范围（配对复现 6480 局，新旧引擎同种子）：只有 13 局触发过回魂、4 局读数不同、**胜者全部相同**
    * ⇒ 这条不是"能赢多少"的改动，是"规则说的是什么"的改动。 */
   const mkLong = function () { const s = S.createState('long', { next: T.mulberry32(4242) }, 5); return s; };
-  /* ① 满血 + 免费回合：三个条件门都不许被绕过 */
+  /* ① 满血 + 免费回合：非能量条件门仍拦截，电磁炮/激光眼免珠前置要求 */
   let st = mkLong();
   Object.assign(st.p[0], { hp: 5, ep: 0, infiniteEnergy: true, elec: 0, boom: 0 });
-  eq(S.computeCost(st, 0, R.SK.DRAIN).ok, false, '满血（hp=5 > long 的 ≤3）⇒ 摄魂必须仍判非法（这是用户报的那一格）');
-  eq(S.computeCost(st, 0, R.SK.RAILGUN).ok, false, '无电珠 ⇒ 电磁炮必须仍判非法（"含珠无限"是免花费，不是凭空给珠）');
-  eq(S.computeCost(st, 0, R.SK.LASER_EYE).ok, false, '首次激光眼无爆珠 ⇒ 必须仍判非法');
+  eq(S.computeCost(st, 0, R.SK.DRAIN).ok, false, '满血（hp=5 > long 的 ≤2）⇒ 摄魂必须仍判非法（这是用户报的那一格）');
+  eq(S.computeCost(st, 0, R.SK.FIRESTORM).ok, false, '无己方符咒 ⇒ 天火必须仍判非法（非能量前置条件）');
+  const cRail = S.computeCost(st, 0, R.SK.RAILGUN);
+  eq(cRail.ok && cRail.ep === 0 && cRail.beads === null, true, '回魂回合电磁炮免电珠（含蓄能产物无限）');
+  const cLaser = S.computeCost(st, 0, R.SK.LASER_EYE);
+  eq(cLaser.ok && cLaser.ep === 0 && cLaser.beads === null, true, '回魂回合首次激光眼免爆珠（含蓄能产物无限）');
   const legal = Play.legalActions(st, 0).map(function (l) { return l.key; });
   ok(legal.indexOf(R.SK.DRAIN) < 0, '合法表里不许出现摄魂（页面按钮因此不可点、AI 因此看不见它）');
-  ok(legal.indexOf(R.SK.RAILGUN) < 0, '合法表里不许出现免珠的电磁炮');
+  ok(legal.indexOf(R.SK.FIRESTORM) < 0, '合法表里不许出现无符天火');
+  ok(legal.indexOf(R.SK.RAILGUN) >= 0 && legal.indexOf(R.SK.LASER_EYE) >= 0, '合法表里应包含免珠电磁炮与激光眼');
   /* ② 真在窗口内（复活后 hp=1）⇒ 可用，且**花费**归零 */
   st = mkLong(); Object.assign(st.p[0], { hp: 1, ep: 0, infiniteEnergy: true });
   const c2 = S.computeCost(st, 0, R.SK.DRAIN);

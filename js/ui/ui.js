@@ -1408,35 +1408,25 @@
 
   /* ---------- 事件文案 ---------- */
   function nm(pid) { return (B.state && B.state.p[pid]) ? B.state.p[pid].name : (NAME[pid] || pid); }
-  /* ===== v1.5.253（用户报：**大雷连带被挡下之后 UI 仍显示造成伤害**）=====
-   * 根因：`bigTChain` 事件在 `js/core/resolve.js` 里是**无条件发出**的（发完才可能 `continue` 完全挡住、
-   *   或把伤害转给防御者的作用目标）⇒ **它自己不含"有没有真打中"的信息**，而 UI 原来把这条**硬编码**成
+  /* ===== v1.5.253（用户报：**大雷连带被挡下之后 UI 仍显示造成伤害**） / v2.1.42 取消连带转向 =====
+   * 根因：`bigTChain` 事件在 `js/core/resolve.js` 里是**无条件发出**的（发完才可能 `continue` 被避雷针挡住、
+   *   或在 `deliverDamage` 内被自守防御挡住）⇒ **它自己不含"有没有真打中"的信息**，而 UI 原来把这条**硬编码**成
    *   "受 2 点电伤" ⇒ 于是"被挡下"被渲染成了"造成了伤害"。**结算本身是对的，错的只有文案。**
-   * 真相在同回合的 `damage` 事件里（`reason === '真正的落雷·连带'`、`to` = 真实受害者）⇒ 从这里反推，三种情形：
+   * 真相在同回合的 `damage` 事件里（`reason === '真正的落雷·连带'`、`to === e.to`）⇒ 从本段内反推：
    *   · 有 `to === e.to` 的连带伤害 ⇒ 真打中（并按事件里的 `amt` 印数，不再写死 2）
-   *   · 有连带伤害但 `to` 是别人 ⇒ 被挡下并把伤害**转给**了防御者的作用目标（金刚盾/藤甲那种）
-   *   · 本回合根本没有连带伤害事件 ⇒ **完全挡住**（自守型防御），不许说"造成了伤害"
-   * ⚠️ 必须在 **UI 层**解决：`js/core/resolve.js` 是**指纹五文件之一**，改它 = 规则换代（历史基线作废），
-   *   而 `js/ui/` **不在指纹里** ⇒ 文案问题就在 UI 层修。 */
+   *   · 本段没有 `to === e.to` 的连带伤害 ⇒ **完全挡住**，不许说"造成了伤害"
+   * （只看从当前 `bigTChain` 到下一条 `bigTChain` 之间的事件段，防止同回合其他连带候选的事件串台。） */
   const BIGT_CHAIN_REASON = '真正的落雷·连带';
   function bigTChainText(e, roundEvents) {
     const tag = (e.kind === 'attack' ? '（其攻击被无效）' : '（被目标攻击）');
     const list = roundEvents || [];
-    /* ⚠️ v1.5.253 **第二版**：只看**本候选自己那一段**（从这条 `bigTChain` 到**下一条** `bigTChain`）——
-     * 因为引擎对每个候选是"先发 `bigTChain`、紧跟它自己的投递"。
-     * 第一版我扫的是**整回合**的连带伤害 ⇒ 一回合里有多个候选时，"被挡下的那条"会看到**别的候选的伤害**，
-     * 于是把它误报成"转给你"（我在**真 Chrome**里跑出来就是这句假话，见截图复核）。
-     * ⇒ 判据必须落在"段内"，而不是"回合内"。 */
     const here = list.indexOf(e);
     let seg = here < 0 ? list : list.slice(here + 1);
     for (let k = 0; k < seg.length; k++) if (seg[k] && seg[k].type === 'bigTChain') { seg = seg.slice(0, k); break; }
-    const chain = seg.filter(function (x) {
-      return x && x.type === 'damage' && x.reason === BIGT_CHAIN_REASON;
-    });
-    const mine = chain.filter(function (x) { return x.to === e.to; })[0];
+    const mine = seg.filter(function (x) {
+      return x && x.type === 'damage' && x.reason === BIGT_CHAIN_REASON && x.to === e.to;
+    })[0];
     if (mine) return { cls: 'ev dmg', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 受 ' + mine.amt + ' 点电伤' + tag };
-    const moved = chain[0];
-    if (moved) return { cls: 'ev', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 挡下，伤害转给 ' + nm(moved.to) + '（' + moved.amt + ' 点电伤）' + tag };
     return { cls: 'ev dim', html: '⚡ ' + nm(e.from) + ' 的大雷连带：' + nm(e.to) + ' 挡下（未造成电伤）' + tag };
   }
 
@@ -1489,7 +1479,7 @@
           : { cls: 'ev blue', html: '☂ ' + who + ' 架起避雷针（3 回合内免雷一次）' };
       }
       case 'rodBlock': return { cls: 'ev gold', html: '☂ ' + nm(e.pid) + ' 的避雷针挡下雷击' };
-      case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 被雷劈中：多数技能禁用 3 回合（基础防御/反弹/金刚盾/ジ/吸除外）' };
+      case 'ban': return { cls: 'ev dmg', html: '🌩 ' + nm(e.pid) + ' 的【' + skillName(e.skill) + '】被大雷禁用 ' + (e.turns || 3) + ' 回合' };
       case 'hidden':
         /* 终局收缩是**场地效果**，不是隐藏技能；此前所有 hidden 事件共用一句"触发隐藏技能【…】"，
            玩家会以为第 45 回合开场触发了某个隐藏技。其余 hidden（回魂/梦魇/聚光炮…）保持原样。 */
@@ -1498,7 +1488,7 @@
       /* v1.5.253：不再硬编码"受 2 点电伤" —— 是否真打中要按同回合的连带伤害事件反推（见 `bigTChainText`）。 */
       case 'bigTChain': return bigTChainText(e, roundEvents);
       case 'mirror': return { cls: 'ev pur', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】' + (e.to != null ? '→ ' + nm(e.to) : '') };
-      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + (e.cycle ? '互相镜面成环，本次反射无效' : (e.key === 'firestorm' ? '自己没有有效符咒，镜面天火无效' : (nm(e.from) + ' 本回合的行动不存在或已被作废，无可复制'))) };
+      case 'mirrorNoEffect': return { cls: 'ev dim', html: '🪞 ' + nm(e.pid) + ' 镜面反射：' + (e.cycle ? '互相镜面成环，本次反射无效' : (e.key === 'firestorm' ? '自己没有有效符咒，镜面天火无效' : (nm(e.from) + ' 本回合未成功出招，无可复制'))) };
       /* N14 v1.5.16：非伤害类技能 = 效果落在自己身上 + 对 t2 空指（指向保留、本身无效果） */
       case 'mirrorCopySelf': return { cls: 'ev', html: '🪞 ' + nm(e.pid) + ' 镜面反射：复制 ' + nm(e.from) + ' 的【' + skillName(e.key) + '】' + (e.key === 'armor' && e.to != null ? ('用在自己身上并使 ' + nm(e.to) + ' 附带火弱点') : ('用在自己身上（空指 → ' + nm(e.to) + '）')) };
       case 'revive': return { cls: 'ev gold', html: '👻 ' + nm(e.pid) + ' 回魂复活！本回合无限能量' };

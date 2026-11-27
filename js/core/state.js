@@ -150,12 +150,12 @@
     if (key === R.SK.LASER_EYE) {
       const cont = (p.lastEffSkill || p.lastSkill) === R.SK.LASER_EYE; // R32
       if (cont) return { ok: true, ep: 2, hp: 0, beads: null };
-      if (p.boom < 1) return { ok: false, reason: '首次激光眼需 1 枚爆破珠' };
-      return { ok: true, ep: 1, hp: 0, beads: { boom: 1 } };
+      if (!free && p.boom < 1) return { ok: false, reason: '首次激光眼需 1 枚爆破珠' };
+      return { ok: true, ep: 1, hp: 0, beads: free ? null : { boom: 1 } };
     }
     if (key === R.SK.RAILGUN) {
-      if (p.elec < 1) return { ok: false, reason: '电磁炮需 1 枚电珠' };
-      return { ok: true, ep: 2, hp: 0, beads: { elec: 1 } };
+      if (!free && p.elec < 1) return { ok: false, reason: '电磁炮需 1 枚电珠' };
+      return { ok: true, ep: 2, hp: 0, beads: free ? null : { elec: 1 } };
     }
     if (key === R.SK.FIRESTORM) {
       /* R64（2026-11-06 用户裁定）：**先查有没有自己贴出的、可引爆的符咒**，一枚都没有 ⇒ 条件不满足。

@@ -231,8 +231,10 @@
   /* N14 镜面反射的两个被作用者（t1=复制对象 / t2=输出对象），带兜底钳制。
    * **单点真源**：结算（mirrorPass）的 ④b 与 N15/N16 判定都走这里 ——
    * 否则"t1 阵亡/目标非法后改指向"这类兜底很容易只改一处。 */
-  function mirrorRefs(state, m) {
-    const a = actionOf(state, m);
+  function mirrorRefs(state, m, allowVoided) {
+    const a = allowVoided
+      ? (state.actions[m] && state.actions[m].outcome === 'ok' ? state.actions[m] : null)
+      : actionOf(state, m);
     if (!a || a.key !== SK.MIRROR) return null;
     const opps = aliveOpps(state, m);
     let t1 = a.target, t2 = a.target2;
@@ -246,7 +248,7 @@
     return { t1, t2 };
   }
 
-  /* 顺着 t1 镜面链走到最终被复制的非镜面技能（支持镜面复制镜面；成环/作废/隐藏消耗则 null）。 */
+  /* 顺着 t1 镜面链走到最终被复制的非镜面技能（支持镜面复制镜面；来源已出招即可复制，成环/未出招/隐藏消耗则 null）。 */
   function resolveMirrorChain(state, m, usedByHidden) {
     const a = actionOf(state, m);
     if (!a || a.key !== SK.MIRROR) return null;
@@ -259,12 +261,12 @@
     const maxSteps = playerCount(state) + 1;
     for (let step = 0; step < maxSteps; step++) {
       if (usedByHidden && usedByHidden[cur]) return null;
-      const ca = actionOf(state, cur);
-      if (!ca) return null;
+      const ca = state.actions[cur];
+      if (!ca || ca.outcome !== 'ok') return null;
       if (ca.key !== SK.MIRROR) return { basePid: cur, action: ca, t1: rf.t1, t2: rf.t2 };
       if (seen[cur]) return { cycleInvalid: true, t1: rf.t1, t2: rf.t2 };
       seen[cur] = true;
-      const crf = mirrorRefs(state, cur);
+      const crf = mirrorRefs(state, cur, true);
       if (!crf || crf.t1 == null || crf.t2 == null) return null;
       cur = crf.t1;
     }
@@ -344,8 +346,9 @@
     state._proto = {};
   }
 
-  /* 本回合是否有人用「全息屏障」（含镜面复制全息屏障）把盾套在 `pid` 身上 —— 返回施放者 pid，没有则 null */
-  function holoShieldFrom(state, pid) {
+  /* 本回合所有用「全息屏障」（含镜面复制全息屏障）把盾套在 `pid` 身上的施放者列表 */
+  function holoShieldsFrom(state, pid) {
+    const out = [];
     for (let i = 0; i < state.actions.length; i++) {
       if (i === pid) continue;                      // 自己给自己套不算（规则：目标是"被作用者"= 别人）
       /* ⚠ 必须走 `actionOf`（它会跳过 `voided`），**不能直读 `state.actions[i]`**：
@@ -354,19 +357,23 @@
        * 用 actionOf 还让这条判定**与结算顺序无关** —— 以后万一调 pri 也不会漏掉"被无效化"。 */
       const a = actionOf(state, i);
       if (!a) continue;
-      if (a.key === SK.HOLO && targetOf(state, i) === pid) return i;
-      if (a.key === SK.MIRROR) {
+      if (a.key === SK.HOLO && targetOf(state, i) === pid) out.push(i);
+      else if (a.key === SK.MIRROR) {
         if (state._mirrorHidden && state._mirrorHidden[i]) continue;
         const mr = state._mirrorResolved && state._mirrorResolved[i];
         if (mr) {
-          if (mr.key === SK.HOLO && mr.target === pid) return i;
+          if (mr.key === SK.HOLO && mr.target === pid) out.push(i);
         } else {
           const ch = resolveMirrorChain(state, i, state._mirrorHidden || null);
-          if (ch && !ch.cycleInvalid && ch.action && ch.action.key === SK.HOLO && ch.t2 === pid) return i;
+          if (ch && !ch.cycleInvalid && ch.action && ch.action.key === SK.HOLO && ch.t2 === pid) out.push(i);
         }
       }
     }
-    return null;
+    return out;
+  }
+  function holoShieldFrom(state, pid) {
+    const list = holoShieldsFrom(state, pid);
+    return list.length ? list[0] : null;
   }
 
   /* 直扣血（绕过架势：贷款/禁用/过载血债/净化/天火等）；铁索共享 R45 */
@@ -418,8 +425,8 @@
      * 但 N≥3 被大雷命中后 3 回合不禁 = 与 R29 不符）。 */
     if (usedKey && BIG_T_EXEMPT.indexOf(usedKey) < 0) {
       state.p[pid].cooldown[usedKey] = Math.max(state.p[pid].cooldown[usedKey] || 0, 4);
+      ev(state, { type: 'ban', pid: pid, by: SK.BIG_T, turns: 3, skill: usedKey });
     }
-    ev(state, { type: 'ban', pid: pid, by: SK.BIG_T, turns: 3, skill: usedKey });
   }
 
   /* 可触发地雷的伤害来源；狙击豁免 R38 */
@@ -447,14 +454,14 @@
     }
     rawDamage(state, to, amt, reason, via, { type: opts.type, source: null });
   }
-  /* 转移查检查 + 落地：受害者声明了转移伤害且有有效目标 ⇒ 转给目标；否则原地落地。 */
+  /* 转移查检查 + 落地：受害者声明了转移伤害且有有效目标 ⇒ 转给目标（穿透落点原型制御）；否则原地落地。 */
   function extraHitWithTransfer(state, victim, amt, reason, via, opts) {
     opts = opts || {};
     if (!isAliveInRound(state, victim)) return;
     const dest = transferDestOf(state, victim);
     if (dest != null) {
       ev(state, { type: 'transfer', to: victim, from: (opts.from != null ? opts.from : null), dest, amt, via });
-      extraHitLand(state, dest, amt, reason, via, opts);
+      extraHitLand(state, dest, amt, reason, via, Object.assign({}, opts, { respectProto: false, redirected: true }));
       return;
     }
     extraHitLand(state, victim, amt, reason, via, opts);
@@ -631,13 +638,6 @@
         if (judge(state)) { ev(state, { type: 'blocked', to, by: '八卦阵', amt: dmg.amt, via, judge: true }); return { result: 'blocked' }; }
       } else if (g === 'jinshield') {
         if (!pierce.defense) {
-          if (judge(state)) {
-            const defEa = effectiveAction(state, to);
-            const defTarget = defEa ? defEa.target : oppOf(state, to);
-            if (defTarget != null && defTarget !== to && isAliveInRound(state, defTarget)) {
-              rawDamage(state, defTarget, 1, '金刚盾判定', 'jinshield', { type: R.DMG.NORMAL, source: to });
-            }
-          }
           ev(state, { type: 'blocked', to, by: '金刚盾', amt: dmg.amt, via });
           return { result: 'blocked' };
         }
@@ -733,23 +733,27 @@
   }
 
   /* ---------- N14 镜面反射 / N15 反复横跳 / N16 聚光炮 ---------- */
-  /* 有向图是否存在环（反复横跳触发判定） */
-  function hasCycle(edges) {
+  /* 返回处于至少一个有向环上的边索引集合（边 u->v 在环上 ⇔ 从 v 可沿 edges 回到 u） */
+  function cycleEdgeMask(edges) {
     const adj = {};
     for (const e of edges) (adj[e[0]] = adj[e[0]] || []).push(e[1]);
-    const color = {};
-    let found = false;
-    function dfs(u) {
-      color[u] = 1;
-      const nxt = adj[u] || [];
-      for (const v of nxt) {
-        if (color[v] === 1) { found = true; return; }
-        if (!color[v]) { dfs(v); if (found) return; }
+    const inCycle = {};
+    for (let idx = 0; idx < edges.length; idx++) {
+      const start = edges[idx][1], goal = edges[idx][0];
+      const seen = {};
+      const stack = [start];
+      let hit = false;
+      while (stack.length) {
+        const u = stack.pop();
+        if (u === goal) { hit = true; break; }
+        if (seen[u]) continue;
+        seen[u] = true;
+        const nxt = adj[u] || [];
+        for (const v of nxt) if (!seen[v]) stack.push(v);
       }
-      color[u] = 2;
+      if (hit) inCycle[idx] = true;
     }
-    for (const k in adj) { if (!color[k]) { dfs(+k); if (found) break; } }
-    return found;
+    return inCycle;
   }
 
   /* 判断玩家是否还持有尚未过期且由自己贴出的符咒（镜面复制天火用） */
@@ -876,27 +880,16 @@
         if (!qTargetsT && !tTargetsQ) continue;
         const qUsed = snapRawK[q] || snapK[q];
         const qIsDef = !!(qa && R.GUARD_FAMILY.indexOf(qa.key) >= 0);
-        let qHit = q;
-        if (qIsDef) {
-          const qTgt = snapT[q];
-          /* v2.0.9（N6 字面）：自指防御（八卦/原型/全息）没有"作用目标"可承接 ⇒ 连带伤害落到防御者本人，
-           * 并按 R28①/R23' 照常判定/禁用；旧实现把这一整类 `continue` 掉 = 既不判伤也不禁用。
-           * 有作用目标的防御（藤甲/金刚盾）仍把伤害转给其目标（N22c）；目标已失效时才跳过。 */
-          if (qTgt != null && qTgt !== q) {
-            if (!isAliveInRound(state, qTgt)) continue;
-            qHit = qTgt;
-          }
-        }
-        if (state.p[qHit].rodGuard > 0) {
-          state.p[qHit].rodGuard = 0;
-          ev(state, { type: 'rodBlock', pid: qHit, by: SK.BIG_T });
+        if (state.p[q].rodGuard > 0) {
+          state.p[q].rodGuard = 0;
+          ev(state, { type: 'rodBlock', pid: q, by: SK.BIG_T });
           continue;
         }
         if (!qIsDef && qa && qa.key !== SK.MINI_T) setVoid(state, q, '真正的落雷连带');
         ev(state, { type: 'bigTChain', from: c, to: q, kind: qTargetsT ? 'attack' : 'targeted' });
         const qres = deliverDamage(state, {
           amt: 2, type: R.DMG.ELECTRIC, source: c, via: SK.BIG_T, pierce: { transfer: true }
-        }, qHit, { reason: '真正的落雷·连带' });
+        }, q, { reason: '真正的落雷·连带' });
         if (qres.result === 'land' || qres.result === 'blocked') {
           const qGuard = (guardOf(state, q) || {}).kind;
           if (qres.result === 'land' || qGuard === 'proto') bigTBan(state, q, qUsed);
@@ -912,6 +905,7 @@
     const usedByHidden = {};
     const mirrors = [];
     for (const i of turnOrder(state)) {
+      if (state._mirrorResolved && state._mirrorResolved[i]) continue;
       const a = actionOf(state, i);
       if (a && a.key === SK.MIRROR) mirrors.push(i);
     }
@@ -946,12 +940,16 @@
       const it = info[m];
       if (it && it.t1 != null && it.t2 != null) { edges.push([it.t1, it.t2]); freeUsers.push(m); }
     }
-    if (edges.length >= 2 && hasCycle(edges)) {
-      ev(state, { type: 'hidden', name: '反复横跳', pids: freeUsers.slice() });
-      for (const u of freeUsers) rawDamage(state, u, 1, '反复横跳', 'hop', { type: R.DMG.FIRELIGHT });
-      for (const u of freeUsers) {
-        const ch = resolveMirrorChain(state, u, usedByHidden);
-        if (!ch || ch.cycleInvalid || !ch.action) usedByHidden[u] = true;
+    if (edges.length >= 2) {
+      const mask = cycleEdgeMask(edges);
+      const cycleUsers = [];
+      for (let idx = 0; idx < freeUsers.length; idx++) if (mask[idx]) cycleUsers.push(freeUsers[idx]);
+      if (cycleUsers.length) {
+        ev(state, { type: 'hidden', name: '反复横跳', pids: cycleUsers.slice() });
+        for (const u of cycleUsers) {
+          rawDamage(state, u, 1, '反复横跳', 'hop', { type: R.DMG.FIRELIGHT });
+          usedByHidden[u] = true;
+        }
       }
     }
     return usedByHidden;
@@ -979,6 +977,7 @@
     // ====== ① 避雷针 R31（当回合多避雷针均分能量回馈，防浮点取两位小数） ======
     const rodUsers = [];
     state._rodModeA = [];
+    state._rodModeB = [];
     for (const i of turnOrder(state)) {
       const a = actionOf(state, i);
       if (a && a.key === SK.ROD) rodUsers.push(i);
@@ -989,19 +988,30 @@
     }
     if (rodUsers.length) {
       const lightning = [];
-      for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
+      for (const i of turnOrder(state)) {
+        const a = actionOf(state, i);
+        if (!a) continue;
+        if (R.LIGHTNING.indexOf(a.key) >= 0) lightning.push({ pid: i, key: a.key });
+        else if (a.key === SK.MIRROR) {
+          const ch = resolveMirrorChain(state, i, null);
+          if (ch && !ch.cycleInvalid && ch.action && R.LIGHTNING.indexOf(ch.action.key) >= 0) {
+            lightning.push({ pid: i, key: SK.MIRROR });
+          }
+        }
+      }
       if (lightning.length) {
         state._rodModeA = rodUsers.slice();
-        ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning });
+        ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning.map(function (x) { return x.pid; }) });
         let totalCost = 0;
         for (const l of lightning) {
-          setVoid(state, l, '避雷针');
-          rawDamage(state, l, 1, '避雷针反噬', 'rod', { chain: false, noMine: true });
-          totalCost += (R.byKey[state.actions[l].key].cost || 0);
+          setVoid(state, l.pid, '避雷针');
+          rawDamage(state, l.pid, 1, '避雷针反噬', 'rod', { type: R.DMG.ELECTRIC, noMine: true });
+          totalCost += (R.byKey[l.key].cost || 0);
         }
         const share = round2(totalCost / rodUsers.length);
         if (share > 0) for (const r of rodUsers) state.p[r].ep = round2(state.p[r].ep + share);
       } else {
+        state._rodModeB = rodUsers.slice();
         ev(state, { type: 'rod', pids: rodUsers, mode: 'B' });
         for (const r of rodUsers) state.p[r].rodGuard = 4; // 命中回合 endTurn 会递减，基4=窗口3回合
       }
@@ -1086,17 +1096,23 @@
       };
     }
 
-    // N20 过载炮反制（必须在 clashPass 之前；含镜面复制出的过载炮与攻击反制）
+    // N20 过载炮反制（必须在 clashPass 之前；按入口快照消除座位顺序偏置；含镜面复制出的过载炮与攻击反制）
+    const cannonSnap = [];
+    for (const i of turnOrder(state)) cannonSnap[i] = effectiveAction(state, i);
+    const cannonCountered = [];
     for (const i of turnOrder(state)) {
-      const ea = effectiveAction(state, i);
+      const ea = cannonSnap[i];
       if (!ea || ea.key !== SK.CANNON) continue;
       const t = ea.target;
       if (t == null) continue;
-      const eb = effectiveAction(state, t);
+      const eb = cannonSnap[t];
       if (eb && R.ATK_EFFECT.indexOf(eb.key) >= 0 && (eb.target === i || (!eb.isMirror && eb.key === SK.DUAL_GUN && eb.target2 === i))) {
-        setVoid(state, i, '过载炮被攻击抵消');
-        ev(state, { type: 'cannonCountered', pid: i, by: t, key: eb.key });
+        cannonCountered.push({ pid: i, by: t, key: eb.key });
       }
+    }
+    for (const cc of cannonCountered) {
+      setVoid(state, cc.pid, '过载炮被攻击抵消', cc.by);
+      ev(state, { type: 'cannonCountered', pid: cc.pid, by: cc.by, key: cc.key });
     }
 
     clashPass(state);
@@ -1141,7 +1157,8 @@
           armMine(state, me, i);
         } else if (ea.key === SK.ROD) {
           ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: SK.ROD });
-          if (!state._rodModeA || state._rodModeA.indexOf(i) < 0) {
+          const handledRod = (state._rodModeA && state._rodModeA.indexOf(i) >= 0) || (state._rodModeB && state._rodModeB.indexOf(i) >= 0);
+          if (!handledRod) {
             me.rodGuard = 4;
             ev(state, { type: 'rod', pids: [i], mode: 'B' });
           }
@@ -1176,30 +1193,49 @@
       }
     }
 
-    // 激光眼破防快照：所有激光眼同时判目标是否有防御/复制防/全息/转移可破；仅空放时在 ④d 造成 1 光伤
+    // 激光眼破防快照：所有激光眼同时判目标是否有防御/复制防/全息/转移/次轮八卦可破；仅空放时在 ④d 造成 1 光伤
     const laserConsumed = {};
     const laserVoids = [];
+    const laserClearBagua = [];
+    const laserMirrorEv = {};
     for (const i of turnOrder(state)) {
       const ea = effectiveAction(state, i);
       if (!ea || ea.key !== SK.LASER_EYE) continue;
       const t = effTarget(state, ea);
       if (t == null) continue;
       const tb = effectiveAction(state, t);
-      const hf = holoShieldFrom(state, t);
-      if (tb && tb.key === SK.TRANSFER) {
+      const hfs = holoShieldsFrom(state, t);
+      let hitAny = false;
+      if (tb && (tb.key === SK.TRANSFER || R.GUARD_FAMILY.indexOf(tb.key) >= 0 || (tb.isMirror && copiedGuardKind(tb.key)))) {
         laserVoids.push({ pid: t, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
-        laserConsumed[i] = true;
-      } else if (tb && (R.GUARD_FAMILY.indexOf(tb.key) >= 0 || (tb.isMirror && copiedGuardKind(tb.key)))) {
-        laserVoids.push({ pid: t, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
-        laserConsumed[i] = true;
-      } else if (hf != null) {
-        laserVoids.push({ pid: hf, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
-        laserConsumed[i] = true;
+        hitAny = true;
       }
+      if (hfs.length) {
+        for (const hf of hfs) laserVoids.push({ pid: hf, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
+        hitAny = true;
+      }
+      if (state.p[t] && state.p[t].baguaExtra) {
+        laserClearBagua.push({ pid: t, byPid: i, srcMirror: ea.isMirror, from: ea.from, to: t });
+        hitAny = true;
+      }
+      if (hitAny) laserConsumed[i] = true;
     }
     for (const lv of laserVoids) {
-      if (lv.srcMirror) ev(state, { type: 'mirror', pid: lv.byPid, from: lv.from, to: lv.to, key: SK.LASER_EYE });
+      if (lv.srcMirror && !laserMirrorEv[lv.byPid]) {
+        laserMirrorEv[lv.byPid] = true;
+        ev(state, { type: 'mirror', pid: lv.byPid, from: lv.from, to: lv.to, key: SK.LASER_EYE });
+      }
       setVoid(state, lv.pid, SK.LASER_EYE, lv.byPid);
+    }
+    for (const lb of laserClearBagua) {
+      if (lb.srcMirror && !laserMirrorEv[lb.byPid]) {
+        laserMirrorEv[lb.byPid] = true;
+        ev(state, { type: 'mirror', pid: lb.byPid, from: lb.from, to: lb.to, key: SK.LASER_EYE });
+      }
+      if (state.p[lb.pid] && state.p[lb.pid].baguaExtra) {
+        state.p[lb.pid].baguaExtra = false;
+        ev(state, { type: 'voided', pid: lb.pid, by: SK.LASER_EYE, byPid: lb.byPid, voids: SK.SHIFT });
+      }
     }
 
     // ====== ④d pri3 攻击 / 特殊动作（真实与镜面统一执行） ======
@@ -1207,15 +1243,21 @@
       const ea = effectiveAction(state, i);
       if (!ea || skillPri(ea.key) !== 3) continue;
       if (ea.key === SK.LASER_EYE && laserConsumed[i]) continue;
-      if (R.byKey[ea.key] && (R.byKey[ea.key].cat === R.CAT.ENERGY || R.byKey[ea.key].cat === R.CAT.DEFENSE)) continue;
+      if (R.byKey[ea.key] && (R.byKey[ea.key].cat === R.CAT.ENERGY || (R.byKey[ea.key].cat === R.CAT.DEFENSE && ea.key !== SK.JINSHIELD))) continue;
       if (ea.key === SK.HOLO || ea.key === SK.MINE || ea.key === SK.ROD) continue;
       const t = effTarget(state, ea);
       if (t == null && ea.key !== SK.FIRESTORM) continue;
       const me = state.p[i], you = t != null ? state.p[t] : null;
-      if (ea.isMirror) ev(state, { type: 'mirror', pid: i, from: ea.from, to: t, key: ea.key });
+      if (ea.isMirror && ea.key !== SK.JINSHIELD) ev(state, { type: 'mirror', pid: i, from: ea.from, to: t, key: ea.key });
       const rsnPfx = ea.isMirror ? '镜面反射·' : '';
 
       switch (ea.key) {
+        case SK.JINSHIELD: {
+          if (t != null && t !== i && isAliveInRound(state, t) && judge(state)) {
+            deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.JINSHIELD }, t, { reason: rsnPfx + '金刚盾判定' });
+          }
+          break;
+        }
         case SK.DRAIN: {
           const res = deliverDamage(state, { amt: 1, type: R.DMG.NORMAL, source: i, via: SK.DRAIN }, t, { reason: rsnPfx + '摄魂指法' });
           if (res.result === 'land') {
@@ -1379,6 +1421,7 @@
     // ====== ⑦ 地雷引爆与原型制御结算 pri0 ======
     mineResolveAll(state);
     protoReflectAll(state);
+    state._tauntAlive = state._roundAlive ? state._roundAlive.slice() : null;
     state._roundAlive = null;
     state._mirrorHidden = null;
   }
@@ -1453,15 +1496,20 @@
        * 反证：删掉下面那两行摘/挂 ⇒ spec 的 R65 用例与 D6 的链断言当场红（修前实测 3,3,3 → 2,1,2）。 */
       const _chainsHold = [];
       for (let i = 0; i < playerCount(state); i++) { _chainsHold.push(state.p[i].chains); state.p[i].chains = []; }
+      let sdEmitted = false;
       for (let i = 0; i < playerCount(state); i++) {
         const p = state.p[i];
         if (p.hp <= 0) continue;
-        if (state.round === sdOn && i === 0) ev(state, { type: 'hidden', name: '终局收缩' });
+        if (state.round === sdOn && !sdEmitted) { sdEmitted = true; ev(state, { type: 'hidden', name: '终局收缩' }); }
         deliverDamage(state, { amt: sdDmg, type: R.DMG.NORMAL, source: null, bypassGuards: true, noMine: true }, i, { reason: '终局收缩' });
       }
       for (let i = 0; i < playerCount(state); i++) state.p[i].chains = _chainsHold[i];
     }
     // 挑衅合规检查（本回合义务；净化不能免除已生效义务 R54）
+    const aliveAtPick = function (c) {
+      if (state._tauntAlive) return !!state._tauntAlive[c];
+      return state.p[c] && state.p[c].hp > 0;
+    };
     for (let i = 0; i < playerCount(state); i++) {
       const p = state.p[i];
       if (p.tauntActive) {
@@ -1470,9 +1518,8 @@
          * 不看这刀砍向谁 ⇒ N 人局被挑者打第三人也能免罚（2 人局对手唯一，恒等 ⇒ 一直没露馅，
          * 与 v1.5.13 狙击、v1.5.136 转移同族）。`a.target` 是解析后的真实落点。多个挑衅者时，
          * 攻击其中任一个即算履约（原文"对使用者"，多使用者取"任一"的自然读法）。 */
-        /* 挑主全员阵亡 ⇒ 义务物理不可履行 ⇒ 免罚（与"转移指定目标阵亡⇒转移落空"同族原则；
-         * 2 人局里挑主阵亡=对手没了=本局通常已在结算胜利，行为不变）。 */
-        const impossible = p.tauntBy.every(function (c) { return state.p[c].hp <= 0; });
+        /* 挑主全员回合初已阵亡 ⇒ 义务物理不可履行 ⇒ 免罚（挑主若在义务回合中倒下，仍按当回合义务履约）。 */
+        const impossible = p.tauntBy.every(function (c) { return !aliveAtPick(c); });
         const mr = (a && a.key === SK.MIRROR && state._mirrorResolved) ? state._mirrorResolved[i] : null;
         const effKey = mr ? mr.key : (a && a.key);
         const effTgt = mr ? mr.target : (a && a.target);
@@ -1485,6 +1532,7 @@
         ev(state, { type: 'tauntCheck', pid: i, ok });
       }
     }
+    state._tauntAlive = null;
     // 新挑衅 → 下回合义务
     for (let i = 0; i < playerCount(state); i++) {
       if (state.p[i].tauntPending) {
@@ -1501,16 +1549,16 @@
       const expired = before - p.stickers.length;
       if (expired > 0) ev(state, { type: 'curseExpire', pid: i, n: expired });
     }
-    // 隐藏技能触发（回魂/梦魇，两遍结算以保证互挑同死时不依赖座位顺序）R48/R50
+    // 隐藏技能触发（回魂/梦魇独立判定，互挑同死或链式挑衅时各自按条件触发）R48/R50
     const curseDead = [];
     for (const tc of (state._roundTaunts || [])) {
       const c = state.p[tc.caster], t = state.p[tc.target];
       if (c.hp <= 0 && !c.reviveNext && !c.infiniteEnergy) { c.reviveNext = true; ev(state, { type: 'hidden', name: '回魂', pid: tc.caster }); }
-      if (t.hp <= 0 && !t.infiniteEnergy) curseDead.push(tc);
+      if (t.hp <= 0 && !t.infiniteEnergy && !c.infiniteEnergy) curseDead.push(tc);
     }
     for (const tc of curseDead) {
-      const c = state.p[tc.caster], t = state.p[tc.target];
-      t.reviveNext = false; c.nightmare = true; ev(state, { type: 'hidden', name: '梦魇', pid: tc.caster });
+      const c = state.p[tc.caster];
+      if (!c.nightmare) { c.nightmare = true; ev(state, { type: 'hidden', name: '梦魇', pid: tc.caster }); }
     }
     // 铁索解除（一方确认死亡且无回魂）R46
     for (let i = 0; i < playerCount(state); i++) {

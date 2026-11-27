@@ -431,12 +431,12 @@ t('D111 前台探索三条规则（v1.5.142 · ②③ 于 09-22 夜升级为序�
   eq(eqGreedy(st3, 100), 0, '有我方符咒回合 ε=1soft 与 ε=0 不许有任何改判（序列锁·白班③升级）');
 });
 
-t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用户报）：文案必须按同回合的真事件反推', function () {
+t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用户报 · v2.1.42 取消转向）：文案必须按同回合的真事件反推', function () {
   /* 病（用户在实盘里发现）：`bigTChain` 事件在 `js/core/resolve.js` 里是**无条件发出**的 —— 发完才可能
-   *   `continue` 完全挡住、或把伤害转给防御者的作用目标。UI 原来把这条**硬编码**成"受 2 点电伤"
+   *   `continue` 或在 `deliverDamage` 里被自守防御挡住。UI 原来把这条**硬编码**成"受 2 点电伤"
    *   ⇒ "被挡下"被渲染成"造成了伤害"（**结算是对的，错的只有文案**）。
    * 本门做两件事：① 从 `js/ui/ui.js` **真源码**里抽出 `bigTChainText` 并跑它（不拷一份，测试跑的就是产品代码）；
-   *   ② 三档现场用**引擎真结算**造出来（不手搓事件）：自守防御=完全挡住 / 藤甲=转给被贴者 / 非防御族=真打中。 */
+   *   ② 三档现场用**引擎真结算**造出来（不手搓事件）：自守防御=完全挡住 / 藤甲=完全挡住（v2.1.42 已取消连带转向） / 非防御族=真打中。 */
   const src = readFileSync('js/ui/ui.js', 'utf8').split('\r\n').join('\n');
   const i0 = src.indexOf('const BIGT_CHAIN_REASON');
   const i1 = src.indexOf('function evText(e, roundEvents)');
@@ -468,20 +468,20 @@ t('D166 大雷连带**被挡下时 UI 不许说"造成伤害"**（v1.5.253 用�
       dmg: evs.filter(function (e) { return e.type === 'damage' && e.reason === '真正的落雷·连带'; }) };
   };
   const A = scen(R.SK.GUARD, 1);      // 自守防御 ⇒ 完全挡住
-  const B = scen(R.SK.ARMOR, 2);      // 藤甲（enemy 目标）⇒ 伤害转给被贴者
+  const B = scen(R.SK.ARMOR, 2);      // 藤甲 ⇒ 取消连带转向后直接挡住
   const C = scen(R.SK.GUN, 2);        // 非防御族 ⇒ 真打中（对照）
   /* 前置（本门要测的三档都必须真的被造出来，否则门会变成"测空气"） */
   eq(A.chain.length, 1, '前置：自守防御那档必须产生 bigTChain 事件');
   eq(A.dmg.length, 0, '前提：自守防御那档**没有连带伤害**（这正是用户看到"被挡下"的情形）');
-  eq(B.dmg.length, 1, '前置：藤甲那档必须产生连带伤害（转给被贴者）');
+  eq(B.dmg.length, 0, '前置：藤甲那档取消转向后**没有连带伤害**（本人格挡）');
   eq(C.dmg.length, 1, '前置：非防御族那档必须真的打中');
 
   const aT = mod.bigTChainText(A.chain[0], A.evs).html;
   ok(!/受 2 点电伤|受 2 点伤害/.test(aT) && /挡下/.test(aT),
     '【用户报的那条】被挡下时绝对不许说"受 2 点电伤"，必须说"挡下"：实际=' + aT);
   const bT = mod.bigTChainText(B.chain[0], B.evs).html;
-  ok(bT.indexOf(NM[B.dmg[0].to]) >= 0 && /转给/.test(bT) && !new RegExp(NM[B.chain[0].to] + ' 受').test(bT),
-    '转走时必须指出**真实受害者**、不许记在连带候选头上：实际=' + bT);
+  ok(!/转给|受 2 点电伤/.test(bT) && /挡下（未造成电伤）/.test(bT),
+    '藤甲挡下连带时不转嫁伤害，文案必须说"挡下（未造成电伤）"：实际=' + bT);
   const cT = mod.bigTChainText(C.chain[0], C.evs).html;
   ok(/受 2 点电伤/.test(cT), '真打中时仍要报数（不许为了修 A 把 C 也改哑）：实际=' + cT);
   /* ===== 第四档：**一回合两个候选**（q=1 自守防御=被挡 · q=3 非防御族=真中）=====
