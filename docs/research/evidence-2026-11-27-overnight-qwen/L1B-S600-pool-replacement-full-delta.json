@@ -1,0 +1,331 @@
+{
+  "rows": [
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95001,
+      "hard": 29.1,
+      "regular": 46.3,
+      "sparring": 58.5,
+      "deltaHard": 0,
+      "deltaRegular": 0.09999999999999432,
+      "deltaSparring": -1.1000000000000014,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95002,
+      "hard": 29.1,
+      "regular": 43.8,
+      "sparring": 58,
+      "deltaHard": 0,
+      "deltaRegular": -0.10000000000000142,
+      "deltaSparring": -0.5,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95003,
+      "hard": 31.2,
+      "regular": 43.9,
+      "sparring": 55.6,
+      "deltaHard": 0,
+      "deltaRegular": 0.19999999999999574,
+      "deltaSparring": -0.7999999999999972,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95004,
+      "hard": 32.6,
+      "regular": 45.6,
+      "sparring": 57.9,
+      "deltaHard": 0,
+      "deltaRegular": -0.5,
+      "deltaSparring": -1.6000000000000014,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95005,
+      "hard": 30.1,
+      "regular": 41.1,
+      "sparring": 59.7,
+      "deltaHard": 0,
+      "deltaRegular": -0.10000000000000142,
+      "deltaSparring": -1.1999999999999957,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95006,
+      "hard": 31.8,
+      "regular": 44.9,
+      "sparring": 55.1,
+      "deltaHard": 0,
+      "deltaRegular": -0.10000000000000142,
+      "deltaSparring": -1,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95007,
+      "hard": 31,
+      "regular": 43,
+      "sparring": 56.2,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": -0.8999999999999986,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-rule",
+      "seed": 95008,
+      "hard": 30,
+      "regular": 41.4,
+      "sparring": 58.1,
+      "deltaHard": 0,
+      "deltaRegular": -0.3999999999999986,
+      "deltaSparring": -0.6999999999999957,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95001,
+      "hard": 19.7,
+      "regular": 25,
+      "sparring": 27.9,
+      "deltaHard": 0,
+      "deltaRegular": -0.10000000000000142,
+      "deltaSparring": 0.29999999999999716,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95002,
+      "hard": 21.3,
+      "regular": 26.3,
+      "sparring": 27.7,
+      "deltaHard": 0,
+      "deltaRegular": -0.1999999999999993,
+      "deltaSparring": -0.1999999999999993,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95003,
+      "hard": 20.5,
+      "regular": 25.5,
+      "sparring": 30.7,
+      "deltaHard": 0,
+      "deltaRegular": 0.1999999999999993,
+      "deltaSparring": 0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95004,
+      "hard": 20.3,
+      "regular": 23.9,
+      "sparring": 29,
+      "deltaHard": 0,
+      "deltaRegular": 0.09999999999999787,
+      "deltaSparring": 0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95005,
+      "hard": 19.8,
+      "regular": 23.4,
+      "sparring": 27.6,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": 0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95006,
+      "hard": 21.2,
+      "regular": 24.6,
+      "sparring": 30.7,
+      "deltaHard": 0,
+      "deltaRegular": 0.3000000000000007,
+      "deltaSparring": 0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95007,
+      "hard": 18.4,
+      "regular": 24.7,
+      "sparring": 26.2,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": 0.6999999999999993,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "2p-legacy",
+      "seed": 95008,
+      "hard": 20,
+      "regular": 25,
+      "sparring": 28.2,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": 0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-multi",
+      "seed": 95001,
+      "hard": 3.3,
+      "regular": 10.5,
+      "sparring": 16,
+      "deltaHard": 0,
+      "deltaRegular": -0.3000000000000007,
+      "deltaSparring": 0,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-multi",
+      "seed": 95002,
+      "hard": 3.5,
+      "regular": 10.5,
+      "sparring": 14.5,
+      "deltaHard": 0,
+      "deltaRegular": -0.5,
+      "deltaSparring": -0.3000000000000007,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-multi",
+      "seed": 95003,
+      "hard": 4.5,
+      "regular": 10.3,
+      "sparring": 17,
+      "deltaHard": 0,
+      "deltaRegular": -1,
+      "deltaSparring": 0.1999999999999993,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-multi",
+      "seed": 95004,
+      "hard": 3,
+      "regular": 11,
+      "sparring": 15.5,
+      "deltaHard": 0,
+      "deltaRegular": 0.1999999999999993,
+      "deltaSparring": 0.1999999999999993,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-long",
+      "seed": 95001,
+      "hard": 4.5,
+      "regular": 8.3,
+      "sparring": 15.8,
+      "deltaHard": 0,
+      "deltaRegular": 0.5000000000000009,
+      "deltaSparring": 1,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-long",
+      "seed": 95002,
+      "hard": 3.8,
+      "regular": 8,
+      "sparring": 10.3,
+      "deltaHard": 0,
+      "deltaRegular": -0.3000000000000007,
+      "deltaSparring": -1,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-long",
+      "seed": 95003,
+      "hard": 2.5,
+      "regular": 9.5,
+      "sparring": 15.8,
+      "deltaHard": 0,
+      "deltaRegular": 1,
+      "deltaSparring": 0.5,
+      "ordered": true
+    },
+    {
+      "target": "RING-MINIT-CONT",
+      "config": "5p-long",
+      "seed": 95004,
+      "hard": 2.3,
+      "regular": 7.8,
+      "sparring": 11.5,
+      "deltaHard": 0,
+      "deltaRegular": 0.7999999999999998,
+      "deltaSparring": 0,
+      "ordered": true
+    }
+  ],
+  "summary": {
+    "RING-MINIT-CONT": {
+      "ordered": true,
+      "configs": {
+        "2p-rule": {
+          "seeds": 8,
+          "meanDeltaHard": 0,
+          "meanDeltaRegular": -0.1125000000000016,
+          "meanDeltaSparring": -0.9749999999999988,
+          "sdDeltaRegular": 0.22043990110685327,
+          "sdDeltaSparring": 0.3152380053229633
+        },
+        "2p-legacy": {
+          "seeds": 8,
+          "meanDeltaHard": 0,
+          "meanDeltaRegular": 0.037499999999999645,
+          "meanDeltaSparring": 0.2875000000000001,
+          "sdDeltaRegular": 0.14947825928876746,
+          "sdDeltaSparring": 0.2260392665003137
+        },
+        "5p-multi": {
+          "seeds": 4,
+          "meanDeltaHard": 0,
+          "meanDeltaRegular": -0.40000000000000036,
+          "meanDeltaSparring": 0.024999999999999467,
+          "sdDeltaRegular": 0.43011626335213105,
+          "sdDeltaSparring": 0.20463381929681124
+        },
+        "5p-long": {
+          "seeds": 4,
+          "meanDeltaHard": 0,
+          "meanDeltaRegular": 0.5,
+          "meanDeltaSparring": 0.125,
+          "sdDeltaRegular": 0.4949747468305835,
+          "sdDeltaSparring": 0.739509972887452
+        }
+      }
+    }
+  }
+}
