@@ -71,8 +71,8 @@
 ### NEXT
 
 - 等最终 CI 回执；若绿，本班可收工。
-- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG。
-- 下一班若继续 soft 高废珠，先提出清单外新假设；直接 PG 与低剂量教师线都已收口，不能扫剂量挽救。
+- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG；`nov21-taunt-dsp0b` 当前上游预检红。
+- 下一班若继续 soft 高废珠，先提出清单外新假设；直接 PG 与低剂量教师线都已收口，不能扫剂量挽救。起点只查 `selftest3-pool-census-2026-11-28.txt`。
 - P3 剩余：旋钮 KPI 真实 API 合并、v7 退役决策、CDP 复发观察。
 
 ## 6. 06:36 续班：P3 工程债务
@@ -89,10 +89,13 @@
 - `AR-TK2` 保覆盖 PG：首件血统正确但 selftest3 腿 C 红，按预注册停止。
 - `FC-S1` 保天火 PG：首件全绿，天火/过载炮覆盖保住，但电珠过期 `1591→2133`，主目标反向，淘汰。
 - `MX8-R6B-KL` 保覆盖 PG：首件全绿，废珠下降约 58%，但花珠仅底座 58%、railgun `26→14`、mine `1→0`，触发硬止损，淘汰。
-- 本轮没有池成员变更；剩余高废珠 soft 多数 selftest3 红，不能直接续训。下一班若要继续，应做教师式保覆盖或接受覆盖代价，不再扫 PG 剂量。
+- 本轮没有池成员变更；旧 17/17 census 已作废，当前全池普查为 **30 绿 / 5 红**。剩余高废珠 soft 多数实际为绿，但直接 PG 已多次证明“覆盖保住、浪费不降”或“浪费降、覆盖/花珠掉”，不再扫剂量。
 - 旋钮 KPI 复核：去注释后仍有 145 个真实读法，注释-only 为 0；41 个无静态读法均为动态提及，不能删。总数降到 ≤40 需要真实 API 合并，不是扫描器修复。
 - 当前 35 池废珠表已按 `fx-pool1126d / c61298e6` 重算：可读高废珠前排为 `nov21-taunt-dsp0b 98.0%`、`AR-TK2 97.3%`、`nov21-armor-tzt2d 97.1%`、`MX6-GD-TF20 96.7%`、`FC-S1 96.4%`、`OBS6E9 95.9%`；`MSB11` 的 100% 因分母仅 1 标记为不可读。
 - `AR-TK2` 教师式候选（PG-DR 底 + armor/tank/transfer@0.10）首件与终点全绿、废珠 35.5%，但 armor/tank/transfer 仅 16/5/0 格，覆盖硬门失败，已收口。
 - 文档口径修正：README/AGENTS/旋钮册不再声称 `knobs --check` 自动拦截无注解；生成器已退役该收割逻辑，当前只校验册子新鲜度与暗键。
 - 干净树验收：修复前 Windows `git archive` 会因 autocrlf 把旋钮册转 CRLF 并假红；已将 `training/TRAINING-KNOBS.md` 标记为 `-text`，默认 archive 与 fresh Windows clone 均通过旋钮册和训练栈自检。
 - 收口池审计：35 枚 `hard 17 / soft 18`，`untracked=0`、`dupWid=0`、`blockedAuto=0`、`seatKilledAuto=0`、`seatUnknown=0`、`bad=[]`；`probe-pool` 通过。
+- 当前 selftest3 普查：**30 绿 / 5 红**；红座为 `MN-PG / MT-PG / nov21-taunt-dsp0b / T65-RINGBEAD / OBS6E9`。旧 `selftest3-pool-census.txt` 的 17/17 已过期，下一班使用 `selftest3-pool-census-2026-11-28.txt`。
+- `nov21-taunt-dsp0b` PG 在上游预检即被拒绝（腿 C 红），没有产生训练产物。
+- `nov21-armor-tzt2d` PG 首件全绿、armor `120→116`、transfer `4→5`，但电珠过期仅降约 6%、花珠为底座 76%，未达硬门，淘汰。
