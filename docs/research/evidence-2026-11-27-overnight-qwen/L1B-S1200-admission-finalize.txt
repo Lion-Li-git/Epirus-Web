@@ -1,0 +1,1 @@
+{"id":"L1B-S1200","target":"RINGB11","members":35,"seatSummary":{"90210":{"appended":2,"totalRows":164},"90211":{"appended":2,"totalRows":164}}}

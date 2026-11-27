@@ -474,6 +474,9 @@ node tools/pool-add.mjs --audit
 - Phase 2 结果见 [`RESULTS-2026-11-28-phase2-fallout.md`](RESULTS-2026-11-28-phase2-fallout.md)。
 - Phase 3 A 线已完成并淘汰：A1 全部快照花珠绝对量仅 A0 的 13.1–19.7%，属于“少蓄少废”假改善；不开第二起点。结果见 [`RESULTS-2026-11-28-dr-r3e-stage-c.md`](RESULTS-2026-11-28-dr-r3e-stage-c.md)。
 - Phase 4 已完成：金刚盾/全息高可负担窗口的强制使用对照全部负收益，B 线不开训。结果见 [`RESULTS-2026-11-28-phase4-rule-window.md`](RESULTS-2026-11-28-phase4-rule-window.md)。
+- Phase 6 已完成：`L1B-S1200` 原位替换 `RINGB11`，v2.1.46 池维持 35 枚 `17/18`；全矩阵与产品 `seed=77000` 四桌形全部保序，覆盖只增不减。
+- Phase 6 结果见 [`RESULTS-2026-11-28-phase6-soft-screen.md`](RESULTS-2026-11-28-phase6-soft-screen.md)。
+- transfer 状态窗诊断完成：`TF-DR` 长程兑现 0–12.5%，`AR-TK2` 条件兑现更高；不开 transfer 训练。结果见 [`RESULTS-2026-11-28-transfer-window.md`](RESULTS-2026-11-28-transfer-window.md)。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -483,5 +486,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 01:34 起进入 Phase 6：筛 `MSB11 / RINGB11 / SOFT-RING-C3G25` 与剩余 soft 欠账靶点，优先复用已完整验收的 `L1B-S1200` 做同位替换模拟。
+- 01:58 起进入 Phase 8/9：整理最终 HANDOFF、P3 工程债务清单与 dualGun/mirror 状态窗诊断；不再主动改池。
 - A/B 线均已收口，不再扫 lr/KL/seed；`MSB11` 的 100% 废珠率分母只有 1，继续排除在训练优先之外。

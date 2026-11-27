@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.46 — 11-28（soft 第二次补强：L1B-S1200 原位替换 RINGB11）
+
+**这一版是什么**：在 v2.1.45 当前池上完成 L1b `seg1200` 的第二次完整准入链，用它原位替换 soft 成员 `RINGB11`，池维持 35 枚 `hard 17 / soft 18`。候选血统 `v:92 / S1o / 16561`，`selftest3` 全绿，Stage 1 胜率 51.58%、并集 19、电珠闭环 84.15%（69/82），A/B/C 为 `MxC=0.2562 / MxCL=0.1197 / arR=0.1565`，两 seed 人席 `seatKill=0`。
+
+- **池级效果**：同抽签同位替换全矩阵保持 hard < regular < sparring；2P rule 普通/简单 `−0.96/−0.94pt`，2P legacy `+0.09/+0.10pt`，5P multi `−0.05/+0.15pt`，5P long `−0.25/−0.43pt`。
+- **产品复核**：`seed=77000` 四桌形全部保序；2P rule `−0.50/−0.90pt`，legacy `0/+0.70pt`，5P multi `+0.20/0pt`，5P long `−0.50/−0.30pt`。
+- **覆盖收益**：全池有效并集保持 28；soft 的 bagua/curse/drain/ring/snipe 深度各 +1，无技能归零，覆盖只增不减。
+- **槽位与审计**：候选放回 `RINGB11` 原第 30 行；`pool-add --audit` 为 35 枚、`bad=[]`、`seatUnknown=0`。现役 invited seatKill 清单未再变化。
+- **验证**：Stage 1/2、promote、measure-point、两 seed 人席、bundle/manifest、地图重烘、产品四桌形阶梯和定向门通过；未跑 `--group=engine` 整轮。
+
 ## v2.1.45 — 11-28（soft 长程补强：L1B-S600 原位替换 RING-MINIT-CONT）
 
 **这一版是什么**：在 `c61298e6` 新基线上完成 L1b `seg600` 的完整准入链，用它原位替换 soft 成员 `RING-MINIT-CONT`，池维持 35 枚 `hard 17 / soft 18`。候选血统 `v:92 / S1o / 16561`，`selftest3` 全绿，Stage 1 胜率 54.42%、并集 18、电珠闭环 68.67%（57/83），A/B/C 为 `MxC=0.2400 / MxCL=0.1703 / arR=0.2445`，两 seed 人席 `seatKill=0`。

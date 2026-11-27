@@ -33,3 +33,11 @@
 - `L1B-S1200` 通过 Phase 6 筛除，进入第二次完整入池链，原位替换 `RINGB11`。
 - 候选已有 `selftest3`、Stage 1/2、promote、A/B/C 和两 seed 人席 `seatKill=0` 证据；入池前按已跟踪路径重算人席并保存当前池基线。
 - 本替不覆盖 `dualGun/mirror` 缺口，也不改变规则指纹 `c61298e6`。
+
+## 4. 入池收口
+
+- `L1B-S1200` 已原位替换 `RINGB11`，候选位于原第 30 行；池维持 35 枚 `hard 17 / soft 18`。
+- 两 seed 人席按已跟踪路径重算为 `seatKill=0`；`pool-add --audit` 为 `bad=[]`、`seatUnknown=0`。
+- 产品 `seed=77000` 复核：2P rule `−0.50/−0.90pt`，legacy `0/+0.70pt`，5P multi `+0.20/0pt`，5P long `−0.50/−0.30pt`，四桌形全部保序。
+- `spec 96/96`、`ship-pool 1/1`、`ship-promote 19/19`、`meta-repo 13/13`、`D16`、`D168`、真实 Chrome `SMOKE OK`/`BATTLE OK` 全绿。
+- 发布版本：v2.1.46。

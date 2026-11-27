@@ -1,0 +1,78 @@
+[
+  {
+    "config": "2p-rule",
+    "before": {
+      "hard": 31.1,
+      "regular": 43.8,
+      "sparring": 56.3
+    },
+    "after": {
+      "hard": 31.1,
+      "regular": 43.3,
+      "sparring": 55.4
+    },
+    "delta": {
+      "hard": 0,
+      "regular": -0.5,
+      "sparring": -0.8999999999999986
+    },
+    "ordered": true
+  },
+  {
+    "config": "2p-legacy",
+    "before": {
+      "hard": 20.5,
+      "regular": 23.8,
+      "sparring": 24.7
+    },
+    "after": {
+      "hard": 20.5,
+      "regular": 23.8,
+      "sparring": 25.4
+    },
+    "delta": {
+      "hard": 0,
+      "regular": 0,
+      "sparring": 0.6999999999999993
+    },
+    "ordered": true
+  },
+  {
+    "config": "5p-multi",
+    "before": {
+      "hard": 1.5,
+      "regular": 11.8,
+      "sparring": 16.3
+    },
+    "after": {
+      "hard": 1.5,
+      "regular": 12,
+      "sparring": 16.3
+    },
+    "delta": {
+      "hard": 0,
+      "regular": 0.1999999999999993,
+      "sparring": 0
+    },
+    "ordered": true
+  },
+  {
+    "config": "5p-long",
+    "before": {
+      "hard": 2.3,
+      "regular": 10.5,
+      "sparring": 14.3
+    },
+    "after": {
+      "hard": 2.3,
+      "regular": 10,
+      "sparring": 14
+    },
+    "delta": {
+      "hard": 0,
+      "regular": -0.5,
+      "sparring": -0.3000000000000007
+    },
+    "ordered": true
+  }
+]
