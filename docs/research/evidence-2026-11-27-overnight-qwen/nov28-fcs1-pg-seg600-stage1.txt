@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov28-fcs1-pg.seg600 wid=d2cc98450d4cb99f
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-fcs1-s600
+[nov28-fcs1-pg.seg600] stage1 并集 15/30（自对局 14） 换招JS 0.1213 ‖ 16.9s → D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-fcs1-s600\nov28-fcs1-pg.seg600.json
