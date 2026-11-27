@@ -19,6 +19,7 @@ on:
       - 'css/**'
       - 'js/**'
       - 'champion-map/**'
+      - '!champion-map/archive/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
