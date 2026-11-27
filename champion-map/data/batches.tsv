@@ -138,3 +138,6 @@ measure-CN-DR	a-v2-page-1109	A	-	-	measure-CN-DR	CN-DR-readings.tsv	32	2026-11-2
 measure-PG-DR	a-v2-page-1109	A	-	-	measure-PG-DR	PG-DR-readings.tsv	32	2026-11-26T11:54:50.739Z	add-point
 measure-PG-CN	a-v2-page-1109	A	-	-	measure-PG-CN	PG-CN-readings.tsv	32	2026-11-26T13:45:12.718Z	add-point
 measure-TK-PG	a-v2-page-1109	A	-	-	measure-TK-PG	TK-PG-readings.tsv	32	2026-11-26T15:38:37.130Z	add-point
+measure-MT-PG	a-v2-page-1109	A	-	-	measure-MT-PG	MT-PG-readings.tsv	32	2026-11-27T00:04:42.504Z	add-point
+measure-MN-PG	a-v2-page-1109	A	-	-	measure-MN-PG	MN-PG-readings.tsv	32	2026-11-27T00:06:18.180Z	add-point
+measure-RD-PG	a-v2-page-1109	A	-	-	measure-RD-PG	RD-PG-readings.tsv	32	2026-11-27T00:07:52.215Z	add-point

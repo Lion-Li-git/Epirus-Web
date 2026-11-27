@@ -2,7 +2,7 @@
 
 > **对应计划**：[`PLAN-2026-11-26-value-coverage.md`](PLAN-2026-11-26-value-coverage.md) · [`PREREG-2026-11-26-use-value-pilot.md`](PREREG-2026-11-26-use-value-pilot.md)  
 > **证据目录**：[`evidence-2026-11-26-value-coverage/`](evidence-2026-11-26-value-coverage/)  
-> **状态**：**已完成并收口至 `v2.1.36`**（v2.1.33 完成 A1/A2 与 `FS-DR` 替换 `FC-G1` · v2.1.34 修复 [`training/proto2/pg-train.mjs`](../../training/proto2/pg-train.mjs) 反 REINFORCE 梯度符号并纳入 `PG-DR` · v2.1.35 用真电珠闭环 **`PG-CN`** 替换 `CN-DR` · v2.1.36 按人数修技能剖面并以 **`TK-PG`** 替换 `MX8-R6C-KL`，全池维持 `34` 枚 `17/17`）。
+> **状态**：**已完成并收口至 `v2.1.37`**（v2.1.33 完成 A1/A2 与 `FS-DR` 替换 `FC-G1` · v2.1.34 修复 [`training/proto2/pg-train.mjs`](../../training/proto2/pg-train.mjs) 反 REINFORCE 梯度符号并纳入 `PG-DR` · v2.1.35 用真电珠闭环 **`PG-CN`** 替换 `CN-DR` · v2.1.36 按人数修技能剖面并以 **`TK-PG`** 替换 `MX8-R6C-KL` · v2.1.37 在 **`hard`** 替换三名高废珠主力 **`MT-DR`/`MN-DR`/`ROD-DR`** → **`MT-PG`/`MN-PG`/`RD-PG`** 并补全 `PG-DR.json` Stage 2，全池维持 `34` 枚 `17/17`）。
 
 ---
 
@@ -152,3 +152,15 @@
 - 高废珠前排仍为 `nov21-taunt-dsp0b 97.8%`、`TF-DR 94.0%`、`MN-DR 91.8%`、`MT-DR 91.2%`。
 - soft 5P long 弱成员：`AR-TK2 33.25%`、`RINGB11 29.75%`、`MX8-R6B-KL 26.75%`、`MSB11 25.75%`；下一轮应优先用 soft fallout 或换带修复低档，而不是继续堆 hard。
 - A2 仍只作探索性诊断；原预注册死卡 `v<=0` 与正式脚本判据不一致，未作为今晚入池依据。
+
+---
+
+## 8. 日班收口：主攻 `hard` 高废珠三连换代（`v2.1.37` · `MT-PG`/`MN-PG`/`RD-PG`）
+
+- **补完 `PG-DR.json` Stage 2**：恢复前班截断的 24 技 / 9 消融原始普查并重烘 `skill-report.html`。
+- **三条 `hard` 换代线（均过 `promote 0 阻断` + `90210/90211 seatKill=0` + `fx-pool1126d`）**：
+  1. **`MT-PG`**（`wid=ac6271b6e10a6381`，替 `MT-DR`）：在绿色 `MT-DR` 上跑两段 Stage C PG（`s1 beadSpendW=0.50` → `s2 0.65`），`Stage 1` 胜率 **`56.3%`**、`16/30`、`miniT=39 (6 格)`、电珠 **`41.9% (13/31, 仅过期 18 vs MT-DR 271)`**、`Arena B +42.9809pt`（`6/6` 正，极差 `14.93pt`，全池第一）。
+  2. **`MN-PG`**（`wid=a7272467c05792ea`，替 `MN-DR`）：`MN-DR` 属 `selftest3` 红线不直接跑 PG；改在绿色 `PG-DR` 注入 `MN-DR` `3/5/8P mine@0.65` 再用 `DR-R3E(2:standard@0.85)` 2P 抛光，`Stage 1` 胜率 **`54.5%`**、`17/30`、**`mine=302 (21 格 / 结算 25.9%)`**、电珠 **`66.7% (10/15, 仅过期 4 vs MN-DR 236)`**、`Arena B +40.7633pt`（`6/6` 正，极差 `60.52pt`，全池第二）。
+  3. **`RD-PG`**（`wid=653e6bd461e6b6d9`，替 `ROD-DR`）：绿色 `ROD-DR` 单段 PG（选 `seg2700` 以消去 `seg1800` 90211 `multi 只防御 22.5%` 波动），`Stage 1` 胜率 **`52.3%`**、`17/30`、`rod=312 (14 格 / 结算 13.9%, 2:multi 10/10)`、电珠 **`38.8% (19/49, 仅过期 26 vs ROD-DR 121)`**、`Arena B +19.5179pt`。
+- **对照放弃与 `soft` 下沉裁定**：`nov27-pgta-r1` 因 `G5[long] 37% > 25%` 阻断、`nov27-pgtf-r1` 因 `selftest3` 红与电珠跌回 `18.7%` 放弃；已退位的 `MT-DR / MN-DR / ROD-DR`（`Arena B +13.6..+28.1pt`、废珠 `82.9–91.8%`）不下沉至 `soft` 而直接退役，避免向 `soft` 回灌高废珠并压扁 `5P long` 阶梯。
+- **全池变化与阶梯复核**：`hard`（17 枚）`Arena B` 中位 **`+19.52pt`**、废珠中位 **`51.85%`**、并集 `27` 技；`soft`（17 枚）`Arena B` 中位 **`+4.09pt`**、并集 `27` 技；3 个替换位 `Stage 1` 过期电珠合计 **`628 → 48`（降 `13.1×`）**。`probe-diff-ladder --pool=1`：`2P rule`（1500g `95001`）`32.93% < 42.40% < 57.07%`、`2P legacy` `21.20% < 25.27% < 27.73%`、`5P multi`（800g `95002`）`3.63% < 12.00% < 17.13%`、`5P long`（400g `95001`）`3.75% < 7.25% < 13.25%`，四桌形全过。

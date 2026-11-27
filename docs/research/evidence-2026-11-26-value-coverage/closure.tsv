@@ -76,31 +76,33 @@ JN-DR	hard	25	holo	games	14	2	12		0	3:multi:0/1,5:long:1/8,5:multi:1/1,8:long:0/
 JN-DR	hard	25	miniT	games	24	0	24	0	1	5:long:0/5,8:long:0/9,8:multi:0/10
 JN-DR	hard	25	shift	games	4	0	4		0	5:long:0/1,8:long:0/2,8:multi:0/1
 JN-DR	hard	25	curse	games	10	0	10		0	2:long:0/1,3:long:0/4,3:multi:0/3,5:long:0/2
-MN-DR	hard	25	snipe	games	706	614	92	0.8696883852691218	1	2:long:108/122,2:multi:78/78,3:long:76/93,3:multi:75/97,5:long:76/86,5:multi:78/94,8:long:62/68,8:multi:61/68
-MN-DR	hard	25	sword	games	485	389	96	0.8020618556701031	1	2:long:103/135,2:multi:74/83,3:long:45/55,3:multi:40/64,5:long:42/50,5:multi:29/32,8:long:26/31,8:multi:30/35
-MN-DR	hard	25	guard	games	339	107	232	0.31563421828908556	1	2:long:5/11,2:multi:7/7,3:long:30/89,3:multi:10/29,5:long:29/69,5:multi:6/29,8:long:13/72,8:multi:7/33
-MN-DR	hard	25	gun	games	1021	896	125	0.8775710088148874	1	2:long:108/121,2:multi:66/98,3:long:131/146,3:multi:111/122,5:long:135/147,5:multi:109/129,8:long:125/132,8:multi:111/126
-MN-DR	hard	25	charge	events	257	13	236	0.05058365758754864	1	2:long:1/1,2:multi:10/10,3:long:0/125,3:multi:0/4,5:long:1/80,5:multi:0/1,8:long:0/34,8:multi:1/2
-MN-DR	hard	25	bagua	games	582	93	489	0.15979381443298968	1	2:long:14/57,2:multi:0/29,3:long:13/95,3:multi:5/51,5:long:23/106,5:multi:5/56,8:long:19/122,8:multi:14/66
-MN-DR	hard	25	reflect	games	837	356	481	0.4253285543608124	1	2:long:27/37,2:multi:23/24,3:long:66/132,3:multi:38/122,5:long:65/144,5:multi:44/128,8:long:57/123,8:multi:36/127
-MN-DR	hard	25	mine	games	106	28	78	0.2641509433962264	1	2:long:0/15,3:long:3/18,3:multi:9/11,5:long:5/24,5:multi:6/8,8:long:2/20,8:multi:3/10
-MN-DR	hard	25	shift	games	29	0	29	0	1	3:long:0/13,5:long:0/4,8:long:0/12
-MN-DR	hard	25	bigT	games	40	39	1	0.975	1	2:long:0/1,2:multi:39/39
-MN-DR	hard	25	holo	games	14	1	13		0	3:long:0/5,5:long:0/3,8:long:0/5,8:multi:1/1
-MN-DR	hard	25	railgun	games	13	13	0		0	2:long:1/1,2:multi:10/10,5:long:1/1,8:multi:1/1
-MT-DR	hard	25	sword	games	558	481	77	0.8620071684587813	1	2:long:116/122,2:multi:98/99,3:long:61/75,3:multi:35/44,5:long:48/65,5:multi:38/42,8:long:54/72,8:multi:31/39
-MT-DR	hard	25	gun	games	1076	907	169	0.8429368029739777	1	2:long:137/147,2:multi:85/131,3:long:121/146,3:multi:103/127,5:long:136/149,5:multi:97/117,8:long:120/132,8:multi:108/127
-MT-DR	hard	25	bagua	games	588	107	481	0.18197278911564627	1	2:long:15/85,2:multi:4/62,3:long:18/97,3:multi:3/23,5:long:18/121,5:multi:8/45,8:long:33/104,8:multi:8/51
-MT-DR	hard	25	reflect	games	758	277	481	0.3654353562005277	1	2:long:25/48,2:multi:23/53,3:long:58/122,3:multi:35/122,5:long:50/129,5:multi:38/124,8:long:32/100,8:multi:16/60
-MT-DR	hard	25	charge	events	297	26	271	0.08754208754208755	1	2:long:3/3,2:multi:10/10,3:long:0/20,3:multi:0/11,5:long:6/56,5:multi:6/23,8:long:1/153,8:multi:0/21
-MT-DR	hard	25	snipe	games	681	566	115	0.8311306901615272	1	2:long:65/65,2:multi:60/60,3:long:73/103,3:multi:76/109,5:long:84/91,5:multi:61/85,8:long:64/73,8:multi:83/95
-MT-DR	hard	25	guard	games	314	83	231	0.2643312101910828	1	2:long:1/21,2:multi:5/5,3:long:26/65,3:multi:7/25,5:long:23/75,5:multi:5/26,8:long:12/80,8:multi:4/17
-MT-DR	hard	25	bigT	games	102	92	10	0.9019607843137255	1	2:long:6/6,2:multi:37/37,3:long:8/12,5:long:9/11,5:multi:12/15,8:long:15/15,8:multi:5/6
-MT-DR	hard	25	railgun	games	21	18	3	0.8571428571428571	1	2:long:3/3,2:multi:10/10,5:long:4/5,5:multi:1/2,8:long:0/1
-MT-DR	hard	25	shift	games	3	1	2		0	8:long:0/1,8:multi:1/2
-MT-DR	hard	25	miniT	games	30	0	30	0	1	3:long:0/1,3:multi:0/2,5:long:0/6,5:multi:0/3,8:long:0/10,8:multi:0/8
-MT-DR	hard	25	curse	games	19	0	19		0	3:long:0/7,3:multi:0/4,5:long:0/2,5:multi:0/1,8:long:0/2,8:multi:0/3
-MT-DR	hard	25	holo	games	4	0	4		0	8:long:0/3,8:multi:0/1
+MN-PG	hard	24	sword	games	503	429	74	0.852882703777336	1	2:long:63/92,2:multi:79/84,3:long:79/86,3:multi:47/51,5:long:50/56,5:multi:34/44,8:long:42/46,8:multi:35/44
+MN-PG	hard	24	gun	games	1048	901	147	0.8597328244274809	1	2:long:109/121,2:multi:87/108,3:long:136/150,3:multi:122/139,5:long:129/143,5:multi:98/129,8:long:118/139,8:multi:102/119
+MN-PG	hard	24	charge	events	15	10	4		0	2:long:0/0,2:multi:10/10,3:long:0/1,3:multi:0/0,5:long:0/0,5:multi:0/0,8:long:0/3,8:multi:0/1
+MN-PG	hard	24	reflect	games	1000	432	568	0.432	1	2:long:34/79,2:multi:12/27,3:long:69/147,3:multi:55/147,5:long:66/150,5:multi:66/150,8:long:62/150,8:multi:68/150
+MN-PG	hard	24	snipe	games	756	649	107	0.8584656084656085	1	2:long:97/125,2:multi:65/65,3:long:63/72,3:multi:87/112,5:long:96/102,5:multi:79/100,8:long:80/85,8:multi:82/95
+MN-PG	hard	24	guard	games	400	99	301	0.2475	1	2:long:11/16,2:multi:5/5,3:long:34/98,3:multi:5/31,5:long:25/94,5:multi:6/41,8:long:7/76,8:multi:6/39
+MN-PG	hard	24	mine	games	135	35	100	0.25925925925925924	1	2:multi:20/29,3:long:5/19,3:multi:3/11,5:long:1/24,5:multi:1/11,8:long:2/23,8:multi:3/18
+MN-PG	hard	24	bagua	games	630	148	482	0.23492063492063492	1	2:long:9/36,3:long:16/105,3:multi:21/71,5:long:22/124,5:multi:10/83,8:long:41/118,8:multi:29/93
+MN-PG	hard	24	shift	games	53	5	48	0.09433962264150944	1	3:long:1/10,5:long:0/23,8:long:4/20
+MN-PG	hard	24	holo	games	141	3	138	0.02127659574468085	1	3:long:1/8,3:multi:0/3,5:long:0/22,5:multi:0/31,8:long:2/42,8:multi:0/35
+MN-PG	hard	24	bigT	games	32	32	0	1	1	2:multi:31/31,8:multi:1/1
+MN-PG	hard	24	railgun	games	10	10	0		0	2:multi:10/10
+MN-PG	hard	24	firestorm	games	3	3	0		0	2:long:1/1,5:long:1/1,8:long:1/1
+MN-PG	hard	24	curse	games	11	3	8		0	2:long:1/1,3:long:0/2,5:long:1/3,5:multi:0/1,8:long:1/3,8:multi:0/1
+MT-PG	hard	24	sword	games	518	420	98	0.8108108108108109	1	2:long:101/123,2:multi:96/98,3:long:64/81,3:multi:24/37,5:long:34/43,5:multi:28/38,8:long:50/72,8:multi:23/26
+MT-PG	hard	24	gun	games	1095	961	134	0.8776255707762557	1	2:long:140/146,2:multi:104/133,3:long:126/142,3:multi:118/134,5:long:134/149,5:multi:104/121,8:long:123/138,8:multi:112/132
+MT-PG	hard	24	charge	events	31	13	18	0.41935483870967744	1	2:long:0/0,2:multi:10/10,3:long:2/12,3:multi:0/4,5:long:0/0,5:multi:0/0,8:long:1/5,8:multi:0/0
+MT-PG	hard	24	bagua	games	613	119	494	0.19412724306688417	1	2:long:19/65,2:multi:0/41,3:long:11/106,3:multi:4/43,5:long:33/131,5:multi:3/54,8:long:39/120,8:multi:10/53
+MT-PG	hard	24	reflect	games	884	363	521	0.4106334841628959	1	2:long:48/90,2:multi:24/34,3:long:61/133,3:multi:47/126,5:long:58/142,5:multi:42/128,8:long:43/122,8:multi:40/109
+MT-PG	hard	24	snipe	games	620	533	87	0.8596774193548387	1	2:long:63/63,2:multi:60/60,3:long:63/85,3:multi:83/110,5:long:84/94,5:multi:66/87,8:long:58/61,8:multi:56/60
+MT-PG	hard	24	guard	games	298	60	238	0.20134228187919462	1	2:long:1/21,2:multi:5/5,3:long:20/67,3:multi:0/20,5:long:15/70,5:multi:5/19,8:long:10/73,8:multi:4/23
+MT-PG	hard	24	bigT	games	60	58	2	0.9666666666666667	1	2:multi:37/37,3:long:0/1,5:long:9/9,8:long:12/12,8:multi:0/1
+MT-PG	hard	24	miniT	games	30	0	30	0	1	3:long:0/3,3:multi:0/2,5:multi:0/3,8:long:0/18,8:multi:0/4
+MT-PG	hard	24	railgun	games	13	13	0		0	2:multi:10/10,3:long:2/2,8:long:1/1
+MT-PG	hard	24	shift	games	3	1	2		0	5:long:0/1,8:long:1/2
+MT-PG	hard	24	curse	games	26	0	26	0	1	2:long:0/1,3:long:0/8,3:multi:0/4,5:long:0/4,5:multi:0/1,8:long:0/6,8:multi:0/2
+MT-PG	hard	24	holo	games	18	9	9		0	3:long:0/3,5:long:0/1,8:long:0/3,8:multi:9/11
 nov21-taunt-dsp0b	hard	24	taunt	games	792	792	0	1	1	2:long:71/71,2:multi:150/150,3:long:84/84,3:multi:134/134,5:long:119/119,5:multi:116/116,8:long:56/56,8:multi:62/62
 nov21-taunt-dsp0b	hard	24	sword	games	536	435	101	0.8115671641791045	1	2:long:79/104,2:multi:37/66,3:long:61/70,3:multi:45/53,5:long:63/77,5:multi:37/42,8:long:47/54,8:multi:66/70
 nov21-taunt-dsp0b	hard	24	charge	events	683	8	668	0.01171303074670571	1	2:long:1/11,2:multi:0/10,3:long:2/209,3:multi:2/5,5:long:0/218,5:multi:1/110,8:long:0/107,8:multi:2/13
@@ -165,20 +167,20 @@ PUR-2P	hard	25	rod	games	7	0	7		0	3:long:0/2,5:long:0/2,8:long:0/3
 PUR-2P	hard	25	purify	games	10	0	10		0	3:long:0/2,5:long:0/4,8:long:0/4
 PUR-2P	hard	25	holo	games	3	0	3		0	8:long:0/1,8:multi:0/2
 PUR-2P	hard	25	shift	games	9	3	6		0	2:long:2/2,5:long:0/2,8:long:1/4,8:multi:0/1
-ROD-DR	hard	25	snipe	games	774	664	110	0.8578811369509044	1	2:long:114/135,2:multi:96/96,3:long:71/80,3:multi:83/110,5:long:77/85,5:multi:67/86,8:long:60/70,8:multi:96/112
-ROD-DR	hard	25	guard	games	313	81	232	0.25878594249201275	1	2:long:0/10,2:multi:17/27,3:long:20/72,3:multi:7/23,5:long:22/76,5:multi:0/30,8:long:13/57,8:multi:2/18
-ROD-DR	hard	25	gun	games	999	873	126	0.8738738738738738	1	2:long:119/123,2:multi:86/118,3:long:122/136,3:multi:116/142,5:long:120/139,5:multi:104/115,8:long:122/132,8:multi:84/94
-ROD-DR	hard	25	reflect	games	837	313	524	0.3739545997610514	1	2:long:44/61,2:multi:12/21,3:long:64/130,3:multi:39/128,5:long:54/139,5:multi:43/131,8:long:22/102,8:multi:35/125
-ROD-DR	hard	25	sword	games	491	385	106	0.7841140529531568	1	2:long:40/68,2:multi:59/69,3:long:90/114,3:multi:24/38,5:long:75/87,5:multi:34/37,8:long:44/56,8:multi:19/22
-ROD-DR	hard	25	charge	events	146	18	121	0.1232876712328767	1	2:long:0/1,2:multi:10/10,3:long:6/14,3:multi:1/1,5:long:1/49,5:multi:0/1,8:long:0/61,8:multi:0/9
-ROD-DR	hard	25	bagua	games	534	116	418	0.21722846441947566	1	2:long:11/42,2:multi:0/9,3:long:15/95,3:multi:5/51,5:long:27/115,5:multi:9/58,8:long:36/117,8:multi:13/47
-ROD-DR	hard	25	rod	games	79	12	67	0.1518987341772152	1	2:multi:10/10,3:long:0/9,3:multi:0/1,5:long:1/15,5:multi:0/13,8:long:0/23,8:multi:1/8
-ROD-DR	hard	25	bigT	games	71	58	13	0.8169014084507042	1	2:multi:27/27,3:long:9/11,3:multi:1/1,5:long:4/10,5:multi:9/11,8:long:5/8,8:multi:3/3
-ROD-DR	hard	25	railgun	games	16	14	2		0	2:multi:10/10,3:long:2/4,3:multi:1/1,5:long:1/1
-ROD-DR	hard	25	shift	games	22	7	15	0.3181818181818182	1	3:long:0/3,5:long:0/4,8:long:7/15
-ROD-DR	hard	25	holo	games	12	0	12		0	3:long:0/5,5:long:0/3,8:long:0/3,8:multi:0/1
-ROD-DR	hard	25	curse	games	2	0	2		0	5:long:0/2
-ROD-DR	hard	25	purify	games	1	0	1		0	8:long:0/1
+RD-PG	hard	24	sword	games	489	405	84	0.8282208588957055	1	2:long:61/81,2:multi:93/103,3:long:83/103,3:multi:30/37,5:long:41/61,5:multi:29/31,8:long:38/42,8:multi:30/31
+RD-PG	hard	24	gun	games	1019	884	135	0.8675171736997056	1	2:long:115/125,2:multi:70/102,3:long:128/143,3:multi:105/129,5:long:132/145,5:multi:106/116,8:long:124/134,8:multi:104/125
+RD-PG	hard	24	charge	events	49	19	26	0.3877551020408163	1	2:long:0/0,2:multi:10/10,3:long:1/7,3:multi:0/1,5:long:8/13,5:multi:0/0,8:long:0/17,8:multi:0/1
+RD-PG	hard	24	bagua	games	532	108	424	0.20300751879699247	1	2:long:12/38,2:multi:0/9,3:long:17/99,3:multi:4/42,5:long:20/109,5:multi:11/58,8:long:34/111,8:multi:10/66
+RD-PG	hard	24	reflect	games	806	297	509	0.3684863523573201	1	2:long:51/63,2:multi:0/9,3:long:70/134,3:multi:31/132,5:long:56/136,5:multi:45/132,8:long:23/97,8:multi:21/103
+RD-PG	hard	24	snipe	games	760	645	115	0.8486842105263158	1	2:long:114/134,2:multi:65/65,3:long:71/83,3:multi:85/117,5:long:81/92,5:multi:77/96,8:long:67/75,8:multi:85/98
+RD-PG	hard	24	guard	games	282	71	211	0.25177304964539005	1	2:long:1/12,2:multi:5/15,3:long:18/68,3:multi:10/27,5:long:23/54,5:multi:4/31,8:long:9/50,8:multi:1/25
+RD-PG	hard	24	bigT	games	81	61	20	0.7530864197530864	1	2:multi:27/27,3:long:9/14,3:multi:0/1,5:long:9/16,5:multi:6/8,8:long:2/4,8:multi:8/11
+RD-PG	hard	24	rod	games	79	11	68	0.13924050632911392	1	2:multi:10/10,3:long:0/11,5:long:1/18,5:multi:0/9,8:long:0/16,8:multi:0/15
+RD-PG	hard	24	shift	games	22	8	14	0.36363636363636365	1	3:long:0/3,5:long:1/5,8:long:7/12,8:multi:0/2
+RD-PG	hard	24	railgun	games	15	12	3		0	2:multi:10/10,3:long:0/1,5:long:2/4
+RD-PG	hard	24	holo	games	15	1	14		0	3:long:0/3,5:long:1/2,8:long:0/10
+RD-PG	hard	24	curse	games	2	1	1		0	3:long:0/1,5:long:1/1
+RD-PG	hard	24	firestorm	games	1	1	0		0	5:long:1/1
 T65-RINGBEAD	hard	25	snipe	games	799	703	96	0.8798498122653317	1	2:long:61/66,2:multi:62/62,3:long:101/111,3:multi:91/112,5:long:107/116,5:multi:96/118,8:long:107/118,8:multi:78/96
 T65-RINGBEAD	hard	25	guard	games	261	45	216	0.1724137931034483	1	2:long:14/43,2:multi:18/39,3:long:3/36,3:multi:3/28,5:long:1/46,5:multi:1/33,8:long:5/28,8:multi:0/8
 T65-RINGBEAD	hard	25	gun	games	827	674	153	0.814993954050786	1	2:long:96/106,2:multi:73/98,3:long:98/121,3:multi:67/99,5:long:101/116,5:multi:74/95,8:long:79/97,8:multi:86/95

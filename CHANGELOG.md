@@ -4,6 +4,27 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.37 — 11-27（`hard` 三席高废珠换代：**`MT-PG`/`MN-PG`/`RD-PG`** 替换 **`MT-DR`/`MN-DR`/`ROD-DR`** ‖ 修 `PG-DR.json` Stage 2）
+
+**这一版是什么**：在排查 `v2.1.36` 后继路线后主攻 **`hard`** 带三名高废珠主力——**`MT-PG`**（替 `MT-DR`）、**`MN-PG`**（替 `MN-DR`）与 **`RD-PG`**（替 `ROD-DR`）。三席退役成员合计 `Stage 1` 过期电珠由 **`628 → 48`**（降 **`13.1×`**），同时完整保留 `miniT` / `mine` / `rod` 稀缺技能覆盖且全部 **`0` 阻断 / `seatKill=0`**；同时补全被上版截断的 [`PG-DR.json`](champion-map/data/skill-report/PG-DR.json) Stage 2 普查数据。全池保持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`、`fx-pool1126d`）**。
+
+- **`MT-PG`（[`docs/artifacts/MT-PG.bak`](docs/artifacts/MT-PG.bak) · `wid=ac6271b6e10a6381`）入 `hard` 替换退役 `MT-DR`**：
+  - `MT-DR` 底座两段 Stage C PG（`nov27-pg-mt-s1.seg3600` `--beadSpendW=0.50` → `nov27-pg-mt-s2.seg1200` `--beadSpendW=0.65 --lamExp=1.10 --penDeadElec=0.70 --klModes=standard`）；
+  - `Stage 1`：胜率 **`56.3%`**（`MT-DR 48.8%`）、`16/30`（`Stage 2 = 24 技`）、`miniT=39 (6 格)`、电珠闭环 **`41.9% (13/31)`**（仅过期 `18`，较 `MT-DR 271` 降 **`15.1×`**）；
+  - `2P`（300g `95001`）：`rule 17.0% / legacy 18.3%`；`6` 粒 `Arena B +42.9809pt`（`6/6` 正 `[34.66 .. 49.59]pt`，极差 `14.9349pt`，全池最高）；`promote` **0 阻断**（`G4 0.3%/0%`、`G5 0%/0%`）；`90210/90211 seatKill=0`；图坐标 `H=58.3 / S=1.56`。
+- **`MN-PG`（[`docs/artifacts/MN-PG.bak`](docs/artifacts/MN-PG.bak) · `wid=a7272467c05792ea`）入 `hard` 替换退役 `MN-DR`**：
+  - 针对红线 `MN-DR` 不直接做梯度，改为在绿色 `PG-DR` 注入 `MN-DR` 的 `3:multi,5:long,8:long` `mine@0.65`（`nov27-pgmn-r2`）再接 `DR-R3E(2:standard@0.85)` 短程 2P 抛光（`nov27-mnpg-2p`）；
+  - `Stage 1`：胜率 **`54.5%`**、`17/30`（`Stage 2 = 25 技`）、`mine=302 (21 格 / 结算 35/135=25.9%)`、电珠闭环 **`66.7% (10/15)`**（仅过期 `4`，较 `MN-DR 236` 降 **`59×`**）；
+  - `2P`（300g `95001`）：`rule 19.3% / legacy 17.7%`；`6` 粒 `Arena B +40.7633pt`（`6/6` 正 `[14.33 .. 74.84]pt`，极差 `60.515pt`，全池第二）；`promote` **0 阻断**；`90210/90211 seatKill=0`；图坐标 `H=53.2 / S=1.52`。
+- **`RD-PG`（[`docs/artifacts/RD-PG.bak`](docs/artifacts/RD-PG.bak) · `wid=653e6bd461e6b6d9`）入 `hard` 替换退役 `ROD-DR`**：
+  - `ROD-DR` 单段 Stage C PG（`nov27-pg-rod-s1.seg2700`，`--lamExp=1.10 --penDeadElec=0.70 --beadSpendW=0.50 --klModes=standard`）；
+  - `Stage 1`：胜率 **`52.3%`**、`17/30`（`Stage 2 = 24 技`）、`rod=312 (14 格 / 结算 11/79=13.9%, 2:multi 10/10)`、电珠闭环 **`38.8% (19/49)`**（仅过期 `26`，较 `ROD-DR 121` 降 **`4.7×`**）；
+  - `2P`（300g `95001`）：`rule 18.7% / legacy 19.3%`；`6` 粒 `Arena B +19.5179pt`（极差 `32.0424pt`）；`promote` **0 阻断**（`G4 4.7%/0%`、`G5 0%/0%`）；`90210/90211 seatKill=0`；图坐标 `H=61.6 / S=1.41`。
+- **`soft` 下沉评估与净变化**：
+  - 评估了落选臂 `TA-PG`（`nov27-pgta-r1`，`Arena B -1.51pt` 但 `G5[long] 37% > 25%` 阻断，不入池）与已退位原主 `MT-DR / ROD-DR / MN-DR`（`Arena B +13.6..+28.1pt` 但废珠 `82.9–91.8%`），直接退役以防高废珠与过度抬硬压扁 `5P long` 阶梯。
+  - 更新后 `hard` 17 枚 `Arena B` 中位 **`+19.52pt`**、废珠率中位 **`51.85%`**、带内覆盖 **`27` 技**；`soft` 17 枚 `Arena B` 中位 **`+4.09pt`**、带内覆盖 **`27` 技**；`MT-DR/MN-DR/ROD-DR.json` 依 `AGENTS.md §24` 移至仓外隔离目录（`.bak` 保留在册）。
+  - 换代后 `probe-diff-ladder --pool=1` 全桌形无缺口通过：`2P rule`（1500g `95001`）`32.93% < 42.40% < 57.07%`、`2P legacy` `21.20% < 25.27% < 27.73%`、`5P multi`（800g `95002`）`3.63% < 12.00% < 17.13%`、`5P long`（400g `95001`）`3.75% < 7.25% < 13.25%`。
+
 ## v2.1.36 — 11-27（**`TK-PG`** 入 `soft` 替换退役 **`MX8-R6C-KL`** ‖ 人数剖面量具与坦克覆盖修正）
 
 **这一版是什么**：按 `2/3/5/8P` 拆开技能使用与兑现，确认电磁炮在 2P 最少、随人数上升属正常形状；`PG-CN` 的真实缺口在 8P 电珠闭环（`5/29`），不是 2P。坦克覆盖线经 `FS-G2 → T1 → T2` 得到绿色坦克教师，再低剂量蒸回绿色 `PG-DR`，得到 **`TK-PG`**（[`docs/artifacts/TK-PG.bak`](docs/artifacts/TK-PG.bak) · `wid=4fb5b59cb4e5a446`）入 **`soft`**，替换高废珠的 `MX8-R6C-KL`；全池维持 **`34` 枚（`hard 17 / soft 17`、`bad=[]`）**。
