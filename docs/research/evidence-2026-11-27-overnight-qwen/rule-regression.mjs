@@ -5,20 +5,21 @@ import { resolve } from 'node:path';
 const ROOT = process.cwd();
 const BEFORE = 'D:/code/Epirus-Web-fp-before';
 const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
-const packs = [
-  'JN-DR', 'HL-G1', 'FS-DR', 'FS2-LE26', 'TK-FS4', 'RD-PG',
-  'MN-PG', 'PG-CN', 'nov21-taunt-dsp0b', 'OBS6E9', 'DR-R3E',
-];
+const SEED = Number(process.env.ARENA_SEED || 82200);
+const TAG = SEED === 82200 ? '' : '-seed' + SEED;
+const packs = process.env.REG_PACKS
+  ? process.env.REG_PACKS.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['JN-DR', 'HL-G1', 'FS-DR', 'FS2-LE26', 'TK-FS4', 'RD-PG', 'MN-PG', 'PG-CN', 'nov21-taunt-dsp0b', 'OBS6E9', 'DR-R3E'];
 const rows = [];
 
 function run(tree, id, path) {
   const cp = spawnSync(process.execPath, [
     'tools/arena-eval.mjs', '--pack=' + path, '--id=' + id,
-    '--dose=page', '--seed=82200', '--jobs=1',
+    '--dose=page', '--seed=' + SEED, '--jobs=1',
   ], { cwd: tree, encoding: 'utf8', maxBuffer: 32 << 20 });
   const stdout = String(cp.stdout || '');
   const stderr = String(cp.stderr || '');
-  writeFileSync(resolve(ROOT, OUT, id + '-' + (tree === BEFORE ? 'before' : 'after') + '.txt'),
+  writeFileSync(resolve(ROOT, OUT, id + '-' + (tree === BEFORE ? 'before' : 'after') + TAG + '.txt'),
     stdout + '\n' + stderr);
   const line = stdout.trim().split('\n').reverse().find((s) => s.trim().startsWith('{'));
   if (!line) throw new Error(id + ' 没有 Arena JSON：exit=' + cp.status + '\n' + stderr.slice(-1000));
@@ -45,7 +46,7 @@ for (const id of packs) {
   console.log(id + '\trAll ' + row.beforeR.toFixed(6) + ' -> ' + row.afterR.toFixed(6) + '\tdelta=' + row.deltaR.toFixed(6));
 }
 
-writeFileSync(resolve(ROOT, OUT, 'phase1-rule-regression.json'), JSON.stringify(rows, null, 2));
+writeFileSync(resolve(ROOT, OUT, 'phase1-rule-regression' + TAG + '.json'), JSON.stringify(rows, null, 2));
 const header = ['id', 'beforeR', 'afterR', 'deltaR', 'beforeShortR', 'afterShortR', 'beforeLongR', 'afterLongR', 'beforeX4', 'afterX4'];
-writeFileSync(resolve(ROOT, OUT, 'phase1-rule-regression.tsv'),
+writeFileSync(resolve(ROOT, OUT, 'phase1-rule-regression' + TAG + '.tsv'),
   header.join('\t') + '\n' + rows.map((r) => header.map((k) => r[k]).join('\t')).join('\n') + '\n');
