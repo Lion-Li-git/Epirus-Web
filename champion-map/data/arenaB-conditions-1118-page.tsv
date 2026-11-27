@@ -706,3 +706,14 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T11:50:40.150Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	85200	page	data/arena-league-1118-page.tsv	0.009323	0.013990
 2026-11-27T11:50:42.669Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	86200	page	data/arena-league-1118-page.tsv	0.232740	0.072196
 2026-11-27T11:50:45.178Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	87200	page	data/arena-league-1118-page.tsv	0.187007	0.061455
+2026-11-27T16:27:42.294Z	JN-DR	docs/artifacts/JN-DR.bak	9f5bbfa2e4fe96c6	82200	page	data/arena-league-1118-page.tsv	0.630213	0.187492
+2026-11-27T16:27:47.384Z	HL-G1	docs/artifacts/HL-G1.bak	f9a7a0946a03cc25	82200	page	data/arena-league-1118-page.tsv	-0.058067	0.002236
+2026-11-27T16:27:52.388Z	FS-DR	docs/artifacts/FS-DR.bak	938df8e9b74f0a7c	82200	page	data/arena-league-1118-page.tsv	0.359542	0.094103
+2026-11-27T16:27:57.494Z	FS2-LE26	docs/artifacts/FS2-LE26.bak	540a3927fc272984	82200	page	data/arena-league-1118-page.tsv	0.359542	0.082473
+2026-11-27T16:28:02.497Z	TK-FS4	docs/artifacts/TK-FS4.bak	a05227ae9c7456b7	82200	page	data/arena-league-1118-page.tsv	-0.190361	-0.043142
+2026-11-27T16:28:07.436Z	RD-PG	docs/artifacts/RD-PG.bak	764723661c0c7a50	82200	page	data/arena-league-1118-page.tsv	0.303192	0.089013
+2026-11-27T16:28:12.547Z	MN-PG	docs/artifacts/MN-PG.bak	8c695ab424093375	82200	page	data/arena-league-1118-page.tsv	0.630213	0.197765
+2026-11-27T16:28:17.503Z	PG-CN	docs/artifacts/PG-CN.bak	3ad6ae77a3f5f287	82200	page	data/arena-league-1118-page.tsv	0.786202	0.233761
+2026-11-27T16:28:22.584Z	nov21-taunt-dsp0b	docs/artifacts/nov21-taunt-dsp0b.bak	2107f21e2e845646	82200	page	data/arena-league-1118-page.tsv	0.303192	0.080616
+2026-11-27T16:28:28.102Z	OBS6E9	docs/artifacts/obs6-coldstart/OBS6E9.bak	180fc9c52b6b6cff	82200	page	data/arena-league-1118-page.tsv	0.347322	0.081612
+2026-11-27T16:28:33.089Z	DR-R3E	docs/artifacts/DR-R3E.bak	2df78f45a45f9346	82200	page	data/arena-league-1118-page.tsv	0.523866	0.162936
