@@ -13,6 +13,8 @@
  * ① **找不到可执行文件要响亮**：报出找过哪些路径，`exit 4`；不许退化成"CDP 连不上"那种指错方向的话。
  * ② **等待预算不许静默放宽**：默认仍是 60 × 200ms = 12s；要调就显式 `--cdp-wait=N`（次数），
  *    并且超时信息里必须带上"等了多久 ‖ Chrome 是否还活着 ‖ stderr 尾巴"。
+ *    `launchChromeReady()` 只对 `CDP endpoint not reachable` 做显式 `attempts` 次有界重启；
+ *    进程已退出、spawn 报错、找不到 Chrome 都不重试，避免把真故障洗成偶发。
  * ③ **收尸**：调用方 `killTree()` 或看门狗超时都要杀进程树 + 删临时 profile（原来 `smoke.mjs` 那段注释
  *    记的就是"node 被杀 ⇒ finally 不跑 ⇒ 孤儿 headless Chrome"）。
  *
@@ -101,6 +103,23 @@ export function launchChrome(opt) {
   };
 }
 
+export async function launchChromeReady(opt) {
+  const o = opt || {};
+  const attempts = Math.max(1, Number(o.attempts) || 1);
+  for (let i = 0; i < attempts; i++) {
+    const boot = launchChrome(o);
+    try {
+      await boot.version();
+      return boot;
+    } catch (e) {
+      boot.killTree();
+      const retryable = /CDP endpoint not reachable/.test(String(e && e.message || e));
+      if (!retryable || i === attempts - 1) throw e;
+      console.error('[cdp-boot] CDP 端点启动超时，重启 Chrome ' + (i + 1) + '/' + (attempts - 1) + ' 次');
+    }
+  }
+}
+
 /* ---------------- 自检 ---------------- */
 async function selfTest() {
   const bad = [];
@@ -114,7 +133,7 @@ async function selfTest() {
   const fake = process.execPath;
   let got = '';
   try {
-    const L = launchChrome({ chrome: fake, port: 9411, tries: 6 });
+    const L = await launchChromeReady({ chrome: fake, port: 9411, tries: 6, attempts: 2 });
     /* node 不认 --headless=new 这些参数 ⇒ 会立刻报错退出；正好用来验"死了"那条分支 */
     await L.version();
     L.killTree();

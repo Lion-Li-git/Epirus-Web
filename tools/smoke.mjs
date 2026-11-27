@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 /* 起 Chrome / 等 CDP 的**唯一**实现（v1.7.5 S0） */
-import { launchChrome } from './cdp-boot.mjs';
+import { launchChromeReady } from './cdp-boot.mjs';
 
 /* 位置参数：剔除 --flag（如 --max-ms=N），否则会被当成端口/chrome 路径 */
 const ARGV = process.argv.slice(2).filter(function (a) { return !/^--/.test(a); });
@@ -29,7 +29,7 @@ const URL = 'file:///' + join(ROOT, 'index.html').replace(/\\/g, '/');
  *   三种可能在日志里长得一模一样（同一把尺本机 10.7s 绿）。现在：路径、进程死活、stderr 尾巴都要打出来。 */
 let BOOT;
 try {
-  BOOT = launchChrome({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES });
+  BOOT = await launchChromeReady({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES, attempts: 2 });
 } catch (e) {
   console.error('SMOKE 起不来 Chrome：' + e.message);
   process.exit(e.code === 'NO_CHROME' ? 4 : 2);

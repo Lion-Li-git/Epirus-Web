@@ -6,7 +6,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 /* 起 Chrome / 等 CDP 的唯一实现（v1.7.5 S0） */
-import { launchChrome } from './cdp-boot.mjs';
+import { launchChromeReady } from './cdp-boot.mjs';
 import { rejectUnknownFlags } from './audit-lib.mjs';
 /* v1.7.69：仓规「不认识的 `--` 参数必须**响亮失败**」—— 本工具此前没有消毒层，拼错的旗标被**静默忽略**
  *   （正是「静默忽略 = 假读数」那条规矩要防的事；`gate-sentinel` 一族一直在报告这个缺口）。 */
@@ -37,7 +37,7 @@ const OUT = join(ROOT, flag('out', 'docs/artifacts/battle-out'));
 
 let BOOT;
 try {
-  BOOT = launchChrome({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES });
+  BOOT = await launchChromeReady({ chrome: ARGV[0], port: PORT, tries: CDP_TRIES, attempts: 2 });
 } catch (e) {
   console.error('BATTLE 起不来 Chrome：' + e.message);
   process.exit(e.code === 'NO_CHROME' ? 4 : 2);

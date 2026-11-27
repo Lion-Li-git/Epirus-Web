@@ -79,4 +79,5 @@
 - Pages 发布已排除 `champion-map/archive`：干净树产物 **450 → 208 文件、61M → 43M**；仓内 archive 保留，页面无运行时引用。
 - training workflow 已补齐 `tools/audit-lib.mjs`、`js/core/**`、`js/train/policy.js`、`policy2.js`、`bots.js`、`evo.js`、`js/pool-draw.js`、参照包与自检夹具的 push/PR 触发路径。
 - 验证：干净树 Pages 组装通过；`training/train.mjs --selftest` 的 37 条原型自证、selftest3 六腿、浏览器镜像全绿；`training/knobs.mjs --check` 通过。
+- CDP 复发审计：最近 50 次 gates 有 3 次失败，均为 `/json/version` 启动超时；新增 `launchChromeReady()` 仅对该超时重启一次，`smoke`/`battle` 显式 `attempts=2`，进程退出与 spawn 错误不重试。注入首启失败验证恰好重试一次，真实 Chrome `SMOKE OK` / `BATTLE OK`。
 - 本轮未改产品规则、池成员或训练判据，也未跑本地整轮门禁。
