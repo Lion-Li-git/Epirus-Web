@@ -723,3 +723,9 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T16:30:53.180Z	MN-PG	docs/artifacts/MN-PG.bak	8c695ab424093375	82201	page	data/arena-league-1118-page.tsv	0.334914	0.090323
 2026-11-27T16:46:23.228Z	L1B-S1200	scratch/arms/nov27-long-pgdr-l1b.seg1200.bak	0a0470c99b6344d7	82200	page	data/arena-league-1118-page.tsv	0.630213	0.191860
 2026-11-27T17:01:11.292Z	L1B-S600	scratch/arms/nov27-long-pgdr-l1b.seg600.bak	23a8b70edb8e6346	82200	page	data/arena-league-1118-page.tsv	0.734599	0.221458
+2026-11-27T17:18:32.142Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	82200	page	data/arena-league-1118-page.tsv	0.734599	0.221458
+2026-11-27T17:18:34.665Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	83200	page	data/arena-league-1118-page.tsv	0.049861	0.026078
+2026-11-27T17:18:37.151Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	84200	page	data/arena-league-1118-page.tsv	0.202574	0.081402
+2026-11-27T17:18:39.624Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	85200	page	data/arena-league-1118-page.tsv	0.249144	0.072534
+2026-11-27T17:18:42.106Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	86200	page	data/arena-league-1118-page.tsv	0.401470	0.137285
+2026-11-27T17:18:44.582Z	L1B-S600	docs/artifacts/L1B-S600.bak	23a8b70edb8e6346	87200	page	data/arena-league-1118-page.tsv	0.187007	0.062983

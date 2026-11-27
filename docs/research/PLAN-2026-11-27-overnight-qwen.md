@@ -470,6 +470,8 @@ node tools/pool-add.mjs --audit
 - 新规则指纹冻结为 `c61298e6`；`spec 96/96`、训练服务自检、池加载自检、`ui-contract 8/8`、`meta-repo 13/13`、`ship-pool 1/1`、`D16`/`D168`、训练栈 37 条、真实 Chrome `SMOKE OK`/`BATTLE OK` 全绿。
 - Phase 1 已完成：35/35 Stage 1 对齐新指纹；底座 28 绿/4 红/3 legacy；2P rule/legacy 八 seed 与 5P multi/long 四 seed 全部保序；受影响包 Arena 回归首 seed 三处变化在第二 seed 全部归零。
 - Phase 1 结果见 [`RESULTS-2026-11-28-phase1-baseline.md`](RESULTS-2026-11-28-phase1-baseline.md)。
+- Phase 2 已完成：`L1B-S600` 完整链通过并原位替换 `RING-MINIT-CONT`，v2.1.45 池维持 35 枚 `17/18`；全矩阵与产品 `seed=77000` 四桌形全部保序。
+- Phase 2 结果见 [`RESULTS-2026-11-28-phase2-fallout.md`](RESULTS-2026-11-28-phase2-fallout.md)。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -479,5 +481,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 00:31 起进入 Phase 2：先完整验收 `nov27-long-pgdr-l1b.seg1200`，再做同抽签同位替换模拟。
-- `MSB11` 的 100% 废珠率分母只有 1，不按比率列为训练优先；A 线硬座先从绿色 `DR-R3E`、`JN-DR` 开始。
+- 01:25 起进入 Phase 3 A 线：先跑 `DR-R3E` 同 seed Stage C 对照 A0 与处理 A1，首件落盘立即验血统。
+- `MSB11` 的 100% 废珠率分母只有 1，不按比率列为训练优先；A 线第二起点只在 A1 有信号后从绿色 `JN-DR`/`FS-DR` 选择。

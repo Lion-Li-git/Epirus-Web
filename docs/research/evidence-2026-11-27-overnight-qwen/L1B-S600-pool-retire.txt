@@ -1,0 +1,4 @@
+✔ 退役 RING-MINIT-CONT（tier=soft，wid=225404c8e4454cf0）已摘出池表；skill-report raw （已删 raw：曾测于 2026-11-27 · 并集 17/30；纯数字留在图列）
+   ↻ 演化图已自动同步：（一致）
+   ↻ skill-report.html 已自动重烘
+   下一步：node tools/build-pool-bundle.mjs --split ‖ node champion-map/rebuild-map.mjs

@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.45 — 11-28（soft 长程补强：L1B-S600 原位替换 RING-MINIT-CONT）
+
+**这一版是什么**：在 `c61298e6` 新基线上完成 L1b `seg600` 的完整准入链，用它原位替换 soft 成员 `RING-MINIT-CONT`，池维持 35 枚 `hard 17 / soft 18`。候选血统 `v:92 / S1o / 16561`，`selftest3` 全绿，Stage 1 胜率 54.42%、并集 18、电珠闭环 68.67%（57/83），A/B/C 为 `MxC=0.2400 / MxCL=0.1703 / arR=0.2445`，两 seed 人席 `seatKill=0`。
+
+- **池级效果**：同抽签同位替换全矩阵保持 hard < regular < sparring；2P rule 普通/简单 `−0.11/−0.97pt`，2P legacy `+0.04/+0.29pt`，5P multi `−0.40/+0.03pt`，5P long `+0.50/+0.13pt`。
+- **覆盖代价**：全池有效并集保持 28；soft 的 laserEye 深度 `2→1`、proto `4→3`、jinshield `6→5`，holo `5→6`，无技能归零。
+- **槽位与审计**：候选放回 `RING-MINIT-CONT` 原第 29 行；`pool-add --audit` 为 35 枚、`bad=[]`、`seatUnknown=0`。soft 参照变化使现役 invited `MX8-TN35-KL3` 的带内 seatKill 从 1 更新为 2，未隐瞒。
+- **验证**：Stage 1/2、promote、measure-point、两 seed 人席、bundle/manifest、地图重烘、产品 `seed=77000` 四桌形阶梯和定向门通过；未跑 `--group=engine` 整轮。
+
 ## v2.1.44 — 11-28（通宵审查修复：训练服务认证 / 金刚盾交叉规则 / UI 与池整表校验）
 
 **这一版是什么**：修复通宵审查确认的 P0/P1/P2 缺陷：本地训练服务增加随机令牌、Host/Origin 校验和 POST-only 控制，并等待进程树真正退出；金刚盾主动判定接入狙击干扰与地雷触发；UI 修正下一回合无极变速徽章和 session 新包优先级；池整表增加数量、ID 集合与重复校验。冠军权重未改，规则指纹 `442b4b68 → c61298e6`。

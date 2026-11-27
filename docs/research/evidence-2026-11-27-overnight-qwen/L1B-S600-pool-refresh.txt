@@ -1,0 +1,5 @@
+✔ 已刷 champion-map/pool-members.tsv：改了 2 行 ‖ 人席仍没量过的 0 枚
+   · MX8-TN35-KL3 pass/1 → pass/2
+   · L1B-S600 pass/-1 → pass/0
+   ↻ 演化图已自动同步：（一致）
+   ↻ skill-report.html 已自动重烘

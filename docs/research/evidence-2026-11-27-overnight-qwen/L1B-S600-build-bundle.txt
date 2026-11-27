@@ -1,0 +1,42 @@
+== 生成池 bundle ==
+   成员 35 枚：{"hard":17,"soft":18} ‖ 每枚 wid 已逐条重算并核对 ✅
+   · DR-R3E         hard · 体检 pass · 人席否决 0 格 · wid=eae4b0ad
+   · FS-DR          hard · 体检 pass · 人席否决 0 格 · wid=c4610496
+   · FS-G2          hard · 体检 pass · 人席否决 0 格 · wid=892ba770
+   · FS2-LE26       hard · 体检 pass · 人席否决 0 格 · wid=56806d43
+   · HL-G1          hard · 体检 pass · 人席否决 0 格 · wid=803f773d
+   · JN-DR          hard · 体检 pass · 人席否决 0 格 · wid=27923b8d
+   · MN-PG          hard · 体检 pass · 人席否决 0 格 · wid=a7272467
+   · MT-PG          hard · 体检 pass · 人席否决 0 格 · wid=ac6271b6
+   · nov21-taunt-dsphard · 体检 pass · 人席否决 0 格 · wid=db788352
+   · nov22-ring3-gd6hard · 体检 pass · 人席否决 0 格 · wid=a64b53c9
+   · PG-CN          hard · 体检 pass · 人席否决 0 格 · wid=7e2ac466
+   · PG-DR          hard · 体检 pass · 人席否决 0 格 · wid=93064163
+   · PUR-2P         hard · 体检 pass · 人席否决 0 格 · wid=25140b2b
+   · RD-PG          hard · 体检 pass · 人席否决 0 格 · wid=653e6bd4
+   · T65-RINGBEAD   hard · 体检 pass · 人席否决 0 格 · wid=00065fc5
+   · TF-DR          hard · 体检 pass · 人席否决 0 格 · wid=ac6b3456
+   · TK-FS4         hard · 体检 pass · 人席否决 0 格 · wid=ac126b33
+   · AR-TK2         soft · 体检 pass · 人席否决 0 格 · wid=b5d4cbc6
+   · FC-S1          soft · 体检 pass · 人席否决 0 格 · wid=9390478c
+   · MSB11-R1S130778soft · 体检 pass · 人席否决 0 格 · wid=970c77da
+   · MX6-GD-TF20    soft · 体检 pass · 人席否决 1 格 · 点名 · wid=bab64e2b
+   · MX8-R6B-KL     soft · 体检 pass · 人席否决 1 格 · 点名 · wid=eb5f0460
+   · MX8-TN35-KL3   soft · 体检 pass · 人席否决 2 格 · 点名 · wid=137f584e
+   · nov21-armor-tztsoft · 体检 pass · 人席否决 0 格 · wid=7819b219
+   · OBS6E9         soft · 体检 pass · 人席否决 0 格 · wid=d2a64af4
+   · PG-CN-S1200    soft · 体检 pass · 人席否决 0 格 · wid=a4be8877
+   · PUR-DR         soft · 体检 pass · 人席否决 0 格 · wid=7fd8b3c1
+   · R-GD12         soft · 体检 pass · 人席否决 0 格 · wid=7e55abc3
+   · RG-MN          soft · 体检 pass · 人席否决 0 格 · wid=7e4628cb
+   · L1B-S600       soft · 体检 pass · 人席否决 0 格 · wid=910b82ec
+   · RINGB11        soft · 体检 pass · 人席否决 0 格 · wid=764f0b92
+   · SOFT-RING-C3G25soft · 体检 pass · 人席否决 0 格 · wid=8c7030eb
+   · TF2-DR         soft · 体检 pass · 人席否决 0 格 · wid=97430ee6
+   · TF2-RD         soft · 体检 pass · 人席否决 0 格 · wid=ccc8268b
+   · TK-PG          soft · 体检 pass · 人席否决 0 格 · wid=4fb5b59c
+   --split 清单：js/pool-manifest.js（5.0 KB）
+   --split 分片：js/pool-packs/（35 个，合计 10943 KB）
+✔ 已写 js/bundled-champion-pool.js（10938 KB）
+✔ 已写 js/pool-manifest.js 与 js/pool-packs/
+   下一步：分片模式把清单与 loader 挂进 index.html；单文件 bundle 留给 tools/gates/file:// 回退。跑 `node tools/probe-pool.mjs` 对账。

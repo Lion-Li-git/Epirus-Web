@@ -1,0 +1,14 @@
+== 加入冠军池 ==
+   id=L1B-S600 · wid=910b82ecbc976e0f · tier=soft
+   上槽体检：pass（—） ‖ 人席否决：没量过（批表里没这枚）
+   前线读数（24 锚联盟 · page 剂量 · 6 粒 seed）已落 data/arena-noise-floor-1118.tsv：B=13.5082pt ‖ 极差 36.0203pt ‖ 当选判决窗口 5.8pt
+✔ 已写 champion-map/pool-members.tsv（现 35 枚）
+   ✔ 已同步 champion-map/data/page/promote.tsv
+   下一步：node tools/build-pool-bundle.mjs --split（整表 + 页面懒加载清单/分片）
+   [skill-report] 入池普查（Stage 1 观察 + Stage 2 强度）…
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [L1B-S600] stage1 并集 18/30（自对局 14） 换招JS 0.0765 ‖ 18.3s → D:\code\Epirus-Web\champion-map\data\skill-report\L1B-S600.json
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [L1B-S600] stage2 并集 18/30（自对局 14） 换招JS 0.0765 ‖ 强度 25 技（消融 9） ‖ 5.4s → D:\code\Epirus-Web\champion-map\data\skill-report\L1B-S600.json
+   ↻ 演化图已自动同步：（一致）
+   ↻ skill-report.html 已自动重烘

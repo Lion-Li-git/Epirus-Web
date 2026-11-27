@@ -48,8 +48,11 @@ for (const seed of [90210, 90211]) {
   const candidateRows = parsed.filter((r) => r[0] === ID);
   const candPath = resolve(ROOT, OUT, ID + '-seat-candidate-' + seed + '.tsv');
   writeFileSync(candPath, header.join('\t') + '\n' + candidateRows.map((r) => r.join('\t')).join('\n') + '\n');
-  const canonical = readFileSync(resolve(ROOT, 'champion-map/pool-seat-' + seed + '.tsv'), 'utf8').trimEnd();
-  const full = canonical + '\n' + candidateRows.map((r) => r.join('\t')).join('\n') + '\n';
+  const canonicalLines = readFileSync(resolve(ROOT, 'champion-map/pool-seat-' + seed + '.tsv'), 'utf8').replace(/\r/g, '').trimEnd().split('\n');
+  const canonicalHead = canonicalLines[0].split('\t');
+  const idCol = canonicalHead.indexOf('id');
+  const kept = canonicalLines.slice(1).filter((line) => line.split('\t')[idCol] !== ID);
+  const full = [canonicalLines[0], ...kept, ...candidateRows.map((r) => r.join('\t'))].join('\n') + '\n';
   const fullPath = resolve(ROOT, OUT, ID + '-seat-full-' + seed + '.tsv');
   writeFileSync(fullPath, full);
   batches.push(rdTable(fullPath, full));

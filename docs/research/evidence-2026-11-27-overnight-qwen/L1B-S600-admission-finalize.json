@@ -1,0 +1,15 @@
+{
+  "id": "L1B-S600",
+  "target": "RING-MINIT-CONT",
+  "members": 35,
+  "seatSummary": {
+    "90210": {
+      "appended": 2,
+      "totalRows": 162
+    },
+    "90211": {
+      "appended": 2,
+      "totalRows": 162
+    }
+  }
+}

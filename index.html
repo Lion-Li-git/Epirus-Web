@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Epirus 拍手游戏 — 2~8 人对战（3/4/5 血）</title>
-<link rel="stylesheet" href="css/style.css?v=epirus2144">
+<link rel="stylesheet" href="css/style.css?v=epirus2145">
 </head>
 <body>
 <div id="app">
   <header class="top">
     <h1>拍手游戏 <span class="jp">ジ Epirus</span></h1>
-    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.44 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
+    <span class="sub">国际拍手游戏规则制定协会 · 规则 v2.1.0 精简 · 程序 v2.1.45 （2~8 人 × 3/4/5 血 · 全人数共用一条难度阶梯）· <a href="champion-map/index.html" style="color:#7fb2ff">冠军查看器 ↗</a></span>
   </header>
 
   <nav class="tabs">
@@ -184,29 +184,29 @@
 <div id="overlay-root" class="overlay hidden"><div class="card" id="overlay-card"></div></div>
 
 <!-- 引擎（加载顺序即依赖顺序） -->
-<script src="js/core/rules.js?v=epirus2144"></script>
-<script src="js/core/state.js?v=epirus2144"></script>
-<script src="js/core/resolve.js?v=epirus2144"></script>
-<script src="js/core/play.js?v=epirus2144"></script>
-<script src="js/train/bots.js?v=epirus2144"></script>
-<script src="js/train/policy.js?v=epirus2144"></script>
-<script src="js/train/policy2.js?v=epirus2144"></script>
-<script src="js/train/evo.js?v=epirus2144"></script>
-<script src="js/train/trainer.js?v=epirus2144"></script>
-<script src="js/bundled-champion.js?v=epirus2144"></script>
-    <script src="js/bundled-champion-3p.js?v=epirus2144"></script>
-<script src="js/champion-pack.js?v=epirus2144"></script>
-<script src="js/pool-draw.js?v=epirus2144"></script>
-<script src="js/ui/skill-tip.js?v=epirus2144"></script>
-<script src="js/ui/bead-choice.js?v=epirus2144"></script>
-<script src="js/ui/rules-panel.js?v=epirus2144"></script>
+<script src="js/core/rules.js?v=epirus2145"></script>
+<script src="js/core/state.js?v=epirus2145"></script>
+<script src="js/core/resolve.js?v=epirus2145"></script>
+<script src="js/core/play.js?v=epirus2145"></script>
+<script src="js/train/bots.js?v=epirus2145"></script>
+<script src="js/train/policy.js?v=epirus2145"></script>
+<script src="js/train/policy2.js?v=epirus2145"></script>
+<script src="js/train/evo.js?v=epirus2145"></script>
+<script src="js/train/trainer.js?v=epirus2145"></script>
+<script src="js/bundled-champion.js?v=epirus2145"></script>
+    <script src="js/bundled-champion-3p.js?v=epirus2145"></script>
+<script src="js/champion-pack.js?v=epirus2145"></script>
+<script src="js/pool-draw.js?v=epirus2145"></script>
+<script src="js/ui/skill-tip.js?v=epirus2145"></script>
+<script src="js/ui/bead-choice.js?v=epirus2145"></script>
+<script src="js/ui/rules-panel.js?v=epirus2145"></script>
 <!-- 冠军池：懒加载清单只有 id/wid/tier/file；真源 champion-map/data/page/pool-members.tsv，由 build-pool-bundle --split 生成。
      分片权重在 js/pool-packs/<id>.js，按本局抽到的 N−1 席注入；本地 file:// 使用整表 js/bundled-champion-pool.js。 -->
 <script defer src="js/pool-manifest.js?v=p1127a"></script>
-<script defer src="js/pool-loader.js?v=epirus2144"></script>
+<script defer src="js/pool-loader.js?v=epirus2145"></script>
 <!-- 2P 与多人桌共用统一冠军池；pool-members-2p.tsv 作为 2P 训练对手名册。 -->
 <!-- ui.js 在清单/loader 之后 defer 执行；newGame 按本局席位调用 EpirusPoolLoader.ensure()。
      加载期间技能按钮置灰并显示"冠军包加载中"；整表与单包入口提供本地回退。 -->
-<script defer src="js/ui/ui.js?v=epirus2144"></script>
+<script defer src="js/ui/ui.js?v=epirus2145"></script>
 </body>
 </html>
