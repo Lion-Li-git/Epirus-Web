@@ -38,7 +38,7 @@ for (const pack of PACKS) {
       for (const e of r.state.events || []) {
         if (e.type === 'action' && e.pid === seat && e.key === 'transfer' && e.outcome === 'ok') row.declared++;
         if (e.type === 'transfer' && e.to === seat) row.paid++;
-        if (e.type === 'damage' && e.target === seat) { row.damageEvents++; if (e.via === 'tank') row.tankDamage++; }
+        if (e.type === 'damage' && e.to === seat) { row.damageEvents++; if (e.via === 'tank') row.tankDamage++; }
       }
       row.games++;
     }

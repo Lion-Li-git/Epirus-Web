@@ -157,9 +157,9 @@
      * （训练与评测早就带盐；此前只有页面缺省 0 ⇒ 页面走确定性顺序）。
      * 现在它由本局种子派生（乘一个固定混数取低 32 位），不再单独抽一次 ⇒ 登记了种子就复现了盐。 */
     B.state.slotSalt = (Math.imul(B.matchSeed, 2654435761)) >>> 0;
-    B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null; B.resolvePending = false;
+    B.roundStarted = false; B.locked = false; B.aiKey = null; B.picking = null; B.resolvePending = false; B.pendingDiff = null;
     B.evCursor = 0; B.transcript = []; B.aiHistory = [];
-    B.roundStartSnapshot = null; B.roundStartRngState = null; B.warnedChampNoTrain = false; B.undoUsed = false;
+    B.roundStartSnapshot = null; B.roundStartRngState = null; B.roundStartBotMem = null; B.warnedChampNoTrain = false; B.undoUsed = false;
     B.packsReady = true; B.packLoadError = null;
     closeOverlay();
     closeModal();
@@ -167,12 +167,12 @@
     renderSide(0); renderSide(1);
     /* 人数与血量是两根独立轴，模式名由查表得到。 */
     /* §E667：开局这一格算**一次**，页面首行与导出的头部读同一份（抄两遍 = 两份实现会分叉） */
+    const drawInfo = aiInfo();
+    if (drawInfo && drawInfo.poolDraw) startPoolPackLoad(drawInfo.poolDraw);
     const oppInfo = aiInfo();
     B.oppInfo = oppInfo.source;
     B.oppSeats = seatOppLabel(oppInfo);
     B.oppMid = null;
-    /* 懒加载：本局抽到的席位分片开始注入；加载完成前技能格置灰（startPoolPackLoad 内部会 rebuild）。 */
-    if (oppInfo && oppInfo.poolDraw) startPoolPackLoad(oppInfo.poolDraw);
     B.diffLabel = diffName(B.diff);            /* 与 `对手=` 同一时刻的快照：中途换档时这两格必须说的是同一档 */
     logClear('新对局：' + n + ' 人 · ' + (MODE_NM[B.modeKey] || B.modeKey) + ' · 难度=' + diffName(B.diff) +
       ' · 对手AI=' + B.oppInfo + ' · 每人初始 ' + B.state.mode.hp + ' 血');
@@ -659,6 +659,8 @@
         try { POOL.params[id] = P.unpack(pack, true); } catch (e) { if (POOL.bad.indexOf(id) < 0) POOL.bad.push(id); }
       }
       B.packsReady = true;
+      const oi = aiInfo();
+      if (B.state) { B.oppInfo = oi.source; B.oppSeats = seatOppLabel(oi); }
       if (L.fellBack && L.fellBack()) addLog('div', 'ev dim', '⚠ 冠军包分片加载失败，本局已回退整表；详情见浏览器 console');
       buildSkillGrid(); renderSide(0); renderSide(1);
       if (POOL.bad.length) addLog('div', 'ev dim', '⚠ 冠军包分片解不开：' + POOL.bad.join('、') + ' ⇒ 对应席位回退单包');
@@ -667,9 +669,13 @@
       if (B.packToken !== token) return;
       B.packsReady = true;
       B.packLoadError = (e && e.message) ? e.message : String(e);
-      addLog('div', 'ev dim', '⚠ 冠军包分片加载失败（' + esc(B.packLoadError) + '）⇒ 本局对应席位回退单包');
+      for (const id of ids) if (!POOL.params[id] && POOL.bad.indexOf(id) < 0) POOL.bad.push(id);
+      const oi = aiInfo();
+      if (B.state) { B.oppInfo = oi.source; B.oppSeats = seatOppLabel(oi); }
+      const fallbackText = (B.players || 2) > V7_MAX_PLAYERS ? '6–8 人桌改用多人强档脚本，不使用 v7 单包' : '对应席位按契约回退内置单包';
+      addLog('div', 'ev dim', '⚠ 冠军包分片加载失败（' + esc(B.packLoadError) + '）⇒ ' + fallbackText);
       buildSkillGrid(); renderSide(0); renderSide(1);
-      if (B.state && !B.state.over && !B.locked) hint('冠军包加载失败，已回退单包；可以先出招。');
+      if (B.state && !B.state.over && !B.locked) hint('冠军包加载失败，已按当前人数回退；可以先出招。');
     });
     B.packsLoad = done;
     return done;
@@ -697,7 +703,14 @@
         poolDraw: draw, seatId: m.id, poolNote: draw.mixNote || null };
     }
     const p = m && POOL.params[m.id];
-    if (!p) { single.poolNote = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席退回单包'; single.poolDraw = draw; return single; }
+    if (!p) {
+      const why = '席位 ' + pid + ' 抽到的成员解不开 ⇒ 本席回退';
+      if (n > V7_MAX_PLAYERS) {
+        return { params: null, scriptPick: fallbackPickFor(n), scriptName: fallbackNameFor(n), from: 'script-fallback:' + m.id,
+          poolDraw: draw, seatId: m.id, poolNote: why + '；6–8 人桌禁用 v7 单包，改用多人强档脚本' };
+      }
+      single.poolNote = why + '单包'; single.poolDraw = draw; return single;
+    }
     return { params: p, from: 'pool:' + m.id, poolDraw: draw, seatId: m.id,
       poolNote: (draw.allSame && !plan.two) ? '该档池只够 ' + draw.seats.length + ' 席 ⇒ ' + aiSeatWord() + '全同（降级，已明说）' : null };
   }
@@ -821,11 +834,13 @@
     if (!d || !d.seats || !d.seats.length) return info ? info.source : '';   /* 非池档（风格/单包/兜底）：source 本身就是"谁在打" */
     const seats = B.state.p.slice(1);                      /* AI 席 = pid 1..N-1，与 draw.seats 同序 */
     const one = d.seats.length === 1;                      /* 2P 只抽一席 ⇒ 每一席同取 seats[0]（与 champForSeat 一致） */
-    const who = seats.map(function (p, i) {
+    const who = info.seatLabels ? info.seatLabels.join('  ') : seats.map(function (p, i) {
       const m = d.seats[one ? 0 : i];
       if (!m) return p.name + '=未抽到';
       /* §E600-B 同一条纪律：脚本席要一眼看得出是脚本，别读起来像一枚包的名字 */
-      return p.name + '=' + (m.kind === 'script' ? '脚本·' + ((styleOf(m.id) || {}).name || m.id) : m.id);
+      if (m.kind === 'script') return p.name + '=脚本·' + ((styleOf(m.id) || {}).name || m.id);
+      if (!POOL.params[m.id]) return p.name + '=回退·' + ((B.players || 2) > V7_MAX_PLAYERS ? '多人强档脚本' : '内置单包');
+      return p.name + '=' + m.id;
     }).join('  ');
     return who + (d.scriptSeats ? '（掺脚本 ' + d.scriptSeats + ' 席）' : '') +
       (d.mixNote ? ' ⚠' + d.mixNote : '') + (d.bandNote ? ' ⚠' + d.bandNote : '') +
@@ -865,13 +880,19 @@
         const RD = (window.EpirusPoolDraw && window.EpirusPoolDraw.rosterFor) ? window.EpirusPoolDraw.rosterFor(S.members, tier) : null;
         const n = RD ? RD.members.length : S.members.filter(function (m) { return m.tier === tier.pool; }).length;
         const srcName = (RD && RD.bandW) ? (nm + '·两带混抽（' + n + ' 枚）') : (nm + '·' + tier.pool + '(' + n + ' 枚)');
+        const loading = B.packsReady === false && !B.packLoadError;
+        const shortLabels = d.seats.map(function (s) {
+          if (s.kind === 'script') { const q = styleOf(s.id); return '脚本·' + (q ? q.name : s.id); }
+          if (loading) return s.id + '(加载中)';
+          if (!POOL.params[s.id]) return (B.players || 2) > V7_MAX_PLAYERS ? '脚本回退·多人强档' : '回退·内置单包';
+          return s.id;
+        });
+        const missing = !loading && d.seats.some(function (s) { return s.kind !== 'script' && !POOL.params[s.id]; });
+        const seatLabels = B.state.p.slice(1).map(function (p, i) {
+          return p.name + '=' + (shortLabels[d.seats.length === 1 ? 0 : i] || '未抽到');
+        });
         return {
-          source: srcName + ' 本局=' +
-            d.seats.map(function (s) {
-              /* §E600-B：脚本席要一眼看得出是脚本（不然"本局=st:toolkit"读起来像一枚包的名字） */
-              if (s.kind === 'script') { const q = styleOf(s.id); return '脚本·' + (q ? q.name : s.id); }
-              return s.id;
-            }).join('+') +
+          source: (loading ? '池·加载中…' : (missing ? '池降级·' : '') + srcName) + ' 本局=' + shortLabels.join('+') +
             (d.scriptSeats ? (' 掺脚本 ' + d.scriptSeats + ' 席') : '') +
             (d.bands ? ' 带比 ' + d.bands : '') +
             (d.mixNote ? ' ⚠' + d.mixNote : '') +
@@ -880,8 +901,8 @@
             (d.allSame && !plan.two ? ' ⚠' + aiSeatWord() + '全同:该档成员不足' : '') +
             (S.bad.length ? ' ⚠出局:' + S.bad.join(',') : '') +
             ' · ' + tier.name + tierEpsLabel(tier),
-          champ: true, from: 'pool', tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode,
-          ramp: !!tier.ramp, poolDraw: d, allSame: !!d.allSame
+          champ: !missing, fallback: missing, from: missing ? 'pool-degraded' : 'pool', tier: tier.id, eps: tier.eps, epsK: tier.epsK, epsMode: tier.epsMode,
+          ramp: !!tier.ramp, poolDraw: d, allSame: !!d.allSame, seatLabels: seatLabels, loading: loading
         };
       }
     }
@@ -1086,6 +1107,7 @@
          * doPickMulti 会照常重设快照 ⇒ 只损失复活回合这一下的悔棋权。 */
         B.roundStartSnapshot = null;
         B.roundStartRngState = null;
+        B.roundStartBotMem = null;
         B.locked = false;
         buildSkillGrid(); renderSide(0); renderSide(1);
         hint('回魂复活（R48）—— 本回合由你出招（无限能量，回合结束即消散）。');
@@ -1187,6 +1209,7 @@
       B.roundStartSnapshot = S.cloneState(B.state);
       B.roundStartRngState = (B.state && B.state.rng && B.state.rng.next && typeof B.state.rng.next.getState === 'function')
         ? B.state.rng.next.getState() : null;
+      B.roundStartBotMem = (Bots.snapshotBotMem && typeof Bots.snapshotBotMem === 'function') ? Bots.snapshotBotMem() : null;
     }
     ensureRound();
     if (B.state.over) { B.locked = false; return; }
@@ -1233,8 +1256,19 @@
         buildSkillGrid(); renderSide(0); renderSide(1);
         B.locked = false;
         B.roundStarted = false;
+        flushPendingDiff();
+        if (B.state !== myState || B.transcript !== myTranscript) return;
         if (B.state.over) { finish(); return; }
-        if (B.state.p[0].hp <= 0) { hint('你已被淘汰，自动观战至结束…'); autoRunRest(); return; }
+        if (B.state.p[0].hp <= 0) {
+          hint('你已被淘汰，自动观战至结束…');
+          if (B.packsReady === false) {
+            const watchState = B.state, watchTranscript = B.transcript;
+            B.packsLoad.then(function () {
+              if (B.state === watchState && B.transcript === watchTranscript && !B.state.over && B.state.p[0].hp <= 0) autoRunRest();
+            });
+          } else autoRunRest();
+          return;
+        }
         hint('第 ' + (B.state.round + 1) + ' 回合准备 —— 请出招（出招前可“悔一步”）。');
       } catch (err) {
         battleFatal(err);
@@ -1277,6 +1311,7 @@
     if (B.roundStartRngState != null && B.state && B.state.rng && B.state.rng.next && typeof B.state.rng.next.setState === 'function') {
       B.state.rng.next.setState(B.roundStartRngState);
     }
+    if (B.roundStartBotMem && Bots.restoreBotMem && typeof Bots.restoreBotMem === 'function') Bots.restoreBotMem(B.roundStartBotMem);
     B.roundStarted = false;
     B.transcript.pop();
     B.evCursor = B.state.events.length;
@@ -1577,6 +1612,7 @@
   let remoteHistory = [];
   let remoteTotal = 1000;
   let remoteRetry = null;
+  let remoteGeneration = 0;
 
   function renderChampState() {
     applyPackTypeLock();
@@ -1611,6 +1647,7 @@
     Champ.saveTrainLogCSV(trainer);
   }
   function stopRemote() {
+    remoteGeneration++;
     if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
     if (remoteES) { remoteES.close(); remoteES = null; }
     if ($('btn-stop')) $('btn-stop').disabled = true;
@@ -1678,6 +1715,7 @@
     return { mode, up, gens, batch, lr, seed, teacher, shapeKey, winOnly };
   }
   function connectRemoteTrain() {
+    const generation = ++remoteGeneration;
     const base = remoteBase();
     const cfg = trainParams();
     if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
@@ -1687,22 +1725,26 @@
     if ($('tr-progress')) $('tr-progress').style.width = '0%';
     if ($('tr-remote')) $('tr-remote').textContent = '正在探测 2.0 训练服务…';
     fetchProbe(base).then(function (res) {
-      if (res.ok) openRemote(base, cfg);
-      else waitForServer(base, cfg);
+      if (generation !== remoteGeneration) return;
+      if (res.ok) openRemote(base, cfg, generation);
+      else waitForServer(base, cfg, generation);
     });
   }
-  function waitForServer(base, cfg) {
+  function waitForServer(base, cfg, generation) {
     if ($('tr-remote')) {
       $('tr-remote').textContent = '服务未启动。请双击 training/start-train-server.cmd 启动（或 node training/server/train-server.mjs）——检测到后自动连接…';
     }
     if (remoteRetry) clearInterval(remoteRetry);
     remoteRetry = setInterval(function () {
+      if (generation !== remoteGeneration) { clearInterval(remoteRetry); remoteRetry = null; return; }
       fetchProbe(base).then(function (res) {
-        if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, cfg); }
+        if (generation !== remoteGeneration) return;
+        if (res.ok) { clearInterval(remoteRetry); remoteRetry = null; openRemote(base, cfg, generation); }
       });
     }, 2000);
   }
-  function openRemote(base, cfg) {
+  function openRemote(base, cfg, generation) {
+    if (generation !== remoteGeneration) return;
     if (remoteES) { remoteES.close(); remoteES = null; }
     const qs = new URLSearchParams({
       mode: cfg.mode,
@@ -1725,8 +1767,9 @@
     if ($('btn-stop')) $('btn-stop').disabled = false;
     const es = new EventSource(base + '/train?' + qs.toString());
     remoteES = es;
-    es.onopen = function () { if ($('tr-remote')) $('tr-remote').textContent = '已连接 2.0 服务，训练中（可切回对局页）'; };
+    es.onopen = function () { if (generation === remoteGeneration && remoteES === es && $('tr-remote')) $('tr-remote').textContent = '已连接 2.0 服务，训练中（可切回对局页）'; };
     es.onmessage = function (ev) {
+      if (generation !== remoteGeneration || remoteES !== es) return;
       let d = {};
       try { d = JSON.parse(ev.data); } catch (e) { return; }
       if (d.type === 'start') {
@@ -1868,7 +1911,8 @@
       if (ex.slot === '3p') {
         window.EPIRUS_CHAMPION_3P = ex.pack;
         sessionMultiChampSet = true;
-        try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { /* 隐私模式等 */ }
+        let persisted = true;
+        try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { persisted = false; }
         resetMultiChampCache();
         renderChampState();                                    /* 里面会调 applyPackTypeLock ⇒ 人数下拉即时锁/解锁 */
         if (B.state === stateBefore) {
@@ -1879,7 +1923,7 @@
         alert('多人冠军包已载入：' + (file.name || '(未命名)') + '\n包代：' + (gen === '2.0'
           ? '2.0 代（v:' + ex.pack.v + '）——2~8 人桌全可用'
           : 'v7 / 1.8 代（v:' + ex.pack.v + '）——适用于 2–5 人桌') +
-          '\n对局「困难」档即时生效。\n想还原内置冠军：点「用内置冠军」。');
+          '\n对局「困难」档即时生效。\n想还原内置冠军：点「用内置冠军」。' + (persisted ? '' : '\n⚠️ 本地保存失败（存储被禁用或配额已满）；本次会话可用，刷新后不会保留。'));
         return;
       }
       /* 2P 槽：维持原路径（`importJSON` 做版本/维度校验），只是喂**剥壳后**的 JSON。 */
@@ -1888,7 +1932,10 @@
         alert('导入失败：' + champReasonText(r.reason, r));
         return;
       }
-      Champ.store.save(r.policy);
+      if (!Champ.store.save(r.policy)) {
+        alert('冠军策略载入失败：localStorage 写入被拒绝或配额已满；请检查浏览器存储设置后重试。');
+        return;
+      }
       renderChampState();
       if (B.state === stateBefore) {
         const oi = aiInfo();
@@ -1950,6 +1997,14 @@
   }
 
   /* ---------- 事件绑定 ---------- */
+  function flushPendingDiff() {
+    if (!B.pendingDiff) return;
+    const next = B.pendingDiff;
+    B.pendingDiff = null;
+    const sel = $('sel-diff');
+    if (sel) sel.value = next;
+    if (sel && typeof sel.onchange === 'function') sel.onchange();
+  }
   function bind() {
     $('tab-battle').onclick = function () { showTab('battle'); };
     if ($('tab-train')) $('tab-train').onclick = function () { showTab('train'); };
@@ -1970,6 +2025,12 @@
     $('sel-players').onchange = function () { newGame(); };
     $('sel-hp').onchange = function () { newGame(); };
     $('sel-diff').onchange = function () {
+      if (B.resolvePending) {
+        B.pendingDiff = $('sel-diff').value;
+        $('sel-diff').value = B.diff;
+        hint('当前回合正在结算，难度切换将在结算后生效…');
+        return;
+      }
       const prev = B.diff;
       const prevPlayers = B.players;
       B.diff = $('sel-diff').value;

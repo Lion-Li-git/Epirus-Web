@@ -451,7 +451,7 @@ while (games < GAMES) {
       let ai = -1;
       const lastChg = { elec: -1, boom: -1 };
       for (const e of (row.evs || [])) {
-        if (DMG_W > 0 && allowPosShape && e.type === 'damage' && e.source === seat && e.target !== seat && (e.amt || 0) > 0 && ai >= 0 && ai < ds.length && !ds[ai].push) {
+        if (DMG_W > 0 && allowPosShape && e.type === 'damage' && e.source === seat && e.to !== seat && (e.amt || 0) > 0 && ai >= 0 && ai < ds.length && !ds[ai].push) {
           shape[ai] += DMG_W * Math.min(2, e.amt);
           stat.dmgAmt += e.amt;
         }

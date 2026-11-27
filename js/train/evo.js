@@ -1665,7 +1665,7 @@ function supportPriorRand(state, pid, salt) {
     for (const e of st.events) {
       if (e.type !== 'damage') continue;
       if (e.to != null) taken[e.to] += (e.amt || 0);
-      if (e.source != null) dealt[e.source] += (e.amt || 0);
+      if (e.source != null && e.to !== e.source) dealt[e.source] += (e.amt || 0);
     }
     const order = [];
     for (let i = 0; i < n; i++) {
@@ -3582,7 +3582,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
         if (!rounds[cur]) rounds[cur] = { guard: {}, dmg: {} };
         if (e.outcome === 'ok' && R.GUARD_FAMILY.indexOf(e.key) >= 0) rounds[cur].guard[e.pid] = true;
       } else if (e.type === 'damage') {
-        if (cur < 0 || e.to == null || e.source !== seat) continue;
+        if (cur < 0 || e.to == null || e.source !== seat || e.to === seat) continue;
         if (!rounds[cur]) rounds[cur] = { guard: {}, dmg: {} };
         rounds[cur].dmg[e.to] = (rounds[cur].dmg[e.to] || 0) + (e.amt || 0);
       }
@@ -3598,7 +3598,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   function countWallBreakHits(events, seat) {
     const wk = wallBreakKeyList();
     let n = 0;
-    for (const e of (events || [])) { if (e.type === 'damage' && e.source === seat && e.via && wk.indexOf(e.via) >= 0) n++; }
+    for (const e of (events || [])) { if (e.type === 'damage' && e.source === seat && e.to !== seat && e.via && wk.indexOf(e.via) >= 0) n++; }
     return n;
   }
   /* v1.8.39b：同一件事按**伤害量**数（v1.8.39 的 /1 命中数第 0 代就吃满 ⇒ 退化成常数，实测 R0/R3/R6 已否证）。
@@ -3606,7 +3606,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   function wallBreakDamage(events, seat) {
     const wk = wallBreakKeyList();
     let d = 0;
-    for (const e of (events || [])) { if (e.type === 'damage' && e.source === seat && e.via && wk.indexOf(e.via) >= 0) d += (e.amt || 0); }
+    for (const e of (events || [])) { if (e.type === 'damage' && e.source === seat && e.to !== seat && e.via && wk.indexOf(e.via) >= 0) d += (e.amt || 0); }
     return d;
   }
   /* DS 11-02（用户口径：多血要适度防御、残血要摄魂）：只数**真挡下**的与**摄魂回血**。 */
@@ -3648,7 +3648,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
   function countLaserHits(events, seat) {
     let n = 0;
     for (const e of (events || [])) {
-      if (e.type === 'damage' && e.source === seat && e.via === R.SK.LASER_EYE) n++;
+      if (e.type === 'damage' && e.source === seat && e.to !== seat && e.via === R.SK.LASER_EYE) n++;
     }
     return n;
   }
@@ -3656,7 +3656,7 @@ if (DOSE_ON) varietyMaxLanded = Math.max(varietyMaxLanded, countVarietyLanded(r.
     const pk = pierceKeyList();
     let n = 0;
     for (const e of events) {
-      if (e.type === 'damage' && e.source === seat && e.via && pk.indexOf(e.via) >= 0) n++;
+      if (e.type === 'damage' && e.source === seat && e.to !== seat && e.via && pk.indexOf(e.via) >= 0) n++;
     }
     return n;
   }
@@ -3792,7 +3792,7 @@ function countVarietyLanded(events, seat, RR) {
   const seen = {};
   for (let i = 0; i < evs.length; i++) {
     const e = evs[i];
-    if (e.type === 'damage' && e.via && (e.source == null || e.source === seat) && rules.byKey[e.via]) { seen[e.via] = 1; continue; }
+    if (e.type === 'damage' && e.via && (e.source == null || (e.source === seat && e.to !== seat)) && rules.byKey[e.via]) { seen[e.via] = 1; continue; }
     if (e.type === 'heal' && e.via && rules.byKey[e.via]) { seen[e.via] = 1; continue; }
     if (e.type !== 'action' || e.pid !== seat || !e.key || e.outcome !== 'ok' || e.key === R.SK.JI) continue;
     /* 防御那一半：向后找同席的 blocked/reflect，直到该席下一次 action（= 下一回合）为止。 */
@@ -3887,7 +3887,7 @@ function countVariety(events, seat) {
   function countFocusHits(events, seat) {
     let prev = null, n = 0;
     for (const e of (events || [])) {
-      if (e.type !== 'damage' || e.source !== seat || e.to == null) continue;
+      if (e.type !== 'damage' || e.source !== seat || e.to == null || e.to === seat) continue;
       if (e.to === prev) n++;
       prev = e.to;
     }
@@ -3912,7 +3912,7 @@ function countVariety(events, seat) {
         if (cur < 0) continue;
         const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmgBy: {}, dmgTo: {} });
         if (e.to === seat && e.source != null && e.source !== seat) rr.dmgBy[e.source] = (rr.dmgBy[e.source] || 0) + 1;
-        if (e.source === seat && e.to != null) (rr.dmgTo[e.to] = rr.dmgTo[e.to] || []).push(e.key);
+        if (e.source === seat && e.to != null && e.to !== seat) (rr.dmgTo[e.to] = rr.dmgTo[e.to] || []).push(e.key);
       }
     }
     let attacked = 0, retaliated = 0;
@@ -3952,8 +3952,8 @@ function countVariety(events, seat) {
       } else if (e.type === 'damage') {
         if (cur < 0) continue;
         const rr = rounds[cur] || (rounds[cur] = { cast: {}, dmg: {}, myTo: {} });
-        if (e.source != null) rr.dmg[e.source] = (rr.dmg[e.source] || 0) + (e.amt || 0);
-        if (e.source === seat && e.to != null) rr.myTo[e.to] = (rr.myTo[e.to] || 0) + 1;
+        if (e.source != null && e.to !== e.source) rr.dmg[e.source] = (rr.dmg[e.source] || 0) + (e.amt || 0);
+        if (e.source === seat && e.to != null && e.to !== seat) rr.myTo[e.to] = (rr.myTo[e.to] || 0) + 1;
       }
     }
     const isThreat = function (q, r) {          // q 在上回合是否构成威胁（第 1 回合没有上回合）
@@ -4000,7 +4000,7 @@ function countVariety(events, seat) {
       if (e.type === 'damage') {
         if (cur < 0) continue;
         if (!rounds[cur]) rounds[cur] = { my: 0, taken: 0 };
-        if (e.source === seat) rounds[cur].my += e.amt || 0;
+        if (e.source === seat && e.to !== seat) rounds[cur].my += e.amt || 0;
         if (e.to === seat) rounds[cur].taken += e.amt || 0;
       }
     }
@@ -4106,7 +4106,7 @@ function countVariety(events, seat) {
       const ch = [];
       for (let pid = 0; pid < n; pid++) ch.push(pid === 0 ? trainChooser(params) : wrapBotN(foe));
       Play.autoGameN(st, ch);
-      for (const e of (st.events || [])) if (e.type === 'damage' && e.source === 0) dmg += (e.amt || 0);
+      for (const e of (st.events || [])) if (e.type === 'damage' && e.source === 0 && e.to !== 0) dmg += (e.amt || 0);
     }
     return dmg / G;
   }

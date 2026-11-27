@@ -157,7 +157,7 @@ async function main() {
    * \uff08\u9759\u6001\u90a3\u534a\u5728 `np-test` D28/D226\uff0c\u4f1a\u88ab\u91cd\u6784\u67b6\u7a7a\uff1b\u8fd9\u4e00\u534a\u8981\u771f\u8d77\u6d4f\u89c8\u5668\u624d\u80fd\u8bc1\u660e"\u9009 4 \u8840\u5efa\u51fa\u6765\u7684\u5c40\u771f\u7684\u662f 4 \u8840"\uff09\u3002
    * \u26a0 \u7528\u6237\u70b9\u540d\u8981\u590d\u6d4b\u7684\u90a3\u6761 = **\u4eba\u6570\u5230 2 \u65f6\u4e09\u5f20\u591a\u4eba\u4e13\u7528\u6280\u80fd\u81ea\u52a8\u5c4f\u853d**\uff1a\u65e7\u7248\u5b83\u7531 `standard` \u7684\u5361\u8868\u6321\u7740\uff0c
    *   \u73b0\u5728 2 \u4eba\u4e5f\u80fd\u5f00 4/5 \u8840\uff08\u90a3\u91cc\u7684\u5361\u8868\u662f AVAILABLE_MULTI\uff09\uff0c\u552f\u4e00\u8fd8\u6321\u7740\u5b83\u7684\u662f `canUseSkillInMode` \u91cc"\u5b58\u6d3b\u4eba\u6570 \u22642"\u90a3\u4e00\u652f
-   *   \u21d2 \u5fc5\u987b\u9010\u8840\u91cf\u5224\uff0c\u5e76\u4e14**3~5 \u4eba\u90a3 9 \u683c\u8981\u5f53\u6b63\u5bf9\u7167**\uff08\u5426\u5219\u8fd9\u6761\u5224\u636e\u5728"\u6c38\u8fdc\u8bf4\u591a\u4eba\u6a21\u5f0f"\u7684\u574f\u5b9e\u73b0\u4e0a\u4e5f\u7eff\uff09\u3002 */
+   *   \u21d2 \u5fc5\u987b\u9010\u8840\u91cf\u5224\uff0c\u5e76\u4e14**3~8 \u4eba\u90a3 9 \u683c\u8981\u5f53\u6b63\u5bf9\u7167**\uff08\u5426\u5219\u8fd9\u6761\u5224\u636e\u5728"\u6c38\u8fdc\u8bf4\u591a\u4eba\u6a21\u5f0f"\u7684\u574f\u5b9e\u73b0\u4e0a\u4e5f\u7eff\uff09\u3002 */
   await evalJS(`document.getElementById('tab-battle').click()`);
   await sleep(250);
   const sweep = await evalJS(`(function(){
@@ -166,7 +166,7 @@ async function main() {
     if (!pl || !hpSel || !U || !U.B) return { fatal: 'missing #sel-players / #sel-hp / EpirusUI' };
     const names = R.MULTI_ONLY.map(function (k) { return R.byKey[k].name; });
     const rows = [];
-    for (const p of [2, 3, 4, 5]) for (const h of [3, 4, 5]) {
+    for (const p of [2, 3, 4, 5, 6, 7, 8]) for (const h of [3, 4, 5]) {
       pl.value = String(p); pl.dispatchEvent(new Event('change'));
       hpSel.value = String(h); hpSel.dispatchEvent(new Event('change'));
       const st = U.B.state;
@@ -189,7 +189,7 @@ async function main() {
     console.log('  sweep fatal =', sweep.fatal);
   } else {
     const rows = sweep.rows;
-    check('12 \u79cd\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u7ec4\u5408\u5168\u90e8\u5efa\u5f97\u51fa\u5c40', rows.length === 12);
+    check('21 \u79cd\uff08\u4eba\u6570 \u00d7 \u8840\u91cf\uff09\u7ec4\u5408\u5168\u90e8\u5efa\u5f97\u51fa\u5c40', rows.length === 21);
     check('\u6bcf\u683c\u7684\u4eba\u6570\u771f\u843d\u5230\u5ea7\u4f4d\u6570', rows.every(r => r.n === r.p));
     check('\u6bcf\u683c\u7684\u8840\u91cf\u771f\u843d\u5230 mode.hp \u4e0e\u6bcf\u4e2a\u5ea7\u4f4d\u7684\u521d\u59cb\u8840', rows.every(r => r.modeHp === r.h && r.initHp === new Array(r.p).fill(r.h).join('/')));
     const seen = {};
@@ -198,7 +198,7 @@ async function main() {
       sweep.modeKeys.every(k => seen[k]) && Object.keys(seen).length === sweep.modeKeys.length);
     check('2 \u4eba\u5c40\uff1a\u4e09\u5f20\u591a\u4eba\u4e13\u7528\u5361\u5168\u90e8\u6807\u6ce8\u4e3a\u300c\u591a\u4eba\u6a21\u5f0f\u300d\uff08\u7528\u6237\u70b9\u540d\u7684\u56de\u5f52\uff0c\u9010\u8840\u91cf\u5224\uff09',
       rows.filter(r => r.p === 2).every(r => r.cardCt === sweep.blockedText));
-    check('\u6b63\u5bf9\u7167\uff1a3~5 \u4eba\u5c40\u90a3\u4e09\u5f20\u4fdd\u6301\u53ef\u7528',
+    check('\u6b63\u5bf9\u7167\uff1a3~8 \u4eba\u5c40\u90a3\u4e09\u5f20\u4fdd\u6301\u53ef\u7528',
       rows.filter(r => r.p > 2).every(r => r.cardCt !== sweep.blockedText));
     console.log('  sweep 4 \u8840\u683c =', JSON.stringify(rows.filter(r => r.h === 4).map(r => r.p + '\u4eba\u2192' + r.modeKey + '(hp' + r.modeHp + ')')));
     console.log('  sweep 2 \u4eba\u683c =', JSON.stringify(rows.filter(r => r.p === 2).map(r => r.h + '\u8840\u2192' + r.modeKey + ' \u5361=' + r.cardCt)));
@@ -206,6 +206,23 @@ async function main() {
   }
   await shot(join(tmpdir(), 'screenshot-long.png'));
   console.log('screenshot-long saved');
+
+  await evalJS(`(()=>{const p=document.getElementById('sel-players'),h=document.getElementById('sel-hp'),d=document.getElementById('sel-diff');p.value='8';p.dispatchEvent(new Event('change'));h.value='5';h.dispatchEvent(new Event('change'));d.value='lv:hard';d.dispatchEvent(new Event('change'));document.getElementById('btn-newgame').click();const U=window.EpirusUI;for(const q of U.B.state.p)q.hp=99;U.refresh();window.__smoke8Before=U.B.state.round;})()`);
+  await waitFor(`[...document.querySelectorAll('.skillbtn')].some(b=>b.querySelector('.nm')?.textContent==='ジ'&&!b.disabled)`, '8人局技能就绪', 15000);
+  for (let i = 0; i < 3; i++) {
+    await evalJS(`(()=>{const b=[...document.querySelectorAll('.skillbtn')].find(x=>x.querySelector('.nm')?.textContent==='ジ'&&!x.disabled);if(!b)return false;b.click();return true;})()`);
+    await sleep(500);
+  }
+  await waitFor(`window.EpirusUI.B.state.round > window.__smoke8Before`, '8人局回合推进', 8000);
+  check('8人5血局能真实推进回合', await evalJS(`window.EpirusUI.B.state.round > window.__smoke8Before && !window.EpirusUI.B.state.over`));
+
+  const undoMem = await evalJS(`(()=>{const U=window.EpirusUI,B=U.B,Bots=window.EpirusBots,S=window.EpirusState,R=window.EpirusRules,Play=window.EpirusPlay;Bots.resetBotMem();const original=Bots.snapshotBotMem();B.locked=false;B.state.over=false;B.undoUsed=false;B.roundStartSnapshot=S.cloneState(B.state);B.roundStartRngState=B.state.rng.next.getState();B.roundStartBotMem=Bots.snapshotBotMem();B.transcript=[{round:B.state.round,line:'fixture',human:'',ai:'',lines:[],parts:[],events:[]}];const fake=S.cloneState(B.state);fake.round=Math.max(2,fake.round);fake.p[0].hp=1;for(let i=1;i<fake.p.length;i++)fake.p[i].hp=99;fake.p[0].lastSkill=R.SK.GUARD;Bots.pickBalanced(fake,1,Play.legalActions(fake,1));const mutated=Bots.snapshotBotMem();document.getElementById('btn-undo').click();const restored=Bots.snapshotBotMem();return {original:original,mutated:mutated,restored:restored,same:JSON.stringify(original)===JSON.stringify(restored)};})()`);
+  check('悔棋恢复脚本AI跨回合记忆', undoMem && undoMem.mutated.oppMightDefend === true && undoMem.same === true);
+
+  const queuedDiff = await evalJS(`(()=>{const U=window.EpirusUI,b=[...document.querySelectorAll('.skillbtn')].find(x=>x.querySelector('.nm')?.textContent==='ジ'&&!x.disabled);if(!b)return null;b.click();const s=document.getElementById('sel-diff');s.value='lv:sparring';s.dispatchEvent(new Event('change'));return {before:U.B.diff,pending:U.B.pendingDiff,select:s.value,resolving:U.B.resolvePending};})()`);
+  check('结算中切档排队且不污染当前回合', queuedDiff && queuedDiff.before === 'lv:hard' && queuedDiff.pending === 'lv:sparring' && queuedDiff.select === 'lv:hard' && queuedDiff.resolving === true);
+  await waitFor(`window.EpirusUI.B.pendingDiff === null && !window.EpirusUI.B.resolvePending`, '排队难度切换落地', 15000);
+  check('结算后自动应用排队难度', await evalJS(`window.EpirusUI.B.diff === 'lv:sparring'`));
 
   /* --- v1.6.6 难度阶梯（用户指令 2「重新研究脚本难度…冠军作为底层但探索概率很高」）：
    * 验证下拉选项与页面状态联动（静态契约由 D227 负责）。
@@ -266,6 +283,12 @@ async function main() {
     console.log('  ladder 2人 =', JSON.stringify(lad.at2), ' 5人 =', JSON.stringify(lad.at5));
     await shot(join(tmpdir(), 'screenshot-ladder.png'));
   }
+
+  const saveFailure = await evalJS(`(()=>{const C=window.EpirusChampion,P=window.EpirusPolicy,orig=Storage.prototype.setItem;let result;try{Storage.prototype.setItem=function(){throw new Error('quota');};result=C.store.save(P.unpack(window.EPIRUS_CHAMPION));}finally{Storage.prototype.setItem=orig;}return result===false;})()`);
+  check('本地冠军保存失败会返回失败而不是假成功', saveFailure === true);
+
+  const staleConnections = await evalJS(`(async()=>{const origFetch=window.fetch,origES=window.EventSource,resolvers=[];let esCount=0;window.fetch=function(){return new Promise(function(resolve){resolvers.push(resolve);});};window.EventSource=class{constructor(){esCount++;}close(){}};try{const btn=document.getElementById('btn-train');btn.click();btn.click();resolvers[1]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));resolvers[0]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));document.getElementById('btn-stop').click();return esCount;}finally{window.fetch=origFetch;window.EventSource=origES;}})()`);
+  check('旧训练探测晚到不会重连并覆盖新会话', staleConnections === 1);
 
   console.log('\nJS errors:', errors.length ? errors : '(none)');
   console.log('SUMMARY:', checks.every(c => c[1]) && errors.length === 0 ? 'SMOKE OK' : 'SMOKE FAILED');

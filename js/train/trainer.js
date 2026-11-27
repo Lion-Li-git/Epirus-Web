@@ -41,7 +41,7 @@
       return null;
     },
     save: function (params) {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(P.pack(params))); } catch (e) { /* ignore */ }
+      try { localStorage.setItem(LS_KEY, JSON.stringify(P.pack(params))); return true; } catch (e) { return false; }
     },
     clear: function () { try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ } },
     exportJSON: function (params) { return JSON.stringify(P.pack(params), null, 1); },

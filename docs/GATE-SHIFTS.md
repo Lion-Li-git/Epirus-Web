@@ -11,18 +11,17 @@
 > ⚠ 为什么不写进 `docs/METHODOLOGY.md`：那份文件**在门的读取面上**（D153 读它），往里加一段就得重跑一整轮
 > —— 为一张操作表付 20 分钟不划算。这里是操作性内容，不是方法学规矩。
 
-## 一、六组是什么、谁依赖谁
+## 一、五组是什么、谁依赖谁
 
-| 组 | 条数 | 管什么 | 跑它也等于跑 |
+| 组 | 累计条数 | 管什么 | 跑它也等于跑 |
 |---|---|---|---|
-| `meta` | 16 | 仓库纪律：CHANGELOG/README/版本三处、门号、落盘残留、可复现性 | — |
-| `ship` | 36 | 出厂面：可行性闸、当选、promote、线上槽、METHODOLOGY/RULES-2P 的读面 | meta |
-| `train` | 104 | 训练侧：`js/train/`、chooser、特征、env 旋钮、并发跑器 | ship + meta |
-| `ui` | 7 | 页面与前端契约 | train + ship + meta |
-| `probe` | 36 | 研究量具**自身**的牙（判据不许只在开发时跑过一次） | train + ship + meta |
-| `engine` | 全部 | 引擎与规则语义（`js/core/`、`server/`、`tests/`、根 `index.html`、门禁自己） | 整轮，不分组 |
+| `meta` | 17 | 仓库纪律：CHANGELOG/README/版本三处、门号、落盘残留、可复现性 | — |
+| `ship` | 54 | 出厂面：可行性闸、当选、promote、线上槽、METHODOLOGY/RULES-2P 的读面 | meta |
+| `ui` | 62 | 页面与前端契约 | ship + meta |
+| `probe` | 91 | 研究量具**自身**的牙（判据不许只在开发时跑过一次） | ship + meta |
+| `engine` | 全部 167 | 引擎与规则语义（`js/core/`、`server/`、`tests/`、根 `index.html`、门禁自己） | 整轮，不分组 |
 
-`node tools/np-test.mjs --list-groups` 是这张表的机器版本（数出来的，不是手抄的）。
+`node tools/np-test.mjs --list-groups` 与 `--list-parts --json` 是这张表的机器版本（2026-11-27 现读；门数只看后者 `total`）。
 
 ## 二、班次 → 该跑什么
 
@@ -31,7 +30,7 @@
 | 只动 `champion-map/`、`docs/` 里不被门读的那些、`results/` | `node tools/gate-all.mjs --np --group=meta` | **~36 秒** |
 | 动了 `CHANGELOG.md` / `README.md` / `.gitignore` / 任何 `.bak` 落盘 | 同上（`meta` 就是为这个存在的：D8 / D82 / D205 / D194 都在里面） | ~36 秒 |
 | 动了 `docs/METHODOLOGY.md` / `docs/RULES-2P.md` / `docs/RULES-NP.md` / `docs/artifacts/e129-out/matrix.json` | `--np --group=ship` | ~2 分钟 |
-| 动了 `js/train/`、`tools/train-3p.mjs`、`tools/eval-5p.mjs`、`tools/style-exam.mjs`、env 旋钮 | **`--auto` 已修好**（11-07 午后 · `b35ea251`）：训练面判到 **probe（88 条，累计含 ship+meta）+ 另跑 `--part=engine-fuzz`（13 条，D54 的夹具直接 import `Bots`）** ⇒ 直接 `node tools/gate-all.mjs --auto`，实测 `88/88 + 13/13 + spec 61/61`。手敲同理：`--np --group=probe`（`--group=train` 那条已随训练组退役作废，别再写） | ~5 分钟 |
+| 动了 `js/train/`、`tools/train-3p.mjs`、`tools/eval-5p.mjs`、`tools/style-exam.mjs`、env 旋钮 | **`--auto` 已修好**（11-07 午后 · `b35ea251`）：训练面判到 **probe（91 条，累计含 ship+meta）+ 另跑 `--part=engine-fuzz`（13 条，D54 的夹具直接 import `Bots`）** ⇒ 直接 `node tools/gate-all.mjs --auto`。手敲同理：`--np --group=probe`（`--group=train` 那条已随训练组退役作废，别再写） | ~5 分钟 |
 | 动了 `js/ui/`、页面契约、`tools/smoke.mjs` / `battle-test.mjs` | `--np --group=ui` | ~11 分钟 |
 | 动了**量具本身**（`tools/probe-*`、`analyze-*`、`pool-frontier-lib`、被门当输入的 `docs/artifacts/e16*-*.mjs`） | `--np --group=probe` | ~10 分钟 |
 | 动了 `js/core/`、`server/`、`tests/`、根 `index.html`、`tools/np-test.mjs` 自己 | **整轮**：`node tools/gate-all.mjs --np`（不带 `--group`） | **见本节末真源表**（本机并行 ≈5.5 分钟 ‖ 串行 ≈16 分钟） |

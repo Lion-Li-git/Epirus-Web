@@ -15,11 +15,11 @@ const source = readFileSync(join(ROOT, 'js/pool-loader.js'), 'utf8');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const widOf = pack => createHash('sha1').update(JSON.stringify(pack.a)).digest('hex').slice(0, 16);
 
-function makeLoader(members) {
+function makeLoader(members, opts) {
   const scripts = [];
   const timeouts = [];
   const warnings = [];
-  const crypto = {
+  const crypto = opts && opts.noCrypto ? null : {
     subtle: {
       digest: async (_alg, data) => {
         const hex = createHash('sha1').update(Buffer.from(data)).digest('hex');
@@ -97,4 +97,10 @@ await hungDone;
 assert.equal(hung.loader.get('A'), packA, '加载超时必须回退整表而不是永久 pending');
 assert.equal(hung.loader.fellBack(), true);
 
-console.log('POOL_LOADER_SELFTEST OK（晚到分片不覆盖整表；wid 不符与超时均触发回退）');
+const insecure = makeLoader([memberA], { noCrypto: true });
+const insecureDone = insecure.loader.ensure(['A']);
+insecure.shard(0, 'A', packA);
+await insecureDone;
+assert.equal(insecure.loader.get('A'), packA, '不安全 HTTP 下缺少 crypto.subtle 也必须能用纯 JS SHA-1 校验分片');
+
+console.log('POOL_LOADER_SELFTEST OK（晚到分片不覆盖整表；wid 不符与超时均触发回退；无 Web Crypto 可用）');

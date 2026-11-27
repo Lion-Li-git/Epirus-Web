@@ -2,7 +2,7 @@
 
 依据国际拍手游戏规则制定协会的规则（[原仓库 Lion-LiHaoyi/Epirus](https://github.com/Lion-LiHaoyi/Epirus)，规则文档 v2.1.0）实现的网页版：2–8 人对局 + 可选的自训练冠军 AI。
 
-> **当前版本：v2.1.38** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），另支持导入 `v7` 冠军包（`FEAT_S=213` ‖ 5689 参数，2–5 人）
+> **当前版本：v2.1.39** · 人数 2–8 × 血量 3/4/5 两根独立轴 · 全人数共用同一套分级冠军池（2.0 包版本 `v:92` ‖ arch `S1o` ‖ `obs3b` / `obs5` / `obs6`），另支持导入 `v7` 冠军包（`FEAT_S=213` ‖ 5689 参数，2–5 人）
 > 规则见 [`docs/RULES-2P.md`](docs/RULES-2P.md) / [`docs/RULES-NP.md`](docs/RULES-NP.md)；版本历史与实验记录见 [`CHANGELOG.md`](CHANGELOG.md) 与 `docs/research/`。
 
 - **游戏部分零依赖、纯静态**：双击 `index.html` 即可游玩（推荐 Chrome / Edge），不需要安装、不需要联网。
@@ -28,6 +28,7 @@
   ② **桌上是谁**：2–8 人统一从冠军池清单 `js/pool-manifest.js` 逐席抽取对应带位成员（允许同席型重复、不许整桌全同；装配与降级规则见 [`docs/POOL-CONTRACT.md`](docs/POOL-CONTRACT.md)）。HTTP 下只懒加载本局抽到的 N−1 枚分片（`js/pool-packs/<id>.js`，Pages 构建时生成）；本地双击 `file://` 回退整表 `js/bundled-champion-pool.js`。
 - **脚本掺席与风格**：简单档按桌概率掺脚本席（`p=0.35`、逐席最多 1 席：`st:mix` / `st:toolkit`）；普通档 `p=0.1`、逐席最多 1 席（`st:toolkit`），推导仅在 `js/pool-draw.js` 的 `scriptSeats` 一处。脚本风格共 6 种（`EpirusBots.STYLES`），其中「杂货铺」带显式计划层。
 - **对局信息与辅助**：HP（含 0.5 血）、ジ、电/爆能量珠、地雷/符咒/挑衅/梦魇/回魂等持续状态全部可见；技能按钮悬停显示手势与说明；支持每局一次「悔一步」与导出对局记录。
+- **当前边界**：6–8 人已有建局与实战回归；冠军包层 `dualGun` 仍只有象征性出手、`mirror` 仍为 0，最新版难度阶梯只覆盖 2P/5P。下一步先决定是否为这两张卡开训练载体，不通过改池或脚本冒充覆盖完成。
 
 ### 训练场
 
