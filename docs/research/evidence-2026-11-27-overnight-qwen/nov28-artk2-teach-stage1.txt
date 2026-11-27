@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov28-artk2-teach wid=d9f2aa9c63633da2
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-artk2-teach
+[nov28-artk2-teach] stage1 并集 21/30（自对局 17） 换招JS 0.0767 ‖ 18s → D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-artk2-teach\nov28-artk2-teach.json
