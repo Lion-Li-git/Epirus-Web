@@ -4,13 +4,14 @@ import { resolve } from 'node:path';
 import { widOf } from '../../../champion-map/pack-id.mjs';
 
 const ROOT = process.cwd();
-const SIM = 'D:/code/Epirus-Web-pool-sim-l1b';
+const SIM = process.env.SIM_ROOT || 'D:/code/Epirus-Web-pool-sim-l1b';
 const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
 const ID = process.env.SIM_ID || 'L1B-S1200';
 const CAND = process.env.SIM_PACK || 'scratch/arms/nov27-long-pgdr-l1b.seg1200.bak';
 const SIM_PACK = 'docs/artifacts/' + ID + '.bak';
 const targets = (process.env.SIM_TARGETS || 'MX8-R6B-KL,MX6-GD-TF20,MX8-TN35-KL3,RING-MINIT-CONT').split(',');
 const full = process.env.SIM_FULL === '1';
+const TAG = process.env.SIM_TAG || '';
 const seeds2p = full ? [95001, 95002, 95003, 95004, 95005, 95006, 95007, 95008] : [95001];
 const seeds5p = full ? [95001, 95002, 95003, 95004] : [95001];
 const tablePath = resolve(SIM, 'champion-map/data/page/pool-members.tsv');
@@ -64,7 +65,7 @@ try {
   writeFileSync(tablePath, original);
 }
 
-writeFileSync(resolve(ROOT, OUT, ID + '-pool-replacement' + (full ? '-full' : '-screen') + '.json'), JSON.stringify(report, null, 2));
+writeFileSync(resolve(ROOT, OUT, ID + '-pool-replacement' + TAG + (full ? '-full' : '-screen') + '.json'), JSON.stringify(report, null, 2));
 const header = ['target', 'config', 'seed', 'hard', 'regular', 'sparring'];
-writeFileSync(resolve(ROOT, OUT, ID + '-pool-replacement' + (full ? '-full' : '-screen') + '.tsv'),
+writeFileSync(resolve(ROOT, OUT, ID + '-pool-replacement' + TAG + (full ? '-full' : '-screen') + '.tsv'),
   header.join('\t') + '\n' + report.map((r) => header.map((k) => r[k]).join('\t')).join('\n') + '\n');

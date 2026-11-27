@@ -1,0 +1,98 @@
+[
+  {
+    "target": "MSB11-R1S130778313",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 45.4,
+    "sparring": 56.7
+  },
+  {
+    "target": "MSB11-R1S130778313",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 24.3,
+    "sparring": 26.7
+  },
+  {
+    "target": "MSB11-R1S130778313",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 16
+  },
+  {
+    "target": "MSB11-R1S130778313",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 7,
+    "sparring": 13.8
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 45.4,
+    "sparring": 57
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25.3,
+    "sparring": 27.6
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.3,
+    "sparring": 15.8
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.3,
+    "sparring": 15.8
+  },
+  {
+    "target": "SOFT-RING-C3G25",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 46.4,
+    "sparring": 58.5
+  },
+  {
+    "target": "SOFT-RING-C3G25",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25,
+    "sparring": 27.2
+  },
+  {
+    "target": "SOFT-RING-C3G25",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 11,
+    "sparring": 16.5
+  },
+  {
+    "target": "SOFT-RING-C3G25",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 9,
+    "sparring": 13
+  }
+]

@@ -1,0 +1,109 @@
+[
+  {
+    "target": "MSB11-R1S130778313",
+    "poolUnionBefore": 28,
+    "poolUnionAfter": 28,
+    "lostPoolSkills": [],
+    "softDepthChanges": {
+      "bagua": {
+        "before": 16,
+        "after": 17
+      },
+      "bigT": {
+        "before": 14,
+        "after": 15
+      },
+      "charge": {
+        "before": 17,
+        "after": 18
+      },
+      "curse": {
+        "before": 4,
+        "after": 5
+      },
+      "drain": {
+        "before": 5,
+        "after": 6
+      },
+      "holo": {
+        "before": 6,
+        "after": 7
+      },
+      "mine": {
+        "before": 2,
+        "after": 1
+      },
+      "proto": {
+        "before": 3,
+        "after": 2
+      },
+      "railgun": {
+        "before": 14,
+        "after": 15
+      },
+      "ring": {
+        "before": 10,
+        "after": 11
+      },
+      "tank": {
+        "before": 4,
+        "after": 3
+      }
+    },
+    "zeroedSoftSkills": []
+  },
+  {
+    "target": "RINGB11",
+    "poolUnionBefore": 28,
+    "poolUnionAfter": 28,
+    "lostPoolSkills": [],
+    "softDepthChanges": {
+      "bagua": {
+        "before": 16,
+        "after": 17
+      },
+      "curse": {
+        "before": 4,
+        "after": 5
+      },
+      "drain": {
+        "before": 5,
+        "after": 6
+      },
+      "ring": {
+        "before": 10,
+        "after": 11
+      },
+      "snipe": {
+        "before": 17,
+        "after": 18
+      }
+    },
+    "zeroedSoftSkills": []
+  },
+  {
+    "target": "SOFT-RING-C3G25",
+    "poolUnionBefore": 28,
+    "poolUnionAfter": 28,
+    "lostPoolSkills": [],
+    "softDepthChanges": {
+      "drain": {
+        "before": 5,
+        "after": 6
+      },
+      "firestorm": {
+        "before": 2,
+        "after": 1
+      },
+      "holo": {
+        "before": 6,
+        "after": 7
+      },
+      "jinshield": {
+        "before": 5,
+        "after": 4
+      }
+    },
+    "zeroedSoftSkills": []
+  }
+]

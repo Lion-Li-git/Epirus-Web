@@ -1,0 +1,23 @@
+{
+  "MSB11-R1S130778313": {
+    "ordered": true,
+    "worstRegular": -1.3000000000000007,
+    "worstSparring": -2,
+    "meanRegular": -0.7249999999999996,
+    "meanSparring": -1.2499999999999991
+  },
+  "RINGB11": {
+    "ordered": true,
+    "worstRegular": -0.8999999999999986,
+    "worstSparring": -1.5,
+    "meanRegular": -0.1999999999999993,
+    "meanSparring": -0.4999999999999991
+  },
+  "SOFT-RING-C3G25": {
+    "ordered": true,
+    "worstRegular": 0,
+    "worstSparring": -2.8000000000000007,
+    "meanRegular": 0.3250000000000002,
+    "meanSparring": -0.75
+  }
+}
