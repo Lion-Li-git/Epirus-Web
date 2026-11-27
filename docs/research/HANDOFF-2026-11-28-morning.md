@@ -71,7 +71,7 @@
 ### NEXT
 
 - 等最终 CI 回执；若绿，本班可收工。
-- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG、`MX6-GD-TF20` PG、`MX8-TN35-KL3` PG；`nov21-taunt-dsp0b` 当前上游预检红。
+- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG、`MX6-GD-TF20` PG、`MX8-TN35-KL3` PG、`RG-MN` PG；`nov21-taunt-dsp0b` 当前上游预检红。
 - 下一班若继续 soft 高废珠，先提出清单外新假设；直接 PG 与低剂量教师线都已收口，不能扫剂量挽救。起点只查 `selftest3-pool-census-2026-11-28.txt`。
 - P3 剩余：旋钮 KPI 真实 API 合并、v7 退役决策、CDP 复发观察。
 
@@ -101,3 +101,4 @@
 - `nov21-armor-tzt2d` PG 首件全绿、armor `120→116`、transfer `4→5`，但电珠过期仅降约 6%、花珠为底座 76%，未达硬门，淘汰。
 - `MX6-GD-TF20` PG 首件全绿：废珠降 40.7%、花珠为底座 111%，transfer/miniT/railgun `29/6/14` 均过；但胜率 `37.58%` 低于 38% 硬门 0.42pt，按预注册淘汰，不追 `seg1200`。
 - `MX8-TN35-KL3` PG 首件全绿：胜率 `47.08%`、laserEye/proto/holo `18/13/21` 均过；总废珠率 `90.23%→63.35%`，仍高于 60% 硬门 3.35pt，按预注册淘汰。
+- `RG-MN` PG 首件全绿：胜率 `44.42%`、mine/ring `36/22`、花珠为底座 88.9%；但废珠率 `75.1%`，高于 60% 硬门，按预注册淘汰。
