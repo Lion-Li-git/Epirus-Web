@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov27-long-pgdr-l1b.seg600 wid=910b82ecbc976e0f
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-L1B-S600
+[nov27-long-pgdr-l1b.seg600] stage1 并集 18/30（自对局 14） 换招JS 0.0765 ‖ 16.2s → D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-L1B-S600\nov27-long-pgdr-l1b.seg600.json

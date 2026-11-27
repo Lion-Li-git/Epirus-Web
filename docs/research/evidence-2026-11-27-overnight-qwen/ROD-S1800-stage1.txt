@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：nov27-pg-rod-s1.seg1800 wid=05ec6c1317496272
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-ROD-S1800
+[nov27-pg-rod-s1.seg1800] stage1 并集 17/30（自对局 11） 换招JS 0.0364 ‖ 15.4s → D:\code\Epirus-Web\docs\research\evidence-2026-11-27-overnight-qwen\skill-ROD-S1800\nov27-pg-rod-s1.seg1800.json
