@@ -71,7 +71,7 @@
 ### NEXT
 
 - 等最终 CI 回执；若绿，本班可收工。
-- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG；`nov21-taunt-dsp0b` 当前上游预检红。
+- 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG、`MX6-GD-TF20` PG；`nov21-taunt-dsp0b` 当前上游预检红。
 - 下一班若继续 soft 高废珠，先提出清单外新假设；直接 PG 与低剂量教师线都已收口，不能扫剂量挽救。起点只查 `selftest3-pool-census-2026-11-28.txt`。
 - P3 剩余：旋钮 KPI 真实 API 合并、v7 退役决策、CDP 复发观察。
 
@@ -99,3 +99,4 @@
 - 当前 selftest3 普查：**30 绿 / 5 红**；红座为 `MN-PG / MT-PG / nov21-taunt-dsp0b / T65-RINGBEAD / OBS6E9`。旧 `selftest3-pool-census.txt` 的 17/17 已过期，下一班使用 `selftest3-pool-census-2026-11-28.txt`。
 - `nov21-taunt-dsp0b` PG 在上游预检即被拒绝（腿 C 红），没有产生训练产物。
 - `nov21-armor-tzt2d` PG 首件全绿、armor `120→116`、transfer `4→5`，但电珠过期仅降约 6%、花珠为底座 76%，未达硬门，淘汰。
+- `MX6-GD-TF20` PG 首件全绿：废珠降 40.7%、花珠为底座 111%，transfer/miniT/railgun `29/6/14` 均过；但胜率 `37.58%` 低于 38% 硬门 0.42pt，按预注册淘汰，不追 `seg1200`。
