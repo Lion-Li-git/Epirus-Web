@@ -59,3 +59,9 @@
 - `L1B-S1200` 留作第二候选；它综合与 multi 更强，但本班长程收益不如 `seg600`。
 - `seg2400`、`ROD seg1800` 本轮不入池。
 - 进入 Phase 3 A 线：先用绿色 `DR-R3E` 做 Stage C 对照/处理，首件落盘立即验血统。
+
+## 7. 06:50 续班：L1b seg1800 当前池快筛
+
+- 候选 `scratch/arms/nov27-long-pgdr-l1b.seg1800.bak` 的 selftest3 六腿全绿；使用当前 `bf22eff0` 池做同 seed 同位替换，基线为 2P rule `45.4/57.0`、2P legacy `25.3/27.6`、5P multi `10.3/15.8`、5P long `8.3/15.8`（普通/简单）。
+- 单 seed 快筛没有正信号：`MX6-GD-TF20` 的 5P long `-1.3/-2.3pt`；`MX8-R6B-KL` 的 2P rule simple `-1.6pt`、5P multi simple `-1.5pt`；`FC-S1` 的 2P rule simple `-2.3pt`；`MX8-TN35-KL3` 的 5P multi 普通 `-2.0pt`。
+- 裁定：`L1b seg1800` 本轮淘汰，不跑完整矩阵、promote 或入池链；证据见 `evidence-2026-11-27-overnight-qwen/L1B-S1800-pool-replacement-screen.tsv`。
