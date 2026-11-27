@@ -468,6 +468,8 @@ node tools/pool-add.mjs --audit
 - v2.1.41–43 已提交推送；当前池 35 枚 `17/18`，结构审计 `bad=[]`。
 - Phase 0 已提前完成：训练服务认证/生命周期 `6b47442a`、金刚盾交叉规则 `f4b8e1bd`、UI/整表校验 `5307ebe0`，均已推送。
 - 新规则指纹冻结为 `c61298e6`；`spec 96/96`、训练服务自检、池加载自检、`ui-contract 8/8`、`meta-repo 13/13`、`ship-pool 1/1`、`D16`/`D168`、训练栈 37 条、真实 Chrome `SMOKE OK`/`BATTLE OK` 全绿。
+- Phase 1 已完成：35/35 Stage 1 对齐新指纹；底座 28 绿/4 红/3 legacy；2P rule/legacy 八 seed 与 5P multi/long 四 seed 全部保序；受影响包 Arena 回归首 seed 三处变化在第二 seed 全部归零。
+- Phase 1 结果见 [`RESULTS-2026-11-28-phase1-baseline.md`](RESULTS-2026-11-28-phase1-baseline.md)。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -477,5 +479,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 00:15 起进入 Phase 1：在 `c61298e6` 下重跑 35 池 Stage 1、selftest3 底座账、受影响包同 seed 回归和 2P/5P 阶梯矩阵。
-- Phase 1 三表全部落盘后才进入 Phase 2；旧指纹读数只作历史对照，不作当前判决。
+- 00:31 起进入 Phase 2：先完整验收 `nov27-long-pgdr-l1b.seg1200`，再做同抽签同位替换模拟。
+- `MSB11` 的 100% 废珠率分母只有 1，不按比率列为训练优先；A 线硬座先从绿色 `DR-R3E`、`JN-DR` 开始。
