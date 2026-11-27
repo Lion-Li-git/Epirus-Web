@@ -1,0 +1,386 @@
+[
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 46.2,
+    "sparring": 58.4
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95002,
+    "hard": 29.1,
+    "regular": 43.7,
+    "sparring": 58
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95003,
+    "hard": 31.2,
+    "regular": 43.6,
+    "sparring": 55.4
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95004,
+    "hard": 32.6,
+    "regular": 45.6,
+    "sparring": 58.1
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95005,
+    "hard": 30.1,
+    "regular": 40.9,
+    "sparring": 59.6
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95006,
+    "hard": 31.8,
+    "regular": 44.8,
+    "sparring": 55
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95007,
+    "hard": 31,
+    "regular": 42.7,
+    "sparring": 56.1
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95008,
+    "hard": 30,
+    "regular": 41.5,
+    "sparring": 57.8
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 24.9,
+    "sparring": 27.7
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95002,
+    "hard": 21.3,
+    "regular": 26.3,
+    "sparring": 27.8
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95003,
+    "hard": 20.5,
+    "regular": 25.7,
+    "sparring": 30.7
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95004,
+    "hard": 20.3,
+    "regular": 23.9,
+    "sparring": 29
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95005,
+    "hard": 19.8,
+    "regular": 23.3,
+    "sparring": 27.9
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95006,
+    "hard": 21.2,
+    "regular": 24.4,
+    "sparring": 30.9
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95007,
+    "hard": 18.4,
+    "regular": 24.9,
+    "sparring": 26.3
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95008,
+    "hard": 20,
+    "regular": 24.9,
+    "sparring": 28.2
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 15.8
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-multi",
+    "seed": 95002,
+    "hard": 3.5,
+    "regular": 10.3,
+    "sparring": 14
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-multi",
+    "seed": 95003,
+    "hard": 4.5,
+    "regular": 10.8,
+    "sparring": 16.8
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-multi",
+    "seed": 95004,
+    "hard": 3,
+    "regular": 11,
+    "sparring": 16.3
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.5,
+    "sparring": 14.8
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-long",
+    "seed": 95002,
+    "hard": 3.8,
+    "regular": 8,
+    "sparring": 10.3
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-long",
+    "seed": 95003,
+    "hard": 2.5,
+    "regular": 9,
+    "sparring": 15
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-long",
+    "seed": 95004,
+    "hard": 2.3,
+    "regular": 7.3,
+    "sparring": 11
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 45.4,
+    "sparring": 58
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95002,
+    "hard": 29.1,
+    "regular": 43.1,
+    "sparring": 57.2
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95003,
+    "hard": 31.2,
+    "regular": 43,
+    "sparring": 54
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95004,
+    "hard": 32.6,
+    "regular": 45,
+    "sparring": 58
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95005,
+    "hard": 30.1,
+    "regular": 40.4,
+    "sparring": 59
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95006,
+    "hard": 31.8,
+    "regular": 44,
+    "sparring": 54
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95007,
+    "hard": 31,
+    "regular": 41.4,
+    "sparring": 55.4
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95008,
+    "hard": 30,
+    "regular": 41.2,
+    "sparring": 56.9
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 24.9,
+    "sparring": 27.1
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95002,
+    "hard": 21.3,
+    "regular": 26.2,
+    "sparring": 27.2
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95003,
+    "hard": 20.5,
+    "regular": 25.3,
+    "sparring": 30.2
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95004,
+    "hard": 20.3,
+    "regular": 24,
+    "sparring": 27.4
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95005,
+    "hard": 19.8,
+    "regular": 23.8,
+    "sparring": 27.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95006,
+    "hard": 21.2,
+    "regular": 24.8,
+    "sparring": 29.8
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95007,
+    "hard": 18.4,
+    "regular": 24.4,
+    "sparring": 25.7
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95008,
+    "hard": 20,
+    "regular": 25.2,
+    "sparring": 27.8
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 15.8
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95002,
+    "hard": 3.5,
+    "regular": 11,
+    "sparring": 15
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95003,
+    "hard": 4.5,
+    "regular": 10.3,
+    "sparring": 17.5
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95004,
+    "hard": 3,
+    "regular": 10,
+    "sparring": 16.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 7,
+    "sparring": 14.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95002,
+    "hard": 3.8,
+    "regular": 8.3,
+    "sparring": 10.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95003,
+    "hard": 2.5,
+    "regular": 8.3,
+    "sparring": 13.5
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95004,
+    "hard": 2.3,
+    "regular": 6,
+    "sparring": 10.5
+  }
+]
