@@ -65,3 +65,9 @@
 - 候选 `scratch/arms/nov27-long-pgdr-l1b.seg1800.bak` 的 selftest3 六腿全绿；使用当前 `bf22eff0` 池做同 seed 同位替换，基线为 2P rule `45.4/57.0`、2P legacy `25.3/27.6`、5P multi `10.3/15.8`、5P long `8.3/15.8`（普通/简单）。
 - 单 seed 快筛没有正信号：`MX6-GD-TF20` 的 5P long `-1.3/-2.3pt`；`MX8-R6B-KL` 的 2P rule simple `-1.6pt`、5P multi simple `-1.5pt`；`FC-S1` 的 2P rule simple `-2.3pt`；`MX8-TN35-KL3` 的 5P multi 普通 `-2.0pt`。
 - 裁定：`L1b seg1800` 本轮淘汰，不跑完整矩阵、promote 或入池链；证据见 `evidence-2026-11-27-overnight-qwen/L1B-S1800-pool-replacement-screen.tsv`。
+
+## 8. 06:55 续班：L1b seg2400 当前池快筛
+
+- 同一当前池、同一 seed `95001`、同一四靶点快筛；`selftest3` 已有全绿回执。
+- `MX6-GD-TF20` 的 5P long `-1.3/-1.8pt`；`MX8-R6B-KL` 仅 5P long 简单 `+0.5pt`，但 2P rule 简单 `-1.5pt`、普通档长程无增益；`FC-S1` 的 2P rule 简单 `-1.9pt`；`MX8-TN35-KL3` 的 5P multi 普通 `-2.0pt`。
+- 裁定：`L1b seg2400` 也没有值得升级的替换点，本轮淘汰；不跑完整矩阵或入池链。证据见 `evidence-2026-11-27-overnight-qwen/L1B-S2400-pool-replacement-screen.tsv`。

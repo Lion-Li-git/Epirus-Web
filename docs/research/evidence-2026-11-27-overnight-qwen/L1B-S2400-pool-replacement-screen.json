@@ -1,0 +1,130 @@
+[
+  {
+    "target": "MX6-GD-TF20",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 43.8,
+    "sparring": 56.3
+  },
+  {
+    "target": "MX6-GD-TF20",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25,
+    "sparring": 27.5
+  },
+  {
+    "target": "MX6-GD-TF20",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 9.8,
+    "sparring": 15.5
+  },
+  {
+    "target": "MX6-GD-TF20",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 7,
+    "sparring": 14
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 44.9,
+    "sparring": 55.5
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25.1,
+    "sparring": 27.4
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 15
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.3,
+    "sparring": 16.3
+  },
+  {
+    "target": "FC-S1",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 44.6,
+    "sparring": 55.1
+  },
+  {
+    "target": "FC-S1",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25.3,
+    "sparring": 28.2
+  },
+  {
+    "target": "FC-S1",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 9.8,
+    "sparring": 15.3
+  },
+  {
+    "target": "FC-S1",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 7.8,
+    "sparring": 16
+  },
+  {
+    "target": "MX8-TN35-KL3",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 44.2,
+    "sparring": 56.1
+  },
+  {
+    "target": "MX8-TN35-KL3",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 24.6,
+    "sparring": 26.9
+  },
+  {
+    "target": "MX8-TN35-KL3",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 8.3,
+    "sparring": 15.5
+  },
+  {
+    "target": "MX8-TN35-KL3",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.8,
+    "sparring": 15.5
+  }
+]
