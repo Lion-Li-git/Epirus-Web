@@ -924,7 +924,8 @@ function forwardObs6(W, state, pid, cands, params, opts2) {
     const R = W.EpirusRules;
     if (!cands || !cands.length) return { key: R.SK.JI, target: null, target2: null, bead: null };
     const f = forwardCands(W, state, pid, cands, params, { temp: opts2 && opts2.temp != null ? opts2.temp : 0.5 });
-    let r = (opts2 && opts2.greedy) ? 0 : state.rng.next();
+    if (opts2 && opts2.greedy) return cands[f.argmax] || cands[0];
+    let r = state.rng.next();
     if (r >= 1) r = 0.999999;
     let acc = 0;
     for (let i = 0; i < f.probs.length; i++) { acc += f.probs[i]; if (r < acc) return cands[i]; }

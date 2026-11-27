@@ -25,16 +25,33 @@ const LATEST_OUT_REL = 'scratch/arms/ui-train-latest.bak';
 let activeChild = null;
 let lastOut = '';
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  if (origin === 'null') return true;   // 本地双击 file:// 打开页面
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
+}
+
+function setCors(req, res) {
+  const origin = req && req.headers ? String(req.headers.origin || '') : '';
+  if (isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-function sendJson(res, code, obj) {
-  setCors(res);
+function sendJson(req, res, code, obj) {
+  setCors(req, res);
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
+}
+
+function numParam(q, key, fallback) {
+  const raw = q.get(key);
+  if (raw == null || String(raw).trim() === '') return fallback;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : fallback;
 }
 
 function resolveInsideRoot(relOrPath) {
@@ -42,6 +59,15 @@ function resolveInsideRoot(relOrPath) {
   const full = resolve(ROOT, raw);
   if (full !== ROOT && !full.startsWith(ROOT + sep)) return null;
   return full;
+}
+
+function validateTeacher(raw) {
+  const t = String(raw || '').trim();
+  if (!t) return null;
+  if (/^[A-Za-z0-9_-]+$/.test(t)) return t;
+  const full = resolve(ROOT, t);
+  if ((full !== ROOT && !full.startsWith(ROOT + sep)) || !existsSync(full)) return null;
+  return t;
 }
 
 function extractPackFromBak(filePath) {
@@ -55,33 +81,52 @@ function extractPackFromBak(filePath) {
   return { champion, meta };
 }
 
-function killActive() {
-  if (!activeChild) return false;
-  try { activeChild.kill('SIGTERM'); } catch (e) { /* ignore */ }
-  activeChild = null;
-  return true;
+function killChildTree(child) {
+  if (!child) return false;
+  try {
+    if (process.platform === 'win32' && child.pid) {
+      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+      killer.unref();
+    } else {
+      child.kill('SIGTERM');
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
-function parseStepLine(mode, line, total) {
+function killActive() {
+  if (!activeChild) return false;
+  const c = activeChild;
+  activeChild = null;
+  return killChildTree(c);
+}
+
+function parseStepLine(mode, line, stepsPerRound, totalAll) {
   if (mode === 'pg') {
     const m = /局\s+(\d+)\s+‖\s+步\s+(\d+)\s+‖\s+平均净分\s+([-\d.]+)/.exec(line);
     if (m) {
       return {
         step: Number(m[1]),
         upd: Number(m[2]),
-        total,
+        total: totalAll,
         best: Number(m[3]),
       };
     }
   } else {
-    const m = /步\s+(\d+)(?:（轮\s+[^）]+）)?\s+‖\s+训练加权似然\s+([-\d.]+)(?:.*?top-1\s+([\d.]+)%)?/.exec(line);
+    const m = /步\s+(\d+)(?:（轮\s+(\d+)）)?\s+‖\s+训练加权似然\s+([-\d.]+)(?:.*?top-1\s+([\d.]+)%)?/.exec(line);
     if (m) {
-      const agree = m[3] != null ? Number(m[3]) / 100 : null;
+      const localStep = Number(m[1]);
+      const round = m[2] != null ? Number(m[2]) : 0;
+      const agree = m[4] != null ? Number(m[4]) / 100 : null;
       return {
-        step: Number(m[1]),
-        total,
-        best: agree != null ? agree : Number(m[2]),
-        ll: Number(m[2]),
+        step: round * stepsPerRound + localStep,
+        localStep,
+        round,
+        total: totalAll,
+        best: agree != null ? agree : Number(m[3]),
+        ll: Number(m[3]),
         agree,
       };
     }
@@ -90,37 +135,40 @@ function parseStepLine(mode, line, total) {
 }
 
 function handleTrain(req, res, q) {
-  const modeRaw = String(q.get('mode') || 'pg').trim();
-  const mode = (modeRaw === 'supfit' || modeRaw === 'distill') ? 'supfit' : 'pg';
-  const upRaw = String(q.get('up') || q.get('upstream') || DEFAULT_UP).trim();
-  const upAbs = resolveInsideRoot(upRaw);
-  if (!upAbs || !existsSync(upAbs)) {
-    setCors(res);
+  const sseError = (msg) => {
+    setCors(req, res);
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
-    res.write('data: ' + JSON.stringify({ type: 'error', msg: '起点包不存在或路径越界：' + upRaw }) + '\n\n');
+    res.write('data: ' + JSON.stringify({ type: 'error', msg }) + '\n\n');
     res.end();
+  };
+
+  const modeRaw = String(q.get('mode') || 'pg').trim();
+  const mode = (modeRaw === 'supfit' || modeRaw === 'distill') ? 'supfit' : 'pg';
+  const upRaw = String(q.get('up') || q.get('upstream') || DEFAULT_UP).trim();
+  const upAbs = resolveInsideRoot(upRaw);
+  if (!upAbs || !existsSync(upAbs)) {
+    sseError('起点包不存在或路径越界：' + upRaw);
     return;
   }
-
-  killActive();
 
   const outAbs = resolve(ROOT, LATEST_OUT_REL);
   mkdirSync(dirname(outAbs), { recursive: true });
 
-  const seed = Number(q.get('seed') || (mode === 'pg' ? 7 : 20261031)) || 7;
+  const seed = numParam(q, 'seed', mode === 'pg' ? 7 : 20261031);
   const cmdArgs = ['training/train.mjs', '--mode=' + mode, '--out=' + LATEST_OUT_REL, '--tag=ui-server', '--seed=' + seed];
+  let stepsPerRound = 0;
   let total = 0;
 
   if (mode === 'pg') {
-    const games = Math.max(1000, Number(q.get('games') || q.get('gens') || 2000) || 2000);
-    const batch = Math.max(8, Number(q.get('batch') || 48) || 48);
-    const lr = Number(q.get('lr') || 0.0003) || 0.0003;
+    const games = Math.max(1000, numParam(q, 'games', numParam(q, 'gens', 2000)));
+    const batch = Math.max(8, numParam(q, 'batch', 48));
+    const lr = numParam(q, 'lr', 0.0003);
     const shapeKey = String(q.get('shapeKey') || '').trim();
-    const klW = Number(q.get('klW') || 0);
+    const klW = numParam(q, 'klW', 0);
     const klTilt = String(q.get('klTilt') || '').trim();
     total = games;
     cmdArgs.push('--up=' + upRaw, '--games=' + games, '--batch=' + batch, '--lr=' + lr);
@@ -128,16 +176,30 @@ function handleTrain(req, res, q) {
     if (Number.isFinite(klW) && klW > 0) cmdArgs.push('--klW=' + klW);
     if (klTilt) cmdArgs.push('--klTilt=' + klTilt);
   } else {
-    const steps = Math.max(10, Number(q.get('steps') || q.get('gens') || 60) || 60);
-    const groups = Math.max(60, Number(q.get('groups') || q.get('batch') || 600) || 600);
-    const lr = Number(q.get('lr') || 0.0004) || 0.0004;
-    const teacher = String(q.get('teacher') || 'toolkit').trim() || 'toolkit';
-    const teacher2 = String(q.get('teacher2') || '').trim();
-    const teacher2frac = Number(q.get('teacher2frac') || 0.5) || 0.5;
-    const winOnly = Number(q.get('winOnly') || 0) || 0;
+    const steps = Math.max(10, numParam(q, 'steps', numParam(q, 'gens', 60)));
+    const groups = Math.max(60, numParam(q, 'groups', numParam(q, 'batch', 600)));
+    const lr = numParam(q, 'lr', 0.0004);
+    const teacherRaw = String(q.get('teacher') || 'toolkit').trim() || 'toolkit';
+    const teacher = validateTeacher(teacherRaw);
+    if (!teacher) {
+      sseError('teacher 不合法或文件不存在/路径越界：' + teacherRaw);
+      return;
+    }
+    const teacher2Raw = String(q.get('teacher2') || '').trim();
+    let teacher2 = '';
+    if (teacher2Raw) {
+      teacher2 = validateTeacher(teacher2Raw);
+      if (!teacher2) {
+        sseError('teacher2 不合法或文件不存在/路径越界：' + teacher2Raw);
+        return;
+      }
+    }
+    const teacher2frac = numParam(q, 'teacher2frac', 0.5);
+    const winOnly = numParam(q, 'winOnly', 0);
     const obj = String(q.get('objective') || 'cand').trim() || 'cand';
-    const dagger = Number(q.get('dagger') || 1);
-    total = steps;
+    const dagger = Math.max(0, Math.min(6, numParam(q, 'dagger', 1)));
+    stepsPerRound = steps;
+    total = steps * (dagger + 1);
     cmdArgs.push(
       '--upstream=' + upRaw,
       '--steps=' + steps,
@@ -145,13 +207,15 @@ function handleTrain(req, res, q) {
       '--lr=' + lr,
       '--teacher=' + teacher,
       '--objective=' + obj,
-      '--dagger=' + (Number.isFinite(dagger) ? dagger : 1)
+      '--dagger=' + dagger
     );
     if (teacher2) cmdArgs.push('--teacher2=' + teacher2, '--teacher2frac=' + teacher2frac);
     if (winOnly === 1 || winOnly === 2) cmdArgs.push('--winOnly=' + winOnly);
   }
 
-  setCors(res);
+  killActive();
+
+  setCors(req, res);
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
     'Cache-Control': 'no-cache',
@@ -179,7 +243,7 @@ function handleTrain(req, res, q) {
     for (const rawLine of parts) {
       const line = rawLine.trim();
       if (!line) continue;
-      const parsed = parseStepLine(mode, line, total);
+      const parsed = parseStepLine(mode, line, stepsPerRound, total);
       if (parsed) {
         sendEv(Object.assign({ type: 'step', mode, line }, parsed));
       } else if (/^#|终|产物|判：|⚠|⛔|⚑/.test(line)) {
@@ -195,8 +259,8 @@ function handleTrain(req, res, q) {
   req.on('close', () => {
     closed = true;
     if (activeChild === child) {
-      try { child.kill('SIGTERM'); } catch (e) { /* ignore */ }
       activeChild = null;
+      killChildTree(child);
     }
   });
 
@@ -235,20 +299,24 @@ function handleTrain(req, res, q) {
 
 const server = http.createServer((req, res) => {
   if (req.method === 'OPTIONS') {
-    setCors(res);
+    setCors(req, res);
     res.writeHead(204);
     res.end();
     return;
   }
   const u = new URL(req.url || '/', 'http://127.0.0.1:' + PORT);
   if (u.pathname === '/' || u.pathname === '/status') {
-    sendJson(res, 200, { ok: true, engine: '2.0-obs6', active: !!activeChild, lastOut: lastOut || null });
+    sendJson(req, res, 200, { ok: true, engine: '2.0-obs6', active: !!activeChild, lastOut: lastOut || null });
     return;
   }
   if (u.pathname === '/reset') {
+    if (req.method !== 'POST') {
+      sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed: use POST /reset' });
+      return;
+    }
     const killed = killActive();
     lastOut = '';
-    sendJson(res, 200, { ok: true, stopped: killed });
+    sendJson(req, res, 200, { ok: true, stopped: killed });
     return;
   }
   if (u.pathname === '/champion') {
@@ -257,10 +325,10 @@ const server = http.createServer((req, res) => {
     const targetAbs = resolve(ROOT, targetRel);
     try {
       const ext = extractPackFromBak(targetAbs);
-      if (!ext) { sendJson(res, 404, { ok: false, msg: '未找到可用 2.0 冠军包' }); return; }
-      sendJson(res, 200, { ok: true, champion: ext.champion, meta: ext.meta, path: targetRel });
+      if (!ext) { sendJson(req, res, 404, { ok: false, msg: '未找到可用 2.0 冠军包' }); return; }
+      sendJson(req, res, 200, { ok: true, champion: ext.champion, meta: ext.meta, path: targetRel });
     } catch (e) {
-      sendJson(res, 500, { ok: false, msg: e.message });
+      sendJson(req, res, 500, { ok: false, msg: e.message });
     }
     return;
   }
@@ -268,7 +336,7 @@ const server = http.createServer((req, res) => {
     handleTrain(req, res, u.searchParams);
     return;
   }
-  sendJson(res, 404, { ok: false, msg: 'unknown endpoint: ' + u.pathname });
+  sendJson(req, res, 404, { ok: false, msg: 'unknown endpoint: ' + u.pathname });
 });
 
 server.listen(PORT, '127.0.0.1', () => {

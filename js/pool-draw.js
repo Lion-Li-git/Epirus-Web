@@ -81,13 +81,13 @@
      *   ⚠ 混抽模式下这一发补救走的是**整表洗牌**（不按权重）—— 它只在"四席全同"这种极端里出手，
      *     为的是守住裁定③而不是守权重；四席全同在 hard 11 ‖ soft 16 上概率约 1e-4 量级。 */
     var guard = 0;
-    while (distinct(out.seats) === 1 && members.length > 1 && guard < 8) {
+    while (out.seats.length > 1 && distinct(out.seats) === 1 && members.length > 1 && guard < 8) {
       var k = Math.floor(rand() * out.seats.length);
       order = shuffled();
       out.seats[k] = order[Math.floor(rand() * order.length)];
       guard++;
     }
-    out.allSame = distinct(out.seats) === 1;
+    out.allSame = out.seats.length > 1 && distinct(out.seats) === 1;
     if (out.allSame) out.degraded = members.length < 2 ? 'single-member-tier' : 'still-all-same';
     /* ⑥ 每包最多重复一次（POOL-CONTRACT §0 ⑥，2026-11-18 用户裁定「每个包最多重复一次」）：
      *    两条抽法（洗牌循环补足 & bandW 带内放回）在此统一做**逐包计数上限 = 2** 修复趟——

@@ -3,6 +3,7 @@
  * 由 ui.js 的 showTab('rules') 调 EpirusRulesPanel.render()。 */
 (function () {
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); };
+  var fmtDesc = function (s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); };
   var CAT = { energy: '能量', attack: '攻击', defense: '防御', special: '特殊' };
   var TGT = { self: '自己', enemy: '其他玩家', other: '其他玩家（受益者）' };
   function qa(q, a) { return '<div class="qa"><b>Q：' + q + '</b><br>' + a + '</div>'; }
@@ -41,7 +42,7 @@
         });
         desc = desc.replace(/仅限 HP≤\d+/, '仅限 HP≤（' + caps.join(' ‖ ') + '）');
       }
-      t += '<tr><td><b>' + esc(s.name) + '</b></td><td>' + esc(CAT[s.cat] || '') + '</td><td>' + cost + (bead ? '<br><span class="src">' + bead + '</span>' : '') + '</td><td>' + esc(s.pri) + '</td><td>' + esc(TGT[s.target] || '') + '</td><td>' + esc(desc) + '</td><td>' + ((R.MULTI_ONLY || []).indexOf(s.key) >= 0 ? '多人' : '') + '</td></tr>';
+      t += '<tr><td><b>' + esc(s.name) + '</b></td><td>' + esc(CAT[s.cat] || '') + '</td><td>' + cost + (bead ? '<br><span class="src">' + bead + '</span>' : '') + '</td><td>' + esc(s.pri) + '</td><td>' + esc(TGT[s.target] || '') + '</td><td>' + fmtDesc(desc) + '</td><td>' + ((R.MULTI_ONLY || []).indexOf(s.key) >= 0 ? '多人' : '') + '</td></tr>';
     });
     el.innerHTML = t + '</table>';
   }

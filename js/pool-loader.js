@@ -91,14 +91,25 @@
   }
   function loadMonolith() {
     if (monoPromise) return monoPromise;
-    var v = (manifest() && manifest().ver) || '';
+    var origM = manifest();
+    var origById = null;
+    if (origM && Array.isArray(origM.members)) {
+      origById = {};
+      for (var oi = 0; oi < origM.members.length; oi++) {
+        var om = origM.members[oi];
+        if (om && om.id) origById[om.id] = om;
+      }
+    }
+    var v = (origM && origM.ver) || '';
     monoPromise = loadScript('js/bundled-champion-pool.js?v=' + encodeURIComponent(v)).then(function () {
       var full = global.EPIRUS_CHAMPION_POOL;
       if (!full || !Array.isArray(full.members)) throw new Error('整表 bundle 加载了但形状不对');
       return Promise.all(full.members.map(function (m) {
         if (!m || !m.id || !m.pack) throw new Error('整表 bundle 里有成员缺少 id/pack');
-        var want = memberOf(m.id);
-        if (!want || want.wid !== m.wid) throw new Error('整表成员与清单身份不符：' + m.id);
+        if (origById) {
+          var want = origById[m.id];
+          if (!want || want.wid !== m.wid) throw new Error('整表成员与原清单身份不符：' + m.id);
+        }
         return widOf(m.pack).then(function (got) {
           if (got !== m.wid) throw new Error('整表成员 wid 不符：' + m.id + '（应为 ' + m.wid + '，实得 ' + got + '）');
           return m;

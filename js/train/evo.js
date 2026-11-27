@@ -1413,10 +1413,25 @@ function supportPriorRand(state, pid, salt) {
     /* 候选过多时按网络打分留前 BELIEF_BEAM 个（浏览器上界保护；现役包实测均值 25.9 ⇒ 正常不触发）。
        `X` 在这里就地取，不放模块顶层：`evo.js` 原来不依赖 `EpirusResolve`，不想为了这一档改加载顺序假设。 */
     const X = global.EpirusResolve;
+    let p2Logits = null;
+    if (params && params.p2 && (cands.length > BELIEF_BEAM || BELIEF_TIE === 1)) {
+      const fwd = P.forwardCands(state, pid, cands, params, { temp: 1 });
+      if (fwd && fwd.logits) {
+        p2Logits = new Map();
+        for (let i = 0; i < cands.length; i++) p2Logits.set(cands[i], fwd.logits[i]);
+      }
+    }
+    const candNetScore = function (cand) {
+      if (p2Logits) {
+        const s = p2Logits.get(cand);
+        return s != null ? s : 0;
+      }
+      return P.value(state, pid, cand.key, params, null, cand);
+    };
     let pool = cands;
     if (cands.length > BELIEF_BEAM) {
       const scored = [];
-      for (let i = 0; i < cands.length; i++) scored.push({ c: cands[i], v: P.value(state, pid, cands[i].key, params, null, cands[i]) });
+      for (let i = 0; i < cands.length; i++) scored.push({ c: cands[i], v: candNetScore(cands[i]) });
       scored.sort(function (a, x) { return x.v - a.v; });
       pool = scored.slice(0, BELIEF_BEAM).map(function (s) { return s.c; });
     }
@@ -1435,13 +1450,13 @@ function supportPriorRand(state, pid, salt) {
       /* §E161c · **并列怎么破**：`beliefValue` 是一把整数血量的尺 ⇒ 大量候选**精确并列**（这一回合什么都不改变的手太多了），
          而默认形状"`v > bv + 1e-9` ⇒ 取枚举顺序里第一个最优"意味着**并列由候选的枚举顺序裁决**，那不是偏好 ⇒
          等于把包自己那部分风格（珠经济、连段）在平票时扔掉了。§E156b 看到的"三列塌"里有一部分是这个，不全是目标近视。
-         `BELIEF_TIE = 1` ⇒ 平票改由**网络自己的打分**裁决（`P.value` 只在**同一状态内**可比——§E153 否掉的是拿它跨状态当价值）。
+         `BELIEF_TIE = 1` ⇒ 平票改由**网络自己的打分**裁决（`P.value` / 2.0 `forwardCands.logits` 只在**同一状态内**可比——§E153 否掉的是拿它跨状态当价值）。
          ⚠ 默认 0 ⇒ 下面那条 `else if` 永不进，`bn` 从不参与判决 ⇒ 已量过的 §E154~§E161 那一版逐字不变。 */
       if (v > bv + 1e-9) {
         bv = v; best = pool[ci];
-        bn = BELIEF_TIE === 1 ? P.value(state, pid, pool[ci].key, params, null, pool[ci]) : -1e18;
+        bn = BELIEF_TIE === 1 ? candNetScore(pool[ci]) : -1e18;
       } else if (BELIEF_TIE === 1 && Math.abs(v - bv) <= 1e-9) {
-        const nn = P.value(state, pid, pool[ci].key, params, null, pool[ci]);
+        const nn = candNetScore(pool[ci]);
         if (nn > bn + 1e-12) { bn = nn; best = pool[ci]; }
       }
     }
@@ -1477,7 +1492,9 @@ function supportPriorRand(state, pid, salt) {
       const obj = (typeof k === 'object' && k) ? k : null;
       const t1 = (obj && obj.target != null) ? obj.target : pickTargetN(state, pid, key);
       const t2 = (obj && obj.target2 != null) ? obj.target2 : pickTarget2N(state, pid, key, t1);
-      return { key: key, target: t1, target2: t2 };
+      const out = { key: key, target: t1, target2: t2 };
+      if (obj && obj.bead != null) out.bead = obj.bead;
+      return out;
     };
   }
 

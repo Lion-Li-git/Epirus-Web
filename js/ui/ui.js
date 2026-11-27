@@ -224,10 +224,11 @@
     if (p.chains && p.chains.length) badges.push(['铁索连环×' + p.chains.length, 'pur']);
     if (p.nightmare) badges.push(['梦魇-0.5/回合', 'warn']);
     if (p.vampire) badges.push(['吸血鬼公爵', 'pur']);
-    if (p.baguaExtra) badges.push(['无极变速·本回合', 'blue']);
-    if (p.fireWeakNow) badges.push(['藤甲·火伤+1', 'warn']);
-    if (p.tauntActive) badges.push(['被挑衅·必须攻击', 'warn']);
-    if (p.infiniteEnergy) badges.push(['回魂·无限能量', 'gold']);
+    const roundPending = !B.roundStarted && !st.over;
+    if (p.baguaExtra || (roundPending && p.baguaExtraNext)) badges.push(['无极变速·本回合', 'blue']);
+    if (p.fireWeakNow || (roundPending && p.fireWeakNext)) badges.push(['藤甲·火伤+1', 'warn']);
+    if (p.tauntActive || (roundPending && p.tauntBy && p.tauntBy.length)) badges.push(['被挑衅·必须攻击', 'warn']);
+    if (p.infiniteEnergy || (roundPending && p.reviveNext)) badges.push(['回魂·无限能量', 'gold']);
     if (p.stickers.length) badges.push(['符咒×' + p.stickers.length, 'pur']);
     const cd = Object.keys(p.cooldown).filter(function (k) { return p.cooldown[k] > 0; });
     if (cd.length) badges.push(['禁用中:' + cd.map(skillName).join('/') + '×' + cd.length, 'warn']);
@@ -301,7 +302,18 @@
     const st = B.state;
     // 不可用（ジ/珠子不足或条件不满足）的技能直接置灰
     const legalMap = {};
-    if (!st.over) { for (const l of Play.legalActions(st, 0)) legalMap[l.key] = l; }
+    if (!st.over) {
+      let legalSt = st;
+      if (!B.roundStarted && st.p && st.p[0] && (st.p[0].nightmare || st.p[0].reviveNext)) {
+        legalSt = S.cloneState(st);
+        const lp0 = legalSt.p[0];
+        if (lp0.reviveNext) { lp0.hp = 1; lp0.infiniteEnergy = true; }
+        else if (lp0.nightmare && lp0.hp > 0) lp0.hp = Math.max(0, +(lp0.hp - 0.5).toFixed(2));
+      }
+      if (!legalSt.over && legalSt.p[0] && legalSt.p[0].hp > 0) {
+        for (const l of Play.legalActions(legalSt, 0)) legalMap[l.key] = l;
+      }
+    }
     grid.innerHTML = '';
     /* v1.5.22（用户第三次澄清）：**技能格按钮**用 `R.skills` 的规则声明顺序
      * （能量(ジ/蓄能/聚能环) → 攻击 → 防御 → 特殊）—— 用户的原话是"能量类跑到防御类下面了，不符合直觉"。
@@ -493,8 +505,11 @@
    * 反证：这条合并的可玩性不是靠"我看代码觉得等价"，是 smoke 的 12 格扫描 + battle 真打（2 人 × 三档血量各起一局）。 */
   /* ---------- 多人（3~8）对局 ---------- */
   /* 3P 冠军包（多人自对战训练产物）：不兼容/缺失返回 null */
+  const BUILTIN_MULTI_CHAMP = (typeof window !== 'undefined' && typeof window.EPIRUS_CHAMPION_3P !== 'undefined')
+    ? window.EPIRUS_CHAMPION_3P : null;
   let multiChampCache, multiChampFrom;   // v1.5.10：multiChampFrom ∈ 'local'（本机自训/导入）| 'builtin'（内置包）
   let sessionMultiChampSet = false;
+  let sessionMultiChampPack = null;
   function resetMultiChampCache() { multiChampCache = undefined; multiChampFrom = undefined; }
   function loadMultiChamp() {
     if (multiChampCache !== undefined) return multiChampCache;
@@ -507,8 +522,13 @@
      * newGame/首手，页面静默半死；这里降级为"本机包不可用"并如实回 null。 */
     try { multiChampCache = P.loadGame(pack); } catch (e) { multiChampCache = null; }  // 严格 → 状态段只增的旧包逐位等价嵌入（v8 兼容）
     multiChampFrom = multiChampCache ? 'local' : null;
-    if (!multiChampCache && typeof window.EPIRUS_CHAMPION_3P !== 'undefined') {
-      try { multiChampCache = P.loadGame(window.EPIRUS_CHAMPION_3P); } catch (e) { multiChampCache = null; }   // 回退内置包
+    if (!multiChampCache && sessionMultiChampPack) {
+      try { multiChampCache = P.loadGame(sessionMultiChampPack); } catch (e) { multiChampCache = null; }
+      multiChampFrom = multiChampCache ? 'local' : null;
+    }
+    const builtinPack = BUILTIN_MULTI_CHAMP || (typeof window !== 'undefined' && typeof window.EPIRUS_CHAMPION_3P !== 'undefined' ? window.EPIRUS_CHAMPION_3P : null);
+    if (!multiChampCache && builtinPack) {
+      try { multiChampCache = P.loadGame(builtinPack); } catch (e) { multiChampCache = null; }   // 回退内置包
       multiChampFrom = multiChampCache ? 'builtin' : null;
     }
     return multiChampCache;
@@ -754,6 +774,7 @@
    * 改回内置冠军"= **假承诺**。两个槽位的语义本来就一样（都是"改回内置"）⇒ 一起清。
    * 反证：`tools/battle-test.mjs` 同时种两个键再点这个按钮 —— 修前只有 3P 键会消失。 */
   function useBuiltinChampion() {
+    const hadSession = sessionMultiChampSet || !!sessionMultiChampPack;
     let had3 = false, had2 = false;
     try {
       had3 = !!localStorage.getItem('epirus.champion3p');
@@ -762,19 +783,17 @@
       localStorage.removeItem('epirus.champion.v3');
     } catch (e) { /* ignore */ }
     sessionMultiChampSet = false;
+    sessionMultiChampPack = null;
+    if (typeof window !== 'undefined' && BUILTIN_MULTI_CHAMP) window.EPIRUS_CHAMPION_3P = BUILTIN_MULTI_CHAMP;
     resetMultiChampCache();
     const loaded = loadMultiChamp();
-    /* ⚠️ 顺序要紧：`newGame()` 会把提示刷成"请选择技能出招"⇒ 提示必须放在它后面
-     * （v1.5.10 第一版写反了，被 tools/battle-test.mjs 的 "提示告知已改回内置冠军" 抓到）。 */
-    /* v1.5.131：2P 侧也要重开一局（原先只判 `B.multi`）。2P 的 chooser **每次决策都重读**
-     * `Champ.store.load()`（`chooseAI:574`）⇒ 清键下次决策即生效；重开只是让这一局从干净状态开始。 */
     if (tierIsChamp(B.diff)) newGame();   // v1.6.6：2 人/多人同一条路 ⇒ 不再分"只有 hard 槽才重开"
     renderChampState();
-    hint(had3 || had2
-      ? ('已清除本机冠军（' + [(had3 ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
+    hint((had3 || hadSession || had2)
+      ? ('已清除本机冠军（' + [((had3 || hadSession) ? '多人' : ''), (had2 ? '2 人' : '')].filter(Boolean).join(' + ') +
          '），改回内置冠军（' + (loaded ? '多人包已加载' : '⚠ 多人内置包缺失/不兼容') + '）')
       : '本机没有自训/导入的冠军，本来就在用内置冠军');
-    return { had: had3, had2: had2, loaded: !!loaded, from: multiChampFrom || null };
+    return { had: had3 || hadSession, had2: had2, loaded: !!loaded, from: multiChampFrom || null };
   }
   /* 当前对局实际用的是哪个 AI（供 UI 显示与探针断言） */
   function styleOf(id) {
@@ -1133,11 +1152,13 @@
       logEvents(roundEvents);
       pushTranscript(parts, roundEvents);
       renderLogSummary(B.state.round, parts, roundEvents);
+      renderSide(0); renderSide(1);
       persistBattle();
     }
     B.evCursor = B.state.events.length;
     B.locked = false;
     B.roundStarted = false;
+    renderSide(0); renderSide(1);
     if (B.state.over) finish();
   }
 
@@ -1323,7 +1344,7 @@
 
   function finish() {
     persistBattle();
-    buildSkillGrid();
+    buildSkillGrid(); renderSide(0); renderSide(1);
     const w = B.state.winner;
     /* v1.8.45（11-06 夜）：`cls` 原来算了从没用（死代码），内联判的是 `w === 'red'`
      *（w 取值只有 0/'draw'/席位号 ⇒ 恒 false）⇒ AI 获胜/平局全显示金色。改为按同一 cls 渲染。 */
@@ -1649,7 +1670,10 @@
   }
   function resetServerTrain() {
     stopRemote();
-    fetch(remoteBase() + '/reset').then(function (r) { return r.json(); }).then(function () {
+    fetch(remoteBase() + '/reset', { method: 'POST' }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    }).then(function () {
       remoteHistory = [];
       if ($('tr-state')) $('tr-state').textContent = '服务端已重置（2.0 服务就绪）';
       if ($('tr-progress')) $('tr-progress').style.width = '0%';
@@ -1768,11 +1792,12 @@
         if ($('tr-seeds-status')) $('tr-seeds-status').textContent = d.cmd || '';
       } else if (d.type === 'step') {
         const gen = Number(d.step || 0);
+        const rnd = Number(d.round || 0);
         const tot = Math.max(1, Number(d.total || remoteTotal));
         const val = Number(d.best);
-        remoteHistory.push({ round: 0, seed: cfg.seed, gen: gen, best: Number.isFinite(val) ? val : 0 });
+        remoteHistory.push({ round: rnd, seed: cfg.seed, gen: gen, best: Number.isFinite(val) ? val : 0 });
         if ($('tr-progress')) $('tr-progress').style.width = Math.min(100, (gen / tot) * 100).toFixed(1) + '%';
-        if ($('tr-state')) $('tr-state').textContent = '训练中 · ' + gen + ' / ' + tot + ' · 指标 ' + (Number.isFinite(val) ? val.toFixed(3) : '--');
+        if ($('tr-state')) $('tr-state').textContent = '训练中 · ' + gen + ' / ' + tot + (rnd > 0 ? (' (DAgger 轮 ' + rnd + ')') : '') + ' · 指标 ' + (Number.isFinite(val) ? val.toFixed(3) : '--');
         if ($('tr-seeds-status')) $('tr-seeds-status').textContent = d.line || '';
         drawChart();
       } else if (d.type === 'log') {
@@ -1782,7 +1807,7 @@
         if ($('btn-stop')) $('btn-stop').disabled = true;
         es.close(); remoteES = null;
         if (d.champ) {
-          window.EPIRUS_CHAMPION_3P = d.champ;
+          sessionMultiChampPack = d.champ;
           sessionMultiChampSet = true;
           try { localStorage.setItem('epirus.champion3p', JSON.stringify(d.champ)); } catch (e) { /* ignore */ }
           resetMultiChampCache();
@@ -1865,9 +1890,16 @@
       sel.params = alt.params; sel.tag = alt.tag;
     }
     if (!sel.params) { alert('还没有冠军可导出'); return; }
-    const text = sel.tag === '3p'
-      ? JSON.stringify(P.pack(sel.params), null, 1)
-      : Champ.store.exportJSON(sel.params);
+    let text;
+    if (sel.tag === '3p') {
+      const packed = P.pack(sel.params);
+      if (packed && !(window.EpirusPolicy2 && window.EpirusPolicy2.checkPack && window.EpirusPolicy2.checkPack(packed).ok)) {
+        packed._slot = '3p';
+      }
+      text = JSON.stringify(packed, null, 1);
+    } else {
+      text = Champ.store.exportJSON(sel.params);
+    }
     const blob = new Blob([text], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1898,8 +1930,9 @@
       }
       /* 多人槽（3P/NP）：写 window 全局 + localStorage（页面优先读后者）+ 清缓存 ⇒ 对局"困难"档即时生效。
        * 还原入口就是页面上那个「用内置冠军」按钮（v1.5.10 起已有，会清 `epirus.champion3p`）。 */
-      if (ex.slot === '3p') {
-        window.EPIRUS_CHAMPION_3P = ex.pack;
+      const is3pUnwrapped = ex.slot === null && ex.pack && (ex.pack._slot === '3p' || ex.pack.v === 92);
+      if (ex.slot === '3p' || is3pUnwrapped) {
+        sessionMultiChampPack = ex.pack;
         sessionMultiChampSet = true;
         let persisted = true;
         try { localStorage.setItem('epirus.champion3p', JSON.stringify(ex.pack)); } catch (e) { persisted = false; }
@@ -1969,6 +2002,8 @@
         closeModal();
         Champ.store.clear();
         sessionMultiChampSet = false;
+        sessionMultiChampPack = null;
+        if (typeof window !== 'undefined' && BUILTIN_MULTI_CHAMP) window.EPIRUS_CHAMPION_3P = BUILTIN_MULTI_CHAMP;
         try { localStorage.removeItem('epirus.champion3p'); } catch (e) { /* ignore */ }
         resetMultiChampCache();
         renderChampState();

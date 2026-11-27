@@ -127,9 +127,10 @@ const KL_MODES = new Set(KL_MODES_RAW ? KL_MODES_RAW.split(',').map((s) => s.tri
 for (const md of KL_MODES) {
   if (!R.MODES[md]) { console.error('⛔ --klModes 含未知模式 "' + md + '"（合法：' + Object.keys(R.MODES).join(',') + '）'); process.exit(2); }
 }
-const pv = Float64Array.from(P.unpack(raw, true));
+const unpacked = P.unpack(raw, true);
+if (!unpacked) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
+const pv = Float64Array.from(unpacked);
 const pv0 = Float64Array.from(pv);   /* KL 锚的冻结起点（--klW；起点=UP 本尊的权重） */
-if (!pv) { console.error('⛔ 起点读不出：' + UP); process.exit(2); }
 const ly = layoutOf(P);
 if (ly.L.tinterK > 0 || ly.L.interK > 0) { console.error('⛔ interK/tinterK>0 ⇒ pg-lib 拒跑'); process.exit(2); }
 const preflight = runSelftest3(W, P, pv, UP);

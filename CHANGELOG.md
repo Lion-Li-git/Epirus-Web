@@ -4,6 +4,20 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.43 — 11-27（P1 前端与池加载修复 ‖ P2 AI 推理与训练服务修复 ‖ 千问通宵班计划）
+
+**这一版是什么**：修复 P1（前端对局界面 / 冠军池抽签与整表校验）及 P2（AI 推理孪生 / 训练服务与脚本）已定位缺陷，并落盘基于 `442b4b68` 指纹的千问通宵班执行计划 [`docs/research/PLAN-2026-11-27-overnight-qwen.md`](docs/research/PLAN-2026-11-27-overnight-qwen.md)。核心规则引擎与冠军权重未动，规则指纹保持 **`442b4b68`**。
+
+- **P1（冠军池与前端交互）**：
+  - `js/pool-draw.js`：2 人局仅 1 席 AI 时不再执行「禁全同」重写循环，保住 2P `lv:regular` 按带加权抽签（`bandW`）且不再误标 `still-all-same`；
+  - `js/pool-loader.js`：`loadMonolith()` 加载整表前先快照原清单 `wid` 表再比对，避免加载后与自身比对成恒真；
+  - `js/ui/ui.js` & `css/style.css` & `js/ui/rules-panel.js`：补全观战结束/回合末侧栏刷新；未正式落子前预览次轮状态徽章与梦魇/回魂对摄魂的合法可用性；修复 3P 导入/训练覆盖内置 `EPIRUS_CHAMPION_3P` 与纯 JSON 2.0/3P 导出再导入错进 2P 槽的问题；修复 6–8 人目标弹窗溢出与 961–1120px 窄屏三列挤压；规则表解析 `**加粗**` 标签，训练页适配 DAgger 轮次与 `POST /reset`。
+- **P2（AI 推理与训练管线）**：
+  - `js/train/policy2.js` & `training/proto2/arch2.mjs`：双边同步修复 `chooseCandidates(..., { greedy: true })` 因 `r=0` 恒返回 `cands[0]` 的 bug，改为直接返回 `cands[f.argmax]`；
+  - `js/train/evo.js`：`beliefSearchPick` 对 `params.p2` 改走 `forwardCands` 候选分数，避免在 beam 裁剪或平票破局时调用旧版 `P.value` 崩溃；`wrapBotN` 保留脚本自选 `bead`；
+  - `training/server/train-server.mjs` & `pg-train.mjs` & `supfit-gd.mjs`：Windows 下用 `taskkill /T /F` 清理子进程树，收紧本地 CORS 白名单并要求 `POST /reset`，校验 `teacher`/`teacher2` 防目录穿越，修复 `seed=0`/`dagger=0` 被假值覆盖及 DAgger 进度轮次拼接，修 `pg-train` 空包防御与 `supfit-gd` lineage 元数据。
+- **验证**：语法自检、专项回归、`spec 94/94`、`engine-rules 63/63`、`ui-contract 8/8`、`ship-pool`（`D234`）、`meta-repo`（`D8` / `L6` / `D205` / `D230`）、`D16` / `D168`、`browser-parity` 与真实 Chrome `SMOKE OK` / `BATTLE OK` 全绿（不跑 `--group=engine` 整轮）。
+
 ## v2.1.42 — 11-27（规则引擎边界集中修复：回魂 / 过载炮 / 金刚盾 / 镜面 / 激光眼 / 大雷×全息 / 天火转移 / 避雷针 / 反复横跳 / 终局收缩 / 挑衅）
 
 **这一版是什么**：按用户裁定集中修复核心规则引擎已复现边界缺陷，同步更新 [`docs/RULES-2P.md`](docs/RULES-2P.md)、[`docs/RULES-NP.md`](docs/RULES-NP.md) 与玩家可见事件/规则页文案。冠军权重未改，规则指纹 `03a9cc97 → 442b4b68`；保留双枪优先级 3、聚光炮/合二为一穿防、反弹/藤甲仅反弹枪/坦克/双枪既有设定。

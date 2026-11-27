@@ -135,8 +135,8 @@ table.eval th,table.eval td{border:1px solid var(--line);padding:4px 12px;text-a
 table.eval th{color:var(--dim);font-weight:400}
 .mono{font-family:Consolas,monospace;font-size:12px;color:var(--dim);word-break:break-all}
 .modal{position:fixed;inset:0;background:rgba(5,6,15,.7);display:flex;align-items:center;justify-content:center;z-index:50}
-.modal .card{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:20px 26px}
-.modal .btns{display:flex;gap:10px;margin-top:12px;justify-content:center}
+.modal .card{background:var(--panel);border:1px solid var(--accent);border-radius:12px;padding:20px 26px;max-width:min(560px,92vw);max-height:85vh;overflow-y:auto}
+.modal .btns{display:flex;gap:10px;margin-top:12px;justify-content:center;flex-wrap:wrap}
 .modal button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);
   border-radius:8px;padding:8px 16px;cursor:pointer;font-size:14px}
 .modal button:hover{border-color:var(--accent)}
@@ -160,6 +160,7 @@ footer{margin-top:22px;color:var(--dim);font-size:12px;text-align:center;line-he
    技能区底边 930 > 768）；现在 4 列 8 行、底边约 784，仍要滚一点但已短 150px。
    只动 961~1120 这一段，宽屏与手机布局不变。 */
 @media(min-width:961px) and (max-width:1120px){
+  #app.app-wide .battle{grid-template-columns:185px 1fr 340px}
   .skillgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
   .skillbtn{min-height:50px;padding:5px 3px 4px}
 }
