@@ -93,4 +93,4 @@
 - 当前 35 池废珠表已按 `fx-pool1126d / c61298e6` 重算：可读高废珠前排为 `nov21-taunt-dsp0b 98.0%`、`AR-TK2 97.3%`、`nov21-armor-tzt2d 97.1%`、`MX6-GD-TF20 96.7%`、`FC-S1 96.4%`、`OBS6E9 95.9%`；`MSB11` 的 100% 因分母仅 1 标记为不可读。
 - `AR-TK2` 教师式候选（PG-DR 底 + armor/tank/transfer@0.10）首件与终点全绿、废珠 35.5%，但 armor/tank/transfer 仅 16/5/0 格，覆盖硬门失败，已收口。
 - 文档口径修正：README/AGENTS/旋钮册不再声称 `knobs --check` 自动拦截无注解；生成器已退役该收割逻辑，当前只校验册子新鲜度与暗键。
-- 干净树验收注记：Windows `core.autocrlf=true` 下裸 `git archive` 会把导出文件转 CRLF，令 `knobs --check` 假红；用 `git -c core.autocrlf=false archive` 按 CI LF 口径导出后，旋钮册与训练栈自检均全绿。
+- 干净树验收：修复前 Windows `git archive` 会因 autocrlf 把旋钮册转 CRLF 并假红；已将 `training/TRAINING-KNOBS.md` 标记为 `-text`，默认 archive 现在也逐字节稳定，旋钮册与训练栈自检均全绿。
