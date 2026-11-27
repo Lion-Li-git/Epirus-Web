@@ -311,31 +311,44 @@
     ok(ctl.p[1].fireWeakNow && ctl.p[1].fireWeakNext, '正对照：没被作废的藤甲必须把火弱挂在**对手**身上（Now 与 Next 都亮）');
   });
 
-  t('N23 被激光眼作废的金刚盾**不挡也不反击**（同族对照：它的副作用判在**消费侧** ⇒ 本来就对，钉住别再坏）', function () {
-    /* 与藤甲同族的问题：金刚盾的格挡/反击都走 `guardOf`→`actionOf`（消费侧），作废后自然不生效。
-     * 这条用例把它钉住；判定序列故意给"必胜"，这样"反击"那一格才是**有牙的**（否则恒败的 rng
-     * 会让它无论挡没挡都不反击 ⇒ 空枪）。 */
+  t('N23 被激光眼作废的金刚盾**不挡也不触发判定伤害**（同族对照：它的副作用判在**消费侧** ⇒ 本来就对，钉住别再坏）', function () {
+    /* 与藤甲同族的问题：金刚盾的格挡/判定伤害都走 `guardOf`→`actionOf`（消费侧），作废后自然不生效。
+     * 这条用例把它钉住；判定序列故意给"必胜"，这样"判定伤害"那一格才是**有牙的**（否则恒败的 rng
+     * 会让它无论判不判都不伤害 ⇒ 空枪）。 */
     const st = S.createState('multi', seqRng([0.1, 0.1, 0.1, 0.1]), 3);
     for (let i = 0; i < 3; i++) st.p[i].ep = 9;
     st.p[2].boom = 1;                    /* 激光眼首次使用要 1 颗爆珠（R32） */
     st.events = []; X.startTurn(st);
     S.attemptAction(st, 0, SK.GUN, { target: 1 });
-    S.attemptAction(st, 1, SK.JINSHIELD, null);
+    S.attemptAction(st, 1, SK.JINSHIELD, { target: 0 });
     S.attemptAction(st, 2, SK.LASER_EYE, { target: 1 });
     X.resolveActions(st); X.endTurn(st);
     ok(st.actions[1].voided, '金刚盾必须被作废');
     eq(st.p[1].hp, 2, '被作废 ⇒ 枪打进来（不许挡）');
-    eq(st.p[0].hp, 3, '被作废 ⇒ 不许反击枪手');
-    /* 正对照：同一构造去掉激光眼 ⇒ 挡住 + 反击 1（证明上面两条不是靠"金刚盾没接上"蒙的） */
+    eq(st.p[0].hp, 3, '被作废 ⇒ 不许对目标造成判定伤害');
+    /* 正对照：同一构造去掉激光眼 ⇒ 挡住 + 对声明目标造成 1 点判定伤害 */
     const st2 = S.createState('multi', seqRng([0.1, 0.1, 0.1, 0.1]), 3);
     for (let i = 0; i < 3; i++) st2.p[i].ep = 9;
     st2.events = []; X.startTurn(st2);
     S.attemptAction(st2, 0, SK.GUN, { target: 1 });
-    S.attemptAction(st2, 1, SK.JINSHIELD, null);
+    S.attemptAction(st2, 1, SK.JINSHIELD, { target: 0 });
     S.attemptAction(st2, 2, SK.JI, null);
     X.resolveActions(st2); X.endTurn(st2);
     eq(st2.p[1].hp, 3, '正对照：金刚盾挡住枪');
-    eq(st2.p[0].hp, 2, '正对照：判定胜 ⇒ 反击枪手 1 点');
+    eq(st2.p[0].hp, 2, '正对照：判定胜 ⇒ 对声明目标造成 1 点伤害');
+  });
+
+  t('R15b 金刚盾判定伤害打向声明目标，不是反打攻击者', function () {
+    const st = S.createState('multi', seqRng([0.1]), 3);
+    for (const p of st.p) p.ep = 5;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.GUN, { target: 1 });
+    S.attemptAction(st, 1, SK.JINSHIELD, { target: 2 });
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].hp, 3, '攻击者不应被反打');
+    eq(st.p[1].hp, 3, '金刚盾挡住来伤');
+    eq(st.p[2].hp, 2, '声明目标受到 1 点判定伤害');
   });
 
   t('R44 净化：移除符咒并回血、清梦魇', function () {
@@ -516,6 +529,33 @@
     X.resolveActions(st3); X.endTurn(st3);
     ok(!st3.events.some(function (e) { return e.reason === '挑衅违约'; }), '挑主全死 ⇒ 义务免罚');
     eq(st3.p[1].hp, 3, '免罚不掉血');
+  });
+
+  t('R54c 挑衅：同等级抵消免罚，非抵消无效化仍违约', function () {
+    const run = function (kind) {
+      const st = S.createState('multi', noJudge(), 3);
+      for (let i = 0; i < 3; i++) st.p[i].ep = 9;
+      st.events = []; X.startTurn(st);
+      S.attemptAction(st, 0, SK.TAUNT, { target: 1 });
+      S.attemptAction(st, 2, SK.JI, null);
+      S.attemptAction(st, 1, SK.JI, null);
+      X.resolveActions(st); X.endTurn(st);
+      X.startTurn(st);
+      S.attemptAction(st, 0, kind === 'mini' ? SK.MINI_T : (kind === 'high' ? SK.BIG_T : SK.GUN), { target: 1 });
+      S.attemptAction(st, 1, SK.GUN, { target: 0 });
+      S.attemptAction(st, 2, SK.JI, null);
+      X.resolveActions(st); X.endTurn(st);
+      return st;
+    };
+    const cancel = run('cancel');
+    eq(cancel.p[1].hp, 3, '同等级枪枪抵消 ⇒ 不算挑衅违约');
+    ok(cancel.events.some(function (e) { return e.type === 'tauntCheck' && e.pid === 1 && e.ok === true; }), '同等级抵消必须如实报 ok=true');
+    const mini = run('mini');
+    eq(mini.p[1].hp, 2, '被小雷无效化 ⇒ 挑衅违约 -1');
+    ok(mini.events.some(function (e) { return e.type === 'tauntCheck' && e.pid === 1 && e.ok === false; }), '小雷无效化必须报 ok=false');
+    const high = run('high');
+    eq(high.p[1].hp, 0, '被高优先级大雷无效化 ⇒ 大雷 2 伤 + 挑衅违约 1');
+    ok(high.events.some(function (e) { return e.type === 'tauntCheck' && e.pid === 1 && e.ok === false; }), '高优先级阻止必须报 ok=false');
   });
 
   t('R23d 过载炮反制必须"攻击指回炮手"（v1.5.138 指向盲：2P 恒等 ⇒ 3P 反证）', function () {
@@ -1086,7 +1126,7 @@
     eq(st2.p[0].chains.length + st2.p[1].chains.length, 0, '普通伤害照旧消耗连边（回归）');
   });
 
-  t('R66 过载炮（2026-11-13 用户裁定「保留」）：打穿防御/反弹/藤甲，原型照挡、八卦照判、金刚盾跳反击，被任何攻击类技能抵消', function () {
+  t('R66 过载炮（2026-11-13 用户裁定「保留」）：打穿防御/反弹/藤甲，原型照挡、八卦照判、金刚盾不触发判定，被任何攻击类技能抵消', function () {
     // ① 打穿防御
     let st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     play(st, R.SK.CANNON, R.SK.GUARD);
@@ -1113,11 +1153,11 @@
     st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     play(st, R.SK.CANNON, R.SK.PROTO);
     eq(st.p[1].hp, 3, '原型制御应照挡过载炮（pierce 不覆盖原型）');
-    // ⑥ 金刚盾：pierce.defense 跳过 50% 反击判定直接落伤 R66
+    // ⑥ 金刚盾：pierce.defense 跳过判定伤害直接落伤 R66
     st = game(); setEp(st, 5, 5); st.p[0].hp = 3; st.p[1].hp = 3;
     play(st, R.SK.CANNON, R.SK.JINSHIELD);
     eq(st.p[1].hp, 2, '过载炮应穿过金刚盾造成 1 伤');
-    eq(st.p[0].hp, 3, '金刚盾反击判定应被 pierce.defense 跳过（不回打施法者）');
+    eq(st.p[0].hp, 3, '金刚盾判定伤害应被 pierce.defense 跳过');
     // ⑦ 八卦阵照判 50%（pierce 不绕判定，双向钉死）
     const bagWin = game('standard', seqRng([0.1])); setEp(bagWin, 5, 0);
     play(bagWin, R.SK.CANNON, R.SK.BAGUA);
@@ -1349,18 +1389,18 @@
     eq(st.p[1].chains.length, 0, '一次性连边触发后应解除');
   });
 
-  t('R65b 金刚盾反击与挑衅违约参与铁索连环', function () {
+  t('R65b 金刚盾判定伤害与挑衅违约参与铁索连环', function () {
     const st1 = S.createState('multi', seqRng([0.1]), 3);
     st1.p.forEach(function (p) { p.hp = 3; p.ep = 5; });
     st1.p[0].chains = [2]; st1.p[2].chains = [0];
     st1.events = []; X.startTurn(st1);
     S.attemptAction(st1, 0, SK.GUN, { target: 1 });
-    S.attemptAction(st1, 1, SK.JINSHIELD, null);
+    S.attemptAction(st1, 1, SK.JINSHIELD, { target: 0 });
     S.attemptAction(st1, 2, SK.JI, null);
     X.resolveActions(st1); X.endTurn(st1);
-    eq(st1.p[0].hp, 2, '金刚盾判定胜：攻击者 P0 受 1 点反击伤');
-    eq(st1.p[2].hp, 2, '金刚盾反击应通过铁索连环传导给 P2');
-    eq(st1.p[0].chains.length, 0, '金刚盾反击传导后连环应解除');
+    eq(st1.p[0].hp, 2, '金刚盾判定胜：声明目标 P0 受 1 点伤害');
+    eq(st1.p[2].hp, 2, '金刚盾判定伤害应通过铁索连环传导给 P2');
+    eq(st1.p[0].chains.length, 0, '金刚盾判定伤害传导后连环应解除');
 
     const st2 = S.createState('multi', noJudge(), 3);
     st2.p.forEach(function (p) { p.hp = 3; p.ep = 5; });
@@ -1587,6 +1627,49 @@
     S.attemptAction(st, 2, SK.JI, null);
     X.resolveActions(st); X.endTurn(st);
     ok(st.events.some(function (e) { return e.type === 'tauntCheck' && e.pid === 0 && e.ok === true; }), '双枪 target2 打挑衅者 P2 应判定挑衅履约成功');
+  });
+
+  t('N9e 双枪第二目标重复或非法时兜底为另一名存活对手', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    for (const p of st.p) p.ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.DUAL_GUN, { target: 1, target2: 1 });
+    S.attemptAction(st, 1, SK.JI, null);
+    S.attemptAction(st, 2, SK.JI, null);
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.actions[0].target2, 2, '重复目标必须兜底为另一名存活对手');
+    eq(st.p[1].hp, 2, '第一目标受 1 伤');
+    eq(st.p[2].hp, 2, '第二目标也必须受 1 伤');
+    eq(st.p[0].ep, 6, '仍只支付一次双枪费用');
+  });
+
+  t('N14g 镜面复制不要求来源行动仍有效', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    for (const p of st.p) p.ep = 9;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.MIRROR, { target: 1, target2: 2 });
+    S.attemptAction(st, 1, SK.CANNON, { target: 2 });
+    S.attemptAction(st, 2, SK.GUN, { target: 1 });
+    X.resolveActions(st); X.endTurn(st);
+    ok(st.actions[1].voided, '来源过载炮被反制作废');
+    ok(!st.events.some(function (e) { return e.type === 'mirrorNoEffect'; }), '来源作废不应让镜面变成 mirrorNoEffect');
+    ok(st.events.some(function (e) { return e.type === 'damage' && e.source === 0 && e.to === 2 && e.via === SK.CANNON; }), '镜面仍按来源技能结算');
+    eq(st.p[2].hp, 2, '输出目标承受镜面复制伤害');
+  });
+
+  t('R70b 镜面复制避雷针参与情形 A 能量均分', function () {
+    const st = S.createState('multi', noJudge(), 3);
+    st.p[0].ep = 4; st.p[1].ep = 3; st.p[2].ep = 2;
+    st.events = []; X.startTurn(st);
+    S.attemptAction(st, 0, SK.ROD, null);
+    S.attemptAction(st, 1, SK.MIRROR, { target: 0, target2: 2 });
+    S.attemptAction(st, 2, SK.MINI_T, { target: 0 });
+    X.resolveActions(st); X.endTurn(st);
+    eq(st.p[0].ep, 1, '真实避雷针获得均分回馈');
+    eq(st.p[1].ep, 1, '镜面避雷针获得同等均分回馈');
+    eq(st.p[0].rodGuard, 0, '情形 A 不再额外设置免雷窗口');
+    eq(st.p[1].rodGuard, 0, '镜面情形 A 不再额外设置免雷窗口');
+    ok(st.events.some(function (e) { return e.type === 'rod' && e.mode === 'A' && e.pids.length === 2; }), '回馈事件必须同时列出真实与镜面避雷针');
   });
 
   /* ============ 输出 ============ */

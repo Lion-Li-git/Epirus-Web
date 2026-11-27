@@ -33,6 +33,7 @@
     const acted = state.actions[pid];
     if (acted && !acted.voided) {
       acted.voided = true;
+      acted.voidReason = by;
       /* 用户裁定 2026-10-16：**被作废的技能不许留下副作用**。
        * 生产侧写出状态（藤甲火弱 / 镜面复制盾 / 镜面转移）在被作废时一并回滚/清理。 */
       if (acted.fireWeakPrev) {
@@ -631,9 +632,10 @@
       } else if (g === 'jinshield') {
         if (!pierce.defense) {
           if (judge(state)) {
-            const src = dmg.source;
-            if (src != null && src !== to && isAliveInRound(state, src)) {
-              rawDamage(state, src, 1, '金刚盾反击', 'counter', { type: R.DMG.NORMAL, source: to });
+            const defEa = effectiveAction(state, to);
+            const defTarget = defEa ? defEa.target : oppOf(state, to);
+            if (defTarget != null && defTarget !== to && isAliveInRound(state, defTarget)) {
+              rawDamage(state, defTarget, 1, '金刚盾判定', 'jinshield', { type: R.DMG.NORMAL, source: to });
             }
           }
           ev(state, { type: 'blocked', to, by: '金刚盾', amt: dmg.amt, via });
@@ -976,11 +978,20 @@
 
     // ====== ① 避雷针 R31（当回合多避雷针均分能量回馈，防浮点取两位小数） ======
     const rodUsers = [];
-    for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && a.key === SK.ROD) rodUsers.push(i); }
+    state._rodModeA = [];
+    for (const i of turnOrder(state)) {
+      const a = actionOf(state, i);
+      if (a && a.key === SK.ROD) rodUsers.push(i);
+      else if (a && a.key === SK.MIRROR) {
+        const ch = resolveMirrorChain(state, i, null);
+        if (ch && ch.action && ch.action.key === SK.ROD) rodUsers.push(i);
+      }
+    }
     if (rodUsers.length) {
       const lightning = [];
       for (const i of turnOrder(state)) { const a = actionOf(state, i); if (a && R.LIGHTNING.indexOf(a.key) >= 0) lightning.push(i); }
       if (lightning.length) {
+        state._rodModeA = rodUsers.slice();
         ev(state, { type: 'rod', pids: rodUsers, mode: 'A', voided: lightning });
         let totalCost = 0;
         for (const l of lightning) {
@@ -1130,8 +1141,10 @@
           armMine(state, me, i);
         } else if (ea.key === SK.ROD) {
           ev(state, { type: 'mirrorCopySelf', pid: i, from: ea.from, to: ea.target, key: SK.ROD });
-          me.rodGuard = 4;
-          ev(state, { type: 'rod', pids: [i], mode: 'B' });
+          if (!state._rodModeA || state._rodModeA.indexOf(i) < 0) {
+            me.rodGuard = 4;
+            ev(state, { type: 'rod', pids: [i], mode: 'B' });
+          }
         } else if (ea.key === SK.TRANSFER) {
           me._copiedTransfer = ea.target;
           ev(state, { type: 'mirror', pid: i, from: ea.from, to: ea.target, key: SK.TRANSFER });
@@ -1464,7 +1477,8 @@
         const effKey = mr ? mr.key : (a && a.key);
         const effTgt = mr ? mr.target : (a && a.target);
         const effTgt2 = (!mr && a && a.key === SK.DUAL_GUN) ? a.target2 : null;
-        const ok = impossible || !!(a && a.outcome === 'ok' && R.TAUNT_SATISFY.indexOf(effKey) >= 0
+        const mutualCancel = !!(a && a.voided && a.voidReason === '相抵');
+        const ok = impossible || !!(a && a.outcome === 'ok' && (!a.voided || mutualCancel) && R.TAUNT_SATISFY.indexOf(effKey) >= 0
           && (p.tauntBy.indexOf(effTgt) >= 0 || (effTgt2 != null && p.tauntBy.indexOf(effTgt2) >= 0)));
         if (!ok) rawDamage(state, i, 1, '挑衅违约', 'taunt', { type: R.DMG.NORMAL, allowDead: true });
         p.tauntActive = false; p.tauntBy = [];

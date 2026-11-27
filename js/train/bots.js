@@ -39,8 +39,8 @@
 
   function stanceOf(you) {
     const s = you.lastSkill;
-    if (s === SK.GUARD || s === SK.SHIFT) return 'guard';          // 防御架势 → 需穿防御
-    if (s === SK.REFLECT || s === SK.PROTO || s === SK.JINSHIELD || s === SK.ARMOR || s === SK.BAGUA) return 'reflect'; // 反弹/架势 → 需穿反弹
+    if (s === SK.GUARD || s === SK.JINSHIELD || s === SK.SHIFT) return 'guard'; // 防御架势 → 需穿防御
+    if (s === SK.REFLECT || s === SK.PROTO || s === SK.ARMOR || s === SK.BAGUA) return 'reflect'; // 反弹/架势 → 需穿反弹
     return 'none';
   }
   function oppInDefense(you) { return stanceOf(you) !== 'none'; }

@@ -195,7 +195,15 @@
     const ev2 = function (e) { events.push(e); if (state.events) state.events.push(e); if (emit) emit(e); };
     const def = R.byKey[key];
     const tg = def ? resolveTarget(state, pid, key, opt) : null;
-    const tg2 = (opt && opt.target2 != null && opt.target2 !== pid && state.p[opt.target2]) ? opt.target2 : null;
+    let tg2 = null;
+    if (opt && opt.target2 != null) {
+      const cand = opt.target2;
+      if (typeof cand === 'number' && cand !== pid && cand !== tg && state.p[cand] && state.p[cand].hp > 0) tg2 = cand;
+      else if (key === R.SK.DUAL_GUN) {
+        const rest = opponentsOf(state, pid).filter(function (o) { return o !== tg; });
+        if (rest.length) tg2 = global.EpirusResolve.saltPick(state, rest, 2);
+      }
+    }
     /* v1.5.19：把"这一手指向谁"留在**玩家对象上**（`state.actions` 每回合会被清空 ⇒ 决策时刻
      * 完全看不到上一回合谁打过谁，见 docs/PARAMS-PLAN.md §0 与 v7 的关系特征 T 块）。
      * 这是**公共信息**（真人局里手势指向谁大家都看得见），存进去不产生信息泄漏。
@@ -220,6 +228,7 @@
 
     if (!def) return fail('invalid', '未知技能');
     if (!canUseSkillInMode(state, key)) return fail('invalid', '该模式不可用');
+    if (key === R.SK.DUAL_GUN && (tg == null || tg2 == null)) return fail('invalid', '双枪射手需要两个不同的存活目标');
     // 禁用倒计时：强行使用 -1HP 且无效（§2.2-1 / R29）
     if ((p.cooldown[key] || 0) > 0) {
       p.hp -= 1;
