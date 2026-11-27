@@ -1754,6 +1754,24 @@
     eq(st.p[1].hp, 3, '只进行一次判定（首个 rng=0.9 败），不因挨两枪而触发多次判定');
   });
 
+  t('R13d 金刚盾主动判定干扰指向狙击手的狙击', function () {
+    const st = game('standard', seqRng([0.1])); setEp(st, 5, 5);
+    play(st, SK.SNIPE, SK.JINSHIELD, { target: 1 }, { target: 0 });
+    ok(st.actions[0].voided, '狙击手被金刚盾指向时应失效');
+    eq(st.p[0].hp, 2, '狙击手仍吃金刚盾判定伤');
+    eq(st.p[1].hp, 3, '被干扰的狙击不造成伤害');
+  });
+
+  t('R59b 金刚盾判定伤实际落地时触发地雷', function () {
+    const st = game('standard', seqRng([0.1])); setEp(st, 5, 0);
+    st.p[1].mineArmed = true; st.p[1].mineRound = st.round - 1;
+    play(st, SK.JINSHIELD, SK.JI, { target: 1 }, null);
+    eq(st.p[1].hp, 2, '金刚盾判定伤命中带雷者');
+    eq(st.p[0].hp, 2, '地雷反击炸到金刚盾使用者');
+    ok(st.events.some(function (e) { return e.type === 'mine'; }), '必须产生 mine 事件');
+    eq(st.p[1].mineArmed, false, '触发后地雷卸下');
+  });
+
   t('R32b 激光眼破除无极变速次轮八卦与双层叠盾（自盾+全息）', function () {
     // ① 破无极变速次轮八卦
     let st = game('standard', seqRng([0.1])); setEp(st, 5, 5);

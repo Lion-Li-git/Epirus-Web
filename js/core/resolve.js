@@ -430,7 +430,7 @@
   }
 
   /* 可触发地雷的伤害来源；狙击豁免 R38 */
-  const MINE_TRIGGER = [SK.GUN, SK.SWORD, SK.TANK, SK.DRAIN, SK.RAILGUN, SK.BIG_T, SK.LASER_EYE, SK.CANNON];
+  const MINE_TRIGGER = [SK.GUN, SK.SWORD, SK.TANK, SK.DRAIN, SK.RAILGUN, SK.BIG_T, SK.LASER_EYE, SK.CANNON, SK.JINSHIELD];
 
   /* ===== R63（2026-11-06 用户裁定）：无来源/额外伤害的**单跳转移** =====
    * 「转移伤害又不在乎伤害是否有来源」⇒ 爆头与天火这些走 `rawDamage`（绕过 deliverDamage 转移拦截）的
@@ -1376,7 +1376,12 @@
 
     // ====== ⑥a 狙击 pri1（真实与镜面复制皆按狙击时机干扰/爆头） ======
     const eaTargetsWho = function (st, ea, who) {
-      if (!ea || R.ATK_EFFECT.indexOf(ea.key) < 0) return false;
+      if (!ea) return false;
+      if (ea.key === SK.JINSHIELD) {
+        if (ea.act && ea.act.voided) return false;
+        return (ea.isMirror ? ea.target : targetOf(st, ea.pid)) === who;
+      }
+      if (R.ATK_EFFECT.indexOf(ea.key) < 0) return false;
       if (ea.isMirror) return ea.target === who;
       if (!(ea.act && ea.act._dgVoid1) && targetOf(st, ea.pid) === who) return true;
       if (ea.key === SK.DUAL_GUN && !(ea.act && ea.act._dgVoid2) && ea.target2 === who && who !== ea.pid && isAliveInRound(st, who)) return true;
