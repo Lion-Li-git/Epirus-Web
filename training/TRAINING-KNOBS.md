@@ -6,7 +6,7 @@
 > 名单模块与注释不参与判定；`env[变量]` 这种**动态读法**看不见具体键，落进"仅动态提及"档，**不是删除候选**。
 > 为什么换口径：旧口径拿手维护的入口名单判，实测两头都错过——`training/train-3p.mjs` 整族键（`EPIRUS_ANCHOR`/`BREADTH_FLOOR`/`GA_GATE`…）与 `tools/np-parallel.mjs` 读的 `EPIRUS_BATCH_MAX` 都被判成暗键，照表删就删坏现役代码。
 > 运行时那套（`training/server/knob-guard.mjs` 的 `readKeysOf()` / `detectDarkKnobs()`，按**单个入口**的 import 闭包判）没变，也不该变：那是"这个入口认不认这个键"，本册答的是"全仓还有没有人读"。
-> 注解：`training/train-3p.mjs` 的 `SELF_ENV_KEYS` 行尾注释——注解住在读取处旁边，删旋钮时自然消失。
+> 注解：历史 `SELF_ENV_KEYS` 行尾注解收割已随 v7 线退役；当前 `--check` 只校验册子新鲜度与暗键。
 > 历史台账（`REMOVED_TRAIN_KEYS` 等）在被删文件里，随 git 史可考。
 > 2026-11-19 起 v7 产线（train-best/fast/server 那批）退役、其旋钮宇宙大幅缩水；⚠ 但那句"train-3p 已删除"**不成立**：
 > `training/train-3p.mjs` 仍在仓（`tools/command-checkup.mjs:22,68` 拿它当 env 读者入口跑 `detectDarkKnobs`），死掉的是 `tools/train-3p.mjs` 那条旧路径（`tools/gate-all.mjs:89` 记着）。

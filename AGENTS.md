@@ -4,7 +4,7 @@
 
 ## 旋钮（训练侧配置）
 
-1. **新增旋钮必须同笔带注解**：登记进 `training/knobs.mjs` 的 `ENTRIES` 所扫的在用入口（原 `train-3p.mjs` 的 `SELF_ENV_KEYS` 已随 v7 线退役，2026-11-19）——行尾 `//` 注解，生成器按行收割，`node training/knobs.mjs --check` 会拦无注解的读取。能进 ECON/FIGHT/TRAIN 单一来源表的键不许另开直读。
+1. **新增旋钮必须同笔带注解**：登记进 `training/knobs.mjs` 的 `ENTRIES` 所扫的在用入口（原 `train-3p.mjs` 的 `SELF_ENV_KEYS` 已随 v7 线退役，2026-11-19）——行尾 `//` 注解。当前 `node training/knobs.mjs --check` 只校验册子新鲜度与暗键，不自动收割或拦截无注解。能进 ECON/FIGHT/TRAIN 单一来源表的键不许另开直读。
 2. **加一删二**：新增一根旋钮前，先找两根可删或可合并的。env 总数 KPI：**≤40**（2026-11-10 基线 245，三档爆破分批进行，每批附前→后计数）。
 3. **禁错误吞咽与静默兜底**：缺关键配置必须 fail-fast（响亮 exit，exit 码不许被盖）。`\|\| 默认` 只许表达"旋钮契约的缺省值"，不许用来掩盖"该有而没有"。
 4. **同一规则只许一份实现**。孪生账例外：`js/train/policy2.js` 与 `training/proto2/arch2.mjs` 是设计内双胞胎——不许合并，也不许只改一边。

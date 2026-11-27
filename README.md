@@ -74,7 +74,7 @@ Epirus-Web/
 │   └─ bundled-champion-pool.js  整表回退（file:// 与 tools/gates 用；真源 champion-map/data/page/pool-members.tsv）
 ├─ training/                     训练侧独立子仓（统一入口 / 本地服务 / 旋钮真源；产品侧零依赖）
 │   ├─ train.mjs                   2.0 统一 CLI 总入口（--mode=pg|supfit|fuse|selftest）
-│   ├─ knobs.mjs                   旋钮单一真源生成器（--check 拦截未登记/无注解键）
+│   ├─ knobs.mjs                   旋钮单一真源生成器（--check 校验册子新鲜度与暗键）
 │   ├─ TRAINING-KNOBS.md           旋钮唯一配置真源手册
 │   ├─ start-train-server.cmd      一键启动页面本地 2.0 训练服务
 │   ├─ server/                     2.0 SSE 训练服务（train-server.mjs）+ 对手池/暗键守护等共用仪器
