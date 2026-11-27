@@ -103,4 +103,23 @@ insecure.shard(0, 'A', packA);
 await insecureDone;
 assert.equal(insecure.loader.get('A'), packA, '不安全 HTTP 下缺少 crypto.subtle 也必须能用纯 JS SHA-1 校验分片');
 
-console.log('POOL_LOADER_SELFTEST OK（晚到分片不覆盖整表；wid 不符与超时均触发回退；无 Web Crypto 可用）');
+const truncated = makeLoader([memberA, memberB]);
+const truncatedDone = truncated.loader.ensure(['A', 'B']);
+truncated.fail(0);
+truncated.fail(1);
+await flush();
+truncated.monolith(2, [{ id: 'A', wid: memberA.wid, pack: packA }]);
+await assert.rejects(truncatedDone, /成员数量/);
+
+const duplicated = makeLoader([memberA, memberB]);
+const duplicatedDone = duplicated.loader.ensure(['A', 'B']);
+duplicated.fail(0);
+duplicated.fail(1);
+await flush();
+duplicated.monolith(2, [
+  { id: 'A', wid: memberA.wid, pack: packA },
+  { id: 'A', wid: memberA.wid, pack: packA },
+]);
+await assert.rejects(duplicatedDone, /重复 ID/);
+
+console.log('POOL_LOADER_SELFTEST OK（晚到分片不覆盖整表；wid 不符、超时、截断与重复均触发回退；无 Web Crypto 可用）');

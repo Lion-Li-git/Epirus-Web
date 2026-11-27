@@ -115,6 +115,19 @@
           return m;
         });
       })).then(function (checked) {
+        if (origM && Array.isArray(origM.members)) {
+          if (checked.length !== origM.members.length) throw new Error('整表成员数量与原清单不符：' + checked.length + ' !== ' + origM.members.length);
+          var seen = Object.create(null);
+          for (var ci = 0; ci < checked.length; ci++) {
+            var cid = checked[ci].id;
+            if (seen[cid]) throw new Error('整表成员重复 ID：' + cid);
+            seen[cid] = true;
+          }
+          for (var oi2 = 0; oi2 < origM.members.length; oi2++) {
+            var om2 = origM.members[oi2];
+            if (om2 && om2.id && !seen[om2.id]) throw new Error('整表缺少原清单成员：' + om2.id);
+          }
+        }
         monoPacks = {};
         for (var i = 0; i < checked.length; i++) {
           var m = checked[i];

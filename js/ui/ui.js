@@ -225,7 +225,7 @@
     if (p.nightmare) badges.push(['梦魇-0.5/回合', 'warn']);
     if (p.vampire) badges.push(['吸血鬼公爵', 'pur']);
     const roundPending = !B.roundStarted && !st.over;
-    if (p.baguaExtra || (roundPending && p.baguaExtraNext)) badges.push(['无极变速·本回合', 'blue']);
+    if (p.baguaExtra || (roundPending && p.guardNext)) badges.push(['无极变速·本回合', 'blue']);
     if (p.fireWeakNow || (roundPending && p.fireWeakNext)) badges.push(['藤甲·火伤+1', 'warn']);
     if (p.tauntActive || (roundPending && p.tauntBy && p.tauntBy.length)) badges.push(['被挑衅·必须攻击', 'warn']);
     if (p.infiniteEnergy || (roundPending && p.reviveNext)) badges.push(['回魂·无限能量', 'gold']);
@@ -514,18 +514,18 @@
   function loadMultiChamp() {
     if (multiChampCache !== undefined) return multiChampCache;
     let pack = null;
-    try {
-      const raw = localStorage.getItem('epirus.champion3p');
-      if (raw) pack = JSON.parse(raw);
-    } catch (e) { /* ignore */ }
+    if (sessionMultiChampSet && sessionMultiChampPack) {
+      pack = sessionMultiChampPack;
+    } else {
+      try {
+        const raw = localStorage.getItem('epirus.champion3p');
+        if (raw) pack = JSON.parse(raw);
+      } catch (e) { /* ignore */ }
+    }
     /* v2.0.9：解包放在 try 里 —— 缺 js/train/policy.js（或它抛异常）时，旧实现会把 TypeError 抛到
      * newGame/首手，页面静默半死；这里降级为"本机包不可用"并如实回 null。 */
     try { multiChampCache = P.loadGame(pack); } catch (e) { multiChampCache = null; }  // 严格 → 状态段只增的旧包逐位等价嵌入（v8 兼容）
     multiChampFrom = multiChampCache ? 'local' : null;
-    if (!multiChampCache && sessionMultiChampPack) {
-      try { multiChampCache = P.loadGame(sessionMultiChampPack); } catch (e) { multiChampCache = null; }
-      multiChampFrom = multiChampCache ? 'local' : null;
-    }
     const builtinPack = BUILTIN_MULTI_CHAMP || (typeof window !== 'undefined' && typeof window.EPIRUS_CHAMPION_3P !== 'undefined' ? window.EPIRUS_CHAMPION_3P : null);
     if (!multiChampCache && builtinPack) {
       try { multiChampCache = P.loadGame(builtinPack); } catch (e) { multiChampCache = null; }   // 回退内置包
@@ -1300,7 +1300,7 @@
   /* 测试钩子（tools/np-probe.mjs 用）：只暴露对象引用，不改变游戏逻辑
    * v1.6.5：加 `modeFor` ⇒ smoke 可以**在真页面里**把 12 种（人数 × 血量）组合全过一遍，
    * 断言"映射的像恰好 = R.MODES 的全部 key"（这是行为断言，不是扫文本 —— 静态钉会被重构架空，本仓记过账）。 */
-  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, seatOppLabel: seatOppLabel, battleText: buildBattleText, showRecap: showRecap, modeFor: modeFor, tierOf: tierOf, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
+  if (typeof window !== 'undefined') window.EpirusUI = { B: B, newGame: newGame, aiInfo: aiInfo, seatOppLabel: seatOppLabel, battleText: buildBattleText, showRecap: showRecap, modeFor: modeFor, tierOf: tierOf, champForCount: champForCount, refresh: function () { buildSkillGrid(); renderSide(0); renderSide(1); } };
 
   /* v1.6.6：`chooseAI`（2 人专用那条 AI 路）已删除 —— 难度阶梯现在全人数共用一条路（`chooseAIMulti` + `DIFF_TIERS`）。
    * 它原来的三档（简单 = 60% 随机 + 中等、中等 = `pickBalanced`、困难 = 2P 冠军 ε=0）由阶梯接住：
