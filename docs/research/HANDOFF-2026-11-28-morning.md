@@ -94,3 +94,4 @@
 - `AR-TK2` 教师式候选（PG-DR 底 + armor/tank/transfer@0.10）首件与终点全绿、废珠 35.5%，但 armor/tank/transfer 仅 16/5/0 格，覆盖硬门失败，已收口。
 - 文档口径修正：README/AGENTS/旋钮册不再声称 `knobs --check` 自动拦截无注解；生成器已退役该收割逻辑，当前只校验册子新鲜度与暗键。
 - 干净树验收：修复前 Windows `git archive` 会因 autocrlf 把旋钮册转 CRLF 并假红；已将 `training/TRAINING-KNOBS.md` 标记为 `-text`，默认 archive 与 fresh Windows clone 均通过旋钮册和训练栈自检。
+- 收口池审计：35 枚 `hard 17 / soft 18`，`untracked=0`、`dupWid=0`、`blockedAuto=0`、`seatKilledAuto=0`、`seatUnknown=0`、`bad=[]`；`probe-pool` 通过。
