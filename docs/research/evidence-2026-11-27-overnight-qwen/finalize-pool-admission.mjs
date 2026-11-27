@@ -3,9 +3,10 @@ import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
 const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
-const ID = 'L1B-S600';
-const TARGET = 'RING-MINIT-CONT';
-const pre = readFileSync(resolve(ROOT, OUT, 'pre-admission-pool-members.tsv'), 'utf8').replace(/\r/g, '').trimEnd().split('\n');
+const ID = process.env.POOL_ID || 'L1B-S600';
+const TARGET = process.env.POOL_TARGET || 'RING-MINIT-CONT';
+const PRE = process.env.POOL_PRE || 'pre-admission-pool-members.tsv';
+const pre = readFileSync(resolve(ROOT, OUT, PRE), 'utf8').replace(/\r/g, '').trimEnd().split('\n');
 const cur = readFileSync(resolve(ROOT, 'champion-map/data/page/pool-members.tsv'), 'utf8').replace(/\r/g, '').trimEnd().split('\n');
 const head = pre[0].split('\t');
 const preRows = pre.slice(1).map((line) => line.split('\t'));
