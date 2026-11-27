@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.41 — 11-27（保留 AR-TK2 并追加 PG-CN-S1200 ‖ 池 35 枚 17/18 ‖ 修复 skill-report 页面不同步）
+
+**这一版是什么**：按用户 B 方案回退 v2.1.40 的“PG-CN-S1200 原位替换 AR-TK2”，保留 AR-TK2 的 soft armor/tank 载体，同时把 PG-CN-S1200 作为额外 soft 成员；池从 34 枚变为 35 枚（hard 17 / soft 18）。规则指纹不变（03a9cc97）。
+
+- **AR-TK2 回池**：恢复 soft 行与 skill-report raw，按当前夹具 fx-pool1126d、指纹 03a9cc97 重跑 Stage 1：并集 17/30、胜率 39.58%、armor 120/120、tank 22/120、transfer 11 格；保留其既有 promote pass / seatKill=0 记录。
+- **PG-CN-S1200 保留为额外成员**：不再宣称原位替换 AR-TK2；其并集 17/30、胜率 54.17%，但 armor/tank 为 0，定位为强度/经济补强，不承担 armor/tank 角色。
+- **页面修复**：skill-report 页面此前 35 张卡但池表/raw 只有 34，多出的是已退役 AR-TK2；本版重烘后页面与池表一致为 35 枚（AR-TK2 回池 + PG-CN-S1200 保留）。证据见 [`RESULTS-2026-11-27-pool35-b.md`](docs/research/RESULTS-2026-11-27-pool35-b.md)。
+- **验证**：`pool-add --audit` 35 枚 / `hard 17 + soft 18` / `bad=[]`；`champion-map/pipeline/validate.mjs` 通过（canonical 998 / mismatch 0）；`spec 86/86`；`SMOKE OK`；`BATTLE OK`；`rebuild-map` 页内自检 101 PASS / 0 FAIL；`bundle` 与 `manifest` 均为 35 枚，`skill-report.html` 35 张卡（AR-TK2 + PG-CN-S1200 同在）。
+
 ## v2.1.40 — 11-27（soft fallout 入池与 selftest3 量具修正）
 
 **这一版是什么**：用已有 hard PG 中间快照补强 soft 低档，并修正梯度启动门的两类假红；不改规则指纹。
