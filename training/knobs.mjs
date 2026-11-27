@@ -8,7 +8,7 @@
  *
  * 做什么：把"代码真读的集合"（server/knob-guard.mjs 的解析器）与入口清单合并成册 `TRAINING-KNOBS.md`。
  *
- * 防腐烂：`--check` 重新生成并与盘上文件逐字比对，不同 ⇒ exit 1。CI 在 gates.yml 里作为独立步骤跑。
+ * 防腐烂：`--check` 重新生成并与盘上文件逐字比对，不同 ⇒ exit 1。CI 在 training.yml 里作为独立步骤跑。
  *
  * 用法：node training/knobs.mjs               # 重新生成 TRAINING-KNOBS.md（生成器就是本文件）
  *       node training/knobs.mjs --check       # 只比对，不一致 exit 1（CI 用）
@@ -97,7 +97,7 @@ md.push('');
 /* ⚠ 头注也由本文件生成：以前有人在册子上手加过一段"生成器 tools/knob-registry.mjs…CI 每次 push --check"，
  *   那个文件名的生成器**从未入库**（git 史里查不到），而 `--check` 只比下面的数据账三个数 ⇒ 错话活了下来，
  *   并且任何人一跑重生成就会把它抹掉。头注写进生成器才是它该待的地方（11-20 核对）。 */
-md.push('> 生成器就是本文件：`node training/knobs.mjs` 重生成；CI 每次都跑 `node training/knobs.mjs --check`（`.github/workflows/gates.yml:125`）。');
+md.push('> 生成器就是本文件：`node training/knobs.mjs` 重生成；CI 每次都跑 `node training/knobs.mjs --check`（`.github/workflows/training.yml`）。');
 md.push('> ⚠ `--check` 比的是**整篇字节**（不是只比数据账三个数——旧头注这么写，是错的：`cur !== content` 才 exit 1）。');
 md.push('> 判"在用/暗键"的口径（2026-11-24 换）：**按读法扫维护面**（`tools/ training/ js/ champion-map/` 里 `process.env.X` / `env[\'X\']` / `e.<KEY>` 别名），');
 md.push('> 名单模块与注释不参与判定；`env[变量]` 这种**动态读法**看不见具体键，落进"仅动态提及"档，**不是删除候选**。');
