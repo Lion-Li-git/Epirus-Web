@@ -86,7 +86,7 @@ function analyticGrad(pt, idx) {
   return grad;
 }
 let cN = 0, cBad = 0, cSkip = 0, cFloor = 0, cRes = 0, cFull = 0, cFullRes = 0, worst = 0;
-const EPS = 1e-6;
+const EPS = 1e-5; // 1e-6 会把 ulp(logπ)/ε 舍入噪声放大成假红；真漏项仍在 O(1e-2) 量级。
 /* ⚑ 全扫点（逐坐标查）挑的不是"最好看"的格子，而是**这条腿自己分得出真假**的格子：
  *   ① 该候选 π∈[0.05,0.95]（政策在这一格没决定死 ⇒ 梯度不是 1e-51 那种纯噪声）；
  *   ② 解析梯度 |∂|>1e-6 的坐标数 ≥300（否则全扫 7993 格里大半贴地板，等于白扫）。
@@ -191,18 +191,24 @@ let eBad = 0, eN = 0;
 console.log('腿E 浏览器镜像: ' + (eBad === 0 ? '✔ ' + eN + ' 决策点 tape 逐位同' : '✘ ' + eBad));
 
 /* —— 腿 F：键级似然导数（supfit-gd 用）数值对账 —— */
-let fBad = 0, fN = 0;
+let fBad = 0, fN = 0, fTies = 0;
 {
   const p = pts[13];
   if (p) {
     const fr = P.forwardCands(p.st, p.pid, p.cands, params, { temp: 1 });
     const keys = p.cands.map((c) => c.key);
     const uniq = [...new Set(keys)];
+    const t0 = tailOf(fr.logits, keys, 1);
+    const tiedMax = new Set();
     for (const k of uniq) {
-      const t0 = tailOf(fr.logits, keys, 1);
+      const ix = keys.map((kk, j) => kk === k ? j : -1).filter((j) => j >= 0);
+      const best = t0.bestOf[k];
+      if (ix.filter((j) => fr.logits[j] === best).length > 1) for (const j of ix) if (fr.logits[j] === best) tiedMax.add(j);
+    }
+    for (const k of uniq) {
       const ag = dLogKeyP(k, fr.logits, keys, 1, t0);
-      const kp0 = t0.kProb[k];
       for (const j of [0, Math.floor(keys.length / 2), keys.length - 1]) {
+        if (tiedMax.has(j)) { fTies++; continue; }
         const p2 = Float64Array.from(fr.logits); p2[j] += 1e-6;
         const m2 = Float64Array.from(fr.logits); m2[j] -= 1e-6;
         const num = (Math.log(tailOf(p2, keys, 1).kProb[k]) - Math.log(tailOf(m2, keys, 1).kProb[k])) / 2e-6;
@@ -210,12 +216,11 @@ let fBad = 0, fN = 0;
         const adiff = Math.abs(num - ana);
         fN++;
         if (adiff > 1e-8 + 1e-3 * Math.max(Math.abs(num), Math.abs(ana))) { fBad++; console.log('   ✘ 键 ' + k + ' logit[' + j + '] 解析 ' + ana.toExponential(3) + ' vs 数值 ' + num.toExponential(3)); }
-        void kp0;
       }
     }
   }
 }
-console.log('腿F 键级导数:   ' + (fBad === 0 ? '✔ ' + fN + ' 对账' : '✘ ' + fBad));
+console.log('腿F 键级导数:   ' + (fBad === 0 ? '✔ ' + fN + ' 对账' + (fTies ? '（跳过 ' + fTies + ' 个不可导并列最大值）' : '') : '✘ ' + fBad));
 
 const ok = badA === 0 && badB === 0 && cBad === 0 && dBad === 0 && eBad === 0 && fBad === 0;
 console.log(ok ? '# selftest3 全绿 ✔（本次梯度训练允许开）' : '# selftest3 红 ⇒ 本次梯度训练不许开');

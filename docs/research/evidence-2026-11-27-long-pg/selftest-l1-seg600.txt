@@ -1,0 +1,20 @@
+# selftest3 ‖ nov27-long-pgdr-l1.seg600.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.274（逐坐标 16561 里可分辨 2718）‖ 判定 2795 ‖ 不进判定 14311（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+   ✘ 键 ji logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 gun logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 guard logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 reflect logit[15] 解析 0.000e+0 vs 数值 -5.968e-7
+   ✘ 键 bagua logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 shift logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 jinshield logit[8] 解析 0.000e+0 vs 数值 5.000e-1
+   ✘ 键 jinshield logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 armor logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 proto logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 holo logit[15] 解析 0.000e+0 vs 数值 -5.969e-7
+   ✘ 键 curse logit[15] 解析 0.000e+0 vs 数值 5.000e-1
+腿F 键级导数:   ✘ 12
+# selftest3 红 ⇒ 本次梯度训练不许开

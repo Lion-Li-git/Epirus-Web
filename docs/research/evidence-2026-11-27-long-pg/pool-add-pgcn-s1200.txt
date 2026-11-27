@@ -1,0 +1,15 @@
+   跑上槽体检（≈2.5 分钟）：node tools/promote-champion.mjs docs/artifacts/PG-CN-S1200.bak --dry → docs/artifacts/promote-PG-CN-S1200.txt
+== 加入冠军池 ==
+   id=PG-CN-S1200 · wid=a4be887766a4eb3a · tier=soft
+   上槽体检：pass ‖ 人席否决：0 格
+   前线读数（24 锚联盟 · page 剂量 · 6 粒 seed）已落 data/arena-noise-floor-1118.tsv：B=20.3588pt ‖ 极差 51.0848pt ‖ 当选判决窗口 5.8pt
+✔ 已写 champion-map/pool-members.tsv（现 35 枚）
+   ✔ 已同步 champion-map/data/page/promote.tsv
+   下一步：node tools/build-pool-bundle.mjs --split（整表 + 页面懒加载清单/分片）
+   [skill-report] 入池普查（Stage 1 观察 + Stage 2 强度）…
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [PG-CN-S1200] stage1 并集 17/30（自对局 15） 换招JS 0.0831 ‖ 15.8s → D:\code\Epirus-Web\champion-map\data\skill-report\PG-CN-S1200.json
+   # 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+   [PG-CN-S1200] stage2 并集 17/30（自对局 15） 换招JS 0.0831 ‖ 强度 24 技（消融 8） ‖ 2.7s → D:\code\Epirus-Web\champion-map\data\skill-report\PG-CN-S1200.json
+   ↻ 演化图已自动同步：（一致）
+   ↻ skill-report.html 已自动重烘

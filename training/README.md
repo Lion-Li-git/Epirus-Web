@@ -101,7 +101,7 @@
 
 - 产品 CI 跑 np 矩阵、spec 与浏览器三档；训练侧旋钮册和训练栈自检走独立 `.github/workflows/training.yml`，只在训练面变更时触发。
 - 旋钮册防腐烂：改了 env 读取 ⇒ `node training/knobs.mjs` 重生成册并随改动提交（**生成器就是 knobs.mjs 本身**）。改旗标/旋钮先看 AGENTS 铁律（同笔注解、加一删二、≤40）。
-- 梯度训练启动门：`pg-train` / `supfit-gd` 对实际装载的上游参数自动执行 `selftest3`；红则不开训。冻结推理包的产品验收不消费这门。
+- 梯度训练启动门：`pg-train` / `supfit-gd` 对实际装载的上游参数自动执行 `selftest3`；红则不开训。冻结推理包的产品验收不消费这门。数值梯度使用 `ε=1e-5` 避开 `ulp(logπ)/ε` 舍入假红；键级导数跳过最大值并列的不可导点，其余格仍逐位对账。
 - 训练侧手动自查：`node training/train.mjs --selftest`（涵盖 `selftest2` + `selftest3` + `browser-parity`）。
 
 ## 六、常用验尸（30 秒判断产物血统）

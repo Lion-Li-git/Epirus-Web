@@ -1,0 +1,22 @@
+import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
+
+const [target, id, wid, candidatePath] = process.argv.slice(2);
+if (!target || !id || !wid || !candidatePath) throw new Error('usage: node pool-set-candidate.mjs <target> <id> <wid> <relative-pack-path>');
+const file = 'champion-map/data/page/pool-members.tsv';
+const source = execFileSync('git', ['show', 'HEAD:' + file], { encoding: 'utf8' });
+const lines = source.trimEnd().split(/\r?\n/);
+const header = lines[0].split('\t');
+const row = lines.findIndex((line) => line.split('\t')[header.indexOf('id')] === target);
+if (row < 0) throw new Error('target not found: ' + target);
+const cells = lines[row].split('\t');
+cells[header.indexOf('id')] = id;
+cells[header.indexOf('wid')] = wid;
+cells[header.indexOf('path')] = candidatePath;
+cells[header.indexOf('invited')] = '0';
+cells[header.indexOf('promoteVerdict')] = 'candidate';
+cells[header.indexOf('seatKill')] = '0';
+cells[header.indexOf('note')] = 'pool simulation only';
+lines[row] = cells.join('\t');
+writeFileSync(file, lines.join('\n') + '\n');
+console.log('replaced ' + target + ' -> ' + id);

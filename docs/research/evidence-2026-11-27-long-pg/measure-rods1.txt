@@ -1,0 +1,16 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-pg-rod-s1.seg1800.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-pg-rod-s1.seg1800.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-pg-rod-s1.seg1800.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-pg-rod-s1.seg1800.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/nov27-pg-rod-s1.seg1800-extra.tsv --ids=nov27-pg-rod-s1.seg1800 --out=staging/nov27-pg-rod-s1.seg1800-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+—— ax-multi —— [冠军4N] h2=88.27 h3=64.38 h5=40.81 h8=23.64 x2=0.7654 x3=0.4656 x5=0.2601 x8=0.1273 n2=2600 n3=1440 n5=740 n8=440 sec=14.4 mode=multi dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=16 skE=15 keys=bagua,bigT,charge,curse,drain,guard,gun,holo,ji,railgun,reflect,ring,rod,shift,snipe,sword coop=v3x40
+—— a-multi —— [冠军4N] h2=82.69 h3=61.67 h5=40.27 h8=23.64 x2=0.6538 x3=0.4250 x5=0.2534 x8=0.1273 n2=2600 n3=1440 n5=740 n8=440 sec=14.9 mode=multi dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=23 skE=21 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,mine,miniT,purify,railgun,reflect,ring,rod,shift,snipe,sword,tank,taunt,transfer coop=v3x40
+—— a-long —— [冠军4N] h2=88.96 h3=58.82 h5=43.92 h8=33.64 x2=0.7792 x3=0.3823 x5=0.2990 x8=0.2416 n2=2600 n3=1440 n5=740 n8=440 sec=28.1 mode=long dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=25 skE=23 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,mine,miniT,purify,railgun,reflect,ring,rod,shift,snipe,sword,tank,taunt,transfer coop=v3x40
+—— ax-long —— [冠军4N] h2=91.42 h3=59.58 h5=42.03 h8=31.82 x2=0.8285 x3=0.3937 x5=0.2753 x8=0.2208 n2=2600 n3=1440 n5=740 n8=440 sec=31.3 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=18 keys=bagua,bigT,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,rod,shift,snipe,sword,taunt coop=v3x40
+—— arena-b —— arS=0.1499 arL=0.0152 arR=0.2445
+—— mixedfix —— MxC=0.1956 MxCL=0.1691 MxSkU=16 MxSkE=14
+—— ruler ——
+  1/1 ‖ 36.19s/枚 ‖ 已用 36s ‖ 预计还需 0.0 分 ‖ 最新 nov27-pg-rod-s1.seg1800 H=60.8 S=1.49
+完成 1 枚，用时 36s ⇒ D:\code\Epirus-Web\champion-map\staging\nov27-pg-rod-s1.seg1800-ruler.tsv
+readings 32 条 ‖ display nov27-pg-rod-s1.seg1800-display.tsv
+--no-add：停在 D:\code\Epirus-Web\champion-map\staging\nov27-pg-rod-s1.seg1800-readings.tsv

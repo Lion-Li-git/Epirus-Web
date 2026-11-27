@@ -1,0 +1,2 @@
+scratch/arms/nov27-long-pgdr-l1b.seg600.bak v=92 arch=S1o params=16561
+scratch/arms/nov27-long-pgdr-l1b.bak v=92 arch=S1o params=16561

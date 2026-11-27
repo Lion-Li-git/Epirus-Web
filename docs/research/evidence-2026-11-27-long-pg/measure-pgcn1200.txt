@@ -1,0 +1,16 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov26-pgcn2-pg3.seg1200.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov26-pgcn2-pg3.seg1200.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov26-pgcn2-pg3.seg1200.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov26-pgcn2-pg3.seg1200.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/nov26-pgcn2-pg3.seg1200-extra.tsv --ids=nov26-pgcn2-pg3.seg1200 --out=staging/nov26-pgcn2-pg3.seg1200-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+—— ax-multi —— [冠军4N] h2=89.69 h3=60.49 h5=40.14 h8=20.68 x2=0.7938 x3=0.4073 x5=0.2517 x8=0.0935 n2=2600 n3=1440 n5=740 n8=440 sec=13.1 mode=multi dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=16 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,shift,snipe,sword coop=v3x40
+—— a-multi —— [冠军4N] h2=83.00 h3=61.04 h5=39.05 h8=18.41 x2=0.6600 x3=0.4156 x5=0.2382 x8=0.0675 n2=2600 n3=1440 n5=740 n8=440 sec=13.9 mode=multi dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=21 skE=19 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,rod,shift,snipe,sword,taunt coop=v3x40
+—— a-long —— [冠军4N] h2=83.69 h3=56.18 h5=47.03 h8=30.45 x2=0.6738 x3=0.3427 x5=0.3378 x8=0.2052 n2=2600 n3=1440 n5=740 n8=440 sec=28.5 mode=long dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=22 skE=20 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,rod,shift,snipe,sword,tank,taunt coop=v3x40
+—— ax-long —— [冠军4N] h2=84.50 h3=56.60 h5=41.76 h8=26.14 x2=0.6900 x3=0.3490 x5=0.2720 x8=0.1558 n2=2600 n3=1440 n5=740 n8=440 sec=29.0 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=17 skE=17 keys=bagua,bigT,cannon,charge,curse,firestorm,guard,gun,holo,ji,jinshield,railgun,reflect,ring,shift,snipe,sword coop=v3x40
+—— arena-b —— arS=0.1775 arL=0.1159 arR=0.4688
+—— mixedfix —— MxC=0.3008 MxCL=0.2171 MxSkU=17 MxSkE=15
+—— ruler ——
+  1/1 ‖ 35.43s/枚 ‖ 已用 35s ‖ 预计还需 0.0 分 ‖ 最新 nov26-pgcn2-pg3.seg1200 H=47.7 S=1.73
+完成 1 枚，用时 35s ⇒ D:\code\Epirus-Web\champion-map\staging\nov26-pgcn2-pg3.seg1200-ruler.tsv
+readings 32 条 ‖ display nov26-pgcn2-pg3.seg1200-display.tsv
+--no-add：停在 D:\code\Epirus-Web\champion-map\staging\nov26-pgcn2-pg3.seg1200-readings.tsv

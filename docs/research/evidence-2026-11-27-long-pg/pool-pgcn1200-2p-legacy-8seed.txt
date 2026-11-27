@@ -1,0 +1,104 @@
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.1%  · 局长 9.7 回合 · 大雷 0.39 张/桌 · 摄魂 0.08 张/桌  · 与『lv:regular』配对差 -4.00 ±3.19pt（95%CI ⇒ 1σ=1.63 ‖ 2.5σ）
+  普通（默认）                   替身夺冠 24.1%  · 局长 10.3 回合 · 大雷 0.38 张/桌 · 摄魂 0.09 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 25.7%  · 局长 10.6 回合 · 大雷 0.36 张/桌 · 摄魂 0.08 张/桌  · 与『lv:regular』配对差 +1.60 ±3.51pt（95%CI ⇒ 1σ=1.79 ‖ 0.9σ）
+  耗时 4.2s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +4.00 ±1.63pt ⇒ 分得开（2.5σ）
+    lv:hard         → lv:sparring    +5.60 ±1.73pt ⇒ 分得开（3.2σ）
+    lv:regular      → lv:sparring    +1.60 ±1.79pt ⇒ 分不开
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 21.7%  · 局长 9.7 回合 · 大雷 0.40 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 -3.20 ±3.22pt（95%CI ⇒ 1σ=1.64 ‖ 2.0σ）
+  普通（默认）                   替身夺冠 24.9%  · 局长 10.2 回合 · 大雷 0.41 张/桌 · 摄魂 0.09 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 27.2%  · 局长 10.4 回合 · 大雷 0.32 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 +2.30 ±3.67pt（95%CI ⇒ 1σ=1.87 ‖ 1.2σ）
+  耗时 4.1s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +3.20 ±1.64pt ⇒ 分不开
+    lv:hard         → lv:sparring    +5.50 ±1.77pt ⇒ 分得开（3.1σ）
+    lv:regular      → lv:sparring    +2.30 ±1.87pt ⇒ 分不开
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.6%  · 局长 9.8 回合 · 大雷 0.41 张/桌 · 摄魂 0.11 张/桌  · 与『lv:regular』配对差 -2.60 ±3.00pt（95%CI ⇒ 1σ=1.53 ‖ 1.7σ）
+  普通（默认）                   替身夺冠 23.2%  · 局长 10.3 回合 · 大雷 0.41 张/桌 · 摄魂 0.11 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 28.2%  · 局长 10.6 回合 · 大雷 0.39 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 +5.00 ±3.49pt（95%CI ⇒ 1σ=1.78 ‖ 2.8σ）
+  耗时 4.2s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +2.60 ±1.53pt ⇒ 分不开
+    lv:hard         → lv:sparring    +7.60 ±1.76pt ⇒ 分得开（4.3σ）
+    lv:regular      → lv:sparring    +5.00 ±1.78pt ⇒ 分得开（2.8σ）
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.0%  · 局长 10.0 回合 · 大雷 0.43 张/桌 · 摄魂 0.10 张/桌  · 与『lv:regular』配对差 -3.90 ±3.17pt（95%CI ⇒ 1σ=1.62 ‖ 2.4σ）
+  普通（默认）                   替身夺冠 23.9%  · 局长 10.3 回合 · 大雷 0.43 张/桌 · 摄魂 0.10 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 28.3%  · 局长 10.7 回合 · 大雷 0.35 张/桌 · 摄魂 0.08 张/桌  · 与『lv:regular』配对差 +4.40 ±3.59pt（95%CI ⇒ 1σ=1.83 ‖ 2.4σ）
+  耗时 4.4s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +3.90 ±1.62pt ⇒ 分得开（2.4σ）
+    lv:hard         → lv:sparring    +8.30 ±1.82pt ⇒ 分得开（4.6σ）
+    lv:regular      → lv:sparring    +4.40 ±1.83pt ⇒ 分得开（2.4σ）
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.3%  · 局长 9.8 回合 · 大雷 0.39 张/桌 · 摄魂 0.08 张/桌  · 与『lv:regular』配对差 -5.30 ±3.13pt（95%CI ⇒ 1σ=1.60 ‖ 3.3σ）
+  普通（默认）                   替身夺冠 25.6%  · 局长 10.1 回合 · 大雷 0.38 张/桌 · 摄魂 0.08 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 25.8%  · 局长 10.5 回合 · 大雷 0.32 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 +0.20 ±3.68pt（95%CI ⇒ 1σ=1.88 ‖ 0.1σ）
+  耗时 4.1s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +5.30 ±1.60pt ⇒ 分得开（3.3σ）
+    lv:hard         → lv:sparring    +5.50 ±1.77pt ⇒ 分得开（3.1σ）
+    lv:regular      → lv:sparring    +0.20 ±1.88pt ⇒ 分不开
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 22.5%  · 局长 9.8 回合 · 大雷 0.44 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 -2.20 ±3.20pt（95%CI ⇒ 1σ=1.63 ‖ 1.3σ）
+  普通（默认）                   替身夺冠 24.7%  · 局长 10.1 回合 · 大雷 0.42 张/桌 · 摄魂 0.09 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 27.5%  · 局长 10.5 回合 · 大雷 0.37 张/桌 · 摄魂 0.08 张/桌  · 与『lv:regular』配对差 +2.80 ±3.60pt（95%CI ⇒ 1σ=1.84 ‖ 1.5σ）
+  耗时 4.3s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +2.20 ±1.63pt ⇒ 分不开
+    lv:hard         → lv:sparring    +5.00 ±1.79pt ⇒ 分得开（2.8σ）
+    lv:regular      → lv:sparring    +2.80 ±1.84pt ⇒ 分不开
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.7%  · 局长 9.7 回合 · 大雷 0.42 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 -5.60 ±3.07pt（95%CI ⇒ 1σ=1.57 ‖ 3.6σ）
+  普通（默认）                   替身夺冠 26.3%  · 局长 10.2 回合 · 大雷 0.42 张/桌 · 摄魂 0.08 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 27.5%  · 局长 10.4 回合 · 大雷 0.36 张/桌 · 摄魂 0.09 张/桌  · 与『lv:regular』配对差 +1.20 ±3.66pt（95%CI ⇒ 1σ=1.87 ‖ 0.6σ）
+  耗时 4.2s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +5.60 ±1.57pt ⇒ 分得开（3.6σ）
+    lv:hard         → lv:sparring    +6.80 ±1.78pt ⇒ 分得开（3.8σ）
+    lv:regular      → lv:sparring    +1.20 ±1.87pt ⇒ 分不开
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 17 枚
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+难度阶梯 · 1 席人类替身(rand) vs 1 席同档 AI · n=2 · mode=standard · 包=2P · 1000 局/档 · 同批种子（跨档逐局配对）· 上线档带大雷/摄魂注入 · 替身夺冠越低=越强
+  困难 · 冠军                  替身夺冠 20.4%  · 局长 9.8 回合 · 大雷 0.39 张/桌 · 摄魂 0.10 张/桌  · 与『lv:regular』配对差 -3.60 ±3.09pt（95%CI ⇒ 1σ=1.58 ‖ 2.3σ）
+  普通（默认）                   替身夺冠 24.0%  · 局长 10.2 回合 · 大雷 0.38 张/桌 · 摄魂 0.09 张/桌  ← 默认档
+  简单 · 陪练                  替身夺冠 26.7%  · 局长 10.4 回合 · 大雷 0.32 张/桌 · 摄魂 0.07 张/桌  · 与『lv:regular』配对差 +2.70 ±3.67pt（95%CI ⇒ 1σ=1.87 ‖ 1.4σ）
+  耗时 4.1s
+  全部配对差（from = 更低夺冠率那一档 = 对人类更难；正 = to 更容易被打赢）：
+    lv:hard         → lv:regular     +3.60 ±1.58pt ⇒ 分得开（2.3σ）
+    lv:hard         → lv:sparring    +6.30 ±1.74pt ⇒ 分得开（3.6σ）
+    lv:regular      → lv:sparring    +2.70 ±1.87pt ⇒ 分不开

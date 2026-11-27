@@ -1,0 +1,7 @@
+[冠军4N] h5=38.93 x5=0.2366 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=13 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,shift,snipe,sword,taunt coop=off
+[冠军4N] h5=43.21 x5=0.2902 n5=280 sec=2.0 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=16 skE=15 keys=bagua,bigT,cannon,charge,curse,firestorm,guard,gun,holo,ji,railgun,reflect,ring,shift,snipe,sword coop=off
+[冠军4N] h5=43.21 x5=0.2902 n5=280 sec=2.1 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=15 skE=13 keys=bagua,bigT,charge,drain,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,snipe,sword coop=off
+[冠军4N] h5=40.71 x5=0.2589 n5=280 sec=2.0 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=15 skE=14 keys=bagua,bigT,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,reflect,ring,snipe,sword coop=off
+[冠军4N] h5=41.07 x5=0.2634 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=17 skE=13 keys=bagua,bigT,charge,drain,guard,gun,holo,ji,miniT,railgun,reflect,ring,rod,shift,snipe,sword,taunt coop=off
+[冠军4N] h5=41.79 x5=0.2723 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=15 skE=14 keys=bagua,bigT,charge,drain,guard,gun,holo,ji,reflect,ring,rod,shift,snipe,sword,taunt coop=off
+[冠军4N] h5=50.36 x5=0.3795 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=16 skE=14 keys=bagua,bigT,cannon,charge,curse,firestorm,guard,gun,holo,ji,railgun,reflect,ring,shift,snipe,sword coop=off

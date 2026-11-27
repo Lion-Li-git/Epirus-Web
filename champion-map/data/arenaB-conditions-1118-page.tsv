@@ -697,3 +697,12 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T00:09:30.607Z	RD-PG	docs/artifacts/RD-PG.bak	764723661c0c7a50	85200	page	data/arena-league-1118-page.tsv	0.362296	0.119795
 2026-11-27T00:09:33.188Z	RD-PG	docs/artifacts/RD-PG.bak	764723661c0c7a50	86200	page	data/arena-league-1118-page.tsv	0.401470	0.131671
 2026-11-27T00:09:35.693Z	RD-PG	docs/artifacts/RD-PG.bak	764723661c0c7a50	87200	page	data/arena-league-1118-page.tsv	0.244979	0.087062
+2026-11-27T11:30:34.599Z	nov26-pgcn2-pg3.seg1200	scratch/arms/nov26-pgcn2-pg3.seg1200.bak	5b0d7004b5992447	82200	page	data/arena-league-1118-page.tsv	0.577315	0.177453
+2026-11-27T11:32:17.544Z	nov27-pg-rod-s1.seg1800	scratch/arms/nov27-pg-rod-s1.seg1800.bak	e6b5a616ea459734	82200	page	data/arena-league-1118-page.tsv	0.469801	0.149914
+2026-11-27T11:44:26.701Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	82200	page	data/arena-league-1118-page.tsv	0.577315	0.177453
+2026-11-27T11:50:32.689Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	82200	page	data/arena-league-1118-page.tsv	0.577315	0.177453
+2026-11-27T11:50:35.218Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	83200	page	data/arena-league-1118-page.tsv	0.343184	0.100950
+2026-11-27T11:50:37.697Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	84200	page	data/arena-league-1118-page.tsv	0.082012	0.037725
+2026-11-27T11:50:40.150Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	85200	page	data/arena-league-1118-page.tsv	0.009323	0.013990
+2026-11-27T11:50:42.669Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	86200	page	data/arena-league-1118-page.tsv	0.232740	0.072196
+2026-11-27T11:50:45.178Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	87200	page	data/arena-league-1118-page.tsv	0.187007	0.061455

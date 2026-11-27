@@ -1,0 +1,5 @@
+[冠军4N] h5=38.93 x5=0.2366 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=13 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,shift,snipe,sword,taunt coop=off
+[冠军4N] h5=40.36 x5=0.2545 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=18 skE=13 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,miniT,railgun,reflect,ring,shift,snipe,sword,taunt coop=off
+[冠军4N] h5=41.43 x5=0.2679 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=16 skE=13 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,miniT,reflect,ring,shift,snipe,sword coop=off
+[冠军4N] h5=38.57 x5=0.2321 n5=280 sec=1.8 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=17 skE=13 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,reflect,ring,shift,snipe,sword coop=off
+[冠军4N] h5=40.36 x5=0.2545 n5=280 sec=1.9 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=16 skE=13 keys=bagua,bigT,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,reflect,ring,shift,snipe,sword coop=off

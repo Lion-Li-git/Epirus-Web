@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.40 — 11-27（soft fallout 入池与 selftest3 量具修正）
+
+**这一版是什么**：用已有 hard PG 中间快照补强 soft 低档，并修正梯度启动门的两类假红；不改规则指纹。
+
+- **soft 换代**：`PG-CN-S1200`（`nov26-pgcn2-pg3.seg1200`，`wid=a4be887766a4eb3a`）原位替换 `AR-TK2`，全池维持 `34` 枚 `17/17`；armor/tank/transfer 有效载体各减 1 但并集不丢。
+- **量具修正**：`selftest3` 腿 C 改用 `ε=1e-5`，腿 F 跳过最大值并列的不可导点；注入 `+1%` ctx 偏置梯度错误仍被腿 C 抓住。
+- **训练止损纠正**：`nov27-long-pgdr-l1.seg600/seg1200` 的旧红灯分别是并列与舍入假红；同 seed 重跑 `nov27-long-pgdr-l1b` 3600 局，全部快照与终点 `selftest3` 绿，前 1200 局权重与 L1 逐位相同。
+
+**验证**：`PG-CN-S1200` promote 0 阻断、人席 `seatKill=0`；A/B/C 为 `MxC=0.3008 / MxCL=0.2171 / arR=0.4688`。2P 八 seed 与 5P 双桌形池级替换均保持 hard 不变、阶梯有序；产品 `seed=77000` 复核与同位模拟一致。`ship-pool 1/1`、`ship-promote 19/19`、浏览器 `SMOKE OK`，演化图 `101 PASS / 0 FAIL`。
+
 ## v2.1.39 — 11-27（池降级 / 观战 / 悔棋 / 训练异步与伤害归因收口）
 
 **这一版是什么**：修复上一轮审计留下的产品接缝与量具口径，不换冠军权重、不改规则指纹（仍为 `03a9cc97`）。
@@ -14,6 +24,7 @@
 - **训练与存储**：训练探测/重连增加代际取消，旧请求晚到不再覆盖新会话；本地冠军写入失败返回失败并明确提示。
 - **伤害归因**：`dmgW`、`rankOf` 与穿透/集火/破墙等输出量统一排除 `source===to` 的返回伤害；转移诊断改用真实 `to` 字段。
 - **回归与文档**：真实 Chrome 覆盖 2–8 人 × 3/4/5 血共 21 格，并验证 8 人推进、悔棋记忆、切档排队、存储失败与旧训练请求；门禁文档计数同步为当前 167 门。
+- **训练研究**：长程 PG 先导 `nov27-long-pgdr-l1` 的旧 `selftest3` 红灯已定位为并列最大值与 `ε=1e-6` 舍入假红；量具修正后两枚快照均绿。现有 `nov26-pgcn2-pg3.seg1200` / `nov27-pg-rod-s1.seg1800` 已补 promote、人席与 2P 八 seed，A/B/C 仍在测。
 
 **验证**：`spec 86/86`；`ship-pool 1/1`；`ui-contract 8/8`；`meta-repo 13/13`；`audit-lib-selftest` 通过；扩展浏览器 `SMOKE OK`。未跑整轮门禁。
 

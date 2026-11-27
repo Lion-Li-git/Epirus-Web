@@ -1,0 +1,5 @@
+[冠军4N] h2=87.40 x2=0.7481 n2=1040 sec=1.8 mode=standard dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=13 skE=13 keys=bagua,bigT,charge,curse,drain,guard,gun,ji,railgun,reflect,ring,snipe,sword coop=off
+[冠军4N] h2=87.12 x2=0.7423 n2=1040 sec=1.7 mode=standard dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=13 skE=13 keys=bagua,bigT,charge,curse,drain,guard,gun,ji,railgun,reflect,ring,snipe,sword coop=off
+[冠军4N] h2=86.63 x2=0.7327 n2=1040 sec=1.8 mode=standard dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=13 skE=13 keys=bagua,bigT,charge,curse,drain,guard,gun,ji,railgun,reflect,ring,snipe,sword coop=off
+[冠军4N] h2=87.02 x2=0.7404 n2=1040 sec=1.7 mode=standard dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=13 skE=12 keys=bagua,bigT,charge,curse,drain,guard,gun,ji,railgun,reflect,ring,snipe,sword coop=off
+[冠军4N] h2=86.25 x2=0.7250 n2=1040 sec=1.7 mode=standard dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=13 skE=12 keys=bagua,bigT,charge,curse,drain,guard,gun,ji,railgun,reflect,ring,snipe,sword coop=off

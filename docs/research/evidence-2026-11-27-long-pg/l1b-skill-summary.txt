@@ -1,0 +1,6 @@
+{"id":"nov27-long-pgdr-l1b.seg1200","win":0.515,"union":19,"self":10,"js":0.0893,"chargeUses":82,"chargePaid":69,"chargeRate":0.8414634146341463}
+{"id":"nov27-long-pgdr-l1b.seg1800","win":0.4967,"union":18,"self":12,"js":0.0896,"chargeUses":76,"chargePaid":56,"chargeRate":0.7368421052631579}
+{"id":"nov27-long-pgdr-l1b.seg2400","win":0.5133,"union":17,"self":11,"js":0.0872,"chargeUses":62,"chargePaid":52,"chargeRate":0.8387096774193549}
+{"id":"nov27-long-pgdr-l1b.seg3000","win":0.5083,"union":17,"self":13,"js":0.0774,"chargeUses":86,"chargePaid":77,"chargeRate":0.8953488372093024}
+{"id":"nov27-long-pgdr-l1b.seg3600","win":0.5108,"union":16,"self":11,"js":0.0803,"chargeUses":77,"chargePaid":71,"chargeRate":0.922077922077922}
+{"id":"nov27-long-pgdr-l1b.seg600","win":0.5442,"union":18,"self":14,"js":0.0766,"chargeUses":84,"chargePaid":58,"chargeRate":0.6904761904761905}
