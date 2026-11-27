@@ -8,7 +8,7 @@
   "selfOnlySkills": [],
   "coverage": {
    "ji": 120,
-   "sword": 68,
+   "sword": 67,
    "guard": 71,
    "bagua": 68,
    "gun": 110,
@@ -23,23 +23,23 @@
    "bigT": 1
   },
   "totalUses": {
-   "ji": 15442,
-   "sword": 1272,
+   "ji": 15445,
+   "sword": 1271,
    "guard": 2134,
    "bagua": 2042,
-   "gun": 5240,
+   "gun": 5243,
    "reflect": 1797,
-   "curse": 1119,
+   "curse": 1120,
    "firestorm": 407,
    "snipe": 1014,
-   "charge": 1789,
+   "charge": 1788,
    "laserEye": 1411,
    "railgun": 23,
    "shift": 46,
    "bigT": 10
   },
   "totalCells": 120,
-  "decN": 33746,
+  "decN": 33751,
   "closure": {
    "sword": {
     "uses": 374,
@@ -101,8 +101,8 @@
    },
    "guard": {
     "uses": 490,
-    "paid": 111,
-    "wasted": 379,
+    "paid": 112,
+    "wasted": 378,
     "unit": "games",
     "byShape": {
      "2:multi": {
@@ -143,9 +143,9 @@
      },
      "8:multi": {
       "uses": 29,
-      "paid": 1,
-      "wasted": 28,
-      "rate": 0.034482758620689655
+      "paid": 2,
+      "wasted": 27,
+      "rate": 0.06896551724137931
      },
      "8:long": {
       "uses": 100,
@@ -154,13 +154,13 @@
       "rate": 0.19
      }
     },
-    "rate": 0.22653061224489796,
+    "rate": 0.22857142857142856,
     "readable": true
    },
    "charge": {
-    "uses": 1780,
+    "uses": 1779,
     "paid": 1432,
-    "wasted": 329,
+    "wasted": 328,
     "unit": "events",
     "byShape": {
      "2:multi": {
@@ -200,10 +200,10 @@
       "rate": 0.8744292237442922
      },
      "8:multi": {
-      "uses": 173,
+      "uses": 172,
       "paid": 87,
-      "wasted": 79,
-      "rate": 0.5028901734104047
+      "wasted": 78,
+      "rate": 0.5058139534883721
      },
      "8:long": {
       "uses": 486,
@@ -212,7 +212,7 @@
       "rate": 0.9238683127572016
      }
     },
-    "rate": 0.8044943820224719,
+    "rate": 0.804946599213041,
     "readable": true
    },
    "bagua": {
@@ -448,9 +448,9 @@
     "readable": true
    },
    "curse": {
-    "uses": 232,
+    "uses": 233,
     "paid": 214,
-    "wasted": 18,
+    "wasted": 19,
     "unit": "games",
     "byShape": {
      "2:long": {
@@ -460,9 +460,9 @@
       "rate": 1
      },
      "8:multi": {
-      "uses": 12,
+      "uses": 13,
       "paid": 9,
-      "wasted": 3,
+      "wasted": 4,
       "rate": null
      },
      "3:multi": {
@@ -502,7 +502,7 @@
       "rate": 1
      }
     },
-    "rate": 0.9224137931034483,
+    "rate": 0.9184549356223176,
     "readable": true
    },
    "snipe": {
@@ -666,23 +666,23 @@
     "readable": false
    }
   },
-  "switchJs": 0.0496,
+  "switchJs": 0.0494,
   "switchJsCells": 10,
-  "winRate": 0.3867,
+  "winRate": 0.3858,
   "bead": {
-   "elecGained": 347,
+   "elecGained": 346,
    "elecSpent": 23,
-   "elecExpired": 318,
+   "elecExpired": 317,
    "boomGained": 1433,
    "boomSpent": 1409,
    "boomExpired": 11
   },
   "curseStats": {
-   "curseOk": 1119,
-   "curseLanded": 300,
+   "curseOk": 1120,
+   "curseLanded": 301,
    "firestormOk": 407,
    "firestormHits": 382,
-   "stickGames": 232,
+   "stickGames": 233,
    "loopGames": 214,
    "boomGames": 214,
    "emptyBoomGames": 0,
@@ -1035,7 +1035,7 @@
     "g": 10
    },
    "DR-R3E@8m": {
-    "w": 1,
+    "w": 0,
     "g": 10
    },
    "DR-R3E@8l": {
@@ -5628,43 +5628,51 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 0,
     "keys": {
-     "ji": 53,
+     "ji": 56,
      "reflect": 17,
-     "charge": 9,
+     "charge": 8,
      "laserEye": 7,
-     "gun": 20,
+     "gun": 23,
      "bagua": 4,
      "snipe": 3,
      "guard": 4,
-     "sword": 3
+     "sword": 2,
+     "curse": 1
     },
     "buckets": {
      "4": {
-      "ji": 33,
-      "reflect": 4,
+      "ji": 36,
+      "reflect": 5,
       "bagua": 4,
-      "guard": 4
+      "guard": 3
      },
      "5": {
-      "reflect": 13,
-      "ji": 16,
+      "reflect": 12,
+      "ji": 14,
       "laserEye": 6,
-      "gun": 17
+      "gun": 20,
+      "guard": 1
      },
      "6": {
-      "charge": 9,
+      "charge": 8,
       "snipe": 3,
-      "sword": 3
+      "sword": 2
      },
      "8": {
       "ji": 3
      },
      "9": {
       "gun": 3,
-      "laserEye": 1,
+      "ji": 2,
+      "laserEye": 1
+     },
+     "10": {
       "ji": 1
+     },
+     "11": {
+      "curse": 1
      }
     }
    },
@@ -7601,10 +7609,10 @@
  "id": "FS2-LE26",
  "wid": "56806d43e003f89b",
  "tier": "hard",
- "rulesFingerprint": "bfd49045",
+ "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-26T13:50:17.554Z",
- "stageSec": 38.9,
+ "measuredAt": "2026-11-27T16:19:05.789Z",
+ "stageSec": 16.6,
  "stage2": {
   "shortlist": [
    "tank",

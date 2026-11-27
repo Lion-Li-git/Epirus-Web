@@ -17,9 +17,9 @@
    "ring": 0
   },
   "totalUses": {
-   "ji": 19356,
+   "ji": 19353,
    "gun": 1572,
-   "sword": 4956,
+   "sword": 4951,
    "guard": 444,
    "charge": 2217,
    "reflect": 41,
@@ -29,7 +29,7 @@
    "ring": 1
   },
   "totalCells": 120,
-  "decN": 29914,
+  "decN": 29906,
   "closure": {
    "gun": {
     "uses": 1006,
@@ -460,9 +460,9 @@
     "readable": true
    }
   },
-  "switchJs": 0.056,
+  "switchJs": 0.0566,
   "switchJsCells": 12,
-  "winRate": 0.335,
+  "winRate": 0.3383,
   "bead": {
    "elecGained": 2216,
    "elecSpent": 1001,
@@ -937,7 +937,7 @@
     "g": 10
    },
    "AR-TK2@2l": {
-    "w": 3,
+    "w": 7,
     "g": 10
    },
    "AR-TK2@3m": {
@@ -6670,11 +6670,11 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 3,
+    "win": 7,
     "keys": {
-     "ji": 139,
+     "ji": 136,
      "gun": 19,
-     "sword": 57,
+     "sword": 52,
      "guard": 5,
      "bigT": 1
     },
@@ -6708,17 +6708,17 @@
       "sword": 2
      },
      "8": {
-      "ji": 15
+      "ji": 9
      },
      "9": {
-      "ji": 16
+      "ji": 14
      },
      "10": {
-      "sword": 15,
-      "ji": 1
+      "ji": 6,
+      "sword": 5
      },
      "11": {
-      "sword": 1
+      "sword": 6
      }
     }
    },
@@ -7092,10 +7092,10 @@
  "id": "RINGB11",
  "wid": "764f0b92c696fc62",
  "tier": "soft",
- "rulesFingerprint": "bfd49045",
+ "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-26T13:52:39.857Z",
- "stageSec": 17.6,
+ "measuredAt": "2026-11-27T16:22:44.085Z",
+ "stageSec": 13.1,
  "stage2": {
   "shortlist": [
    "tank",

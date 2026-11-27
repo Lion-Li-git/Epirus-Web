@@ -1,92 +1,94 @@
 {
  "stage1": {
-  "unionN": 13,
-  "selfUnionN": 11,
+  "unionN": 14,
+  "selfUnionN": 12,
   "envOnlySkills": [
    "shift",
-   "bigT"
+   "curse"
   ],
   "selfOnlySkills": [],
   "coverage": {
    "ji": 120,
-   "sword": 88,
+   "sword": 85,
    "gun": 100,
-   "guard": 63,
-   "reflect": 79,
+   "guard": 66,
+   "reflect": 80,
    "snipe": 82,
-   "holo": 30,
-   "charge": 38,
-   "railgun": 38,
-   "bagua": 66,
+   "holo": 24,
+   "charge": 36,
+   "railgun": 36,
+   "bagua": 67,
+   "jinshield": 32,
    "shift": 3,
    "bigT": 9,
    "curse": 0
   },
   "totalUses": {
-   "ji": 17603,
-   "sword": 2532,
-   "gun": 4360,
-   "guard": 935,
-   "reflect": 1254,
-   "snipe": 2302,
-   "holo": 290,
-   "charge": 770,
-   "railgun": 581,
-   "bagua": 1237,
+   "ji": 15707,
+   "sword": 1514,
+   "gun": 4311,
+   "guard": 960,
+   "reflect": 1244,
+   "snipe": 2298,
+   "holo": 224,
+   "charge": 774,
+   "railgun": 586,
+   "bagua": 1259,
+   "jinshield": 275,
    "shift": 18,
-   "bigT": 89,
-   "curse": 3
+   "bigT": 83,
+   "curse": 1
   },
   "totalCells": 120,
-  "decN": 31974,
+  "decN": 29254,
   "closure": {
    "sword": {
-    "uses": 533,
-    "paid": 428,
-    "wasted": 105,
+    "uses": 546,
+    "paid": 445,
+    "wasted": 101,
     "unit": "games",
     "byShape": {
      "2:multi": {
-      "uses": 84,
-      "paid": 65,
+      "uses": 87,
+      "paid": 68,
       "wasted": 19,
-      "rate": 0.7738095238095238
+      "rate": 0.7816091954022989
      },
      "2:long": {
       "uses": 128,
-      "paid": 119,
-      "wasted": 9,
-      "rate": 0.9296875
+      "paid": 120,
+      "wasted": 8,
+      "rate": 0.9375
      },
      "3:multi": {
       "uses": 45,
-      "paid": 30,
-      "wasted": 15,
-      "rate": 0.6666666666666666
+      "paid": 33,
+      "wasted": 12,
+      "rate": 0.7333333333333333
      },
      "3:long": {
-      "uses": 72,
-      "paid": 60,
+      "uses": 71,
+      "paid": 59,
       "wasted": 12,
-      "rate": 0.8333333333333334
+      "rate": 0.8309859154929577
      },
      "5:multi": {
-      "uses": 29,
-      "paid": 17,
-      "wasted": 12,
-      "rate": 0.5862068965517241
+      "uses": 28,
+      "paid": 15,
+      "wasted": 13,
+      "rate": 0.5357142857142857
      },
      "5:long": {
-      "uses": 77,
-      "paid": 57,
+      "uses": 84,
+      "paid": 64,
       "wasted": 20,
-      "rate": 0.7402597402597403
+      "rate": 0.7619047619047619
      },
      "8:multi": {
-      "uses": 22,
-      "paid": 16,
-      "wasted": 6,
-      "rate": 0.7272727272727273
+      "uses": 27,
+      "paid": 22,
+      "wasted": 5,
+      "rate": 0.8148148148148148
      },
      "8:long": {
       "uses": 76,
@@ -95,71 +97,71 @@
       "rate": 0.8421052631578947
      }
     },
-    "rate": 0.8030018761726079,
+    "rate": 0.815018315018315,
     "readable": true
    },
    "gun": {
-    "uses": 907,
-    "paid": 751,
-    "wasted": 156,
+    "uses": 891,
+    "paid": 737,
+    "wasted": 154,
     "unit": "games",
     "byShape": {
      "2:multi": {
-      "uses": 89,
-      "paid": 68,
+      "uses": 79,
+      "paid": 58,
       "wasted": 21,
-      "rate": 0.7640449438202247
+      "rate": 0.7341772151898734
      },
      "3:multi": {
-      "uses": 130,
-      "paid": 101,
-      "wasted": 29,
-      "rate": 0.7769230769230769
+      "uses": 131,
+      "paid": 105,
+      "wasted": 26,
+      "rate": 0.8015267175572519
      },
      "3:long": {
-      "uses": 131,
-      "paid": 109,
+      "uses": 132,
+      "paid": 110,
       "wasted": 22,
-      "rate": 0.8320610687022901
+      "rate": 0.8333333333333334
      },
      "5:multi": {
-      "uses": 116,
-      "paid": 90,
+      "uses": 117,
+      "paid": 91,
       "wasted": 26,
-      "rate": 0.7758620689655172
+      "rate": 0.7777777777777778
      },
      "5:long": {
-      "uses": 127,
-      "paid": 110,
+      "uses": 126,
+      "paid": 109,
       "wasted": 17,
-      "rate": 0.8661417322834646
+      "rate": 0.8650793650793651
      },
      "8:multi": {
-      "uses": 72,
-      "paid": 53,
-      "wasted": 19,
-      "rate": 0.7361111111111112
+      "uses": 67,
+      "paid": 46,
+      "wasted": 21,
+      "rate": 0.6865671641791045
      },
      "8:long": {
-      "uses": 123,
-      "paid": 106,
-      "wasted": 17,
-      "rate": 0.8617886178861789
+      "uses": 125,
+      "paid": 109,
+      "wasted": 16,
+      "rate": 0.872
      },
      "2:long": {
-      "uses": 119,
-      "paid": 114,
+      "uses": 114,
+      "paid": 109,
       "wasted": 5,
-      "rate": 0.957983193277311
+      "rate": 0.956140350877193
      }
     },
-    "rate": 0.8280044101433297,
+    "rate": 0.8271604938271605,
     "readable": true
    },
    "charge": {
-    "uses": 770,
-    "paid": 581,
-    "wasted": 186,
+    "uses": 774,
+    "paid": 586,
+    "wasted": 185,
     "unit": "events",
     "byShape": {
      "2:multi": {
@@ -181,172 +183,166 @@
       "rate": 1
      },
      "3:long": {
-      "uses": 158,
+      "uses": 157,
       "paid": 118,
-      "wasted": 40,
-      "rate": 0.7468354430379747
+      "wasted": 39,
+      "rate": 0.7515923566878981
      },
      "5:multi": {
-      "uses": 34,
-      "paid": 33,
+      "uses": 32,
+      "paid": 31,
       "wasted": 1,
-      "rate": 0.9705882352941176
+      "rate": 0.96875
      },
      "5:long": {
-      "uses": 256,
-      "paid": 141,
+      "uses": 257,
+      "paid": 142,
       "wasted": 114,
-      "rate": 0.55078125
+      "rate": 0.5525291828793775
      },
      "8:multi": {
-      "uses": 74,
-      "paid": 67,
+      "uses": 79,
+      "paid": 72,
       "wasted": 7,
-      "rate": 0.9054054054054054
+      "rate": 0.9113924050632911
      },
      "8:long": {
-      "uses": 204,
-      "paid": 178,
+      "uses": 205,
+      "paid": 179,
       "wasted": 24,
-      "rate": 0.8725490196078431
+      "rate": 0.8731707317073171
      }
     },
-    "rate": 0.7545454545454545,
+    "rate": 0.7571059431524548,
     "readable": true
    },
    "guard": {
-    "uses": 345,
+    "uses": 360,
     "paid": 92,
-    "wasted": 253,
+    "wasted": 268,
     "unit": "games",
     "byShape": {
      "2:long": {
-      "uses": 60,
-      "paid": 35,
-      "wasted": 25,
-      "rate": 0.5833333333333334
+      "uses": 63,
+      "paid": 34,
+      "wasted": 29,
+      "rate": 0.5396825396825397
      },
      "3:long": {
-      "uses": 76,
-      "paid": 14,
-      "wasted": 62,
-      "rate": 0.18421052631578946
+      "uses": 79,
+      "paid": 19,
+      "wasted": 60,
+      "rate": 0.24050632911392406
      },
      "5:multi": {
-      "uses": 22,
-      "paid": 6,
-      "wasted": 16,
-      "rate": 0.2727272727272727
+      "uses": 19,
+      "paid": 5,
+      "wasted": 14,
+      "rate": null
      },
      "5:long": {
-      "uses": 68,
-      "paid": 11,
-      "wasted": 57,
-      "rate": 0.16176470588235295
+      "uses": 74,
+      "paid": 10,
+      "wasted": 64,
+      "rate": 0.13513513513513514
      },
      "8:multi": {
-      "uses": 23,
-      "paid": 5,
-      "wasted": 18,
-      "rate": 0.21739130434782608
+      "uses": 24,
+      "paid": 3,
+      "wasted": 21,
+      "rate": 0.125
      },
      "8:long": {
-      "uses": 54,
+      "uses": 62,
       "paid": 10,
-      "wasted": 44,
-      "rate": 0.18518518518518517
+      "wasted": 52,
+      "rate": 0.16129032258064516
      },
      "3:multi": {
-      "uses": 30,
+      "uses": 29,
       "paid": 11,
-      "wasted": 19,
-      "rate": 0.36666666666666664
+      "wasted": 18,
+      "rate": 0.3793103448275862
      },
      "2:multi": {
-      "uses": 12,
+      "uses": 10,
       "paid": 0,
-      "wasted": 12,
+      "wasted": 10,
       "rate": null
      }
     },
-    "rate": 0.26666666666666666,
+    "rate": 0.25555555555555554,
     "readable": true
    },
    "reflect": {
-    "uses": 670,
-    "paid": 219,
-    "wasted": 451,
+    "uses": 665,
+    "paid": 221,
+    "wasted": 444,
     "unit": "games",
     "byShape": {
      "3:multi": {
       "uses": 132,
-      "paid": 35,
-      "wasted": 97,
-      "rate": 0.26515151515151514
+      "paid": 37,
+      "wasted": 95,
+      "rate": 0.2803030303030303
      },
      "3:long": {
       "uses": 135,
-      "paid": 51,
-      "wasted": 84,
-      "rate": 0.37777777777777777
+      "paid": 49,
+      "wasted": 86,
+      "rate": 0.362962962962963
      },
      "5:multi": {
       "uses": 130,
-      "paid": 31,
-      "wasted": 99,
-      "rate": 0.23846153846153847
+      "paid": 32,
+      "wasted": 98,
+      "rate": 0.24615384615384617
      },
      "5:long": {
       "uses": 125,
-      "paid": 49,
-      "wasted": 76,
-      "rate": 0.392
+      "paid": 47,
+      "wasted": 78,
+      "rate": 0.376
      },
      "8:multi": {
-      "uses": 40,
-      "paid": 8,
-      "wasted": 32,
-      "rate": 0.2
+      "uses": 33,
+      "paid": 5,
+      "wasted": 28,
+      "rate": 0.15151515151515152
      },
      "8:long": {
-      "uses": 84,
-      "paid": 24,
-      "wasted": 60,
-      "rate": 0.2857142857142857
+      "uses": 83,
+      "paid": 29,
+      "wasted": 54,
+      "rate": 0.3493975903614458
      },
      "2:long": {
-      "uses": 23,
-      "paid": 21,
-      "wasted": 2,
-      "rate": 0.9130434782608695
-     },
-     "2:multi": {
-      "uses": 1,
-      "paid": 0,
-      "wasted": 1,
-      "rate": null
+      "uses": 27,
+      "paid": 22,
+      "wasted": 5,
+      "rate": 0.8148148148148148
      }
     },
-    "rate": 0.32686567164179103,
+    "rate": 0.3323308270676692,
     "readable": true
    },
    "snipe": {
-    "uses": 677,
-    "paid": 544,
+    "uses": 680,
+    "paid": 547,
     "wasted": 133,
     "unit": "games",
     "byShape": {
      "3:multi": {
       "uses": 105,
-      "paid": 69,
-      "wasted": 36,
-      "rate": 0.6571428571428571
+      "paid": 71,
+      "wasted": 34,
+      "rate": 0.6761904761904762
      },
      "3:long": {
       "uses": 107,
-      "paid": 78,
-      "wasted": 29,
-      "rate": 0.7289719626168224
+      "paid": 81,
+      "wasted": 26,
+      "rate": 0.7570093457943925
      },
      "5:multi": {
       "uses": 101,
@@ -356,15 +352,15 @@
      },
      "5:long": {
       "uses": 85,
-      "paid": 80,
-      "wasted": 5,
-      "rate": 0.9411764705882353
+      "paid": 79,
+      "wasted": 6,
+      "rate": 0.9294117647058824
      },
      "8:multi": {
-      "uses": 107,
-      "paid": 90,
+      "uses": 106,
+      "paid": 89,
       "wasted": 17,
-      "rate": 0.8411214953271028
+      "rate": 0.839622641509434
      },
      "2:multi": {
       "uses": 54,
@@ -373,88 +369,88 @@
       "rate": 0.8333333333333334
      },
      "2:long": {
-      "uses": 65,
-      "paid": 65,
-      "wasted": 0,
-      "rate": 1
+      "uses": 67,
+      "paid": 62,
+      "wasted": 5,
+      "rate": 0.9253731343283582
      },
      "8:long": {
-      "uses": 53,
-      "paid": 45,
-      "wasted": 8,
-      "rate": 0.8490566037735849
+      "uses": 55,
+      "paid": 48,
+      "wasted": 7,
+      "rate": 0.8727272727272727
      }
     },
-    "rate": 0.8035450516986706,
+    "rate": 0.8044117647058824,
     "readable": true
    },
    "holo": {
-    "uses": 154,
-    "paid": 48,
-    "wasted": 106,
+    "uses": 122,
+    "paid": 21,
+    "wasted": 101,
     "unit": "games",
     "byShape": {
      "3:long": {
-      "uses": 30,
-      "paid": 4,
-      "wasted": 26,
-      "rate": 0.13333333333333333
+      "uses": 26,
+      "paid": 1,
+      "wasted": 25,
+      "rate": 0.038461538461538464
      },
      "5:multi": {
-      "uses": 7,
-      "paid": 3,
+      "uses": 5,
+      "paid": 1,
       "wasted": 4,
       "rate": null
      },
      "5:long": {
-      "uses": 28,
-      "paid": 8,
-      "wasted": 20,
-      "rate": 0.2857142857142857
-     },
-     "8:long": {
-      "uses": 57,
-      "paid": 16,
-      "wasted": 41,
-      "rate": 0.2807017543859649
-     },
-     "3:multi": {
-      "uses": 13,
-      "paid": 3,
-      "wasted": 10,
-      "rate": null
-     },
-     "8:multi": {
-      "uses": 19,
-      "paid": 14,
-      "wasted": 5,
-      "rate": null
-     }
-    },
-    "rate": 0.3116883116883117,
-    "readable": true
-   },
-   "railgun": {
-    "uses": 251,
-    "paid": 231,
-    "wasted": 20,
-    "unit": "games",
-    "byShape": {
-     "5:long": {
-      "uses": 51,
-      "paid": 50,
-      "wasted": 1,
-      "rate": 0.9803921568627451
-     },
-     "8:multi": {
-      "uses": 26,
-      "paid": 25,
-      "wasted": 1,
-      "rate": 0.9615384615384616
+      "uses": 23,
+      "paid": 5,
+      "wasted": 18,
+      "rate": 0.21739130434782608
      },
      "8:long": {
       "uses": 49,
-      "paid": 49,
+      "paid": 10,
+      "wasted": 39,
+      "rate": 0.20408163265306123
+     },
+     "3:multi": {
+      "uses": 6,
+      "paid": 0,
+      "wasted": 6,
+      "rate": null
+     },
+     "8:multi": {
+      "uses": 13,
+      "paid": 4,
+      "wasted": 9,
+      "rate": null
+     }
+    },
+    "rate": 0.1721311475409836,
+    "readable": true
+   },
+   "railgun": {
+    "uses": 261,
+    "paid": 237,
+    "wasted": 24,
+    "unit": "games",
+    "byShape": {
+     "5:long": {
+      "uses": 52,
+      "paid": 50,
+      "wasted": 2,
+      "rate": 0.9615384615384616
+     },
+     "8:multi": {
+      "uses": 35,
+      "paid": 32,
+      "wasted": 3,
+      "rate": 0.9142857142857143
+     },
+     "8:long": {
+      "uses": 50,
+      "paid": 50,
       "wasted": 0,
       "rate": 1
      },
@@ -466,9 +462,9 @@
      },
      "3:long": {
       "uses": 61,
-      "paid": 61,
-      "wasted": 0,
-      "rate": 1
+      "paid": 60,
+      "wasted": 1,
+      "rate": 0.9836065573770492
      },
      "2:multi": {
       "uses": 2,
@@ -483,71 +479,129 @@
       "rate": null
      },
      "5:multi": {
-      "uses": 27,
-      "paid": 15,
+      "uses": 26,
+      "paid": 14,
       "wasted": 12,
-      "rate": 0.5555555555555556
+      "rate": 0.5384615384615384
      }
     },
-    "rate": 0.9203187250996016,
+    "rate": 0.9080459770114943,
     "readable": true
    },
    "bagua": {
-    "uses": 489,
-    "paid": 117,
-    "wasted": 372,
+    "uses": 487,
+    "paid": 116,
+    "wasted": 371,
     "unit": "games",
     "byShape": {
      "5:long": {
-      "uses": 96,
-      "paid": 26,
-      "wasted": 70,
-      "rate": 0.2708333333333333
+      "uses": 98,
+      "paid": 27,
+      "wasted": 71,
+      "rate": 0.2755102040816326
      },
      "8:multi": {
-      "uses": 27,
+      "uses": 23,
       "paid": 4,
-      "wasted": 23,
-      "rate": 0.14814814814814814
+      "wasted": 19,
+      "rate": 0.17391304347826086
      },
      "8:long": {
-      "uses": 83,
-      "paid": 27,
-      "wasted": 56,
-      "rate": 0.3253012048192771
+      "uses": 82,
+      "paid": 25,
+      "wasted": 57,
+      "rate": 0.3048780487804878
      },
      "2:long": {
-      "uses": 95,
-      "paid": 25,
-      "wasted": 70,
-      "rate": 0.2631578947368421
+      "uses": 88,
+      "paid": 23,
+      "wasted": 65,
+      "rate": 0.26136363636363635
      },
      "3:multi": {
-      "uses": 44,
-      "paid": 1,
-      "wasted": 43,
-      "rate": 0.022727272727272728
+      "uses": 47,
+      "paid": 3,
+      "wasted": 44,
+      "rate": 0.06382978723404255
      },
      "3:long": {
-      "uses": 90,
-      "paid": 29,
-      "wasted": 61,
-      "rate": 0.32222222222222224
+      "uses": 91,
+      "paid": 28,
+      "wasted": 63,
+      "rate": 0.3076923076923077
      },
      "2:multi": {
-      "uses": 13,
-      "paid": 0,
-      "wasted": 13,
+      "uses": 16,
+      "paid": 1,
+      "wasted": 15,
       "rate": null
      },
      "5:multi": {
-      "uses": 41,
+      "uses": 42,
       "paid": 5,
-      "wasted": 36,
-      "rate": 0.12195121951219512
+      "wasted": 37,
+      "rate": 0.11904761904761904
      }
     },
-    "rate": 0.2392638036809816,
+    "rate": 0.23819301848049282,
+    "readable": true
+   },
+   "jinshield": {
+    "uses": 197,
+    "paid": 133,
+    "wasted": 64,
+    "unit": "games",
+    "byShape": {
+     "8:multi": {
+      "uses": 18,
+      "paid": 13,
+      "wasted": 5,
+      "rate": null
+     },
+     "3:long": {
+      "uses": 39,
+      "paid": 21,
+      "wasted": 18,
+      "rate": 0.5384615384615384
+     },
+     "2:long": {
+      "uses": 41,
+      "paid": 29,
+      "wasted": 12,
+      "rate": 0.7073170731707317
+     },
+     "5:long": {
+      "uses": 22,
+      "paid": 18,
+      "wasted": 4,
+      "rate": 0.8181818181818182
+     },
+     "8:long": {
+      "uses": 28,
+      "paid": 17,
+      "wasted": 11,
+      "rate": 0.6071428571428571
+     },
+     "2:multi": {
+      "uses": 13,
+      "paid": 9,
+      "wasted": 4,
+      "rate": null
+     },
+     "3:multi": {
+      "uses": 19,
+      "paid": 14,
+      "wasted": 5,
+      "rate": null
+     },
+     "5:multi": {
+      "uses": 17,
+      "paid": 12,
+      "wasted": 5,
+      "rate": null
+     }
+    },
+    "rate": 0.6751269035532995,
     "readable": true
    },
    "shift": {
@@ -579,52 +633,34 @@
     "readable": false
    },
    "bigT": {
-    "uses": 89,
-    "paid": 63,
-    "wasted": 26,
+    "uses": 83,
+    "paid": 58,
+    "wasted": 25,
     "unit": "games",
     "byShape": {
      "2:multi": {
-      "uses": 80,
-      "paid": 62,
+      "uses": 76,
+      "paid": 58,
       "wasted": 18,
-      "rate": 0.775
-     },
-     "5:long": {
-      "uses": 1,
-      "paid": 1,
-      "wasted": 0,
-      "rate": null
+      "rate": 0.7631578947368421
      },
      "2:long": {
       "uses": 7,
       "paid": 0,
       "wasted": 7,
       "rate": null
-     },
-     "3:long": {
-      "uses": 1,
-      "paid": 0,
-      "wasted": 1,
-      "rate": null
      }
     },
-    "rate": 0.7078651685393258,
+    "rate": 0.6987951807228916,
     "readable": true
    },
    "curse": {
-    "uses": 3,
+    "uses": 1,
     "paid": 0,
-    "wasted": 3,
+    "wasted": 1,
     "unit": "games",
     "byShape": {
-     "5:multi": {
-      "uses": 2,
-      "paid": 0,
-      "wasted": 2,
-      "rate": null
-     },
-     "2:long": {
+     "5:long": {
       "uses": 1,
       "paid": 0,
       "wasted": 1,
@@ -635,23 +671,23 @@
     "readable": false
    }
   },
-  "switchJs": 0.0641,
+  "switchJs": 0.0688,
   "switchJsCells": 12,
-  "winRate": 0.4508,
+  "winRate": 0.4442,
   "bead": {
-   "elecGained": 770,
-   "elecSpent": 581,
-   "elecExpired": 186,
+   "elecGained": 774,
+   "elecSpent": 586,
+   "elecExpired": 185,
    "boomGained": 0,
    "boomSpent": 0,
    "boomExpired": 0
   },
   "curseStats": {
-   "curseOk": 3,
-   "curseLanded": 3,
+   "curseOk": 1,
+   "curseLanded": 1,
    "firestormOk": 0,
    "firestormHits": 0,
-   "stickGames": 3,
+   "stickGames": 1,
    "loopGames": 0,
    "boomGames": 0,
    "emptyBoomGames": 0,
@@ -780,7 +816,7 @@
     "g": 10
    },
    "guardgun@8m": {
-    "w": 1,
+    "w": 0,
     "g": 10
    },
    "guardgun@8l": {
@@ -792,7 +828,7 @@
     "g": 10
    },
    "heavyfire@2l": {
-    "w": 10,
+    "w": 7,
     "g": 10
    },
    "heavyfire@3m": {
@@ -800,7 +836,7 @@
     "g": 10
    },
    "heavyfire@3l": {
-    "w": 4,
+    "w": 5,
     "g": 10
    },
    "heavyfire@5m": {
@@ -812,7 +848,7 @@
     "g": 10
    },
    "heavyfire@8m": {
-    "w": 1,
+    "w": 0,
     "g": 10
    },
    "heavyfire@8l": {
@@ -844,7 +880,7 @@
     "g": 10
    },
    "deepsaver@8m": {
-    "w": 9,
+    "w": 8,
     "g": 10
    },
    "deepsaver@8l": {
@@ -888,7 +924,7 @@
     "g": 10
    },
    "tankline@2l": {
-    "w": 10,
+    "w": 7,
     "g": 10
    },
    "tankline@3m": {
@@ -896,7 +932,7 @@
     "g": 10
    },
    "tankline@3l": {
-    "w": 4,
+    "w": 5,
     "g": 10
    },
    "tankline@5m": {
@@ -908,7 +944,7 @@
     "g": 10
    },
    "tankline@8m": {
-    "w": 1,
+    "w": 0,
     "g": 10
    },
    "tankline@8l": {
@@ -940,7 +976,7 @@
     "g": 10
    },
    "targeter@8m": {
-    "w": 3,
+    "w": 2,
     "g": 10
    },
    "targeter@8l": {
@@ -948,11 +984,11 @@
     "g": 10
    },
    "beadburst@2m": {
-    "w": 9,
+    "w": 6,
     "g": 10
    },
    "beadburst@2l": {
-    "w": 5,
+    "w": 2,
     "g": 10
    },
    "beadburst@3m": {
@@ -964,19 +1000,19 @@
     "g": 10
    },
    "beadburst@5m": {
-    "w": 2,
+    "w": 1,
     "g": 10
    },
    "beadburst@5l": {
-    "w": 2,
+    "w": 0,
     "g": 10
    },
    "beadburst@8m": {
-    "w": 6,
+    "w": 2,
     "g": 10
    },
    "beadburst@8l": {
-    "w": 0,
+    "w": 1,
     "g": 10
    },
    "DR-R3E@2m": {
@@ -984,7 +1020,7 @@
     "g": 10
    },
    "DR-R3E@2l": {
-    "w": 8,
+    "w": 6,
     "g": 10
    },
    "DR-R3E@3m": {
@@ -992,7 +1028,7 @@
     "g": 10
    },
    "DR-R3E@3l": {
-    "w": 0,
+    "w": 2,
     "g": 10
    },
    "DR-R3E@5m": {
@@ -1000,7 +1036,7 @@
     "g": 10
    },
    "DR-R3E@5l": {
-    "w": 1,
+    "w": 2,
     "g": 10
    },
    "DR-R3E@8m": {
@@ -1024,15 +1060,15 @@
     "g": 10
    },
    "FS-DR@3l": {
-    "w": 2,
+    "w": 3,
     "g": 10
    },
    "FS-DR@5m": {
-    "w": 1,
+    "w": 2,
     "g": 10
    },
    "FS-DR@5l": {
-    "w": 0,
+    "w": 1,
     "g": 10
    },
    "FS-DR@8m": {
@@ -1052,15 +1088,15 @@
     "g": 10
    },
    "FS-G2@3m": {
-    "w": 1,
+    "w": 5,
     "g": 10
    },
    "FS-G2@3l": {
-    "w": 1,
+    "w": 0,
     "g": 10
    },
    "FS-G2@5m": {
-    "w": 0,
+    "w": 1,
     "g": 10
    },
    "FS-G2@5l": {
@@ -1080,11 +1116,11 @@
     "g": 10
    },
    "FS2-LE26@2l": {
-    "w": 7,
+    "w": 6,
     "g": 10
    },
    "FS2-LE26@3m": {
-    "w": 1,
+    "w": 5,
     "g": 10
    },
    "FS2-LE26@3l": {
@@ -1124,7 +1160,7 @@
     "g": 10
    },
    "AR-TK2@5m": {
-    "w": 1,
+    "w": 3,
     "g": 10
    },
    "AR-TK2@5l": {
@@ -1441,15 +1477,16 @@
     "games": 10,
     "win": 1,
     "keys": {
-     "ji": 48,
+     "ji": 45,
      "sword": 4,
      "guard": 3,
-     "snipe": 9,
-     "reflect": 7,
+     "snipe": 8,
+     "reflect": 6,
      "gun": 7,
      "bagua": 1,
      "charge": 2,
-     "railgun": 2
+     "railgun": 2,
+     "jinshield": 1
     },
     "buckets": {
      "4": {
@@ -1472,17 +1509,18 @@
      },
      "8": {
       "guard": 3,
-      "ji": 12,
-      "reflect": 4
+      "ji": 11,
+      "reflect": 3
      },
      "9": {
-      "ji": 8,
+      "ji": 6,
       "gun": 6,
-      "reflect": 1
+      "reflect": 1,
+      "jinshield": 1
      },
      "10": {
       "sword": 3,
-      "snipe": 5,
+      "snipe": 4,
       "ji": 1,
       "railgun": 1
      },
@@ -2297,10 +2335,11 @@
      "charge": 16,
      "railgun": 13,
      "gun": 11,
-     "snipe": 22,
+     "snipe": 21,
      "sword": 32,
      "guard": 6,
      "reflect": 6,
+     "jinshield": 1,
      "bagua": 3
     },
     "buckets": {
@@ -2344,14 +2383,15 @@
       "sword": 2
      },
      "8": {
-      "ji": 5
+      "ji": 6
      },
      "9": {
-      "ji": 8
+      "ji": 7,
+      "jinshield": 1
      },
      "10": {
       "ji": 4,
-      "snipe": 4,
+      "snipe": 3,
       "railgun": 1,
       "sword": 1
      },
@@ -2466,18 +2506,19 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 0,
     "keys": {
      "ji": 96,
      "reflect": 13,
      "snipe": 26,
      "gun": 13,
      "bagua": 10,
-     "sword": 5,
+     "sword": 4,
      "charge": 1,
      "railgun": 1,
      "guard": 6,
-     "holo": 4
+     "holo": 4,
+     "jinshield": 1
     },
     "buckets": {
      "4": {
@@ -2507,16 +2548,17 @@
       "bagua": 1
      },
      "9": {
-      "ji": 6,
+      "ji": 7,
       "holo": 1
      },
      "10": {
       "snipe": 3,
-      "ji": 2,
+      "ji": 1,
+      "jinshield": 1,
       "sword": 1
      },
      "11": {
-      "sword": 2
+      "sword": 1
      }
     }
    },
@@ -2645,38 +2687,54 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 10,
+    "win": 7,
     "keys": {
-     "ji": 500,
-     "sword": 232,
-     "gun": 36,
-     "bagua": 12,
-     "reflect": 6,
-     "guard": 2
+     "ji": 96,
+     "sword": 25,
+     "jinshield": 17,
+     "bagua": 11,
+     "gun": 29,
+     "guard": 6,
+     "reflect": 7
     },
     "buckets": {
      "0": {
-      "ji": 219,
-      "bagua": 12,
-      "reflect": 6,
-      "guard": 2
+      "ji": 50,
+      "bagua": 3,
+      "reflect": 5
      },
      "1": {
-      "ji": 181,
-      "gun": 32
+      "ji": 20,
+      "jinshield": 15,
+      "gun": 7
      },
      "2": {
-      "sword": 181
+      "sword": 20
      },
      "4": {
-      "ji": 49
+      "bagua": 5,
+      "guard": 3,
+      "ji": 21,
+      "reflect": 2
      },
      "5": {
-      "ji": 51,
-      "gun": 4
+      "gun": 19,
+      "ji": 4,
+      "jinshield": 2
      },
      "6": {
-      "sword": 51
+      "sword": 4
+     },
+     "8": {
+      "bagua": 3,
+      "guard": 3
+     },
+     "9": {
+      "gun": 3,
+      "ji": 1
+     },
+     "10": {
+      "sword": 1
      }
     }
    },
@@ -2728,14 +2786,15 @@
     "n": 3,
     "mode": "long",
     "games": 10,
-    "win": 4,
+    "win": 5,
     "keys": {
-     "ji": 213,
-     "reflect": 20,
-     "gun": 53,
+     "ji": 141,
+     "reflect": 23,
+     "gun": 51,
      "bagua": 15,
-     "sword": 77,
-     "guard": 6
+     "sword": 39,
+     "jinshield": 7,
+     "guard": 7
     },
     "buckets": {
      "0": {
@@ -2749,17 +2808,18 @@
       "gun": 28
      },
      "4": {
-      "ji": 30,
-      "reflect": 6,
+      "ji": 37,
+      "reflect": 9,
       "bagua": 4,
-      "guard": 4
+      "guard": 5
      },
      "5": {
-      "gun": 19,
-      "ji": 10
+      "gun": 21,
+      "ji": 9,
+      "jinshield": 4
      },
      "6": {
-      "sword": 10,
+      "sword": 9,
       "ji": 1
      },
      "7": {
@@ -2767,17 +2827,18 @@
       "sword": 1
      },
      "8": {
-      "ji": 72,
+      "ji": 31,
       "reflect": 1,
       "bagua": 1,
       "guard": 1
      },
      "9": {
-      "gun": 6,
-      "ji": 67
+      "ji": 30,
+      "jinshield": 3,
+      "gun": 2
      },
      "10": {
-      "sword": 66
+      "sword": 29
      }
     }
    },
@@ -2839,12 +2900,13 @@
     "games": 10,
     "win": 6,
     "keys": {
-     "ji": 166,
+     "ji": 110,
      "reflect": 39,
-     "gun": 91,
+     "gun": 89,
      "bagua": 19,
      "guard": 5,
-     "sword": 37
+     "sword": 9,
+     "jinshield": 2
     },
     "buckets": {
      "0": {
@@ -2858,28 +2920,30 @@
       "gun": 49
      },
      "4": {
-      "ji": 48,
+      "ji": 35,
       "reflect": 12,
       "bagua": 9,
       "guard": 4
      },
      "5": {
-      "gun": 31,
-      "ji": 19
+      "gun": 30,
+      "ji": 6,
+      "jinshield": 1
      },
      "6": {
       "ji": 2,
-      "sword": 17
+      "sword": 4
      },
      "8": {
-      "ji": 25
+      "ji": 10
      },
      "9": {
-      "gun": 11,
-      "ji": 16
+      "gun": 10,
+      "ji": 1,
+      "jinshield": 1
      },
      "10": {
-      "sword": 18
+      "sword": 3
      },
      "11": {
       "ji": 2,
@@ -2893,46 +2957,46 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 0,
     "keys": {
-     "ji": 109,
+     "ji": 102,
      "snipe": 24,
-     "sword": 16,
-     "gun": 28,
-     "bagua": 4,
+     "sword": 13,
+     "jinshield": 1,
+     "guard": 4,
      "reflect": 13,
-     "guard": 3
+     "gun": 26,
+     "bagua": 3
     },
     "buckets": {
      "4": {
       "ji": 51,
-      "guard": 1,
+      "guard": 2,
       "bagua": 2,
       "reflect": 10
      },
      "5": {
-      "ji": 25,
-      "gun": 21,
-      "bagua": 1,
-      "reflect": 2
+      "ji": 23,
+      "jinshield": 1,
+      "reflect": 3,
+      "gun": 22,
+      "bagua": 1
      },
      "6": {
       "snipe": 20,
-      "sword": 5
+      "sword": 3
      },
      "8": {
-      "ji": 18,
-      "bagua": 1,
-      "reflect": 1,
+      "ji": 14,
       "guard": 2
      },
      "9": {
-      "ji": 15,
-      "gun": 7
+      "ji": 14,
+      "gun": 4
      },
      "10": {
       "snipe": 4,
-      "sword": 11
+      "sword": 10
      }
     }
    },
@@ -2944,57 +3008,61 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 143,
-     "gun": 58,
-     "sword": 41,
-     "reflect": 28,
-     "holo": 2,
-     "bagua": 13,
-     "guard": 7
+     "ji": 118,
+     "gun": 62,
+     "sword": 24,
+     "reflect": 33,
+     "jinshield": 5,
+     "guard": 11,
+     "bagua": 9,
+     "holo": 1
     },
     "buckets": {
      "0": {
       "ji": 41,
       "reflect": 12,
-      "bagua": 2,
-      "guard": 4
+      "guard": 7,
+      "bagua": 2
      },
      "1": {
-      "gun": 21,
-      "ji": 16,
+      "gun": 22,
+      "ji": 13,
+      "jinshield": 2,
       "guard": 1,
       "holo": 1
      },
      "2": {
-      "sword": 16
+      "sword": 13
      },
      "4": {
-      "ji": 51,
-      "bagua": 9,
-      "guard": 1,
-      "reflect": 15
+      "reflect": 18,
+      "ji": 41,
+      "guard": 2,
+      "bagua": 6
      },
      "5": {
-      "ji": 22,
-      "holo": 1,
-      "gun": 29,
+      "ji": 9,
+      "jinshield": 2,
+      "gun": 30,
       "guard": 1
      },
      "6": {
-      "sword": 21
+      "sword": 8
      },
      "8": {
-      "ji": 9,
-      "bagua": 2
+      "ji": 11,
+      "reflect": 2,
+      "bagua": 1
      },
      "9": {
-      "gun": 8,
-      "ji": 3,
-      "reflect": 1
+      "gun": 10,
+      "jinshield": 1,
+      "reflect": 1,
+      "ji": 2
      },
      "10": {
-      "sword": 3,
-      "ji": 1
+      "ji": 1,
+      "sword": 2
      },
      "11": {
       "sword": 1
@@ -3282,26 +3350,25 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 9,
+    "win": 8,
     "keys": {
-     "ji": 71,
+     "ji": 45,
      "snipe": 11,
      "charge": 2,
      "railgun": 2,
      "gun": 10,
      "bagua": 1,
      "reflect": 2,
-     "holo": 1,
-     "sword": 13
+     "holo": 1
     },
     "buckets": {
      "4": {
-      "ji": 43,
+      "ji": 30,
       "bagua": 1,
       "reflect": 1
      },
      "5": {
-      "ji": 26,
+      "ji": 13,
       "gun": 10,
       "reflect": 1,
       "holo": 1
@@ -3309,8 +3376,7 @@
      "6": {
       "snipe": 11,
       "ji": 2,
-      "railgun": 2,
-      "sword": 13
+      "railgun": 2
      },
      "7": {
       "charge": 2
@@ -3692,15 +3758,16 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 82,
-     "gun": 30,
-     "bagua": 15,
-     "sword": 6,
+     "ji": 83,
+     "gun": 29,
+     "bagua": 14,
+     "sword": 5,
      "guard": 3,
-     "snipe": 4,
+     "snipe": 5,
      "reflect": 3,
      "charge": 4,
-     "railgun": 4
+     "railgun": 4,
+     "jinshield": 1
     },
     "buckets": {
      "0": {
@@ -3724,15 +3791,17 @@
       "charge": 4
      },
      "8": {
-      "ji": 10,
-      "bagua": 5
+      "ji": 9,
+      "bagua": 4
      },
      "9": {
-      "gun": 8,
-      "ji": 5
+      "gun": 7,
+      "ji": 7
      },
      "10": {
-      "sword": 2
+      "sword": 1,
+      "jinshield": 1,
+      "snipe": 1
      }
     }
    },
@@ -3783,38 +3852,54 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 10,
+    "win": 7,
     "keys": {
-     "ji": 500,
-     "sword": 232,
-     "gun": 36,
-     "bagua": 12,
-     "reflect": 6,
-     "guard": 2
+     "ji": 96,
+     "sword": 25,
+     "jinshield": 17,
+     "bagua": 11,
+     "gun": 29,
+     "guard": 6,
+     "reflect": 7
     },
     "buckets": {
      "0": {
-      "ji": 219,
-      "bagua": 12,
-      "reflect": 6,
-      "guard": 2
+      "ji": 50,
+      "bagua": 3,
+      "reflect": 5
      },
      "1": {
-      "ji": 181,
-      "gun": 32
+      "ji": 20,
+      "jinshield": 15,
+      "gun": 7
      },
      "2": {
-      "sword": 181
+      "sword": 20
      },
      "4": {
-      "ji": 49
+      "bagua": 5,
+      "guard": 3,
+      "ji": 21,
+      "reflect": 2
      },
      "5": {
-      "ji": 51,
-      "gun": 4
+      "gun": 19,
+      "ji": 4,
+      "jinshield": 2
      },
      "6": {
-      "sword": 51
+      "sword": 4
+     },
+     "8": {
+      "bagua": 3,
+      "guard": 3
+     },
+     "9": {
+      "gun": 3,
+      "ji": 1
+     },
+     "10": {
+      "sword": 1
      }
     }
    },
@@ -3866,14 +3951,15 @@
     "n": 3,
     "mode": "long",
     "games": 10,
-    "win": 4,
+    "win": 5,
     "keys": {
-     "ji": 213,
-     "reflect": 20,
-     "gun": 53,
+     "ji": 141,
+     "reflect": 23,
+     "gun": 51,
      "bagua": 15,
-     "sword": 77,
-     "guard": 6
+     "sword": 39,
+     "jinshield": 7,
+     "guard": 7
     },
     "buckets": {
      "0": {
@@ -3887,17 +3973,18 @@
       "gun": 28
      },
      "4": {
-      "ji": 30,
-      "reflect": 6,
+      "ji": 37,
+      "reflect": 9,
       "bagua": 4,
-      "guard": 4
+      "guard": 5
      },
      "5": {
-      "gun": 19,
-      "ji": 10
+      "gun": 21,
+      "ji": 9,
+      "jinshield": 4
      },
      "6": {
-      "sword": 10,
+      "sword": 9,
       "ji": 1
      },
      "7": {
@@ -3905,17 +3992,18 @@
       "sword": 1
      },
      "8": {
-      "ji": 72,
+      "ji": 31,
       "reflect": 1,
       "bagua": 1,
       "guard": 1
      },
      "9": {
-      "gun": 6,
-      "ji": 67
+      "ji": 30,
+      "jinshield": 3,
+      "gun": 2
      },
      "10": {
-      "sword": 66
+      "sword": 29
      }
     }
    },
@@ -3977,12 +4065,13 @@
     "games": 10,
     "win": 6,
     "keys": {
-     "ji": 166,
+     "ji": 110,
      "reflect": 39,
-     "gun": 91,
+     "gun": 89,
      "bagua": 19,
      "guard": 5,
-     "sword": 37
+     "sword": 9,
+     "jinshield": 2
     },
     "buckets": {
      "0": {
@@ -3996,28 +4085,30 @@
       "gun": 49
      },
      "4": {
-      "ji": 48,
+      "ji": 35,
       "reflect": 12,
       "bagua": 9,
       "guard": 4
      },
      "5": {
-      "gun": 31,
-      "ji": 19
+      "gun": 30,
+      "ji": 6,
+      "jinshield": 1
      },
      "6": {
       "ji": 2,
-      "sword": 17
+      "sword": 4
      },
      "8": {
-      "ji": 25
+      "ji": 10
      },
      "9": {
-      "gun": 11,
-      "ji": 16
+      "gun": 10,
+      "ji": 1,
+      "jinshield": 1
      },
      "10": {
-      "sword": 18
+      "sword": 3
      },
      "11": {
       "ji": 2,
@@ -4031,46 +4122,46 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 0,
     "keys": {
-     "ji": 109,
+     "ji": 102,
      "snipe": 24,
-     "sword": 16,
-     "gun": 28,
-     "bagua": 4,
+     "sword": 13,
+     "jinshield": 1,
+     "guard": 4,
      "reflect": 13,
-     "guard": 3
+     "gun": 26,
+     "bagua": 3
     },
     "buckets": {
      "4": {
       "ji": 51,
-      "guard": 1,
+      "guard": 2,
       "bagua": 2,
       "reflect": 10
      },
      "5": {
-      "ji": 25,
-      "gun": 21,
-      "bagua": 1,
-      "reflect": 2
+      "ji": 23,
+      "jinshield": 1,
+      "reflect": 3,
+      "gun": 22,
+      "bagua": 1
      },
      "6": {
       "snipe": 20,
-      "sword": 5
+      "sword": 3
      },
      "8": {
-      "ji": 18,
-      "bagua": 1,
-      "reflect": 1,
+      "ji": 14,
       "guard": 2
      },
      "9": {
-      "ji": 15,
-      "gun": 7
+      "ji": 14,
+      "gun": 4
      },
      "10": {
       "snipe": 4,
-      "sword": 11
+      "sword": 10
      }
     }
    },
@@ -4082,57 +4173,61 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 143,
-     "gun": 58,
-     "sword": 41,
-     "reflect": 28,
-     "holo": 2,
-     "bagua": 13,
-     "guard": 7
+     "ji": 118,
+     "gun": 62,
+     "sword": 24,
+     "reflect": 33,
+     "jinshield": 5,
+     "guard": 11,
+     "bagua": 9,
+     "holo": 1
     },
     "buckets": {
      "0": {
       "ji": 41,
       "reflect": 12,
-      "bagua": 2,
-      "guard": 4
+      "guard": 7,
+      "bagua": 2
      },
      "1": {
-      "gun": 21,
-      "ji": 16,
+      "gun": 22,
+      "ji": 13,
+      "jinshield": 2,
       "guard": 1,
       "holo": 1
      },
      "2": {
-      "sword": 16
+      "sword": 13
      },
      "4": {
-      "ji": 51,
-      "bagua": 9,
-      "guard": 1,
-      "reflect": 15
+      "reflect": 18,
+      "ji": 41,
+      "guard": 2,
+      "bagua": 6
      },
      "5": {
-      "ji": 22,
-      "holo": 1,
-      "gun": 29,
+      "ji": 9,
+      "jinshield": 2,
+      "gun": 30,
       "guard": 1
      },
      "6": {
-      "sword": 21
+      "sword": 8
      },
      "8": {
-      "ji": 9,
-      "bagua": 2
+      "ji": 11,
+      "reflect": 2,
+      "bagua": 1
      },
      "9": {
-      "gun": 8,
-      "ji": 3,
-      "reflect": 1
+      "gun": 10,
+      "jinshield": 1,
+      "reflect": 1,
+      "ji": 2
      },
      "10": {
-      "sword": 3,
-      "ji": 1
+      "ji": 1,
+      "sword": 2
      },
      "11": {
       "sword": 1
@@ -4462,15 +4557,18 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 3,
+    "win": 2,
     "keys": {
-     "ji": 107,
-     "sword": 9,
-     "snipe": 13,
-     "gun": 2,
-     "charge": 21,
-     "railgun": 14,
-     "reflect": 7
+     "ji": 88,
+     "sword": 7,
+     "snipe": 12,
+     "gun": 3,
+     "charge": 15,
+     "railgun": 10,
+     "reflect": 5,
+     "jinshield": 1,
+     "guard": 2,
+     "bagua": 1
     },
     "buckets": {
      "4": {
@@ -4492,22 +4590,25 @@
       "charge": 1
      },
      "8": {
-      "ji": 30
+      "ji": 25,
+      "guard": 2,
+      "bagua": 1
      },
      "9": {
-      "ji": 35,
-      "gun": 1,
-      "reflect": 5
+      "ji": 25,
+      "gun": 2,
+      "reflect": 3,
+      "jinshield": 1
      },
      "10": {
-      "sword": 8,
-      "snipe": 8,
-      "ji": 13,
-      "railgun": 13,
-      "charge": 7
+      "sword": 6,
+      "snipe": 7,
+      "ji": 9,
+      "railgun": 9,
+      "charge": 5
      },
      "11": {
-      "charge": 13
+      "charge": 9
      }
     }
    },
@@ -4571,14 +4672,13 @@
     "n": 2,
     "mode": "multi",
     "games": 10,
-    "win": 9,
+    "win": 6,
     "keys": {
-     "ji": 64,
-     "bigT": 10,
-     "gun": 8,
-     "guard": 2,
-     "sword": 2,
-     "reflect": 1
+     "ji": 60,
+     "jinshield": 9,
+     "bigT": 6,
+     "sword": 8,
+     "gun": 1
     },
     "buckets": {
      "4": {
@@ -4591,23 +4691,22 @@
       "ji": 10
      },
      "7": {
-      "ji": 20
+      "ji": 11,
+      "jinshield": 9
      },
      "8": {
-      "guard": 2,
-      "ji": 3,
-      "reflect": 1
+      "ji": 4
      },
      "9": {
-      "gun": 8,
-      "ji": 3
+      "gun": 1
      },
      "10": {
-      "sword": 2
+      "sword": 4
      },
      "11": {
-      "ji": 8,
-      "bigT": 10
+      "ji": 15,
+      "bigT": 6,
+      "sword": 4
      }
     }
    },
@@ -4617,51 +4716,58 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 5,
+    "win": 2,
     "keys": {
-     "ji": 86,
-     "sword": 18,
-     "bagua": 35,
-     "guard": 17,
-     "gun": 45,
-     "reflect": 1
+     "ji": 97,
+     "sword": 15,
+     "bagua": 50,
+     "jinshield": 22,
+     "gun": 37,
+     "guard": 10,
+     "reflect": 3
     },
     "buckets": {
      "0": {
-      "ji": 32,
-      "bagua": 31,
-      "guard": 6
+      "ji": 30,
+      "bagua": 28,
+      "guard": 3
      },
      "1": {
       "ji": 10,
-      "gun": 22
+      "gun": 17,
+      "jinshield": 3,
+      "reflect": 3
      },
      "2": {
       "sword": 10
      },
      "4": {
-      "ji": 24,
-      "guard": 10,
-      "bagua": 4,
-      "reflect": 1
+      "ji": 27,
+      "bagua": 15,
+      "guard": 6
      },
      "5": {
-      "ji": 7,
-      "gun": 12
+      "ji": 10,
+      "gun": 17,
+      "jinshield": 5
      },
      "6": {
-      "sword": 7
+      "jinshield": 5,
+      "sword": 2
      },
      "8": {
-      "ji": 12,
+      "ji": 16,
+      "bagua": 7,
       "guard": 1
      },
      "9": {
-      "gun": 11,
-      "ji": 1
+      "jinshield": 8,
+      "ji": 4,
+      "gun": 3
      },
      "10": {
-      "sword": 1
+      "sword": 3,
+      "jinshield": 1
      }
     }
    },
@@ -4673,12 +4779,13 @@
     "games": 10,
     "win": 5,
     "keys": {
-     "ji": 58,
+     "ji": 57,
      "reflect": 25,
-     "gun": 45,
-     "bagua": 22,
+     "gun": 46,
+     "bagua": 25,
      "guard": 7,
-     "sword": 3
+     "jinshield": 2,
+     "sword": 2
     },
     "buckets": {
      "4": {
@@ -4696,13 +4803,16 @@
       "sword": 2
      },
      "8": {
-      "ji": 2
+      "ji": 2,
+      "bagua": 3
      },
      "9": {
-      "ji": 2
+      "jinshield": 1,
+      "ji": 1,
+      "gun": 1
      },
      "10": {
-      "sword": 1
+      "jinshield": 1
      }
     }
    },
@@ -4714,13 +4824,13 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 61,
+     "ji": 64,
      "reflect": 10,
-     "gun": 31,
+     "gun": 27,
      "sword": 13,
      "guard": 20,
-     "bagua": 13,
-     "holo": 1
+     "bagua": 15,
+     "jinshield": 7
     },
     "buckets": {
      "0": {
@@ -4733,27 +4843,29 @@
      "4": {
       "ji": 8,
       "bagua": 3,
-      "guard": 5
+      "guard": 4
      },
      "5": {
       "gun": 3,
-      "ji": 2
+      "ji": 3
      },
      "6": {
-      "sword": 2
+      "sword": 2,
+      "jinshield": 1
      },
      "8": {
-      "ji": 19,
-      "guard": 15,
-      "bagua": 10
+      "ji": 20,
+      "guard": 16,
+      "bagua": 12
      },
      "9": {
-      "ji": 12,
-      "gun": 8,
-      "holo": 1
+      "ji": 13,
+      "gun": 4,
+      "jinshield": 5
      },
      "10": {
-      "sword": 11
+      "sword": 11,
+      "jinshield": 1
      }
     }
    },
@@ -4763,58 +4875,44 @@
     "n": 5,
     "mode": "multi",
     "games": 10,
-    "win": 2,
+    "win": 1,
     "keys": {
-     "ji": 87,
-     "reflect": 14,
-     "gun": 33,
-     "snipe": 14,
-     "holo": 4,
-     "guard": 15,
+     "ji": 81,
+     "reflect": 11,
+     "gun": 36,
+     "snipe": 9,
+     "jinshield": 18,
+     "guard": 13,
      "bagua": 6,
-     "curse": 2,
-     "charge": 3,
-     "railgun": 3,
-     "sword": 5
+     "charge": 2,
+     "railgun": 2
     },
     "buckets": {
      "4": {
-      "ji": 45,
-      "guard": 13,
-      "bagua": 4,
-      "reflect": 1
+      "ji": 50,
+      "guard": 10,
+      "bagua": 4
      },
      "5": {
-      "reflect": 10,
-      "gun": 27,
-      "ji": 14,
-      "holo": 4
+      "reflect": 11,
+      "gun": 29,
+      "ji": 9,
+      "jinshield": 12
      },
      "6": {
-      "snipe": 8,
-      "ji": 2,
-      "railgun": 1,
-      "sword": 1
-     },
-     "7": {
-      "charge": 1,
-      "sword": 1
+      "snipe": 9
      },
      "8": {
-      "ji": 16,
-      "bagua": 2,
-      "guard": 2,
-      "reflect": 1
+      "guard": 3,
+      "ji": 17,
+      "bagua": 2
      },
      "9": {
-      "gun": 6,
-      "reflect": 2,
-      "curse": 2,
-      "ji": 8
+      "jinshield": 6,
+      "gun": 7,
+      "ji": 3
      },
      "10": {
-      "snipe": 6,
-      "sword": 3,
       "ji": 2,
       "railgun": 2
      },
@@ -4829,50 +4927,60 @@
     "n": 5,
     "mode": "long",
     "games": 10,
-    "win": 2,
+    "win": 0,
     "keys": {
-     "ji": 56,
-     "reflect": 13,
-     "gun": 51,
+     "ji": 53,
+     "reflect": 14,
+     "gun": 38,
      "guard": 63,
-     "bagua": 34,
-     "holo": 3,
+     "bagua": 33,
+     "jinshield": 5,
+     "charge": 1,
+     "railgun": 1,
+     "holo": 2,
      "sword": 1
     },
     "buckets": {
      "0": {
-      "ji": 28,
+      "ji": 24,
       "reflect": 2,
-      "guard": 4,
-      "bagua": 3
+      "guard": 3,
+      "bagua": 2
      },
      "1": {
       "reflect": 10,
-      "gun": 26,
-      "holo": 1
+      "gun": 22,
+      "holo": 1,
+      "jinshield": 1
      },
      "4": {
-      "guard": 51,
+      "guard": 52,
       "bagua": 23,
-      "ji": 20,
-      "reflect": 1
+      "ji": 18,
+      "reflect": 2
      },
      "5": {
-      "gun": 19,
+      "gun": 14,
+      "jinshield": 2,
       "holo": 1
      },
      "8": {
-      "ji": 7,
       "bagua": 8,
+      "ji": 7,
       "guard": 8
      },
      "9": {
-      "gun": 6,
-      "holo": 1,
-      "ji": 1
+      "ji": 3,
+      "gun": 2,
+      "jinshield": 2
      },
      "10": {
+      "ji": 1,
+      "railgun": 1,
       "sword": 1
+     },
+     "11": {
+      "charge": 1
      }
     }
    },
@@ -4882,43 +4990,61 @@
     "n": 8,
     "mode": "multi",
     "games": 10,
-    "win": 6,
+    "win": 2,
     "keys": {
-     "ji": 89,
-     "snipe": 13,
-     "holo": 23,
-     "bagua": 12,
-     "reflect": 26,
-     "guard": 11,
-     "gun": 32,
-     "sword": 3
+     "ji": 110,
+     "snipe": 12,
+     "jinshield": 17,
+     "sword": 8,
+     "guard": 13,
+     "charge": 11,
+     "railgun": 9,
+     "holo": 4,
+     "bagua": 6,
+     "gun": 18,
+     "reflect": 6
     },
     "buckets": {
      "4": {
-      "ji": 63,
-      "bagua": 9,
-      "reflect": 24,
-      "guard": 8
+      "ji": 61,
+      "guard": 12,
+      "bagua": 4,
+      "reflect": 5
      },
      "5": {
-      "ji": 16,
-      "holo": 19,
-      "gun": 26,
+      "ji": 29,
+      "jinshield": 11,
+      "holo": 4,
+      "gun": 17,
       "reflect": 1
      },
      "6": {
-      "snipe": 13,
-      "sword": 3
+      "snipe": 12,
+      "sword": 8,
+      "ji": 5,
+      "railgun": 5,
+      "jinshield": 4
+     },
+     "7": {
+      "charge": 5
      },
      "8": {
-      "ji": 10,
-      "bagua": 3,
-      "guard": 3,
-      "reflect": 1
+      "ji": 5,
+      "bagua": 2,
+      "guard": 1
      },
      "9": {
-      "gun": 6,
-      "holo": 4
+      "ji": 6,
+      "jinshield": 2,
+      "gun": 1
+     },
+     "10": {
+      "ji": 4,
+      "railgun": 4,
+      "charge": 2
+     },
+     "11": {
+      "charge": 4
      }
     }
    },
@@ -4928,62 +5054,59 @@
     "n": 8,
     "mode": "long",
     "games": 10,
-    "win": 0,
+    "win": 1,
     "keys": {
-     "ji": 69,
-     "gun": 43,
-     "bagua": 52,
+     "ji": 73,
+     "gun": 50,
+     "bagua": 48,
      "guard": 53,
-     "reflect": 14,
-     "sword": 7,
-     "holo": 9
+     "reflect": 15,
+     "sword": 4,
+     "holo": 8,
+     "jinshield": 7
     },
     "buckets": {
      "0": {
-      "ji": 35,
-      "bagua": 25,
-      "guard": 5,
+      "ji": 38,
+      "bagua": 24,
+      "guard": 8,
       "reflect": 8
      },
      "1": {
-      "gun": 24,
+      "gun": 26,
       "ji": 3,
-      "holo": 7
+      "holo": 6,
+      "jinshield": 1
      },
      "2": {
       "sword": 3
      },
      "4": {
-      "guard": 42,
-      "bagua": 20,
-      "ji": 18,
-      "reflect": 6
+      "guard": 38,
+      "bagua": 19,
+      "ji": 24,
+      "reflect": 5
      },
      "5": {
-      "gun": 15,
-      "holo": 1,
-      "ji": 3
+      "gun": 18,
+      "holo": 2,
+      "jinshield": 3,
+      "ji": 2
      },
      "6": {
-      "sword": 2,
-      "ji": 1
-     },
-     "7": {
-      "sword": 1
+      "sword": 1,
+      "jinshield": 1
      },
      "8": {
-      "bagua": 7,
-      "ji": 8,
-      "guard": 5
+      "bagua": 5,
+      "ji": 6,
+      "reflect": 2,
+      "guard": 6
      },
      "9": {
-      "gun": 4,
-      "guard": 1,
-      "ji": 1,
-      "holo": 1
-     },
-     "10": {
-      "sword": 1
+      "jinshield": 2,
+      "gun": 6,
+      "guard": 1
      }
     }
    },
@@ -4995,9 +5118,11 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 78,
+     "ji": 77,
      "bigT": 10,
-     "gun": 8
+     "gun": 5,
+     "jinshield": 3,
+     "bagua": 3
     },
     "buckets": {
      "4": {
@@ -5014,11 +5139,13 @@
       "bigT": 2
      },
      "8": {
-      "ji": 18
+      "ji": 16,
+      "bagua": 3
      },
      "9": {
-      "ji": 2,
-      "gun": 8
+      "ji": 3,
+      "gun": 5,
+      "jinshield": 3
      },
      "11": {
       "bigT": 8
@@ -5031,49 +5158,58 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 8,
+    "win": 6,
     "keys": {
-     "ji": 547,
-     "sword": 245,
-     "snipe": 6,
-     "gun": 39,
-     "bagua": 3,
-     "reflect": 10,
-     "curse": 1
+     "ji": 114,
+     "sword": 24,
+     "jinshield": 16,
+     "bagua": 13,
+     "gun": 28,
+     "snipe": 7,
+     "reflect": 4,
+     "guard": 4
     },
     "buckets": {
      "0": {
-      "ji": 217,
-      "bagua": 1
+      "ji": 49,
+      "bagua": 13,
+      "guard": 3
      },
      "1": {
-      "ji": 196,
-      "gun": 21
+      "ji": 17,
+      "jinshield": 11,
+      "gun": 15,
+      "reflect": 3
      },
      "2": {
-      "sword": 190,
-      "snipe": 6
+      "sword": 12,
+      "snipe": 4
      },
      "4": {
-      "ji": 76,
-      "reflect": 5,
-      "bagua": 2
+      "ji": 24,
+      "guard": 1
      },
      "5": {
-      "ji": 55,
-      "gun": 15,
-      "reflect": 5,
-      "curse": 1
+      "ji": 7,
+      "gun": 12,
+      "jinshield": 4
      },
      "6": {
-      "sword": 55
+      "sword": 5,
+      "snipe": 3
      },
      "8": {
-      "ji": 1
+      "ji": 6
      },
      "9": {
-      "ji": 2,
-      "gun": 3
+      "ji": 10,
+      "jinshield": 1,
+      "reflect": 1,
+      "gun": 1
+     },
+     "10": {
+      "sword": 7,
+      "ji": 1
      }
     }
    },
@@ -5085,13 +5221,13 @@
     "games": 10,
     "win": 1,
     "keys": {
-     "ji": 65,
-     "reflect": 18,
-     "snipe": 12,
-     "guard": 6,
-     "gun": 25,
+     "ji": 66,
+     "reflect": 19,
+     "snipe": 14,
+     "guard": 4,
+     "gun": 23,
      "sword": 2,
-     "holo": 3
+     "jinshield": 3
     },
     "buckets": {
      "4": {
@@ -5108,19 +5244,18 @@
       "snipe": 11
      },
      "8": {
-      "ji": 13,
-      "reflect": 2,
-      "guard": 2
+      "ji": 12,
+      "reflect": 3
      },
      "9": {
-      "ji": 3,
+      "ji": 5,
       "reflect": 1,
-      "gun": 3,
-      "holo": 3
+      "gun": 1,
+      "jinshield": 3
      },
      "10": {
       "sword": 2,
-      "snipe": 1
+      "snipe": 3
      }
     }
    },
@@ -5130,63 +5265,74 @@
     "n": 3,
     "mode": "long",
     "games": 10,
-    "win": 0,
+    "win": 2,
     "keys": {
-     "ji": 80,
-     "reflect": 18,
-     "snipe": 11,
-     "charge": 3,
-     "railgun": 3,
-     "sword": 10,
-     "holo": 7,
-     "gun": 11,
-     "bagua": 3,
-     "guard": 3
+     "ji": 104,
+     "reflect": 11,
+     "snipe": 16,
+     "charge": 6,
+     "railgun": 6,
+     "jinshield": 11,
+     "sword": 8,
+     "bagua": 7,
+     "guard": 7,
+     "gun": 16,
+     "holo": 2
     },
     "buckets": {
      "0": {
-      "ji": 18
+      "ji": 27,
+      "reflect": 1,
+      "bagua": 1
      },
      "1": {
       "reflect": 10,
-      "ji": 13,
-      "holo": 4
+      "ji": 15,
+      "jinshield": 4,
+      "gun": 7,
+      "holo": 1
      },
      "2": {
-      "snipe": 10
+      "snipe": 11
      },
      "4": {
-      "ji": 22,
-      "bagua": 2,
-      "guard": 3,
-      "reflect": 8
+      "ji": 25,
+      "bagua": 6,
+      "guard": 7
      },
      "5": {
+      "jinshield": 6,
       "ji": 10,
-      "holo": 2,
-      "gun": 6,
-      "bagua": 1
-     },
-     "6": {
-      "ji": 3,
-      "railgun": 3,
-      "sword": 6,
-      "holo": 1,
-      "snipe": 1
-     },
-     "7": {
-      "charge": 3
-     },
-     "8": {
-      "ji": 7
-     },
-     "9": {
-      "ji": 5,
       "gun": 5
      },
-     "10": {
-      "ji": 2,
+     "6": {
+      "ji": 6,
+      "railgun": 4,
+      "snipe": 3,
       "sword": 4
+     },
+     "7": {
+      "charge": 5
+     },
+     "8": {
+      "ji": 10
+     },
+     "9": {
+      "ji": 9,
+      "gun": 4,
+      "holo": 1
+     },
+     "10": {
+      "sword": 3,
+      "ji": 1,
+      "railgun": 2,
+      "snipe": 2
+     },
+     "11": {
+      "ji": 1,
+      "jinshield": 1,
+      "sword": 1,
+      "charge": 1
      }
     }
    },
@@ -5240,68 +5386,77 @@
     "n": 5,
     "mode": "long",
     "games": 10,
-    "win": 1,
+    "win": 2,
     "keys": {
-     "ji": 157,
-     "reflect": 25,
+     "ji": 127,
+     "reflect": 23,
      "snipe": 17,
-     "gun": 40,
-     "sword": 30,
-     "holo": 12,
+     "gun": 42,
+     "sword": 11,
+     "holo": 7,
      "bagua": 8,
-     "guard": 7,
-     "bigT": 1
+     "guard": 9,
+     "jinshield": 6,
+     "charge": 2,
+     "railgun": 2
     },
     "buckets": {
      "0": {
-      "ji": 48,
-      "reflect": 4,
+      "ji": 55,
+      "reflect": 3,
       "bagua": 4,
-      "guard": 1
+      "guard": 3
      },
      "1": {
       "reflect": 10,
-      "ji": 18,
-      "gun": 21,
-      "holo": 8
+      "ji": 22,
+      "gun": 24,
+      "holo": 4,
+      "jinshield": 4
      },
      "2": {
-      "snipe": 12,
-      "sword": 4
+      "snipe": 13,
+      "sword": 5,
+      "ji": 2,
+      "railgun": 2
+     },
+     "3": {
+      "charge": 2
      },
      "4": {
-      "ji": 28,
-      "reflect": 8,
-      "bagua": 2,
-      "guard": 6
+      "ji": 30,
+      "bagua": 3,
+      "guard": 6,
+      "reflect": 6
      },
      "5": {
-      "ji": 6,
+      "reflect": 4,
       "gun": 15,
-      "holo": 3,
-      "reflect": 3
+      "ji": 7,
+      "jinshield": 1,
+      "holo": 2
      },
      "6": {
-      "sword": 3,
-      "snipe": 4
+      "sword": 5,
+      "snipe": 3
      },
      "8": {
-      "bagua": 2,
-      "ji": 28
+      "ji": 6,
+      "bagua": 1
      },
      "9": {
-      "ji": 26,
-      "gun": 4,
+      "gun": 3,
+      "ji": 3,
+      "jinshield": 1,
       "holo": 1
      },
      "10": {
-      "sword": 23,
       "ji": 1,
+      "sword": 1,
       "snipe": 1
      },
      "11": {
-      "ji": 2,
-      "bigT": 1
+      "ji": 1
      }
     }
    },
@@ -5346,61 +5501,66 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 81,
-     "gun": 37,
-     "charge": 3,
-     "railgun": 3,
+     "ji": 74,
+     "gun": 32,
+     "charge": 4,
+     "railgun": 4,
      "reflect": 8,
-     "holo": 9,
-     "sword": 7,
+     "holo": 8,
+     "sword": 6,
      "bagua": 6,
-     "guard": 7,
+     "jinshield": 1,
+     "guard": 8,
      "snipe": 3
     },
     "buckets": {
      "0": {
-      "ji": 41,
+      "ji": 35,
       "reflect": 5,
-      "bagua": 6,
-      "guard": 3
+      "bagua": 4,
+      "guard": 1
      },
      "1": {
-      "gun": 26,
-      "ji": 9,
-      "holo": 5
+      "gun": 23,
+      "ji": 7,
+      "holo": 4
      },
      "2": {
-      "sword": 5,
+      "sword": 3,
       "snipe": 2
      },
      "4": {
       "reflect": 2,
       "ji": 19,
-      "guard": 4
+      "guard": 7,
+      "bagua": 1
      },
      "5": {
       "holo": 4,
-      "gun": 9,
+      "gun": 7,
       "ji": 4,
+      "jinshield": 1,
       "reflect": 1
      },
      "6": {
-      "ji": 3,
-      "railgun": 3,
+      "ji": 4,
+      "railgun": 4,
       "sword": 2
      },
      "7": {
-      "charge": 3
+      "charge": 4
      },
      "8": {
       "ji": 3
      },
      "9": {
       "ji": 2,
+      "bagua": 1,
       "gun": 2
      },
      "10": {
-      "snipe": 1
+      "snipe": 1,
+      "sword": 1
      }
     }
    },
@@ -5486,40 +5646,41 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 95,
-     "reflect": 11,
+     "ji": 87,
+     "reflect": 14,
      "snipe": 21,
      "guard": 2,
-     "sword": 13,
-     "gun": 20,
-     "holo": 1
+     "sword": 6,
+     "jinshield": 6,
+     "gun": 21
     },
     "buckets": {
      "4": {
-      "ji": 51,
+      "ji": 43,
       "guard": 2
      },
      "5": {
       "reflect": 10,
-      "ji": 32,
-      "gun": 16
+      "ji": 23,
+      "jinshield": 3,
+      "gun": 15
      },
      "6": {
       "snipe": 18,
-      "sword": 12
+      "sword": 3
      },
      "8": {
-      "ji": 8
+      "ji": 15
      },
      "9": {
-      "ji": 4,
-      "reflect": 1,
-      "gun": 4,
-      "holo": 1
+      "ji": 6,
+      "jinshield": 3,
+      "reflect": 4,
+      "gun": 6
      },
      "10": {
       "snipe": 3,
-      "sword": 1
+      "sword": 3
      }
     }
    },
@@ -5529,17 +5690,18 @@
     "n": 3,
     "mode": "long",
     "games": 10,
-    "win": 2,
+    "win": 3,
     "keys": {
-     "ji": 209,
+     "ji": 162,
      "reflect": 16,
      "snipe": 27,
-     "gun": 72,
-     "bagua": 7,
-     "guard": 4,
+     "gun": 73,
+     "bagua": 10,
+     "guard": 5,
      "charge": 6,
      "railgun": 6,
-     "sword": 26,
+     "sword": 2,
+     "jinshield": 2,
      "holo": 1
     },
     "buckets": {
@@ -5577,20 +5739,21 @@
       "charge": 2
      },
      "8": {
-      "ji": 70,
-      "guard": 2,
+      "ji": 48,
+      "guard": 3,
       "reflect": 1,
-      "bagua": 2
+      "bagua": 5
      },
      "9": {
-      "gun": 33,
-      "ji": 38
+      "gun": 34,
+      "ji": 13,
+      "jinshield": 2
      },
      "10": {
       "ji": 3,
       "railgun": 5,
       "snipe": 7,
-      "sword": 25
+      "sword": 1
      },
      "11": {
       "charge": 4
@@ -5603,38 +5766,46 @@
     "n": 5,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 2,
     "keys": {
-     "ji": 55,
+     "ji": 54,
      "reflect": 12,
-     "snipe": 12,
-     "gun": 25,
+     "snipe": 11,
+     "gun": 23,
+     "jinshield": 3,
+     "bagua": 1,
      "sword": 2
     },
     "buckets": {
      "4": {
-      "ji": 35,
-      "reflect": 1
+      "ji": 32,
+      "bagua": 1
      },
      "5": {
       "reflect": 11,
-      "ji": 13,
-      "gun": 21
+      "ji": 12,
+      "gun": 18,
+      "jinshield": 2
      },
      "6": {
-      "snipe": 11,
+      "snipe": 10,
+      "ji": 1,
+      "sword": 1
+     },
+     "7": {
       "sword": 1
      },
      "8": {
-      "ji": 6
+      "ji": 8
      },
      "9": {
-      "gun": 4,
+      "gun": 5,
+      "jinshield": 1,
+      "reflect": 1,
       "ji": 1
      },
      "10": {
-      "snipe": 1,
-      "sword": 1
+      "snipe": 1
      }
     }
    },
@@ -5644,75 +5815,82 @@
     "n": 5,
     "mode": "long",
     "games": 10,
-    "win": 0,
+    "win": 1,
     "keys": {
-     "ji": 126,
+     "ji": 140,
      "reflect": 16,
      "snipe": 21,
-     "gun": 32,
-     "sword": 11,
-     "holo": 9,
+     "gun": 35,
+     "jinshield": 8,
+     "sword": 14,
      "guard": 9,
+     "holo": 7,
      "bagua": 18,
-     "charge": 3,
-     "railgun": 3
+     "charge": 2,
+     "railgun": 2,
+     "curse": 1
     },
     "buckets": {
      "0": {
-      "ji": 54,
-      "reflect": 2,
-      "guard": 6,
-      "bagua": 13
+      "ji": 59,
+      "reflect": 4,
+      "guard": 8,
+      "bagua": 14
      },
      "1": {
       "reflect": 11,
-      "ji": 27,
-      "gun": 18,
-      "holo": 7,
-      "bagua": 1
+      "ji": 29,
+      "gun": 23,
+      "holo": 4,
+      "jinshield": 3
      },
      "2": {
-      "snipe": 15,
+      "snipe": 16,
       "sword": 9,
       "ji": 1,
-      "railgun": 1
+      "railgun": 1,
+      "jinshield": 2
      },
      "3": {
       "charge": 1
      },
      "4": {
-      "ji": 19,
-      "guard": 3,
+      "ji": 24,
       "bagua": 2
      },
      "5": {
-      "ji": 7,
-      "gun": 7,
+      "ji": 10,
+      "jinshield": 2,
+      "gun": 8,
       "bagua": 1,
+      "curse": 1,
       "reflect": 1,
       "holo": 2
      },
      "6": {
       "snipe": 3,
-      "ji": 2,
-      "railgun": 2,
-      "sword": 1
+      "sword": 3,
+      "holo": 1,
+      "ji": 1,
+      "railgun": 1
      },
      "7": {
-      "charge": 2
+      "charge": 1
      },
      "8": {
-      "ji": 10,
+      "guard": 1,
+      "ji": 9,
       "bagua": 1
      },
      "9": {
       "ji": 5,
-      "gun": 7,
-      "reflect": 2
+      "gun": 4,
+      "jinshield": 1
      },
      "10": {
-      "snipe": 3,
-      "ji": 1
+      "sword": 1,
+      "ji": 2,
+      "snipe": 2
      },
      "11": {
       "sword": 1
@@ -5749,15 +5927,17 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 86,
-     "gun": 34,
-     "bagua": 26,
-     "reflect": 13,
-     "snipe": 1,
-     "charge": 1,
-     "holo": 17,
-     "guard": 7,
-     "sword": 12
+     "ji": 92,
+     "gun": 33,
+     "bagua": 24,
+     "reflect": 14,
+     "snipe": 2,
+     "charge": 2,
+     "holo": 13,
+     "guard": 4,
+     "sword": 13,
+     "jinshield": 3,
+     "railgun": 1
     },
     "buckets": {
      "0": {
@@ -5777,37 +5957,36 @@
       "holo": 1
      },
      "4": {
-      "ji": 27,
-      "bagua": 5,
+      "ji": 29,
+      "bagua": 4,
       "reflect": 2,
-      "guard": 4
+      "guard": 2
      },
      "5": {
-      "gun": 11,
-      "ji": 12,
-      "holo": 8,
-      "reflect": 1
+      "gun": 10,
+      "ji": 15,
+      "holo": 6,
+      "reflect": 2,
+      "jinshield": 2
      },
      "6": {
-      "snipe": 1,
-      "ji": 2,
-      "sword": 8,
+      "snipe": 2,
+      "ji": 3,
+      "sword": 9,
+      "railgun": 1,
       "reflect": 1
      },
      "7": {
-      "charge": 1,
+      "charge": 2,
       "ji": 1,
-      "holo": 1,
+      "jinshield": 1,
       "sword": 1
      },
      "8": {
-      "ji": 6,
-      "guard": 1,
-      "bagua": 1
+      "ji": 6
      },
      "9": {
       "gun": 2,
-      "holo": 1,
       "ji": 2
      },
      "10": {
@@ -5823,10 +6002,11 @@
     "games": 10,
     "win": 10,
     "keys": {
-     "ji": 91,
+     "ji": 68,
      "bigT": 10,
-     "sword": 17,
-     "gun": 4
+     "sword": 6,
+     "gun": 4,
+     "jinshield": 1
     },
     "buckets": {
      "4": {
@@ -5844,14 +6024,15 @@
       "bigT": 10
      },
      "8": {
-      "ji": 13
+      "ji": 2
      },
      "9": {
       "gun": 4,
-      "ji": 13
+      "ji": 1,
+      "jinshield": 1
      },
      "10": {
-      "sword": 12
+      "sword": 1
      }
     }
    },
@@ -5902,45 +6083,45 @@
     "n": 3,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 5,
     "keys": {
-     "ji": 101,
-     "reflect": 13,
-     "snipe": 13,
+     "ji": 73,
+     "reflect": 16,
+     "snipe": 12,
      "guard": 4,
-     "gun": 24,
+     "gun": 28,
      "bagua": 1,
-     "sword": 23,
-     "holo": 3
+     "sword": 5,
+     "jinshield": 8
     },
     "buckets": {
      "4": {
-      "ji": 35,
+      "ji": 37,
       "guard": 4,
       "bagua": 1
      },
      "5": {
-      "reflect": 11,
-      "ji": 13,
-      "gun": 19
+      "reflect": 13,
+      "ji": 12,
+      "gun": 21,
+      "jinshield": 1
      },
      "6": {
       "snipe": 11,
       "sword": 1
      },
      "8": {
-      "ji": 30,
-      "reflect": 1
+      "ji": 19
      },
      "9": {
-      "ji": 23,
-      "gun": 5,
-      "reflect": 1,
-      "holo": 3
+      "ji": 5,
+      "gun": 7,
+      "jinshield": 7,
+      "reflect": 3
      },
      "10": {
-      "snipe": 2,
-      "sword": 22
+      "snipe": 1,
+      "sword": 4
      }
     }
    },
@@ -5950,61 +6131,61 @@
     "n": 3,
     "mode": "long",
     "games": 10,
-    "win": 1,
+    "win": 0,
     "keys": {
-     "ji": 131,
+     "ji": 79,
      "reflect": 21,
      "snipe": 15,
-     "gun": 35,
-     "guard": 24,
-     "bagua": 8,
-     "holo": 1,
+     "gun": 33,
+     "guard": 22,
+     "bagua": 3,
+     "jinshield": 2,
+     "sword": 3,
      "charge": 1,
-     "railgun": 1,
-     "sword": 28
+     "railgun": 1
     },
     "buckets": {
      "0": {
       "ji": 26,
-      "bagua": 3,
-      "guard": 4
+      "guard": 2
      },
      "1": {
       "reflect": 10,
       "ji": 11,
-      "gun": 15
+      "gun": 13,
+      "jinshield": 2
      },
      "2": {
       "snipe": 11
      },
      "4": {
-      "ji": 47,
+      "ji": 18,
       "reflect": 7,
       "guard": 19,
-      "bagua": 5
+      "bagua": 3
      },
      "5": {
-      "ji": 30,
+      "ji": 3,
       "gun": 13,
-      "holo": 1,
       "reflect": 3
      },
      "6": {
       "snipe": 1,
       "ji": 1,
-      "sword": 28
+      "sword": 1
      },
      "8": {
-      "ji": 12,
+      "ji": 15,
       "guard": 1,
       "reflect": 1
      },
      "9": {
       "gun": 7,
-      "ji": 4
+      "ji": 5
      },
      "10": {
       "snipe": 3,
+      "sword": 2,
       "railgun": 1
      },
      "11": {
@@ -6018,41 +6199,45 @@
     "n": 5,
     "mode": "multi",
     "games": 10,
-    "win": 0,
+    "win": 1,
     "keys": {
-     "ji": 54,
+     "ji": 51,
      "reflect": 14,
-     "snipe": 11,
-     "gun": 21,
+     "snipe": 10,
+     "gun": 20,
      "bagua": 2,
-     "sword": 3,
+     "jinshield": 4,
+     "sword": 2,
      "guard": 1
     },
     "buckets": {
      "4": {
-      "ji": 29
+      "ji": 30
      },
      "5": {
       "reflect": 11,
       "ji": 11,
-      "gun": 16
+      "gun": 16,
+      "jinshield": 1
      },
      "6": {
-      "snipe": 11
+      "snipe": 10,
+      "sword": 1
      },
      "8": {
       "reflect": 1,
-      "ji": 10,
+      "ji": 9,
       "bagua": 2,
       "guard": 1
      },
      "9": {
-      "gun": 5,
+      "gun": 4,
+      "jinshield": 3,
       "reflect": 2,
-      "ji": 4
+      "ji": 1
      },
      "10": {
-      "sword": 3
+      "sword": 1
      }
     }
    },
@@ -6064,55 +6249,58 @@
     "games": 10,
     "win": 4,
     "keys": {
-     "ji": 145,
+     "ji": 122,
      "reflect": 18,
-     "snipe": 15,
+     "snipe": 12,
      "gun": 41,
-     "sword": 31,
-     "holo": 8,
-     "guard": 9,
-     "bagua": 6
+     "sword": 19,
+     "holo": 5,
+     "guard": 8,
+     "bagua": 10,
+     "jinshield": 8
     },
     "buckets": {
      "0": {
-      "ji": 78,
-      "guard": 8,
-      "reflect": 6,
+      "ji": 61,
+      "guard": 2,
+      "reflect": 4,
       "bagua": 6
      },
      "1": {
-      "reflect": 11,
-      "ji": 38,
-      "gun": 29,
-      "holo": 7
+      "reflect": 10,
+      "ji": 20,
+      "gun": 28,
+      "holo": 5,
+      "jinshield": 4
      },
      "2": {
-      "snipe": 13,
-      "sword": 24
+      "snipe": 12,
+      "sword": 7
      },
      "4": {
-      "ji": 16,
-      "reflect": 1,
-      "guard": 1
+      "ji": 22,
+      "guard": 6,
+      "reflect": 4,
+      "bagua": 4
      },
      "5": {
-      "gun": 10,
-      "ji": 6,
-      "holo": 1
+      "gun": 12,
+      "ji": 9,
+      "jinshield": 3
      },
      "6": {
-      "sword": 4,
-      "snipe": 2
+      "sword": 8
      },
      "8": {
-      "ji": 3
+      "ji": 6
      },
      "9": {
-      "gun": 2,
-      "ji": 4
+      "gun": 1,
+      "ji": 4,
+      "jinshield": 1
      },
      "10": {
-      "sword": 3
+      "sword": 4
      }
     }
    },
@@ -6124,11 +6312,12 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 57,
+     "ji": 64,
      "snipe": 12,
-     "gun": 21,
-     "holo": 4,
-     "sword": 1,
+     "gun": 20,
+     "holo": 5,
+     "sword": 3,
+     "jinshield": 3,
      "reflect": 8,
      "guard": 1
     },
@@ -6147,18 +6336,19 @@
       "snipe": 11
      },
      "8": {
-      "ji": 15,
+      "ji": 20,
       "reflect": 1,
       "guard": 1
      },
      "9": {
-      "gun": 6,
-      "holo": 3,
-      "ji": 4,
+      "gun": 5,
+      "holo": 4,
+      "ji": 6,
+      "jinshield": 3,
       "reflect": 1
      },
      "10": {
-      "sword": 1,
+      "sword": 3,
       "snipe": 1
      }
     }
@@ -6171,15 +6361,16 @@
     "games": 10,
     "win": 1,
     "keys": {
-     "ji": 119,
-     "gun": 52,
-     "sword": 15,
-     "holo": 13,
-     "guard": 6,
-     "reflect": 10,
-     "bagua": 10,
+     "ji": 131,
+     "gun": 56,
+     "sword": 17,
+     "holo": 7,
+     "guard": 10,
+     "reflect": 8,
+     "bagua": 12,
      "charge": 5,
      "railgun": 5,
+     "jinshield": 6,
      "snipe": 2
     },
     "buckets": {
@@ -6191,9 +6382,10 @@
      },
      "1": {
       "gun": 39,
-      "ji": 14,
+      "ji": 13,
       "holo": 6,
-      "reflect": 1
+      "reflect": 1,
+      "jinshield": 1
      },
      "2": {
       "sword": 9,
@@ -6205,36 +6397,40 @@
       "charge": 2
      },
      "4": {
-      "ji": 26,
-      "bagua": 2,
-      "reflect": 2,
-      "guard": 1
+      "ji": 29,
+      "bagua": 3,
+      "guard": 3
      },
      "5": {
-      "gun": 9,
-      "ji": 7,
-      "holo": 7,
-      "reflect": 1
+      "gun": 10,
+      "ji": 9,
+      "jinshield": 4,
+      "reflect": 1,
+      "holo": 1
      },
      "6": {
-      "sword": 5,
+      "sword": 7,
       "ji": 4,
-      "railgun": 3
+      "railgun": 2
      },
      "7": {
       "charge": 3,
-      "sword": 1
+      "jinshield": 1
      },
      "8": {
-      "ji": 2
+      "guard": 2,
+      "ji": 7,
+      "bagua": 1
      },
      "9": {
-      "ji": 2,
-      "gun": 4
+      "ji": 5,
+      "gun": 7
      },
      "10": {
+      "snipe": 1,
       "ji": 1,
-      "snipe": 1
+      "sword": 1,
+      "railgun": 1
      }
     }
    },
@@ -6282,15 +6478,16 @@
     "n": 2,
     "mode": "long",
     "games": 10,
-    "win": 7,
+    "win": 6,
     "keys": {
-     "ji": 121,
-     "sword": 14,
-     "gun": 88,
+     "ji": 125,
+     "sword": 15,
+     "gun": 87,
      "snipe": 1,
      "bagua": 13,
-     "reflect": 3,
-     "guard": 9
+     "reflect": 4,
+     "guard": 9,
+     "jinshield": 2
     },
     "buckets": {
      "0": {
@@ -6306,26 +6503,29 @@
      "4": {
       "ji": 72,
       "bagua": 13,
-      "guard": 7
+      "guard": 7,
+      "reflect": 1
      },
      "5": {
-      "gun": 72,
-      "ji": 3
+      "gun": 71,
+      "ji": 3,
+      "jinshield": 1
      },
      "6": {
       "snipe": 1
      },
      "8": {
       "reflect": 3,
-      "ji": 3,
+      "ji": 6,
       "guard": 2
      },
      "9": {
       "gun": 6,
-      "ji": 3
+      "ji": 4,
+      "jinshield": 1
      },
      "10": {
-      "sword": 4
+      "sword": 5
      }
     }
    },
@@ -6335,29 +6535,33 @@
     "n": 3,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 5,
     "keys": {
-     "ji": 184,
-     "reflect": 20,
-     "snipe": 19,
-     "sword": 60,
-     "gun": 8,
+     "ji": 76,
+     "reflect": 22,
+     "snipe": 18,
+     "sword": 5,
+     "gun": 10,
+     "jinshield": 6,
      "charge": 3,
-     "railgun": 3
+     "railgun": 3,
+     "bagua": 2,
+     "guard": 1
     },
     "buckets": {
      "4": {
-      "ji": 70,
+      "ji": 40,
       "reflect": 10
      },
      "5": {
       "reflect": 10,
-      "ji": 58,
-      "gun": 6
+      "ji": 25,
+      "gun": 6,
+      "jinshield": 3
      },
      "6": {
       "snipe": 18,
-      "sword": 34,
+      "sword": 4,
       "ji": 3,
       "railgun": 3
      },
@@ -6365,15 +6569,19 @@
       "charge": 3
      },
      "8": {
-      "ji": 26
+      "reflect": 1,
+      "bagua": 2,
+      "ji": 6,
+      "guard": 1
      },
      "9": {
-      "ji": 27,
-      "gun": 2
+      "ji": 2,
+      "jinshield": 3,
+      "gun": 4,
+      "reflect": 1
      },
      "10": {
-      "sword": 26,
-      "snipe": 1
+      "sword": 1
      }
     }
    },
@@ -6385,72 +6593,71 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 161,
+     "ji": 114,
      "reflect": 33,
      "snipe": 18,
-     "guard": 17,
+     "guard": 19,
      "shift": 4,
-     "bagua": 12,
-     "gun": 27,
-     "sword": 33,
-     "holo": 13,
-     "charge": 3,
-     "railgun": 3
+     "bagua": 15,
+     "gun": 29,
+     "sword": 9,
+     "jinshield": 4,
+     "holo": 15
     },
     "buckets": {
      "0": {
       "ji": 37,
       "reflect": 19,
-      "guard": 14,
-      "bagua": 6
+      "guard": 15,
+      "bagua": 8
      },
      "1": {
       "reflect": 11,
       "ji": 13,
       "shift": 4,
-      "gun": 10,
-      "holo": 6
+      "gun": 12,
+      "holo": 7
      },
      "2": {
       "snipe": 11,
-      "ji": 2,
-      "railgun": 2
-     },
-     "3": {
-      "charge": 2
+      "jinshield": 2
      },
      "4": {
-      "ji": 58,
-      "bagua": 5,
-      "guard": 2,
+      "ji": 35,
+      "bagua": 6,
+      "guard": 3,
       "reflect": 3
      },
      "5": {
-      "gun": 15,
-      "ji": 38,
-      "holo": 7
+      "gun": 13,
+      "ji": 14,
+      "jinshield": 1,
+      "holo": 8
      },
      "6": {
-      "sword": 30,
+      "sword": 7,
       "ji": 1,
-      "railgun": 1,
       "snipe": 6
      },
      "7": {
-      "charge": 1
+      "jinshield": 1
      },
      "8": {
-      "ji": 7,
+      "ji": 8,
       "guard": 1,
       "bagua": 1
      },
      "9": {
-      "gun": 2,
-      "ji": 5
+      "gun": 4,
+      "ji": 4
      },
      "10": {
-      "sword": 3,
-      "snipe": 1
+      "sword": 2,
+      "snipe": 1,
+      "ji": 1
+     },
+     "11": {
+      "ji": 1
      }
     }
    },
@@ -6505,57 +6712,60 @@
     "games": 10,
     "win": 2,
     "keys": {
-     "ji": 124,
+     "ji": 130,
      "reflect": 34,
-     "snipe": 18,
+     "snipe": 19,
      "guard": 26,
-     "gun": 37,
-     "sword": 8,
-     "charge": 7,
-     "railgun": 7,
+     "gun": 35,
+     "sword": 11,
+     "charge": 6,
+     "railgun": 6,
      "bagua": 21,
-     "holo": 11
+     "holo": 8,
+     "jinshield": 2
     },
     "buckets": {
      "0": {
-      "ji": 59,
-      "reflect": 14,
-      "guard": 20,
-      "bagua": 16
+      "ji": 58,
+      "reflect": 15,
+      "guard": 18,
+      "bagua": 15
      },
      "1": {
-      "reflect": 18,
+      "reflect": 17,
       "ji": 27,
-      "gun": 25,
+      "gun": 24,
       "guard": 3,
-      "holo": 6,
+      "holo": 5,
+      "jinshield": 1,
       "bagua": 2
      },
      "2": {
       "snipe": 14,
-      "sword": 2,
+      "sword": 3,
       "ji": 8,
-      "railgun": 6,
+      "railgun": 5,
       "holo": 1
      },
      "3": {
-      "charge": 6,
+      "charge": 5,
+      "jinshield": 1,
       "snipe": 1
      },
      "4": {
       "ji": 13,
+      "bagua": 4,
       "reflect": 1,
-      "guard": 3,
-      "bagua": 3
+      "guard": 3
      },
      "5": {
-      "ji": 6,
-      "gun": 6,
-      "holo": 3
+      "ji": 8,
+      "holo": 2,
+      "gun": 5
      },
      "6": {
-      "sword": 4,
-      "snipe": 2,
+      "sword": 5,
+      "snipe": 3,
       "ji": 1
      },
      "7": {
@@ -6565,17 +6775,17 @@
       "railgun": 1
      },
      "8": {
-      "ji": 7
+      "ji": 9,
+      "guard": 2
      },
      "9": {
-      "holo": 1,
+      "ji": 5,
       "gun": 6,
-      "ji": 2,
       "reflect": 1
      },
      "10": {
-      "snipe": 1,
-      "sword": 1
+      "sword": 2,
+      "snipe": 1
      }
     }
    },
@@ -6609,16 +6819,17 @@
     "games": 10,
     "win": 0,
     "keys": {
-     "ji": 75,
-     "gun": 29,
+     "ji": 73,
+     "gun": 32,
      "bagua": 24,
-     "charge": 2,
-     "railgun": 2,
+     "charge": 1,
+     "railgun": 1,
      "sword": 8,
-     "guard": 4,
-     "holo": 6,
+     "guard": 3,
+     "jinshield": 3,
      "snipe": 4,
-     "reflect": 8
+     "reflect": 7,
+     "holo": 1
     },
     "buckets": {
      "0": {
@@ -6636,40 +6847,37 @@
       "holo": 1
      },
      "4": {
-      "ji": 25,
-      "guard": 3,
-      "reflect": 6,
-      "bagua": 6
+      "ji": 23,
+      "guard": 1,
+      "reflect": 4,
+      "bagua": 5
      },
      "5": {
       "gun": 8,
-      "ji": 11,
-      "holo": 4
+      "ji": 10,
+      "jinshield": 2
      },
      "6": {
       "ji": 2,
       "sword": 7,
-      "railgun": 1,
-      "snipe": 1
+      "snipe": 2
      },
      "7": {
-      "charge": 1
+      "jinshield": 1
      },
      "8": {
-      "ji": 7,
-      "guard": 1,
-      "reflect": 1,
-      "bagua": 2
+      "ji": 8,
+      "reflect": 2,
+      "guard": 2,
+      "bagua": 3
      },
      "9": {
       "ji": 1,
-      "gun": 3,
-      "holo": 1
+      "gun": 6
      },
      "10": {
       "railgun": 1,
-      "ji": 1,
-      "snipe": 1
+      "ji": 1
      },
      "11": {
       "charge": 1
@@ -6824,17 +7032,17 @@
     "games": 10,
     "win": 3,
     "keys": {
-     "ji": 143,
+     "ji": 138,
      "reflect": 20,
      "gun": 29,
      "snipe": 23,
      "holo": 6,
-     "guard": 9,
-     "sword": 16,
-     "charge": 6,
+     "guard": 11,
+     "sword": 15,
+     "charge": 5,
      "railgun": 4,
-     "bagua": 2,
-     "bigT": 1
+     "jinshield": 4,
+     "bagua": 2
     },
     "buckets": {
      "0": {
@@ -6858,21 +7066,21 @@
       "charge": 1
      },
      "4": {
-      "ji": 33,
+      "ji": 34,
       "reflect": 2,
-      "guard": 7,
+      "guard": 8,
       "bagua": 2
      },
      "5": {
-      "ji": 19,
+      "ji": 16,
       "gun": 13,
-      "holo": 4
+      "holo": 4,
+      "jinshield": 2
      },
      "6": {
-      "snipe": 14,
+      "snipe": 13,
       "sword": 4,
       "railgun": 1,
-      "charge": 1,
       "ji": 1
      },
      "7": {
@@ -6881,22 +7089,24 @@
       "railgun": 3
      },
      "8": {
-      "ji": 16,
-      "reflect": 1
+      "ji": 17,
+      "reflect": 1,
+      "guard": 1
      },
      "9": {
       "ji": 12,
       "holo": 2,
-      "gun": 3
+      "gun": 3,
+      "jinshield": 1
      },
      "10": {
-      "sword": 6,
-      "ji": 4
+      "sword": 7,
+      "snipe": 1,
+      "ji": 2
      },
      "11": {
-      "sword": 3,
-      "ji": 2,
-      "bigT": 1
+      "sword": 1,
+      "jinshield": 1
      }
     }
    },
@@ -6906,62 +7116,70 @@
     "n": 5,
     "mode": "multi",
     "games": 10,
-    "win": 1,
+    "win": 3,
     "keys": {
-     "ji": 81,
-     "reflect": 13,
-     "charge": 7,
-     "railgun": 7,
-     "snipe": 6,
-     "holo": 1,
-     "gun": 14,
-     "guard": 5,
-     "sword": 12,
-     "bagua": 5
+     "ji": 79,
+     "reflect": 15,
+     "charge": 6,
+     "railgun": 6,
+     "snipe": 7,
+     "holo": 2,
+     "gun": 22,
+     "jinshield": 4,
+     "sword": 7,
+     "bagua": 5,
+     "guard": 5
     },
     "buckets": {
      "4": {
-      "ji": 27,
+      "ji": 32,
       "reflect": 2,
       "guard": 3,
-      "bagua": 4
+      "bagua": 2
      },
      "5": {
       "reflect": 10,
-      "ji": 16,
-      "gun": 11
+      "ji": 17,
+      "gun": 14,
+      "jinshield": 1
      },
      "6": {
-      "ji": 4,
-      "snipe": 5,
-      "railgun": 1,
-      "sword": 3
+      "ji": 6,
+      "snipe": 6,
+      "railgun": 2,
+      "sword": 2
      },
      "7": {
       "ji": 1,
       "charge": 3,
-      "railgun": 1
+      "railgun": 1,
+      "jinshield": 1,
+      "sword": 1
      },
      "8": {
-      "ji": 15,
+      "ji": 13,
+      "bagua": 2,
       "guard": 2,
-      "reflect": 1,
-      "bagua": 1
+      "reflect": 1
      },
      "9": {
-      "holo": 1,
-      "ji": 13,
-      "gun": 3
+      "holo": 2,
+      "ji": 6,
+      "bagua": 1,
+      "gun": 8,
+      "reflect": 2,
+      "jinshield": 1
      },
      "10": {
-      "railgun": 4,
-      "ji": 4,
-      "sword": 9,
+      "jinshield": 1,
+      "sword": 4,
+      "ji": 3,
+      "railgun": 2,
       "snipe": 1
      },
      "11": {
       "ji": 1,
-      "charge": 4,
+      "charge": 3,
       "railgun": 1
      }
     }
@@ -7167,10 +7385,10 @@
  "id": "HL-G1",
  "wid": "803f773db2e563f0",
  "tier": "hard",
- "rulesFingerprint": "bfd49045",
+ "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-26T13:50:17.524Z",
- "stageSec": 38.8,
+ "measuredAt": "2026-11-27T16:19:20.846Z",
+ "stageSec": 15.8,
  "stage2": {
   "shortlist": [
    "tank",

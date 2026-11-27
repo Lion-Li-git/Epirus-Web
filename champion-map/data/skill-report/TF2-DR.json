@@ -6946,10 +6946,10 @@
  "id": "TF2-DR",
  "wid": "97430ee6cf744e0f",
  "tier": "soft",
- "rulesFingerprint": "bfd49045",
+ "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-26T13:52:44.858Z",
- "stageSec": 19.4,
+ "measuredAt": "2026-11-27T16:23:00.222Z",
+ "stageSec": 16,
  "stage2": {
   "shortlist": [
    "tank",
