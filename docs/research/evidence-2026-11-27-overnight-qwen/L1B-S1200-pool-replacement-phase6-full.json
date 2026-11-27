@@ -1,0 +1,194 @@
+[
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 45.4,
+    "sparring": 57
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95002,
+    "hard": 29.1,
+    "regular": 43.1,
+    "sparring": 57.4
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95003,
+    "hard": 31.2,
+    "regular": 42.8,
+    "sparring": 54.8
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95004,
+    "hard": 32.6,
+    "regular": 44.7,
+    "sparring": 57.4
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95005,
+    "hard": 30.1,
+    "regular": 40.6,
+    "sparring": 58.4
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95006,
+    "hard": 31.8,
+    "regular": 43.9,
+    "sparring": 54.1
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95007,
+    "hard": 31,
+    "regular": 41.8,
+    "sparring": 55.3
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-rule",
+    "seed": 95008,
+    "hard": 30,
+    "regular": 40,
+    "sparring": 57.2
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25.3,
+    "sparring": 27.6
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95002,
+    "hard": 21.3,
+    "regular": 26.3,
+    "sparring": 27.5
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95003,
+    "hard": 20.5,
+    "regular": 25.5,
+    "sparring": 30.4
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95004,
+    "hard": 20.3,
+    "regular": 23.8,
+    "sparring": 28.9
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95005,
+    "hard": 19.8,
+    "regular": 23.5,
+    "sparring": 27.5
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95006,
+    "hard": 21.2,
+    "regular": 24.5,
+    "sparring": 31.4
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95007,
+    "hard": 18.4,
+    "regular": 24.7,
+    "sparring": 26
+  },
+  {
+    "target": "RINGB11",
+    "config": "2p-legacy",
+    "seed": 95008,
+    "hard": 20,
+    "regular": 25.5,
+    "sparring": 29.5
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.3,
+    "sparring": 15.8
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-multi",
+    "seed": 95002,
+    "hard": 3.5,
+    "regular": 10.5,
+    "sparring": 14.5
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-multi",
+    "seed": 95003,
+    "hard": 4.5,
+    "regular": 9.8,
+    "sparring": 17.3
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-multi",
+    "seed": 95004,
+    "hard": 3,
+    "regular": 11.5,
+    "sparring": 16
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.3,
+    "sparring": 15.8
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-long",
+    "seed": 95002,
+    "hard": 3.8,
+    "regular": 8.8,
+    "sparring": 9.3
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-long",
+    "seed": 95003,
+    "hard": 2.5,
+    "regular": 8.5,
+    "sparring": 15.3
+  },
+  {
+    "target": "RINGB11",
+    "config": "5p-long",
+    "seed": 95004,
+    "hard": 2.3,
+    "regular": 7,
+    "sparring": 11.3
+  }
+]
