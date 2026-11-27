@@ -3,6 +3,7 @@ name: training
 on:
   push:
     branches: [main]
+    # knobs.mjs --check scans tools/training/js/champion-map; keep every scan root in the trigger.
     paths:
       - 'training/**'
       - 'tools/**'
