@@ -142,8 +142,8 @@ async function main() {
   check('导入冠军包控件在位且已绑定点击事件', await evalJS(`!!document.getElementById('btn-import') && !!document.getElementById('file-import') && typeof document.getElementById('btn-import').onclick === 'function'`));
   await evalJS(`document.getElementById('tab-train').click()`);
   await sleep(300);
-  check('2.0 训练场 UI 在位', await evalJS(`!!document.getElementById('tr-port') && !!document.getElementById('tr-mode') && !!document.getElementById('tr-up') && !!document.getElementById('btn-train') && !!document.getElementById('btn-remote') && !!document.getElementById('tr-remote-gens')`));
-  await evalJS(`document.getElementById('tr-port').value=8799; document.getElementById('tr-remote-gens').value=1000; document.getElementById('btn-train').click()`);
+  check('2.0 训练场 UI 在位', await evalJS(`!!document.getElementById('tr-port') && !!document.getElementById('tr-token') && !!document.getElementById('tr-mode') && !!document.getElementById('tr-up') && !!document.getElementById('btn-train') && !!document.getElementById('btn-remote') && !!document.getElementById('tr-remote-gens')`));
+  await evalJS(`document.getElementById('tr-port').value=8799; document.getElementById('tr-token').value='smoke-token'; document.getElementById('tr-remote-gens').value=1000; document.getElementById('btn-train').click()`);
   await sleep(2500);
   const remoteHint = await evalJS(`document.getElementById('tr-remote').textContent`);
   console.log('remoteHint =', JSON.stringify(remoteHint));
@@ -287,7 +287,7 @@ async function main() {
   const saveFailure = await evalJS(`(()=>{const C=window.EpirusChampion,P=window.EpirusPolicy,orig=Storage.prototype.setItem;let result;try{Storage.prototype.setItem=function(){throw new Error('quota');};result=C.store.save(P.unpack(window.EPIRUS_CHAMPION));}finally{Storage.prototype.setItem=orig;}return result===false;})()`);
   check('本地冠军保存失败会返回失败而不是假成功', saveFailure === true);
 
-  const staleConnections = await evalJS(`(async()=>{const origFetch=window.fetch,origES=window.EventSource,resolvers=[];let esCount=0;window.fetch=function(){return new Promise(function(resolve){resolvers.push(resolve);});};window.EventSource=class{constructor(){esCount++;}close(){}};try{const btn=document.getElementById('btn-train');btn.click();btn.click();resolvers[1]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));resolvers[0]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));document.getElementById('btn-stop').click();return esCount;}finally{window.fetch=origFetch;window.EventSource=origES;}})()`);
+  const staleConnections = await evalJS(`(async()=>{const origFetch=window.fetch,resolvers=[];let postCount=0;document.getElementById('tr-token').value='smoke-token';window.fetch=function(url,opts){if(opts&&opts.method==='POST')postCount++;return new Promise(function(resolve){resolvers.push(resolve);});};try{const btn=document.getElementById('btn-train');btn.click();btn.click();resolvers[1]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));resolvers[0]({ok:true});await new Promise(r=>setTimeout(r,0));await new Promise(r=>setTimeout(r,0));document.getElementById('btn-stop').click();return postCount;}finally{window.fetch=origFetch;}})()`);
   check('旧训练探测晚到不会重连并覆盖新会话', staleConnections === 1);
 
   console.log('\nJS errors:', errors.length ? errors : '(none)');

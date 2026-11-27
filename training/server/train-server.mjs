@@ -7,28 +7,51 @@
  */
 import http from 'node:http';
 import { spawn } from 'node:child_process';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve, sep } from 'node:path';
-import { fileURLToPath, URL } from 'node:url';
+import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 
 const argv = process.argv.slice(2);
 const portFlag = argv.find((a) => a.startsWith('--port='));
+const tokenFlag = argv.find((a) => a.startsWith('--token='));
 const posPort = argv.find((a) => /^\d+$/.test(a));
 const PORT = Math.max(1024, Math.min(65535, Number(portFlag ? portFlag.slice(7) : (posPort || 8787)) || 8787));
+const TOKEN = tokenFlag ? tokenFlag.slice(8) : randomBytes(24).toString('hex');
+if (!TOKEN) throw new Error('--token 不能为空');
 
 const DEFAULT_UP = 'docs/artifacts/obs6-coldstart/MX8-R6C-KL.bak';
 const LATEST_OUT_REL = 'scratch/arms/ui-train-latest.bak';
 
 let activeChild = null;
+let stopPromise = null;
 let lastOut = '';
 
 function isAllowedOrigin(origin) {
-  if (!origin) return false;
-  if (origin === 'null') return true;   // 本地双击 file:// 打开页面
+  if (!origin) return true;
+  if (origin === 'null') return true;   // 本地双击 file:// 打开页面；仍必须带 token
   return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
+}
+
+function tokenOk(got) {
+  const a = Buffer.from(String(got || ''));
+  const b = Buffer.from(TOKEN);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function requestError(req, u, needToken) {
+  const host = String((req.headers && req.headers.host) || '').toLowerCase();
+  if (host !== '127.0.0.1:' + PORT && host !== 'localhost:' + PORT) return { code: 403, msg: 'Host 不允许' };
+  const origin = String((req.headers && req.headers.origin) || '');
+  if (!isAllowedOrigin(origin)) return { code: 403, msg: 'Origin 不允许' };
+  if (needToken) {
+    const got = (req.headers && req.headers['x-epirus-token']) || (u && u.searchParams.get('token')) || '';
+    if (!tokenOk(got)) return { code: 401, msg: '训练令牌无效' };
+  }
+  return null;
 }
 
 function setCors(req, res) {
@@ -38,7 +61,7 @@ function setCors(req, res) {
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Epirus-Token');
 }
 
 function sendJson(req, res, code, obj) {
@@ -61,11 +84,12 @@ function resolveInsideRoot(relOrPath) {
   return full;
 }
 
-function validateTeacher(raw) {
+export function validateTeacher(raw) {
   const t = String(raw || '').trim();
   if (!t) return null;
   if (/^[A-Za-z0-9_-]+$/.test(t)) return t;
-  const full = resolve(ROOT, t);
+  const path = t.startsWith('pack:') ? t.slice(5) : t;
+  const full = resolve(ROOT, path);
   if ((full !== ROOT && !full.startsWith(ROOT + sep)) || !existsSync(full)) return null;
   return t;
 }
@@ -82,25 +106,49 @@ function extractPackFromBak(filePath) {
 }
 
 function killChildTree(child) {
-  if (!child) return false;
-  try {
-    if (process.platform === 'win32' && child.pid) {
-      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
-      killer.unref();
-    } else {
-      child.kill('SIGTERM');
+  if (!child) return Promise.resolve(false);
+  if (child.exitCode != null || child.signalCode != null) return Promise.resolve(true);
+  return new Promise((resolveStop) => {
+    let done = false;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      child.off('close', onClose);
+      child.off('error', onError);
+      resolveStop(ok);
+    };
+    const onClose = () => finish(true);
+    const onError = () => finish(false);
+    child.once('close', onClose);
+    child.once('error', onError);
+    const timer = setTimeout(() => {
+      try { child.kill('SIGTERM'); } catch (e) { /* ignore */ }
+      finish(false);
+    }, 8000);
+    try {
+      if (process.platform === 'win32' && child.pid) {
+        const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true });
+        killer.once('error', () => { try { child.kill('SIGTERM'); } catch (e) { /* ignore */ } });
+      } else {
+        child.kill('SIGTERM');
+      }
+    } catch (e) {
+      finish(false);
     }
-    return true;
-  } catch (e) {
-    return false;
-  }
+  });
 }
 
 function killActive() {
-  if (!activeChild) return false;
+  if (stopPromise) return stopPromise;
+  if (!activeChild) return Promise.resolve(false);
   const c = activeChild;
-  activeChild = null;
-  return killChildTree(c);
+  stopPromise = killChildTree(c).then((ok) => {
+    if (activeChild === c) activeChild = null;
+    stopPromise = null;
+    return ok;
+  });
+  return stopPromise;
 }
 
 function parseStepLine(mode, line, stepsPerRound, totalAll) {
@@ -134,7 +182,7 @@ function parseStepLine(mode, line, stepsPerRound, totalAll) {
   return null;
 }
 
-function handleTrain(req, res, q) {
+async function handleTrain(req, res, q) {
   const sseError = (msg) => {
     setCors(req, res);
     res.writeHead(200, {
@@ -213,7 +261,7 @@ function handleTrain(req, res, q) {
     if (winOnly === 1 || winOnly === 2) cmdArgs.push('--winOnly=' + winOnly);
   }
 
-  killActive();
+  await killActive();
 
   setCors(req, res);
   res.writeHead(200, {
@@ -297,15 +345,26 @@ function handleTrain(req, res, q) {
   });
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
+  const u = new URL(req.url || '/', 'http://127.0.0.1:' + PORT);
+  const boundaryError = requestError(req, u, false);
+  if (boundaryError) {
+    sendJson(req, res, boundaryError.code, { ok: false, msg: boundaryError.msg });
+    return;
+  }
   if (req.method === 'OPTIONS') {
     setCors(req, res);
     res.writeHead(204);
     res.end();
     return;
   }
-  const u = new URL(req.url || '/', 'http://127.0.0.1:' + PORT);
+  const authError = requestError(req, u, true);
+  if (authError) {
+    sendJson(req, res, authError.code, { ok: false, msg: authError.msg });
+    return;
+  }
   if (u.pathname === '/' || u.pathname === '/status') {
+    if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
     sendJson(req, res, 200, { ok: true, engine: '2.0-obs6', active: !!activeChild, lastOut: lastOut || null });
     return;
   }
@@ -314,12 +373,13 @@ const server = http.createServer((req, res) => {
       sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed: use POST /reset' });
       return;
     }
-    const killed = killActive();
+    const killed = await killActive();
     lastOut = '';
     sendJson(req, res, 200, { ok: true, stopped: killed });
     return;
   }
   if (u.pathname === '/champion') {
+    if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
     const latestAbs = resolve(ROOT, LATEST_OUT_REL);
     const targetRel = existsSync(latestAbs) ? LATEST_OUT_REL : DEFAULT_UP;
     const targetAbs = resolve(ROOT, targetRel);
@@ -333,19 +393,32 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (u.pathname === '/train') {
-    handleTrain(req, res, u.searchParams);
+    if (req.method !== 'POST') {
+      sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed: use POST /train' });
+      return;
+    }
+    try {
+      await handleTrain(req, res, u.searchParams);
+    } catch (e) {
+      if (!res.headersSent) sendJson(req, res, 500, { ok: false, msg: e.message });
+      else res.end();
+    }
     return;
   }
   sendJson(req, res, 404, { ok: false, msg: 'unknown endpoint: ' + u.pathname });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log('[train-server] 2.0 obs6 本地训练服务已监听 http://127.0.0.1:' + PORT);
-});
-
-for (const sig of ['SIGINT', 'SIGTERM']) {
-  process.on(sig, () => {
-    killActive();
-    server.close(() => process.exit(0));
+const IS_MAIN = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (IS_MAIN) {
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log('[train-server] 2.0 obs6 本地训练服务已监听 http://127.0.0.1:' + PORT);
+    console.log('[train-server] 打开 http://127.0.0.1:' + PORT + '/?token=' + TOKEN);
   });
+
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.on(sig, async () => {
+      await killActive();
+      server.close(() => process.exit(0));
+    });
+  }
 }

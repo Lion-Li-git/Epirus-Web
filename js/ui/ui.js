@@ -1619,7 +1619,7 @@
 
   /* ---------- 训练场（2.0 obs6 统一训练） ---------- */
   let lastTrainer = null;
-  let remoteES = null;
+  let remoteAbort = null;
   let remoteHistory = [];
   let remoteTotal = 1000;
   let remoteRetry = null;
@@ -1660,17 +1660,29 @@
   function stopRemote() {
     remoteGeneration++;
     if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
-    if (remoteES) { remoteES.close(); remoteES = null; }
+    if (remoteAbort) { remoteAbort.abort(); remoteAbort = null; }
     if ($('btn-stop')) $('btn-stop').disabled = true;
-    if ($('tr-state')) $('tr-state').textContent = '已断开显示（若服务仍在运行可点「重置训练服务」中止）';
+    if ($('tr-state')) $('tr-state').textContent = '已断开显示并请求停止训练';
   }
   function remoteBase() {
     const port = ($('tr-port') && $('tr-port').value) || '8787';
     return 'http://127.0.0.1:' + port;
   }
+  function remoteToken() {
+    const el = $('tr-token');
+    let token = (el && el.value) || '';
+    if (!token) { try { token = sessionStorage.getItem('epirus.trainToken') || ''; } catch (e) { /* ignore */ } }
+    if (!token) { try { token = new URL(location.href).searchParams.get('token') || ''; } catch (e) { /* ignore */ } }
+    token = String(token || '').trim();
+    if (token && el) el.value = token;
+    if (token) { try { sessionStorage.setItem('epirus.trainToken', token); } catch (e) { /* ignore */ } }
+    return token;
+  }
   function resetServerTrain() {
     stopRemote();
-    fetch(remoteBase() + '/reset', { method: 'POST' }).then(function (r) {
+    const token = remoteToken();
+    if (!token) { if ($('tr-remote')) $('tr-remote').textContent = '请先填写启动服务时显示的令牌'; return; }
+    fetch(remoteBase() + '/reset', { method: 'POST', headers: { 'X-Epirus-Token': token } }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     }).then(function () {
@@ -1710,10 +1722,12 @@
     if ($('tr-evalbox')) $('tr-evalbox').innerHTML = h;
   }
   function fetchProbe(base) {
+    const token = remoteToken();
+    if (!token) return Promise.resolve({ ok: false, needToken: true });
     const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     const tid = setTimeout(function () { if (ctl) ctl.abort(); }, 1500);
-    return fetch(base + '/', ctl ? { signal: ctl.signal } : undefined).then(function (r) {
-      clearTimeout(tid); return { ok: r.ok };
+    return fetch(base + '/', { headers: { 'X-Epirus-Token': token }, signal: ctl ? ctl.signal : undefined }).then(function (r) {
+      clearTimeout(tid); return { ok: r.ok, status: r.status };
     }).catch(function () { clearTimeout(tid); return { ok: false }; });
   }
   function trainParams() {
@@ -1733,7 +1747,11 @@
     const base = remoteBase();
     const cfg = trainParams();
     if (remoteRetry) { clearInterval(remoteRetry); remoteRetry = null; }
-    if (remoteES) { remoteES.close(); remoteES = null; }
+    if (remoteAbort) { remoteAbort.abort(); remoteAbort = null; }
+    if (!remoteToken()) {
+      if ($('tr-remote')) $('tr-remote').textContent = '请先填写启动服务时显示的令牌';
+      return;
+    }
     remoteHistory = [];
     if ($('tr-seeds-status')) $('tr-seeds-status').textContent = '';
     if ($('tr-progress')) $('tr-progress').style.width = '0%';
@@ -1759,7 +1777,9 @@
   }
   function openRemote(base, cfg, generation) {
     if (generation !== remoteGeneration) return;
-    if (remoteES) { remoteES.close(); remoteES = null; }
+    if (remoteAbort) { remoteAbort.abort(); remoteAbort = null; }
+    const token = remoteToken();
+    if (!token) { if ($('tr-remote')) $('tr-remote').textContent = '请先填写启动服务时显示的令牌'; return; }
     const qs = new URLSearchParams({
       mode: cfg.mode,
       up: cfg.up,
@@ -1779,13 +1799,11 @@
     remoteTotal = cfg.gens;
     if ($('tr-remote')) $('tr-remote').textContent = '连接中…';
     if ($('btn-stop')) $('btn-stop').disabled = false;
-    const es = new EventSource(base + '/train?' + qs.toString());
-    remoteES = es;
-    es.onopen = function () { if (generation === remoteGeneration && remoteES === es && $('tr-remote')) $('tr-remote').textContent = '已连接 2.0 服务，训练中（可切回对局页）'; };
-    es.onmessage = function (ev) {
-      if (generation !== remoteGeneration || remoteES !== es) return;
-      let d = {};
-      try { d = JSON.parse(ev.data); } catch (e) { return; }
+    const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    remoteAbort = ctl;
+    const finish = function () { if (remoteAbort === ctl) remoteAbort = null; };
+    const apply = function (d) {
+      if (generation !== remoteGeneration || remoteAbort !== ctl) return;
       if (d.type === 'start') {
         remoteTotal = d.total || cfg.gens;
         if ($('tr-state')) $('tr-state').textContent = '已启动 ' + d.mode + ' 2.0 训练（总计 ' + remoteTotal + (d.mode === 'pg' ? ' 局' : ' 步') + '）';
@@ -1805,7 +1823,7 @@
       } else if (d.type === 'done') {
         if ($('tr-progress')) $('tr-progress').style.width = '100%';
         if ($('btn-stop')) $('btn-stop').disabled = true;
-        es.close(); remoteES = null;
+        finish();
         if (d.champ) {
           sessionMultiChampPack = d.champ;
           sessionMultiChampSet = true;
@@ -1818,14 +1836,53 @@
       } else if (d.type === 'error') {
         if ($('btn-stop')) $('btn-stop').disabled = true;
         if ($('tr-remote')) $('tr-remote').textContent = '服务错误：' + (d.msg || 'unknown');
-        es.close(); remoteES = null;
+        finish();
       }
     };
-    es.onerror = function () {
-      if ($('btn-stop')) $('btn-stop').disabled = true;
-      if ($('tr-remote')) $('tr-remote').textContent = '连接中断。请确认 2.0 训练服务仍在运行（training/start-train-server.cmd）。';
-      es.close(); remoteES = null;
+    const consume = function (block) {
+      const data = block.split('\n').filter(function (line) { return line.indexOf('data:') === 0; })
+        .map(function (line) { return line.slice(5).trim(); }).join('\n');
+      if (!data) return;
+      try { apply(JSON.parse(data)); } catch (e) { /* ignore */ }
     };
+    fetch(base + '/train?' + qs.toString(), {
+      method: 'POST',
+      headers: { 'X-Epirus-Token': token },
+      signal: ctl ? ctl.signal : undefined,
+    }).then(async function (r) {
+      if (generation !== remoteGeneration || remoteAbort !== ctl) return;
+      if (!r.ok) {
+        let msg = 'HTTP ' + r.status;
+        try { const j = await r.json(); msg = j.msg || msg; } catch (e) { /* ignore */ }
+        throw new Error(msg);
+      }
+      if ($('tr-remote')) $('tr-remote').textContent = '已连接 2.0 服务，训练中（可切回对局页）';
+      if (!r.body || !r.body.getReader) {
+        const text = await r.text();
+        for (const block of text.split(/\r?\n\r?\n/)) consume(block);
+        finish();
+        return;
+      }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      while (generation === remoteGeneration && remoteAbort === ctl) {
+        const part = await reader.read();
+        if (part.done) break;
+        buf += decoder.decode(part.value, { stream: true });
+        const blocks = buf.split(/\r?\n\r?\n/);
+        buf = blocks.pop() || '';
+        for (const block of blocks) consume(block);
+      }
+      if (buf.trim()) consume(buf);
+      finish();
+    }).catch(function (err) {
+      if (generation !== remoteGeneration || remoteAbort !== ctl) return;
+      if ($('btn-stop')) $('btn-stop').disabled = true;
+      if ($('tr-remote')) $('tr-remote').textContent = err && err.name === 'AbortError'
+        ? '连接已断开并请求停止训练' : '连接中断：' + (err && err.message ? err.message : '未知错误');
+      finish();
+    });
   }
   function drawChart() {
     const cv = $('chart');
