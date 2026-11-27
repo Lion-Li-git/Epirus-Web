@@ -465,8 +465,9 @@ node tools/pool-add.mjs --audit
 
 ### DONE
 
-- v2.1.41–43 已本地提交；当前池 35 枚 `17/18`，结构审计 `bad=[]`。
-- 审查确认：金刚盾×狙击/地雷漏接、训练服务 CORS/GET/进程生命周期、UI `guardNext` 与 session 包优先级、整表截断校验缺口。
+- v2.1.41–43 已提交推送；当前池 35 枚 `17/18`，结构审计 `bad=[]`。
+- Phase 0 已提前完成：训练服务认证/生命周期 `6b47442a`、金刚盾交叉规则 `f4b8e1bd`、UI/整表校验 `5307ebe0`，均已推送。
+- 新规则指纹冻结为 `c61298e6`；`spec 96/96`、训练服务自检、池加载自检、`ui-contract 8/8`、`meta-repo 13/13`、`ship-pool 1/1`、`D16`/`D168`、训练栈 37 条、真实 Chrome `SMOKE OK`/`BATTLE OK` 全绿。
 - 计划命令已按真实 CLI 重写；明确 `hard < regular < sparring`、候选同位替换、人席两 seed、产物跟踪和槽位恢复。
 - 计划工作量扩为核心 8 小时 + 续班 8 小时 + 2 小时 stretch；08:00 与 16:00 只审议，不默认收工。
 
@@ -476,5 +477,5 @@ node tools/pool-add.mjs --audit
 
 ### NEXT
 
-- 23:50 从 Phase 0 开始；先修缺陷并冻结新指纹，禁止直接执行旧版 Phase 0 普查命令。
-- Phase 0 全绿后提交并推送修复，再进入 Phase 1；若修复跨过 00:50，整体顺延，不压缩验收。
+- 00:15 起进入 Phase 1：在 `c61298e6` 下重跑 35 池 Stage 1、selftest3 底座账、受影响包同 seed 回归和 2P/5P 阶梯矩阵。
+- Phase 1 三表全部落盘后才进入 Phase 2；旧指纹读数只作历史对照，不作当前判决。

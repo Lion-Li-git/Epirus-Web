@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.44 — 11-28（通宵审查修复：训练服务认证 / 金刚盾交叉规则 / UI 与池整表校验）
+
+**这一版是什么**：修复通宵审查确认的 P0/P1/P2 缺陷：本地训练服务增加随机令牌、Host/Origin 校验和 POST-only 控制，并等待进程树真正退出；金刚盾主动判定接入狙击干扰与地雷触发；UI 修正下一回合无极变速徽章和 session 新包优先级；池整表增加数量、ID 集合与重复校验。冠军权重未改，规则指纹 `442b4b68 → c61298e6`。
+
+- **训练服务**：`training/server/train-server.mjs` 默认生成随机令牌，启动时打印带令牌地址；`/train` 与 `/reset` 只收 POST，外国 Origin/错误 Host/缺失令牌均拒绝；`pack:<路径>` 教师合法，越界仍拒绝；Windows `taskkill` 后等待 close/error 再释放状态。UI 改用带 `X-Epirus-Token` 的 POST SSE，新增令牌输入。
+- **金刚盾**：`js/core/resolve.js` 将主动判定伤加入地雷触发，并在狙击干扰/爆头判断中识别金刚盾声明目标；不扩大 `ATK_EFFECT`，避免顺带改变相抵与过载炮反制。规则页同步过载炮旧句。
+- **UI 与池加载**：`guardNext` 徽章恢复；session 新多人包在本地持久化失败时仍优先于旧包；整表截断、缺项和重复 ID 会响亮失败。
+- **验证**：`spec 96/96`、`D16`、`D126`、`N21`、`N22b`、`N22c`、`D23`、`D166`、`probe-pool-loader`、`train-server-selftest` 与真实 Chrome `SMOKE OK` 通过；未跑 `--group=engine` 整轮。
+
 ## v2.1.43 — 11-27（P1 前端与池加载修复 ‖ P2 AI 推理与训练服务修复 ‖ 千问通宵班计划）
 
 **这一版是什么**：修复 P1（前端对局界面 / 冠军池抽签与整表校验）及 P2（AI 推理孪生 / 训练服务与脚本）已定位缺陷，并落盘基于 `442b4b68` 指纹的千问通宵班执行计划 [`docs/research/PLAN-2026-11-27-overnight-qwen.md`](docs/research/PLAN-2026-11-27-overnight-qwen.md)。核心规则引擎与冠军权重未动，规则指纹保持 **`442b4b68`**。

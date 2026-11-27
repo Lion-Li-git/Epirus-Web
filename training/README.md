@@ -11,7 +11,7 @@
 | **统一 2.0 训练总入口**（一键分发下述各路 / 自检） | `node training/train.mjs --mode=pg\|supfit\|fuse\|selftest` | 直接传 env 旋钮给 2.0 产线（改走 `--flag`） |
 | **2.0 (obs6) 包的强化/塑形后训练**（现役主力） | `proto2/pg-train.mjs`（REINFORCE + `--shapeKey` 事件塑形 + `--klW/--klTilt` 键频锚 + `--segEvery` 多节点） | ❌ klTilt 抬不起**零覆盖键**（放大起点分布，3×0=0）——零覆盖键走蒸馏 |
 | **2.0 包的教师蒸馏 / DAgger / 多教师** | `proto2/supfit-gd.mjs`（`--teacher=toolkit\|chain\|v7mix\|pack:<任意包>` + `--teacher2/3/4` 键道轮替 + `--winOnly` 胜局语境；EQ-S4/TZ2C/DIV/night2 系全出自它） | ❌ 从融合/插值产物出发时教师必须 ⊇ 两父系键道（METHODOLOGY §148.6） |
-| 浏览器页面本地 SSE 训练服务 | `node training/server/train-server.mjs`（或双击 `training/start-train-server.cmd`） | — |
+| 浏览器页面本地 SSE 训练服务 | `node training/server/train-server.mjs`（或双击 `training/start-train-server.cmd`） | 启动后把控制台打印的随机令牌填入训练页；启动/停止只接受带令牌的 POST |
 | 融合两枚同形状包 | `tools/pack-fuse.mjs`（--a --b --t --out；产物只当教师/候选） | ❌ 融合产物不能当自由巩固起点（单教师巩固 = 洗掉融合） |
 | 旋钮改了/加了 | `node training/knobs.mjs` 重生成册（**--check 供 CI**） | — |
 | 判断产物血统（30 秒） | 本页 §六 验尸脚本 | — |

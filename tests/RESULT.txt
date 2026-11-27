@@ -1,5 +1,5 @@
 通过 96 / 96
-生成于 2026-11-27（Node 桩跑 tests/spec.js；浏览器打开 tests/spec.html 等价）
+生成于 2026-11-28（Node 桩跑 tests/spec.js；浏览器打开 tests/spec.html 等价）
 当前读数以 `node tools/spec-run.mjs` 的自证输出为准；本文件保留跑法与用例沿革。
 
 【用例数沿革】
