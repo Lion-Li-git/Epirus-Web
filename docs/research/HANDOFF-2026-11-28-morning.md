@@ -73,3 +73,10 @@
 - 先等 `aef11ee9` CI 回执；若绿，本班可收工。
 - 下一班若要继续训练，必须先提出清单外的新假设；当前没有值得直接重跑的旧配方。
 - P3 债务按上表逐项提案，不在本班擅自删除或改 CI。
+
+## 6. 06:36 续班：P3 工程债务
+
+- Pages 发布已排除 `champion-map/archive`：干净树产物 **450 → 208 文件、61M → 43M**；仓内 archive 保留，页面无运行时引用。
+- training workflow 已补齐 `tools/audit-lib.mjs`、`js/core/**`、`js/train/policy.js`、`policy2.js`、`bots.js`、`evo.js`、`js/pool-draw.js`、参照包与自检夹具的 push/PR 触发路径。
+- 验证：干净树 Pages 组装通过；`training/train.mjs --selftest` 的 37 条原型自证、selftest3 六腿、浏览器镜像全绿；`training/knobs.mjs --check` 通过。
+- 本轮未改产品规则、池成员或训练判据，也未跑本地整轮门禁。

@@ -5,12 +5,30 @@ on:
     branches: [main]
     paths:
       - 'training/**'
+      - 'tools/audit-lib.mjs'
       - 'tools/pack-fuse.mjs'
+      - 'js/core/**'
+      - 'js/train/policy.js'
+      - 'js/train/policy2.js'
+      - 'js/train/bots.js'
+      - 'js/train/evo.js'
+      - 'js/pool-draw.js'
+      - 'js/bundled-champion-3p.js'
+      - 'docs/artifacts/obs6-coldstart/EQ-S4-E9.bak'
       - '.github/workflows/training.yml'
   pull_request:
     paths:
       - 'training/**'
+      - 'tools/audit-lib.mjs'
       - 'tools/pack-fuse.mjs'
+      - 'js/core/**'
+      - 'js/train/policy.js'
+      - 'js/train/policy2.js'
+      - 'js/train/bots.js'
+      - 'js/train/evo.js'
+      - 'js/pool-draw.js'
+      - 'js/bundled-champion-3p.js'
+      - 'docs/artifacts/obs6-coldstart/EQ-S4-E9.bak'
       - '.github/workflows/training.yml'
   workflow_dispatch:
 
