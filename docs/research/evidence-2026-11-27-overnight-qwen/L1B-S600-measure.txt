@@ -1,0 +1,21 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-long-pgdr-l1b.seg600.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-long-pgdr-l1b.seg600.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-long-pgdr-l1b.seg600.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 scratch/arms/nov27-long-pgdr-l1b.seg600.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/L1B-S600-extra.tsv --ids=L1B-S600 --out=staging/L1B-S600-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+—— ax-multi —— [冠军4N] h2=82.65 h3=62.85 h5=42.57 h8=18.41 x2=0.6531 x3=0.4427 x5=0.2821 x8=0.0675 n2=2600 n3=1440 n5=740 n8=440 sec=15.5 mode=multi dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=15 skE=14 keys=bagua,bigT,charge,curse,drain,guard,gun,holo,ji,jinshield,railgun,reflect,ring,snipe,sword coop=v3x40
+—— a-multi —— [冠军4N] h2=79.08 h3=63.54 h5=39.86 h8=19.77 x2=0.5815 x3=0.4531 x5=0.2483 x8=0.0831 n2=2600 n3=1440 n5=740 n8=440 sec=15.9 mode=multi dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=20 skE=17 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,rod,shift,snipe,sword,taunt coop=v3x40
+—— a-long —— [冠军4N] h2=83.54 h3=54.31 h5=40.95 h8=28.64 x2=0.6708 x3=0.3146 x5=0.2618 x8=0.1844 n2=2600 n3=1440 n5=740 n8=440 sec=29.7 mode=long dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=24 skE=20 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,mine,miniT,purify,railgun,reflect,ring,rod,shift,snipe,sword,tank,taunt,transfer coop=v3x40
+—— ax-long —— [冠军4N] h2=86.96 h3=58.61 h5=40.41 h8=26.59 x2=0.7392 x3=0.3792 x5=0.2551 x8=0.1610 n2=2600 n3=1440 n5=740 n8=440 sec=29.4 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=17 keys=bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,railgun,reflect,ring,shift,snipe,sword,tank,taunt coop=v3x40
+—— arena-b —— arS=0.2215 arL=-0.0693 arR=0.2445
+—— mixedfix —— MxC=0.2400 MxCL=0.1703 MxSkU=16 MxSkE=15
+—— ruler ——
+  1/1 ‖ 36.23s/枚 ‖ 已用 36s ‖ 预计还需 0.0 分 ‖ 最新 L1B-S600 H=58.1 S=1.42
+完成 1 枚，用时 36s ⇒ D:\code\Epirus-Web\champion-map\staging\L1B-S600-ruler.tsv
+readings 32 条 ‖ display L1B-S600-display.tsv
+build: exam-view 1054 行 ‖ coords-view 1054 行，无 display 0
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：101 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 页内自检 0 FAIL
+✅ add-point 完成：L1B-S600

@@ -1,0 +1,66 @@
+[
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 46.3,
+    "sparring": 58.5
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 25,
+    "sparring": 27.9
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 16
+  },
+  {
+    "target": "RING-MINIT-CONT",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 8.3,
+    "sparring": 15.8
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-rule",
+    "seed": 95001,
+    "hard": 29.1,
+    "regular": 45.6,
+    "sparring": 58.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "2p-legacy",
+    "seed": 95001,
+    "hard": 19.7,
+    "regular": 24.8,
+    "sparring": 27.3
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-multi",
+    "seed": 95001,
+    "hard": 3.3,
+    "regular": 10.5,
+    "sparring": 16
+  },
+  {
+    "target": "MX8-R6B-KL",
+    "config": "5p-long",
+    "seed": 95001,
+    "hard": 4.5,
+    "regular": 7.3,
+    "sparring": 14.3
+  }
+]
