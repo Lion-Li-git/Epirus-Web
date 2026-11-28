@@ -63,6 +63,12 @@ export function stripComments(src) {
  *  `EPIRUS_CHAMPION*` 是 `window` 上的包名（全仓从没有 `process.env.EPIRUS_CHAMPION*`，已 grep 证），
  *  留在全集里只会让"有人读"的名单虚胖。 */
 const NOT_A_KNOB = /^EPIRUS_(?:CHAMPION|INSTR)/;
+const RETIRED_KNOBS = new Map([
+  ['EPIRUS_DIV_W', 'v7 训练线已退役；现役 promote 的同名字串只是历史标签'],
+  ['EPIRUS_JSON', '机器可读输出前缀，不是环境旋钮'],
+  ['EPIRUS_T3P_BASELINE', 'train-3p 已退役'],
+  ['EPIRUS_WORKERS', 'v7 worker 池已退役'],
+]);
 
 /** 全集口径 = 读集口径：出现过的**键名**（裸字符串字面量也算）。
  *
@@ -74,7 +80,7 @@ const NOT_A_KNOB = /^EPIRUS_(?:CHAMPION|INSTR)/;
 export function scanKeysFromSource(src) {
   const out = new Set();
   const m = stripComments(src).match(/EPIRUS_[A-Z0-9_]+/g);
-  if (m) for (const k of m) if (!NOT_A_KNOB.test(k)) out.add(k);
+  if (m) for (const k of m) if (!NOT_A_KNOB.test(k) && !RETIRED_KNOBS.has(k)) out.add(k);
   return out;
 }
 
@@ -155,7 +161,7 @@ export function readKeysOf(opt) {
 export function detectDarkKnobs(env, opt) {
   const { read, files } = readKeysOf(opt);
   const universe = repoKnobUniverse(opt.roots);
-  const removed = opt.removed || {};
+  const removed = Object.assign({}, Object.fromEntries(RETIRED_KNOBS), opt.removed || {});
   const gone = Object.keys(removed).filter(function (k) { return env[k] !== undefined; }).sort();
   const dark = Array.from(universe).filter(function (k) {
     return env[k] !== undefined && !read.has(k);

@@ -8,7 +8,7 @@
 > 运行时那套（`training/server/knob-guard.mjs` 的 `readKeysOf()` / `detectDarkKnobs()`，按**单个入口**的 import 闭包判）仍保留给门禁与工具复用。
 > 注解：v7 线（`train-3p.mjs`、`econ-env.mjs`、`train-env.mjs` 等）已于 2026-11-28 正式整体退役并移至仓外隔离区 `cleanup-2026-11-28`（随 git 史可考）；当前 `--check` 校验册子新鲜度与暗键。
 > 2.0 产线（pg-train / supfit-gd）是 **--flag** 接口（见 training/README.md §〇），不走 env 旋钮。
-> 数据账：全集 39 ‖ 在用（有读法）33 ‖ 仅动态提及 2 ‖ 暗键 4
+> 数据账：全集 35 ‖ 在用（有读法）33 ‖ 仅动态提及 2 ‖ 暗键 0
 
 ## 全量（按名排序）
 
@@ -27,12 +27,10 @@
 | `EPIRUS_DEBUG_CDP` | `tools/page-chrome.mjs` | — | 在用（读法 1 处） |
 | `EPIRUS_DEFQ_GAMES` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
 | `EPIRUS_DENSITY_GAMES` | `tools/audit-lib.mjs` | promote-champion | 在用（读法 1 处） |
-| `EPIRUS_DIV_W` | — | promote-champion | 暗键（无读法） |
 | `EPIRUS_FEAS_GAMES` | `tools/audit-lib.mjs` | promote-champion | 在用（读法 1 处） |
 | `EPIRUS_GUARD_GAMES` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
 | `EPIRUS_GUARD_SEEDS` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
 | `EPIRUS_HOTSTART` | `champion-map/audit-parent-evidence.mjs` `champion-map/lineage.mjs` | — | 在用（读法 2 处） |
-| `EPIRUS_JSON` | — | promote-champion | 暗键（无读法） |
 | `EPIRUS_LOG_DEFAULT_OUT` | `tools/gates/_ctx.mjs` | — | 在用（读法 1 处） |
 | `EPIRUS_MUT_MODE` | `tools/probe-cem-arm.mjs` | — | 在用（读法 1 处） |
 | `EPIRUS_NO_DEFQ` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
@@ -49,20 +47,11 @@
 | `EPIRUS_SEL_EVAL_SEEDS` | `tools/gates/_ctx.mjs` | — | 在用（读法 1 处） |
 | `EPIRUS_SHAPE_GAMES` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
 | `EPIRUS_SNIPER_GAMES` | `tools/promote-champion.mjs` | promote-champion | 在用（读法 1 处） |
-| `EPIRUS_T3P_BASELINE` | — | — | 暗键（无读法） |
 | `EPIRUS_WALL_MS` | `training/server/wall-cap.mjs` | — | 在用（读法 1 处） |
-| `EPIRUS_WORKERS` | — | — | 暗键（无读法） |
 | `EPIRUS_WR_TOL` | `tools/gates/meta-repo.mjs` | — | 在用（读法 1 处） |
 
 ## 仅动态提及（**不是删除候选**：读法长成 `env[变量]`，扫不出具体键）
 
 - `EPIRUS_ALLOW_DARK`
 - `EPIRUS_PASSIVE_FIELD`
-
-## 暗键（删除候选：维护面里没有任何 `env.X` / `env['X']` / `e.<KEY>` 读法）
-
-- `EPIRUS_DIV_W`
-- `EPIRUS_JSON`
-- `EPIRUS_T3P_BASELINE`
-- `EPIRUS_WORKERS`
 

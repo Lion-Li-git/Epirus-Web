@@ -21,7 +21,7 @@
   - `TM-S5-a40`（`soft`）：已过 `PREREG` 硬门，但 `miniT` 靶向得分仅 **`8` 分 / `0.250` 分每施放**（`32` 施放中有 `24` 次打在 `ji(21)/gun(3)` 上，低于已淘汰的 `TM-S2` 的 `11` 分 / `0.688` 分每施放）；
   - `TA-S3-R8`（`soft`）：`seatKill=0`（`8.0%/6.5%`），但以 `long` 重八卦阵（`41.8%` 非ジ出手 / 白防 `87.6%`）与零珠经济换得；**本轮保留观察，不无故回退或重训**；
   - `2P legacy` 难度阶梯：`19.8% < 25.1% < 26.9%`，`regular` 与 `sparring` 间距收窄到 **`1.8pt`**。
-- **工程债务**：`node training/knobs.mjs --check` 虽通过，但仍挂着 **4 个历史暗键**（`EPIRUS_DIV_W EPIRUS_JSON EPIRUS_T3P_BASELINE EPIRUS_WORKERS`）；环境旋钮定义唯一真源见 [`training/TRAINING-KNOBS.md`](../../training/TRAINING-KNOBS.md)（本文禁止复抄）。
+- **工程账（Phase 0 已闭合）**：`node training/knobs.mjs --check` 为 **全集 35 / 暗键 0**；4 个历史名字已登记为退役项，设置时会响亮拒绝，`EPIRUS_JSON` 输出协议保持不变。环境旋钮定义唯一真源见 [`training/TRAINING-KNOBS.md`](../../training/TRAINING-KNOBS.md)（本文禁止复抄）。
 
 ### 1.2 明确禁止重复（`AGENTS.md §15`）
 
@@ -44,8 +44,8 @@
 
 ### Phase 0（23:30–00:10 · 40 min）：工作树收口、消除旋钮暗键、刷新全池 `selftest3` 与固化只读探针
 
-1. **确认干净基线**：补账已独立提交为 `0cd5ddcc`；核对 `git status` 仅剩本计划，记录当前分支、真实时间与 `pool-add --audit` 回执。
-2. **清除 `knobs.mjs` 4 个暗键**：全局检索确认 `EPIRUS_DIV_W`、`EPIRUS_JSON`、`EPIRUS_T3P_BASELINE`、`EPIRUS_WORKERS` 在 `tools/ training/ js/ champion-map/` 下确无实际消费逻辑后，从 `training/knobs.mjs` 声明表移除并重运行 `node training/knobs.mjs` 重生成 `TRAINING-KNOBS.md`；要求 `node training/knobs.mjs --check` 输出 **`暗键 0`**（全集降至 **35**，巩固 `≤40` KPI）。
+1. **确认干净基线**：补账已独立提交为 `0cd5ddcc`、本计划提交为 `36a9cca1`；核对 `git status`，记录当前分支、真实时间与 `pool-add --audit` 回执，Phase 0 代码改动另笔提交。
+2. **退役 4 个历史暗键（已完成）**：在 `training/server/knob-guard.mjs` 登记 `EPIRUS_DIV_W`、`EPIRUS_JSON`、`EPIRUS_T3P_BASELINE`、`EPIRUS_WORKERS` 的退役原因；将它们排除出旋钮全集，同时保留 `detectDarkKnobs` 的响亮拒绝。已重生成 `TRAINING-KNOBS.md` 并验证 **全集 35 / 暗键 0**，逐个设置旧键均进入 `gone` 而非静默忽略。
 3. **固化 `miniT` 靶向得分只读工具**（不改引擎 `resolve.js`）：把今晚核验过的 `fx-pool1126d` 120 格 `miniT` 分档计分脚本写成独立只读探针 `tools/probe-minit-effectiveness.mjs`（支持 `--pack=<path|id>` 与 `--compare=<id1,id2>`，按回合 `action.target` 配对 `voidImmune`，不与 `pool-skill-report.mjs` 重复造核心沙箱而直接复用 `tools/audit-lib.mjs` 与 `training/server/opp-pool.mjs`），并在 `TM-S5-a40` 上复测验证输出 `8` 分（`0.250` 分/次）完全一致。
 4. **刷新 `v2.1.51` 全池 `selftest3` 普查**：运行 `CENSUS_PREFIX=selftest3-pool-v2151 CENSUS_BASELINE=0cd5ddcc node docs/research/evidence-2026-11-27-overnight-qwen/selftest3-pool-census.mjs`，产物落在该脚本固定的 `evidence-2026-11-27-overnight-qwen/selftest3-pool-v2151.{txt,json}`；核实 `TM-S5-a40` / `TN-S5` / `TA-S3-R8` 入池后全池最新绿座与红座（预期 31 绿 / 3 红 / 1 legacy）。
 
