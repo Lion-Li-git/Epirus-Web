@@ -4,15 +4,16 @@ import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
 const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
-const PREFIX = 'pool-loo-2026-11-28';
-const TARGETS = ['AR-TK2', 'nov21-armor-tzt2d', 'MX6-GD-TF20', 'FC-S1', 'OBS6E9', 'TF2-DR'];
+const PREFIX = process.env.LOO_PREFIX || 'pool-loo-2026-11-28';
+const TARGETS = (process.env.LOO_TARGETS || 'AR-TK2,nov21-armor-tzt2d,MX6-GD-TF20,FC-S1,OBS6E9,TF2-DR').split(',');
+const SEED_BASE = Number(process.env.LOO_SEED_BASE || 95001);
 const CONFIGS = [
-  { key: '2p-rule', n: 2, mode: 'standard', surrogate: 'rule', games: 1000, seeds: [95001, 95002, 95003, 95004] },
-  { key: '2p-legacy', n: 2, mode: 'standard', surrogate: 'legacy', games: 1000, seeds: [95001, 95002, 95003, 95004] },
-  { key: '5p-multi', n: 5, mode: 'multi', surrogate: 'legacy', games: 400, seeds: [95001, 95002] },
-  { key: '5p-long', n: 5, mode: 'long', surrogate: 'legacy', games: 400, seeds: [95001, 95002] },
-  { key: '8p-multi', n: 8, mode: 'multi', surrogate: 'legacy', games: 400, seeds: [95001, 95002] },
-  { key: '8p-long', n: 8, mode: 'long', surrogate: 'legacy', games: 400, seeds: [95001, 95002] },
+  { key: '2p-rule', n: 2, mode: 'standard', surrogate: 'rule', games: 1000, seeds: [0, 1, 2, 3].map((i) => SEED_BASE + i) },
+  { key: '2p-legacy', n: 2, mode: 'standard', surrogate: 'legacy', games: 1000, seeds: [0, 1, 2, 3].map((i) => SEED_BASE + i) },
+  { key: '5p-multi', n: 5, mode: 'multi', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
+  { key: '5p-long', n: 5, mode: 'long', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
+  { key: '8p-multi', n: 8, mode: 'multi', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
+  { key: '8p-long', n: 8, mode: 'long', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
 ];
 const VARIANTS = ['BASE', ...TARGETS];
 const jobs = [];
