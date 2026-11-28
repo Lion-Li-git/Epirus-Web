@@ -93,7 +93,7 @@
 **目的**：把原 Phase 3 的 `dualGun/mirror` 破冰降为末尾 Stretch，优先解决现役池可量化的阶梯收窄与高废底座问题。
 
 1. **`2P legacy` 细粒度脚本解剖（已完成，只读）**：新 seed `98001–98004` 的 35 池基线为 `regular 26.15% / sparring 30.25% / gap 4.10pt`，未复现 `1.8pt` 窄阶梯；逐枚摘除显示 `TK-FS4 / TF-DR / TN-S5` 是 regular 侧显著支撑，soft 侧点效应方差较大。结论：当前不调池，后续若复现窄阶梯先查 regular 侧支撑。详见 [`RESULTS-2026-11-29-2p-legacy-anatomy.md`](RESULTS-2026-11-29-2p-legacy-anatomy.md)。
-2. **`JN-DR` 高废底座降废（100 min，预注册单臂）**：以绿色 `JN-DR.bak` 为起点跑 Stage C ridge PG（`--games=2400 --lamExp=0.90 --penDeadElec=0.50 --beadSpendW=0.15 --klModes=standard --klW=0.35 --klTilt=jinshield,miniT --klTiltMul=3`），首件立即验血统与 `selftest3`；硬门为 `jinshield ≥ 25`、总废珠 `≤ 45%`、`selftest3` 全绿、`promote` 0 阻断、两批人席 `seatKill=0`，并用小雷探针报告 `pts/cast`。未达门只记负结果，不扫参挽救。
+2. **`JN-DR` 高废底座降废（已完成，淘汰）**：固定 Stage C ridge PG 四档快照全部 `selftest3` 绿，但 Stage 1 废珠为 `67.72/69.01/73.97/76.25%`、`jinshield=22/21/20/22`，首件即触发止损；终点小雷仍 `0` 分。未跑 promote/人席，不补 PG、不扫参，`JN-DR` 保留。详见 [`RESULTS-2026-11-29-jn-dr-waste.md`](RESULTS-2026-11-29-jn-dr-waste.md)。
 
 ---
 

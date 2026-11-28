@@ -1,0 +1,14 @@
+
+=== JN-DR-WASTE-S1 ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: 3b1b3f6cebf5117b | cells: 1200 | measuredAt: 2026-11-28T16:51:53.136Z
+  casts(ok): 16 | non-mirror voided: 16 | voidImmune: 0 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  "2pt(ring/3+ep)": 0,
+  "1pt(2ep)": 0,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 16,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:15, gun:1
+  immuneByKey: 

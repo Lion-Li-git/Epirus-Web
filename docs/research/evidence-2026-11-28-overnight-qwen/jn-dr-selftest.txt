@@ -1,0 +1,45 @@
+{"path":"scratch/arms/JN-DR-WASTE-S1.seg600.bak","wid":"62821246a69b5e9b","arm":"JN-DR-WASTE-S1.seg600","games":624,"seed":20261129,"hotstartFrom":"27923b8d6ee584e8"}
+{"path":"scratch/arms/JN-DR-WASTE-S1.seg1200.bak","wid":"2c771bc4d9f98f8b","arm":"JN-DR-WASTE-S1.seg1200","games":1200,"seed":20261129,"hotstartFrom":"27923b8d6ee584e8"}
+{"path":"scratch/arms/JN-DR-WASTE-S1.seg1800.bak","wid":"36387e2671d96273","arm":"JN-DR-WASTE-S1.seg1800","games":1824,"seed":20261129,"hotstartFrom":"27923b8d6ee584e8"}
+{"path":"scratch/arms/JN-DR-WASTE-S1.seg2400.bak","wid":"3b1b3f6cebf5117b","arm":"JN-DR-WASTE-S1.seg2400","games":2400,"seed":20261129,"hotstartFrom":"27923b8d6ee584e8"}
+{"path":"scratch/arms/JN-DR-WASTE-S1.bak","wid":"3b1b3f6cebf5117b","arm":"JN-DR-WASTE-S1","games":2400,"seed":20261129,"hotstartFrom":"27923b8d6ee584e8"}
+# selftest3 ‖ JN-DR-WASTE-S1.seg600.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.204（逐坐标 16561 里可分辨 1163）‖ 判定 996 ‖ 不进判定 16110（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# selftest3 ‖ JN-DR-WASTE-S1.seg1200.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.500（逐坐标 16561 里可分辨 1643）‖ 判定 1170 ‖ 不进判定 15936（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# selftest3 ‖ JN-DR-WASTE-S1.seg1800.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.339（逐坐标 16561 里可分辨 3127）‖ 判定 3125 ‖ 不进判定 13981（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# selftest3 ‖ JN-DR-WASTE-S1.seg2400.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.946（逐坐标 16561 里可分辨 982）‖ 判定 1028 ‖ 不进判定 16078（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+# selftest3 ‖ JN-DR-WASTE-S1.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.946（逐坐标 16561 里可分辨 982）‖ 判定 1028 ‖ 不进判定 16078（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 12 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
