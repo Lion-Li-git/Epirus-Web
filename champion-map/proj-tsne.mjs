@@ -21,10 +21,11 @@
  *   它们现在用的是同样无界的 x3/y3/z3 ⇒ 立体态被拉成竖条也是这个病）。
  *   ⚠ 不动任何已有列（H/S/Geff/F/rank/x2/y2/x3/y3/z3 与全部行为列），也**不动行序**。
  * 用法：node champion-map/proj-tsne.mjs [--in=coords.tsv] [--perp=30] [--iters=500] [--seed=7]
- *        [--method=auto|tsne|mds] [--write=0|1]
+ *        [--method=tsne] [--write=0|1]
  *   ⚠ 11-05 中午两处**跟着 N 走**的改动（逐视图重投影带出来的，见下面 §G3 两段注释）：
- *     困惑度默认 `min(30, max(4, N/5))`；二维布局默认 `auto` = 在 t-SNE 与经典 MDS 里按 kNN 保住率取高者。
- *     大表（800+）两者都落回原取值 ⇒ 现役 xt/yt 逐字不变。
+ *     困惑度默认 `min(30, max(4, N/5))`；小表学习率与尾部缩放按 N 自适应。
+ *     大表（800+）保留原学习率与 0.5%/99.5% 缩放 ⇒ 现役 xt/yt 逐字不变。
+ *   MDS 自动回退已删除：它会在点数变化时整张换布局，且少数极端尾点会把主云压成一条带。
  * 退出码 0 = 跑完（含自报指标）‖ 2 = 输入不齐（没有 12 个数值特征列）
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -149,7 +150,7 @@ function tsne(DIM, targetPerp, iters, seed) {
   const rnd = mulberry(seed);
   let Y = new Float64Array(N * DIM), V = new Float64Array(N * DIM);
   for (let i = 0; i < N * DIM; i++) Y[i] = (rnd() - 0.5) * 1e-3;
-  const LR = 180;
+  const LR = N >= 600 ? 180 : 50;
   for (let t = 0; t < iters; t++) {
     const num = new Float64Array(N * N); let s = 0;
     for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
@@ -200,60 +201,25 @@ function metrics(P2) {
 
 const T2 = tsne(2, PERP, ITERS, SEED);
 const T3 = tsne(3, PERP, ITERS, SEED + 1);
-/* §G3（11-05 中午 · 千问）**经典 MDS 也算一份，按同一把尺选**。
- *   起因是逐视图重投影：2.0 那张只有 39 枚 ⇒ t-SNE 的"局部邻域"在这规模上根本没东西可保
- *   （实测 kNN@7 在 0.15~0.29 之间摆，而**瞎猜就有 0.184** ⇒ 与随机无异 ⇒ 画出来就是"一坨 + 两枚飞出去"）。
- *   同一份 D2 上 MDS 给 0.502（2.7× 瞎猜、Spearman 0.84）；大表上反过来（870 枚：MDS 0.09 ‖ t-SNE 0.45）。
- *   ⇒ 不是"哪个方法更好"，是**哪个方法配得上这个 N** ⇒ 默认 `--method=auto` 按 kNN 保住率取高者，
- *     两个数都印出来（判据先于结果，且换法必须看得见理由）。`--method=tsne|mds` 可点名锁死。
- *   ⚠ 大表（800+）auto 恒选 t-SNE ⇒ 现役 xt/yt 逐字不变，这一改只动小表。 */
-function mds(DIM) {
-  const mRow = new Array(N).fill(0), mCol = new Array(N).fill(0);
-  let g = 0;
-  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) { mRow[i] += D2[i * N + j]; mCol[j] += D2[i * N + j]; g += D2[i * N + j]; }
-  const B = new Float64Array(N * N);
-  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) B[i * N + j] = -0.5 * (D2[i * N + j] - mRow[i] / N - mCol[j] / N + g / (N * N));
-  const V = [];
-  for (let d = 0; d < DIM; d++) {
-    let v = new Array(N).fill(0).map((_, i) => Math.sin((i + 1) * (d + 1) * 0.7) + 0.1);
-    for (let it = 0; it < 400; it++) {
-      const u = new Array(N).fill(0);
-      for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) u[i] += B[i * N + j] * v[j];
-      for (const w of V) { let dot = 0; for (let i = 0; i < N; i++) dot += u[i] * w[i]; for (let i = 0; i < N; i++) u[i] -= dot * w[i]; }
-      const nn = Math.hypot(...u) || 1; v = u.map(x => x / nn);
-    }
-    V.push(v);
-  }
-  const out = [];
-  for (let d = 0; d < DIM; d++) for (let i = 0; i < N; i++) out.push(V[d][i]);
-  return out;
+const METHOD = arg('method', 'tsne');
+if (METHOD !== 'tsne') {
+  console.error('⛔ MDS 自动回退已退役；--method 只认 tsne');
+  process.exit(2);
 }
-/* 每个轴按 0.5%~99.5% 跨度线性拉到 [-1,1] 并夹住尾巴。
- *   为什么不是只按 IQR 归一：t-SNE 输出的长宽比是任意的，只归 IQR 会画成一条横带（x 跨度远大于 y），
- *   画布上下全空、场网格也浪费；按跨度归一 ⇒ 云团填满画布，且两者跨度相同（线性、逐轴保序）。
- *   ⚠ 必须在两把尺对拍**之前**定义（const 有 TDZ），11-05 中午加 MDS 那一路时踩过一次。 */
+/* 小表的 0.5% 尾部只有约 1 枚，极端点会撑满纵轴并把主云压成一条带。 */
+const TAIL = N <= 300 ? 0.05 : 0.005;
 const scale = (arr) => { const s = arr.slice().sort((a, b) => a - b);
-  const lo = s[Math.floor(s.length * 0.005)], hi = s[Math.min(s.length - 1, Math.floor(s.length * 0.995))];
+  const lo = s[Math.floor(s.length * TAIL)], hi = s[Math.min(s.length - 1, Math.floor(s.length * (1 - TAIL)))];
   const sp = (hi - lo) || 1;
   return arr.map(v => Math.max(-1.05, Math.min(1.05, (v - lo) / sp * 2 - 1))); };
-const M2 = mds(2), M3 = mds(3);
-const mkT = metrics([scale(T2.slice(0, N)), scale(T2.slice(N, 2 * N))]);
-const mkM = metrics([scale(M2.slice(0, N)), scale(M2.slice(N, 2 * N))]);
+const m = metrics([scale(T2.slice(0, N)), scale(T2.slice(N, 2 * N))]);
 const chance = KN / (N - 1);
-console.log('  两把尺对拍（同一份 12 维距离、同一个 k=' + KN + '，瞎猜基线 ' + chance.toFixed(3) + '）：');
-console.log('    t-SNE(perp=' + PERP + ', iters=' + ITERS + ', seed=' + SEED + ')  kNN@' + KN + '=' + mkT.knn.toFixed(3) + ' ⇒ ' + (mkT.knn / chance).toFixed(1) + '× ‖ Spearman=' + mkT.sp.toFixed(3));
-console.log('    经典 MDS（双中心化+幂迭代）        kNN@' + KN + '=' + mkM.knn.toFixed(3) + ' ⇒ ' + (mkM.knn / chance).toFixed(1) + '× ‖ Spearman=' + mkM.sp.toFixed(3));
-const METHOD = arg('method', 'auto');
-const USE_MDS = METHOD === 'mds' || (METHOD === 'auto' && mkM.knn > mkT.knn);
-console.log('  ⇒ 取 ' + (USE_MDS ? 'MDS' : 't-SNE') + (METHOD === 'auto' ? '（auto：按 kNN 保住率取高者）' : '（--method= 点名）'));
-const pick = (tArr, mArr) => (USE_MDS ? mArr : tArr);
-const out2 = pick(T2, M2).slice(0, 2 * N);
-const out3 = pick(T3, M3).slice(0, 3 * N);
-const m = USE_MDS ? mkM : mkT;
-const x2 = scale(out2.slice(0, N)), y2 = scale(out2.slice(N, 2 * N));
-console.log('  ⇒ 落盘 xt/yt 用 ' + (USE_MDS ? 'MDS' : 't-SNE') + '：Spearman=' + m.sp.toFixed(3) + '  kNN@' + KN + '=' + m.knn.toFixed(3) +
+console.log('  ⇒ 落盘 xt/yt 用 t-SNE：Spearman=' + m.sp.toFixed(3) + '  kNN@' + KN + '=' + m.knn.toFixed(3) +
   ' ‖ 瞎猜基线 ' + chance.toFixed(3) + ' ⇒ 高出 ' + (m.knn / chance).toFixed(1) + '×' +
   '   （旧 x2/y2 在 800+ 枚大表上的基线：0.365 / 0.08，小表不可直接引用）');
+const out2 = T2.slice(0, 2 * N);
+const out3 = T3.slice(0, 3 * N);
+const x2 = scale(out2.slice(0, N)), y2 = scale(out2.slice(N, 2 * N));
 
 if (WRITE) {
   let hx = H.indexOf('xt'), hy = H.indexOf('yt'), hx3 = H.indexOf('xt3'), hy3 = H.indexOf('yt3'), hz3 = H.indexOf('zt3');

@@ -53,7 +53,15 @@ for (const [ver, suffix] of VERSIONS) {
   for (const r of members) for (const c of cols) if (!Number.isFinite(Number(r[ix[c]]))) throw new Error(ver + ' 缺投影 ' + r[ix.id] + ' ' + c);
   const moved = members.filter((r) => Math.abs(+r[ix['xt3' + suffix]] - +r[ix.xt3]) > 1e-6 || Math.abs(+r[ix['yt3' + suffix]] - +r[ix.yt3]) > 1e-6 || Math.abs(+r[ix['zt3' + suffix]] - +r[ix.zt3]) > 1e-6).length;
   if (moved !== members.length) throw new Error(ver + ' 仍有 ' + (members.length - moved) + ' 枚三维坐标与全库投影相同');
-  console.log('版本 ' + ver + ' 自证：' + moved + '/' + members.length + ' 枚三维坐标不同于全库 fit');
+  const moved2 = members.filter((r) => Math.abs(+r[ix['xt' + suffix]] - +r[ix.xt]) > 1e-6 || Math.abs(+r[ix['yt' + suffix]] - +r[ix.yt]) > 1e-6).length;
+  if (moved2 !== members.length) throw new Error(ver + ' 仍有 ' + (members.length - moved2) + ' 枚二维坐标与全库投影相同');
+  const span = (col) => {
+    const values = members.map((r) => +r[ix[col]]).sort((a, b) => a - b);
+    return values[Math.floor((values.length - 1) * 0.9)] - values[Math.floor((values.length - 1) * 0.1)];
+  };
+  const spanX = span('xt' + suffix), spanY = span('yt' + suffix);
+  if (spanX < 0.8 || spanY < 0.8) throw new Error(ver + ' 二维主云被尾部压扁：P10–P90 x/y=' + spanX.toFixed(3) + '/' + spanY.toFixed(3));
+  console.log('版本 ' + ver + ' 自证：' + moved + '/' + members.length + ' 枚三维坐标不同于全库 fit ‖ 二维 P10–P90 x/y=' + spanX.toFixed(3) + '/' + spanY.toFixed(3));
 }
 
 if (DRY) { console.log('--dry：计算完成，未写 display/projections'); process.exit(0); }

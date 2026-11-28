@@ -80,6 +80,8 @@ for (const t of [proj, disp]) {
     const id = r[idCol], suffix = regVer[id] === '2.0' ? '20' : '18';
     const cols = ['xt' + suffix, 'yt' + suffix, 'xt3' + suffix, 'yt3' + suffix, 'zt3' + suffix];
     for (const c of cols) if (!Number.isFinite(Number(r[t.ix[c]]))) errs.push(id + ' 版本投影缺数 ' + c);
+    const same2 = Math.abs(+r[t.ix['xt' + suffix]] - +r[t.ix.xt]) <= 1e-6 && Math.abs(+r[t.ix['yt' + suffix]] - +r[t.ix.yt]) <= 1e-6;
+    if (same2) errs.push(id + ' 版本二维投影仍等于全库 fit');
     const same3 = Math.abs(+r[t.ix['xt3' + suffix]] - +r[t.ix.xt3]) <= 1e-6 && Math.abs(+r[t.ix['yt3' + suffix]] - +r[t.ix.yt3]) <= 1e-6 && Math.abs(+r[t.ix['zt3' + suffix]] - +r[t.ix.zt3]) <= 1e-6;
     if (same3) errs.push(id + ' 版本三维投影仍等于全库 fit');
   }

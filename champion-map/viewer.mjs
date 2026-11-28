@@ -259,22 +259,15 @@ const mainOf = id => (id ? (MAIN_OF[id] || id) : id);
 console.log('§E604 副名指针：图上 ' + rows.length + ' 枚 ‖ 其中 ' + Object.keys(ALIASES_OF).length + ' 枚带着历史副名 ‖ ' +
   '翻译表覆盖 ' + Object.keys(MAIN_OF).length + ' 个名字（副名 ' + (Object.keys(MAIN_OF).length - rows.length) + ' 个）');
 /* ===== §E489 投影列不齐就是**装错货**，不许静默逐行退回到旧力导向 =====
- *   第 271 行那句 `(PROJTSNE && r.xt) ? r.xt : r.x2` 是"某枚**单独**没测过投影"时的退路，
- *   它挡不住"整列没了"（那种情况下每一枚都走退路 ⇒ 920 枚全画回旧布局，一个字的警告都没有）。
- *   实测踩过：跑完五步重建链（那时链子里还没有第⑥步 proj-tsne）⇒ 表从 41 列变 36 列，
- *   用户第一眼看的是「投影一下子变回很早的版本、区分度变得很低」，而产物自检 69 条**全绿**。
- *   ⇒ 判据放在**生成侧**：缺列 / 空过半 ⇒ 拒绝出图，除非明说 --proj=old。 */
+ *   缺列或空行都拒绝出图；--proj=old 是显式选择旧布局，不是运行时回退。 */
 if (PROJTSNE) {
   const noCol = ['xt', 'yt'].filter(c => head.indexOf(c) < 0);
   if (noCol.length) { console.error('⛔ coords.tsv 没有投影列 ' + noCol.join('/') + '（表头 ' + head.length + ' 列）' +
-    '\n       ⇒ 页面会**悄悄**把每一枚都画成旧力导向坐标（kNN@10 保住率 0.52 → 0.08 = 用户说的"区分度很低"）。' +
     '\n         补投影：node champion-map/proj-tsne.mjs（重建链第⑥步）‖ 确实要旧投影：--proj=old'); process.exit(2); }
   const empty = rows.filter(r => !(r.xt && r.yt));
-  if (empty.length > rows.length * 0.02) { console.error('⛔ 投影列在，但 ' + empty.length + '/' + rows.length + ' 行是空的' +
-    '\n       ⇒ 这些枚会退回旧坐标，与其余的**不在同一套投影里**（同一张图上混两套坐标 = 距离没有意义）。' +
+  if (empty.length) { console.error('⛔ 投影列在，但 ' + empty.length + '/' + rows.length + ' 行是空的' +
     '\n         空的前 8 枚：' + empty.slice(0, 8).map(r => r.id).join(' ') + '\n         补投影：node champion-map/proj-tsne.mjs'); process.exit(2); }
-  console.log('投影口径 ✅ ' + (rows.length - empty.length) + '/' + rows.length + ' 枚用投影列 xt/yt（proj-tsne 按 N 选：大表 t-SNE ‖ 小表 MDS）' +
-    (empty.length ? '（' + empty.length + ' 枚没有 ⇒ 逐行退旧坐标，见上面那条 2% 的界）' : ''));
+  console.log('投影口径 ✅ ' + rows.length + '/' + rows.length + ' 枚用投影列 xt/yt（t-SNE；无逐行回退）');
   /* §G3（11-05 上午 · 千问 · 用户报"团成一块几个点飞出去"）：**投影列不许是主坐标的拷贝**。
    *   11-05 夜班那份合并器把 `x2/y2`（未投影的线性主坐标）抄进了 `xt/yt`，而上面两条守卫**看不见**这个病
    *   （列在、值也非空，只是值来自另一套坐标）。后果实测：xt 的范围从 ±1.0 变成 −19.2…8.2
@@ -621,7 +614,7 @@ const DATA = rows.map(r => ({
   arL: r.arL === '' || r.arL === undefined ? null : +r.arL,
   /* E393 DS（丙·投影）：坐标由 --proj 选（t-SNE 列 xt/yt/xt3/yt3/zt3 由 proj-tsne.mjs 写进 coords.tsv）。
    *   判据 kNN@10 保住率：旧力导向布局 0.08 → t-SNE 0.52（同一个 12 维招法空间；用户：不用死磕实际意义）。 */
-  x2: (PROJTSNE && r.xt) ? +r.xt : +r.x2, y2: (PROJTSNE && r.yt) ? +r.yt : +r.y2,
+  x2: PROJTSNE ? +r.xt : +r.x2, y2: PROJTSNE ? +r.yt : +r.y2,
   /* 单页化（11-06 夜）：三套投影列按行挂——只在本行所属版本有值（其余版本行在对应过滤下不可见）。
    * ⚠ 必须是**扁平数组**字段（pj18/pj20），不能是嵌套对象：D234⑪b 用 `"id":"X"[^}]*\}` 截节点，
    *   嵌套 `}` 会把截断点提前、sh/sv 被切掉 ⇒ 门假红（实测踩过一次）。数组只有中括号，不犯这条。 */
@@ -629,10 +622,10 @@ const DATA = rows.map(r => ({
   pj20: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt20 !== '' && r.xt20 !== undefined && r.xt20 != null && isFinite(+r.xt20)) ? [+r.xt20, +r.yt20] : null,
   pj318: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt318 !== '' && r.yt318 !== '' && r.zt318 !== '' && isFinite(+r.xt318) && isFinite(+r.yt318) && isFinite(+r.zt318)) ? [+r.xt318, +r.yt318, +r.zt318] : null,
   pj320: (typeof PROJCOLS !== 'undefined' && PROJCOLS && r.xt320 !== '' && r.yt320 !== '' && r.zt320 !== '' && isFinite(+r.xt320) && isFinite(+r.yt320) && isFinite(+r.zt320)) ? [+r.xt320, +r.yt320, +r.zt320] : null,
-  pjAll: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt) ? +r.xt : +r.x2, (PROJTSNE && r.yt) ? +r.yt : +r.y2] : null,
-  pj3All: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [(PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3, (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3] : null,
-  x3: (PROJTSNE && r.xt3) ? +r.xt3 : +r.x3, y3: (PROJTSNE && r.yt3) ? +r.yt3 : +r.y3,
-  z3: (PROJTSNE && r.zt3) ? +r.zt3 : +r.z3,
+  pjAll: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [+r.xt, +r.yt] : null,
+  pj3All: (typeof PROJCOLS !== 'undefined' && PROJCOLS) ? [+r.xt3, +r.yt3, +r.zt3] : null,
+  x3: PROJTSNE ? +r.xt3 : +r.x3, y3: PROJTSNE ? +r.yt3 : +r.y3,
+  z3: PROJTSNE ? +r.zt3 : +r.z3,
   /* §E334 权重身份去重（`attach-dup.mjs`）：`dn` = 同一份权重在面板上有几行 ‖ `dups` = 那几行的 id。
    *   不标就会把"901 行"读成"901 种打法"：实测只有 **713 个不同权重**，而最刺眼的一组是 **4 行都是现役本身**
    *   （SHIPPED-Ldemo ‖ Ldemo  C5-02-31 ‖ C5-02-71）⇒ 对局仪器反过来自证：那三枚打现役配对差恰好 0.0pt。*/
@@ -3668,7 +3661,7 @@ function drawBody() {
     if (_sp && _lg && _sp.style.display !== 'none') _sp.style.top = (_lg.offsetTop + _lg.offsetHeight + 10) + 'px'; }
   var n = 0; for (var kk in st.hi) if (st.hi[kk]) n++;
   ringTally();   /* §E677 表头要说得出"当前这圈环是哪把闸"，顺带把计数刷新（按桌形缓存 ⇒ 仍是状态的纯函数，§E622 那条判得住）*/
-  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ 大表 t-SNE · 小表 MDS）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
+  document.getElementById('stat').textContent = N + ' 种打法（同一份权重只画一枚 ‖ 面板原始 ' + NRAW + ' 行）· 投影 xt/yt（轴无固定含义 ‖ t-SNE）· 真当过线上冠军 ' + P.filter(function (d) { return d.lin; }).length +
     ' 枚 · 训练衍生 ' + P.filter(function (d) { return d.kin === '续训现役'; }).length +
     ' 枚 · 父链 ' + P.filter(function (d) { return d.kin === '父链'; }).length + ' 枚 · 父边 ' + P.filter(function (d) { return !!d.pof && d.pof !== d.id; }).length + ' 条可画 · T = ' + st.T.toFixed(2) + ' · ' + (st.ftab === 'long' ? ('F = 长程桌（5血；已测 ' + NHP() + '/' + N + '）') : 'F = 默认桌（3血）') + ' · 环 = ' + RSUBNAME() + '（过 ' + OKL.length + '/' + POKJ + ' ‖ 没量 ' + (N - POKJ) + '）' + ' · ' + (st.mode === 'map' && st.color !== 'fam' ? ('底图 = ' + colorTitle() + '（点=素点）') : ('颜色 = ' + colorTitle())) +
     (st.mode === 'map' || st.mode === 'tree' ? ' · ' + (st.elev < 0.5 ? '平面' : '立体') : '') +
@@ -4015,6 +4008,9 @@ function setProj(kind) {
   for (var i = 0; i < N; i++) {
     var q = PCUR === '1.8' ? P[i].pj18 : (PCUR === '2.0' ? P[i].pj20 : P[i].pjAll);
     var q3 = PCUR === '1.8' ? P[i].pj318 : (PCUR === '2.0' ? P[i].pj320 : P[i].pj3All);
+    if ((PCUR === 'all' || batchOf(P[i]) === PCUR) && (!q || !q3)) {
+      throw new Error('版本 ' + PCUR + ' 缺投影：' + P[i].id + '（拒绝沿用旧坐标）');
+    }
     if (q) { P[i].x2 = q[0]; P[i].y2 = q[1]; }
     if (q3) { P[i].x3 = q3[0]; P[i].y3 = q3[1]; P[i].z3 = q3[2]; }
   }
@@ -6051,12 +6047,16 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
       for (var vi = 0; vi < versions.length; vi++) {
         var ver = versions[vi];
         batchSel.value = ver; batchSel.dispatchEvent(new Event('change', { bubbles: true })); draw();
-        var visible = 0, moved = 0, hash = 2166136261;
+        var visible = 0, moved = 0, moved2 = 0, hash = 2166136261, xs2 = [], ys2 = [];
         for (var pi = 0; pi < N; pi++) {
           if (!VIS[pi]) continue;
           visible++;
           var d = P[pi], q = ver === '1.8' ? d.pj318 : (ver === '2.0' ? d.pj320 : d.pj3All);
+          var q2 = ver === '1.8' ? d.pj18 : (ver === '2.0' ? d.pj20 : d.pjAll);
+          if (!q2 || !isFinite(d.x2) || !isFinite(d.y2)) { bad3.push(ver + ' 缺二维 fit：' + d.id); continue; }
           if (!q || !isFinite(d.x3) || !isFinite(d.y3) || !isFinite(d.z3)) { bad3.push(ver + ' 缺三维 fit：' + d.id); continue; }
+          if (ver !== 'all' && (Math.abs(d.x2 - d.pjAll[0]) > 1e-6 || Math.abs(d.y2 - d.pjAll[1]) > 1e-6)) moved2++;
+          xs2.push(d.x2); ys2.push(d.y2);
           if (ver !== 'all' && (Math.abs(d.x3 - d.pj3All[0]) > 1e-6 || Math.abs(d.y3 - d.pj3All[1]) > 1e-6 || Math.abs(d.z3 - d.pj3All[2]) > 1e-6)) moved++;
           hash ^= Math.round(d.x3 * 1e6) | 0; hash = Math.imul(hash, 16777619);
           hash ^= Math.round(d.y3 * 1e6) | 0; hash = Math.imul(hash, 16777619);
@@ -6065,6 +6065,13 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
         if (PCUR !== ver) bad3.push('版本切到 ' + ver + ' 而 PCUR=' + PCUR);
         if (!visible) bad3.push(ver + ' 没有可见点');
         if (ver !== 'all' && moved !== visible) bad3.push(ver + ' 仅 ' + moved + '/' + visible + ' 枚换了三维 fit');
+        if (ver !== 'all' && moved2 !== visible) bad3.push(ver + ' 仅 ' + moved2 + '/' + visible + ' 枚换了二维 fit');
+        if (visible >= 20) {
+          xs2.sort(function (a, b) { return a - b; }); ys2.sort(function (a, b) { return a - b; });
+          var spanX = xs2[Math.floor((xs2.length - 1) * 0.9)] - xs2[Math.floor((xs2.length - 1) * 0.1)];
+          var spanY = ys2[Math.floor((ys2.length - 1) * 0.9)] - ys2[Math.floor((ys2.length - 1) * 0.1)];
+          if (spanX < 0.8 || spanY < 0.8) bad3.push(ver + ' 二维主云被尾部压扁：x/y P10–P90=' + spanX.toFixed(3) + '/' + spanY.toFixed(3));
+        }
         sigs[ver] = hash >>> 0;
         det3.push(ver + '=' + visible + ' 枚/换 fit ' + moved + '/hash ' + sigs[ver]);
       }
@@ -6072,7 +6079,7 @@ if (HCL) { st.color = HCL; var _cs = document.getElementById('color'); if (_cs) 
     } catch (E) { bad3.push('这条腿自己抛了：' + String(E && E.message || E).slice(0, 90)); }
     batchSel.value = S3.batch; batchSel.dispatchEvent(new Event('change', { bubbles: true }));
     st.mode = S3.mode; st.iso = S3.iso; recomputeVIS(); draw();
-    T('三维行为轴：all/1.8/2.0 必须各自换用本版本 fit，不能共用全库投影',
+    T('版本投影：all/1.8/2.0 必须各自换用本版本二维/三维 fit，且二维主云不许被尾部压扁',
       bad3.length === 0, bad3.join(' ‖ ') || det3.join(' ‖ '));
   })();
   (function () {
