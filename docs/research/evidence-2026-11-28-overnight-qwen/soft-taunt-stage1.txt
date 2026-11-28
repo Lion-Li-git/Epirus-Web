@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：SOFT-TAUNT-PROBE wid=85eb06cb92d19ac9
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+[SOFT-TAUNT-PROBE] stage1 并集 19/30（自对局 13） 换招JS 0.0718 ‖ 17.5s → D:\code\Epirus-Web\champion-map\data\skill-report\SOFT-TAUNT-PROBE.json
