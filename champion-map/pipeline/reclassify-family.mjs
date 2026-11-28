@@ -1,6 +1,9 @@
 import { resolve, join } from 'node:path';
 import { readTable, writeTable } from '../map-table.mjs';
+import { rejectUnknownFlags } from '../../tools/audit-lib.mjs';
 import { FAMILY_FEATURES, buildFamilyProfiles, classifyFamily, methodOf, readPackInfo } from './family-classifier.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), ['data', 'ids', 'write'], 'reclassify-family');
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));

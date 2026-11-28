@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { rejectUnknownFlags } from './audit-lib.mjs';
 import { buildFamilyProfiles, classifyFamily, methodOf, FAMILY_DISTANCE_MAX } from '../champion-map/pipeline/family-classifier.mjs';
+
+rejectUnknownFlags(process.argv.slice(2), [], 'probe-family-classifier');
 
 const feature = (id, rounds = 20, extra = {}) => ({ pack_id: id, rounds, dmg: 15, heavy: 0.1, holo: 0.1,
   drawRate: 0, zeroRate: 0, seatSpread: 8, distinctKeys: 10, charges: 0.2, waste: 0.3,
