@@ -6,6 +6,7 @@ const ROOT = process.cwd();
 const OUT = process.env.LOO_OUT || 'docs/research/evidence-2026-11-27-overnight-qwen';
 const PREFIX = process.env.LOO_PREFIX || 'pool-loo-2026-11-28';
 const TARGETS = (process.env.LOO_TARGETS || 'AR-TK2,nov21-armor-tzt2d,MX6-GD-TF20,FC-S1,OBS6E9,TF2-DR').split(',');
+const omitOf = (variant) => variant === 'BASE' ? '' : variant.split('+').join(',');
 const SEED_BASE = Number(process.env.LOO_SEED_BASE || 95001);
 const BASELINE = process.env.LOO_BASELINE || '594ef9a2';
 const CONFIGS = [
@@ -34,7 +35,7 @@ function readResult(path) {
 }
 
 function viewOk(raw, variant) {
-  const omitted = variant === 'BASE' ? 0 : variant.split(',').filter(Boolean).length;
+  const omitted = variant === 'BASE' ? 0 : variant.split('+').filter(Boolean).length;
   return raw.includes('# 抽法推导 = rosterFor(全表 ' + (35 - omitted) + ' 枚)');
 }
 
@@ -51,7 +52,7 @@ async function runJob(job) {
   }
   const args = ['tools/probe-diff-ladder.mjs', '--pool=1', '--n=' + cfg.n, '--mode=' + cfg.mode,
     '--games=' + cfg.games, '--seed=' + seed, '--surrogate=' + cfg.surrogate, '--quiet'];
-  if (variant !== 'BASE') args.push('--poolomit=' + variant);
+  if (variant !== 'BASE') args.push('--poolomit=' + omitOf(variant));
   const cp = spawn(process.execPath, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
   let stdout = '', stderr = '';
   cp.stdout.on('data', (d) => { stdout += d; });

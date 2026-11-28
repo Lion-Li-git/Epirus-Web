@@ -50,7 +50,7 @@
 
 ```bash
 LOO_OUT=docs/research/evidence-2026-11-28-overnight-qwen \
-LOO_PREFIX=pool-joint-loo1-v2151 LOO_TARGETS=MT-PG,FC-S1 \
+LOO_PREFIX=pool-joint-loo1-v2151 LOO_TARGETS=MT-PG+FC-S1 \
 LOO_SEED_BASE=97001 LOO_BASELINE=67ab6641 \
 node docs/research/evidence-2026-11-27-overnight-qwen/pool-loo-2026-11-28.mjs
 
@@ -60,4 +60,4 @@ LOO_SEED_BASE=97001 LOO_BASELINE=67ab6641 \
 node docs/research/evidence-2026-11-27-overnight-qwen/pool-loo-2026-11-28.mjs
 ```
 
-每组产出 `*.json / *.tsv` 与逐 seed 原始 `*.txt`。读数方向冲突或样本不足时保留现状，不扫种子挽救。
+每组产出 `*.json / *.tsv` 与逐 seed 原始 `*.txt`。`LOO_TARGETS` 内 `+` 表示联合摘除，逗号仍表示多个独立变体。读数方向冲突或样本不足时保留现状，不扫种子挽救。

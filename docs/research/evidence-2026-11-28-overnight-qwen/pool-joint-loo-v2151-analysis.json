@@ -1,0 +1,303 @@
+{
+  "baseline": "d558abce",
+  "rulesFingerprint": "c61298e6",
+  "fixtureKey": "fx-pool1126d",
+  "seedBase": 97001,
+  "loo1": {
+    "target": "MT-PG+FC-S1",
+    "configs": {
+      "2p-rule": {
+        "baseRegular": 41.25,
+        "targetRegular": 41.275,
+        "deltaRegular": 0.025000000000000355,
+        "deltaSparring": -1.5999999999999996,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "2p-legacy": {
+        "baseRegular": 24.9,
+        "targetRegular": 25.599999999999998,
+        "deltaRegular": 0.6999999999999993,
+        "deltaSparring": 0.09999999999999964,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "5p-multi": {
+        "baseRegular": 11.375,
+        "targetRegular": 8.25,
+        "deltaRegular": -3.125,
+        "deltaSparring": -1.5,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "5p-long": {
+        "baseRegular": 8.25,
+        "targetRegular": 7.625,
+        "deltaRegular": -0.625,
+        "deltaSparring": 2.625,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "8p-multi": {
+        "baseRegular": 11.5,
+        "targetRegular": 11.125,
+        "deltaRegular": -0.375,
+        "deltaSparring": 0.875,
+        "inversionsBefore": 0,
+        "inversionsAfter": 2,
+        "newInversionDeltas": [
+          -0.75,
+          0
+        ],
+        "newInversionSignificant": false
+      },
+      "8p-long": {
+        "baseRegular": 9.25,
+        "targetRegular": 9.125,
+        "deltaRegular": -0.125,
+        "deltaSparring": -0.75,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1,
+        "newInversionDeltas": [
+          1.5
+        ],
+        "newInversionSignificant": false
+      }
+    },
+    "coverage": {
+      "hard": {
+        "members": 16,
+        "union": 28,
+        "unique": {
+          "miniT": [
+            "JN-DR"
+          ],
+          "mine": [
+            "MN-PG"
+          ],
+          "cannon": [
+            "PG-CN"
+          ],
+          "purify": [
+            "PUR-2P"
+          ],
+          "proto": [
+            "T65-RINGBEAD"
+          ],
+          "transfer": [
+            "TF-DR"
+          ],
+          "armor": [
+            "TK-FS4"
+          ],
+          "tank": [
+            "TK-FS4"
+          ]
+        }
+      },
+      "soft": {
+        "members": 17,
+        "union": 28,
+        "unique": {
+          "taunt": [
+            "L1B-S1200"
+          ],
+          "laserEye": [
+            "LE-S2"
+          ],
+          "cannon": [
+            "PG-CN-S1200"
+          ],
+          "purify": [
+            "PUR-DR"
+          ],
+          "rod": [
+            "TF2-RD"
+          ],
+          "miniT": [
+            "TM-S5-a40"
+          ]
+        }
+      }
+    }
+  },
+  "loo2": {
+    "target": "SOFT-RING-C3G25",
+    "configs": {
+      "2p-rule": {
+        "baseRegular": 41.25,
+        "targetRegular": 41.875,
+        "deltaRegular": 0.6250000000000018,
+        "deltaSparring": 2.5,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "2p-legacy": {
+        "baseRegular": 24.9,
+        "targetRegular": 24.174999999999997,
+        "deltaRegular": -0.7250000000000005,
+        "deltaSparring": -0.3250000000000002,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "5p-multi": {
+        "baseRegular": 11.375,
+        "targetRegular": 9.25,
+        "deltaRegular": -2.125,
+        "deltaSparring": -2.875,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "5p-long": {
+        "baseRegular": 8.25,
+        "targetRegular": 7.75,
+        "deltaRegular": -0.5,
+        "deltaSparring": 3.75,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      },
+      "8p-multi": {
+        "baseRegular": 11.5,
+        "targetRegular": 12.25,
+        "deltaRegular": 0.75,
+        "deltaSparring": -0.75,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1,
+        "newInversionDeltas": [
+          3
+        ],
+        "newInversionSignificant": false
+      },
+      "8p-long": {
+        "baseRegular": 9.25,
+        "targetRegular": 8.25,
+        "deltaRegular": -1,
+        "deltaSparring": -0.5,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0,
+        "newInversionDeltas": [],
+        "newInversionSignificant": false
+      }
+    },
+    "coverage": {
+      "hard": {
+        "members": 17,
+        "union": 28,
+        "unique": {
+          "mine": [
+            "MN-PG"
+          ],
+          "cannon": [
+            "PG-CN"
+          ],
+          "purify": [
+            "PUR-2P"
+          ],
+          "proto": [
+            "T65-RINGBEAD"
+          ],
+          "transfer": [
+            "TF-DR"
+          ],
+          "armor": [
+            "TK-FS4"
+          ],
+          "tank": [
+            "TK-FS4"
+          ]
+        }
+      },
+      "soft": {
+        "members": 17,
+        "union": 28,
+        "unique": {
+          "taunt": [
+            "L1B-S1200"
+          ],
+          "laserEye": [
+            "LE-S2"
+          ],
+          "purify": [
+            "PUR-DR"
+          ],
+          "rod": [
+            "TF2-RD"
+          ],
+          "miniT": [
+            "TM-S5-a40"
+          ]
+        }
+      }
+    }
+  },
+  "baseCoverage": {
+    "hard": {
+      "members": 17,
+      "union": 28,
+      "unique": {
+        "mine": [
+          "MN-PG"
+        ],
+        "cannon": [
+          "PG-CN"
+        ],
+        "purify": [
+          "PUR-2P"
+        ],
+        "proto": [
+          "T65-RINGBEAD"
+        ],
+        "transfer": [
+          "TF-DR"
+        ],
+        "armor": [
+          "TK-FS4"
+        ],
+        "tank": [
+          "TK-FS4"
+        ]
+      }
+    },
+    "soft": {
+      "members": 18,
+      "union": 28,
+      "unique": {
+        "taunt": [
+          "L1B-S1200"
+        ],
+        "laserEye": [
+          "LE-S2"
+        ],
+        "purify": [
+          "PUR-DR"
+        ],
+        "rod": [
+          "TF2-RD"
+        ],
+        "miniT": [
+          "TM-S5-a40"
+        ]
+      }
+    }
+  },
+  "decisions": {
+    "loo1Safe": true,
+    "loo2Target": false
+  }
+}

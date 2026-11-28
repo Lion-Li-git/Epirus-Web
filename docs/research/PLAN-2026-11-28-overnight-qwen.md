@@ -64,26 +64,21 @@
 - **预注册判据**：
   - 若 **LOO-1** 无任何配置均值 `Δregular ≥ +1.5pt`、无新 `≥2σ` 倒挂、且经 Stage 1 覆盖复核 `hard` 与 `soft` 的 `28/28` 技能并集 **0 归零**：登记“两枚确认可联合退役”结论（若打算维持 35 枚编制，则在 Phase 2 完成后再同批补入新候选，保持 35 槽稳态）；
   - 若 **LOO-2** 摘除 `SOFT-RING-C3G25` 后反而使 `2P/5P` 变强或不变、且覆盖无唯一归零（检查其技能是否被 `L1B/LE-S2/PH-S2` 全覆盖）：确立在 Phase 2A 中优先**原位升级替换 `SOFT-RING-C3G25`** 的靶点。
+- **结果（00:30）**：LOO-1 通过安全门，六配置 `Δregular=+0.03/+0.70/−3.13/−0.63/−0.38/−0.13pt`，覆盖仍 `28/28`；但 hard `miniT` 会变成 `JN-DR` 单载体，本班不退役。LOO-2 的 `2P rule +0.625pt > +0.5pt`，未过靶点门，Phase 2A 取消。详见 [`RESULTS-2026-11-29-pool-joint-loo.md`](RESULTS-2026-11-29-pool-joint-loo.md)。
 
 ---
 
-### Phase 2（01:30–04:00 · 150 min）：双线精细化升级（严控单变量 + 硬止损）
+### Phase 2（01:30–04:00 · 150 min）：单线精细化升级（严控单变量 + 硬止损）
 
-> 至多两条训练线串行或 `≤2` 并行；每条必须先写 `PREREG-2026-11-28-*.md` 后启动，第一枚 `.bak` 立即验 `selftest3`。
+> 至多两条训练线串行或 `≤2` 并行；每条必须先写 `PREREG-2026-11-29-*.md` 后启动，第一枚 `.bak` 立即验 `selftest3`。
 
-#### 主线 A1：升级 `SOFT-RING-C3G25`（补强 `soft` 聚能环/火环综合载体 ＆ 拉开 `2P legacy` 阶梯）
-- **科学问题**：`SOFT-RING-C3G25`（`wr 34.3%, arB -32.6, waste 61.2%`）拖低 `soft` 下限，且 `v2.1.51` 下 `2P legacy` 的 `regular (25.1%)` 与 `sparring (26.9%)` 只剩 `1.8pt` 差距。
-- **可控新假设**（区别于旧 `RING` 线）：以全绿高经济 `L1B-S600.bak`（`wr 54.4%, waste 31.3%, arB +13.5`）或 `FS2-LE26.bak` 为底座，采用**受限 `curse,firestorm,ring` 蒸馏（`--teacher2=pack:docs/artifacts/SOFT-RING-C3G25.bak --teacher2keys=curse,firestorm,ring --dagger=0` 禁 `charge`）+ 短程岭基线 `pg-train`（`--games=2000 --baseline=ridge --klModes=standard --klTilt=ring,firestorm,curse --klTiltMul=2.5`）**；在 `arenaShapes` 中把 `2:standard` 权重分配为适量区间（例如 `2:standard@2,3:multi,5:multi,5:long@2,8:long`），并监控它对 `2P legacy` 同位替换的影响。
-- **硬门**：
-  1. `selftest3` 六腿全绿；
-  2. Stage 1：`winRate ≥ 44%`、总废珠 `≤ 45%`、`ring ≥ 20`、`firestorm ≥ 15`（天火闭环率 `≥ 80%` 且空爆 `= 0`）、`Arena B > 0pt`；
-  3. `promote --dry --support=2` **0 阻断**；`90210/90211 seatKill = 0`；
-  4. 同位替换 `SOFT-RING-C3G25` 后，`2P rule/legacy` 与 `5P multi/long` 四组全部保序且 **`2P legacy` `sparring − regular ≥ 2.0pt`**。
+#### 主线 A1（已取消）：升级 `SOFT-RING-C3G25`
+- LOO-2 未过预注册靶点门（`2P rule Δregular=+0.625pt > +0.5pt`），本臂不启动，也不寻找替代靶点硬开。
 
 #### 主线 A2：`TM-S5-a40` 小雷（`miniT`）精准靶向微调（目标：`pts/cast` 从 `0.250` 提至 `≥ 0.48`）
 - **科学问题**：`TM-S5-a40` 已在 `soft` 入池，但 `miniT` 打中 `ji/gun` 达 `24/28` 次，浪费了高费反制定位。
 - **单变量机制实验**（配 `winOnly=1` vs `winOnly=0` 镜像对照，遵守 `AGENTS.md §18`）：
-  - 以全绿 `TM-S5-a40.bak` 为学生底座，用 `TM-S2.bak`（`miniT` 均分 `0.688`）作专科教师（`--teacher2=pack:docs/artifacts/TM-S2.bak --teacher2keys=miniT --teacher2frac=0.25`）+ `TM-S5-a40` 自教师护住 `transfer,jinshield,ring`（`--rareOnly=miniT,transfer,jinshield --rareFrac=0.30 --rolloutMode=game --objective=cand --dagger=0 --groups=1400 --steps=120 --lr=0.00015 --seed=20261150`）；同时跑两臂：`winOnly=0` vs `winOnly=1`（只改这一个标志）。
+  - 以全绿 `TM-S5-a40.bak` 为学生底座，用 `TM-S2.bak`（`miniT` 均分 `0.688`）作专科教师（`--teacher2=pack:docs/artifacts/TM-S2.bak --teacher2keys=miniT --teacher2frac=0.25`）+ `TM-S5-a40` 自教师护住 `transfer,jinshield,ring`（`--rareOnly=miniT,transfer,jinshield --rareFrac=0.30 --rolloutMode=game --objective=cand --dagger=0 --groups=1400 --steps=120 --lr=0.00015 --seed=20261129`）；同时跑两臂：`winOnly=0` vs `winOnly=1`（只改这一个标志）。
   - 若需要降废/稳场，对较优一臂补一段短程 `ridge PG`（`--games=1600 --klW=0.35 --klTilt=miniT,transfer,jinshield --klTiltMul=3`）。
 - **硬门（全部达标才替换 `TM-S5-a40`，否则保留 `TM-S5-a40`）**：
   1. `selftest3` 全绿，`promote` 0 阻断，`90210/90211 seatKill=0`；
