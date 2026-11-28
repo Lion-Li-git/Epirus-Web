@@ -33,7 +33,7 @@ import { loadChampParams } from '../training/server/opp-champs.mjs';
 
 /* 仓规（门 D218）：不认识的 `--` 旗标必须**响亮失败** —— 静默忽略会让"我以为控制住了这个变量"变成假读数。 */
 rejectUnknownFlags(process.argv.slice(2), ['tiers', 'games', 'n', 'mode', 'pack', 'seed', 'tgt', 'surrogate', 'extra',
-  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'pooltier', 'pairs', 'banddef',
+  'quiet', 'machine', 'minGap', 'except', 'exceptMin', 'pool', 'poolomit', 'pooltier', 'pairs', 'banddef',
   'mixseats', 'mixids', 'mixadd', 'epsover', 'livedose', 'breakbank', 'breakfirst'], 'probe-diff-ladder');
 
 const flag = (n, d) => { const h = process.argv.find(a => a.indexOf('--' + n + '=') === 0); return h ? h.split('=')[1] : d; };
@@ -199,6 +199,7 @@ let ALL_POOL_M = [];
 const MIX_OF = {};   /* §E610 档 → 掺席（`scriptSeats` 的产出）；单包/钉成员模式下是空的 ⇒ compose 不盖席 */
 const LADDER_NOTED = {};
 if (POOL_TIER && !USE_POOL) { console.error('⛔ --pooltier= 只在 --pool=1 下有意义（单包装配没有"档到池"的映射可钉）'); process.exit(2); }
+if (flag('poolomit', '') && !USE_POOL) { console.error('⛔ --poolomit= 只在 --pool=1 下有意义'); process.exit(2); }
 if (USE_POOL) {
   if (!PD || typeof PD.compose !== 'function') { console.error('⛔ js/pool-draw.js 没进 sandbox 的 CORE 名单 ⇒ 池模式没有抽签实现，只能退回单包'); process.exit(2); }
   /* 2026-11-13 用户裁定「2p 直接切到统一池」：两桌同源 ⇒ 2 人桌也读主表（旧 2P 原生表转任训练对手名册）。 */
@@ -257,6 +258,15 @@ if (USE_POOL) {
     for (const k of Object.keys(NB)) POOL_BY_TIER[k] = NB[k];
     console.log('# --banddef 生效（临时视图，表没动 ‖ 旧带整张替换 ⇒ 全表 ' + Object.keys(placed).length + ' 枚）：' +
       Object.keys(NB).map(t => t + ' ' + NB[t].length + ' 枚').join(' ‖ '));
+  }
+  const POOL_OMIT = (flag('poolomit', '') || '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (POOL_OMIT.length) {
+    const known = Object.keys(MEMBER_P);
+    const bad = POOL_OMIT.filter((id) => known.indexOf(id) < 0);
+    if (bad.length) { console.error('⛔ --poolomit 含未知成员：' + bad.join(',') + '（拒绝静默跳过）'); process.exit(2); }
+    if (new Set(POOL_OMIT).size !== POOL_OMIT.length) { console.error('⛔ --poolomit 含重复成员'); process.exit(2); }
+    for (const tier of Object.keys(POOL_BY_TIER)) POOL_BY_TIER[tier] = POOL_BY_TIER[tier].filter((m) => POOL_OMIT.indexOf(m.id) < 0);
+    console.log('# ⚑ 研究视图 --poolomit = ' + POOL_OMIT.join(',') + '（真源表没动，保留其余成员原顺序）');
   }
   /* §E609 全表重算（banddef 之后）+ **把每一档实际走哪条抽法说出来**：
    *   这一行就是昨天那条教训的正面版本 —— 不看它，"我以为在量临时视图/混抽"和"其实量的是别的"长得一模一样。 */
