@@ -103,6 +103,7 @@
    - **背景**：若 `Phase 1` 确认 `MT-PG` 可被安全摘除或替出，池内 `hard` 红座将仅剩 `MN-PG`（唯一 `hard mine`）与 `T65-RINGBEAD`（唯一 `hard proto`）。
    - **动作**：按 `PH-S2` 的低废 `proto` 经验，只跑 **1 组轻量预研臂**（`PG-DR.bak` 绿底座 + `PH-S2.bak(proto,holo@0.35)` 蒸馏 `groups=1200, steps=120` + Stage 1 普查），验证能否低成本为 `hard` 造出第二枚可梯度续训的绿 `proto` 载体，解除 `T65-RINGBEAD` 的唯一覆盖绑定（**不强制在本班进池**，拿硬读数为白班铺路）。
    - **结果（01:05）**：产物 `selftest3` 全绿，Stage 1 `49.83%, 19/30, holo36`，但 `proto=0`，核心端点失败；不扫参，`T65-RINGBEAD` 仍是唯一 hard proto 载体。详见 [`RESULTS-2026-11-29-hard-proto-probe.md`](RESULTS-2026-11-29-hard-proto-probe.md)。
+   - **补充 mine 探针（01:15）**：绿色 `PG-DR` 只蒸 `MN-PG(mine@0.35)`，产物全绿但 Stage 1 `47.75%, 20/30, ring26, mine0`；核心端点失败，`MN-PG` 仍是唯一 hard mine 载体。详见 [`RESULTS-2026-11-29-hard-mine-probe.md`](RESULTS-2026-11-29-hard-mine-probe.md)。
 2. **整页与地图数据互证**：
    - 运行 `node tools/pool-skill-report.mjs --bake`（若本班修改过池），运行 `node champion-map/rebuild-map.mjs` 与 `node tools/map-selfcheck.mjs`，确认 `skill-report.html` 卡数、`pool-members.tsv` 行数、`bundled-champion-pool.js` 与 `champion-map/index.html` 四视图 **`101 PASS / 0 FAIL`** 完全对齐。
 
