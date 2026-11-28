@@ -1,0 +1,1066 @@
+{
+  "baseline": "594ef9a2",
+  "rulesFingerprint": "c61298e6",
+  "configs": [
+    {
+      "key": "2p-rule",
+      "n": 2,
+      "mode": "standard",
+      "surrogate": "rule",
+      "games": 1000,
+      "seeds": [
+        96001,
+        96002,
+        96003,
+        96004
+      ]
+    },
+    {
+      "key": "2p-legacy",
+      "n": 2,
+      "mode": "standard",
+      "surrogate": "legacy",
+      "games": 1000,
+      "seeds": [
+        96001,
+        96002,
+        96003,
+        96004
+      ]
+    },
+    {
+      "key": "5p-multi",
+      "n": 5,
+      "mode": "multi",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "5p-long",
+      "n": 5,
+      "mode": "long",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "8p-multi",
+      "n": 8,
+      "mode": "multi",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "8p-long",
+      "n": 8,
+      "mode": "long",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 31,
+      "regular": 41.2,
+      "sparring": 52.6,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 30.7,
+      "regular": 39.5,
+      "sparring": 52.2,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 39,
+      "sparring": 53.4,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 32.4,
+      "regular": 37.9,
+      "sparring": 52.4,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 22.7,
+      "regular": 23.6,
+      "sparring": 27.2,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 27.6,
+      "sparring": 29.6,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 22.7,
+      "regular": 26.1,
+      "sparring": 31.7,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.8,
+      "regular": 24.2,
+      "sparring": 27.3,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 8.75,
+      "sparring": 14.25,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 7.5,
+      "sparring": 15.75,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 3.5,
+      "regular": 7.75,
+      "sparring": 14.5,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.75,
+      "regular": 6.25,
+      "sparring": 11,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 11,
+      "regular": 9.75,
+      "sparring": 9.25,
+      "ordered": false
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 13.5,
+      "regular": 14.25,
+      "sparring": 11.25,
+      "ordered": false
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 7.75,
+      "regular": 9.5,
+      "sparring": 11,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 6.75,
+      "regular": 8.75,
+      "sparring": 9.75,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 31,
+      "regular": 40.9,
+      "sparring": 50,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 30.7,
+      "regular": 37.2,
+      "sparring": 49.4,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 38.3,
+      "sparring": 49.5,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 32.4,
+      "regular": 37.5,
+      "sparring": 50.7,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 22.7,
+      "regular": 22.6,
+      "sparring": 27.3,
+      "ordered": false
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 26.6,
+      "sparring": 29,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 22.7,
+      "regular": 26,
+      "sparring": 27.3,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.8,
+      "regular": 23.7,
+      "sparring": 24.3,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 10.75,
+      "sparring": 15.25,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 10.5,
+      "sparring": 16,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 3.5,
+      "regular": 8,
+      "sparring": 13.25,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.75,
+      "regular": 6.75,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 11,
+      "regular": 10.5,
+      "sparring": 16,
+      "ordered": false
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 13.5,
+      "regular": 12.5,
+      "sparring": 9.5,
+      "ordered": false
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 7.75,
+      "regular": 9.25,
+      "sparring": 9.5,
+      "ordered": true
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 6.75,
+      "regular": 9.75,
+      "sparring": 11.75,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 31,
+      "regular": 40.7,
+      "sparring": 53.2,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 30.7,
+      "regular": 38.8,
+      "sparring": 52,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 39,
+      "sparring": 52.8,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 32.4,
+      "regular": 39.7,
+      "sparring": 54,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 22.7,
+      "regular": 22.7,
+      "sparring": 28.2,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 28.7,
+      "sparring": 29.6,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 22.7,
+      "regular": 27.1,
+      "sparring": 30,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.8,
+      "regular": 23.6,
+      "sparring": 25.9,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 13.75,
+      "sparring": 15.5,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 8.75,
+      "sparring": 15.75,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 3.5,
+      "regular": 6.5,
+      "sparring": 13.25,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.75,
+      "regular": 7.75,
+      "sparring": 10.25,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 11,
+      "regular": 11.75,
+      "sparring": 9.25,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 13.5,
+      "regular": 11,
+      "sparring": 12.25,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 7.75,
+      "regular": 10.25,
+      "sparring": 13,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 6.75,
+      "regular": 9.5,
+      "sparring": 9.5,
+      "ordered": false
+    }
+  ],
+  "rows": [
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 31,
+      "regular": 40.9,
+      "sparring": 50,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.30000000000000426,
+      "deltaSparring": -2.6000000000000014
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 30.7,
+      "regular": 37.2,
+      "sparring": 49.4,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -2.299999999999997,
+      "deltaSparring": -2.8000000000000043
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 38.3,
+      "sparring": 49.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.7000000000000028,
+      "deltaSparring": -3.8999999999999986
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 32.4,
+      "regular": 37.5,
+      "sparring": 50.7,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.3999999999999986,
+      "deltaSparring": -1.6999999999999957
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 22.7,
+      "regular": 22.6,
+      "sparring": 27.3,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -1,
+      "deltaSparring": 0.10000000000000142
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 26.6,
+      "sparring": 29,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -1,
+      "deltaSparring": -0.6000000000000014
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 22.7,
+      "regular": 26,
+      "sparring": 27.3,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.10000000000000142,
+      "deltaSparring": -4.399999999999999
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.8,
+      "regular": 23.7,
+      "sparring": 24.3,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.5,
+      "deltaSparring": -3
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 10.75,
+      "sparring": 15.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 2,
+      "deltaSparring": 1
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 10.5,
+      "sparring": 16,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 3,
+      "deltaSparring": 0.25
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 3.5,
+      "regular": 8,
+      "sparring": 13.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.25,
+      "deltaSparring": -1.25
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.75,
+      "regular": 6.75,
+      "sparring": 12.75,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.5,
+      "deltaSparring": 1.75
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 11,
+      "regular": 10.5,
+      "sparring": 16,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 0.75,
+      "deltaSparring": 6.75
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 13.5,
+      "regular": 12.5,
+      "sparring": 9.5,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -1.75,
+      "deltaSparring": -1.75
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 7.75,
+      "regular": 9.25,
+      "sparring": 9.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.25,
+      "deltaSparring": -1.5
+    },
+    {
+      "variant": "nov21-armor-tzt2d",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 6.75,
+      "regular": 9.75,
+      "sparring": 11.75,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1,
+      "deltaSparring": 2
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 31,
+      "regular": 40.7,
+      "sparring": 53.2,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.5,
+      "deltaSparring": 0.6000000000000014
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 30.7,
+      "regular": 38.8,
+      "sparring": 52,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.7000000000000028,
+      "deltaSparring": -0.20000000000000284
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 39,
+      "sparring": 52.8,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": -0.6000000000000014
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 32.4,
+      "regular": 39.7,
+      "sparring": 54,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.8000000000000043,
+      "deltaSparring": 1.6000000000000014
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 22.7,
+      "regular": 22.7,
+      "sparring": 28.2,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -0.9000000000000021,
+      "deltaSparring": 1
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 28.7,
+      "sparring": 29.6,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.0999999999999979,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 22.7,
+      "regular": 27.1,
+      "sparring": 30,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1,
+      "deltaSparring": -1.6999999999999993
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.8,
+      "regular": 23.6,
+      "sparring": 25.9,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.5999999999999979,
+      "deltaSparring": -1.4000000000000021
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 13.75,
+      "sparring": 15.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 5,
+      "deltaSparring": 1.25
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 8.75,
+      "sparring": 15.75,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.25,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 3.5,
+      "regular": 6.5,
+      "sparring": 13.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -1.25,
+      "deltaSparring": -1.25
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.75,
+      "regular": 7.75,
+      "sparring": 10.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.5,
+      "deltaSparring": -0.75
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 11,
+      "regular": 11.75,
+      "sparring": 9.25,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 2,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 13.5,
+      "regular": 11,
+      "sparring": 12.25,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -3.25,
+      "deltaSparring": 1
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 7.75,
+      "regular": 10.25,
+      "sparring": 13,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.75,
+      "deltaSparring": 2
+    },
+    {
+      "variant": "TF2-DR",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 6.75,
+      "regular": 9.5,
+      "sparring": 9.5,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 0.75,
+      "deltaSparring": -0.25
+    }
+  ],
+  "summary": {
+    "nov21-armor-tzt2d": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": -0.9250000000000007,
+        "deltaSparring": -2.75,
+        "deltaRegularBySeed": [
+          -0.30000000000000426,
+          -2.299999999999997,
+          -0.7000000000000028,
+          -0.3999999999999986
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": -0.6500000000000004,
+        "deltaSparring": -1.9749999999999996,
+        "deltaRegularBySeed": [
+          -1,
+          -1,
+          -0.10000000000000142,
+          -0.5
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 2.5,
+        "deltaSparring": 0.625,
+        "deltaRegularBySeed": [
+          2,
+          3
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.375,
+        "deltaSparring": 0.25,
+        "deltaRegularBySeed": [
+          0.25,
+          0.5
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.5,
+        "deltaSparring": 2.5,
+        "deltaRegularBySeed": [
+          0.75,
+          -1.75
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 2,
+        "inversionsAfter": 2
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.375,
+        "deltaSparring": 0.25,
+        "deltaRegularBySeed": [
+          -0.25,
+          1
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      }
+    },
+    "TF2-DR": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": 0.15000000000000036,
+        "deltaSparring": 0.34999999999999964,
+        "deltaRegularBySeed": [
+          -0.5,
+          -0.7000000000000028,
+          0,
+          1.8000000000000043
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": 0.14999999999999947,
+        "deltaSparring": -0.5250000000000004,
+        "deltaRegularBySeed": [
+          -0.9000000000000021,
+          1.0999999999999979,
+          1,
+          -0.5999999999999979
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 3.125,
+        "deltaSparring": 0.625,
+        "deltaRegularBySeed": [
+          5,
+          1.25
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.125,
+        "deltaSparring": -1,
+        "deltaRegularBySeed": [
+          -1.25,
+          1.5
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.625,
+        "deltaSparring": 0.5,
+        "deltaRegularBySeed": [
+          2,
+          -3.25
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 2,
+        "inversionsAfter": 2
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.75,
+        "deltaSparring": 0.875,
+        "deltaRegularBySeed": [
+          0.75,
+          0.75
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1
+      }
+    }
+  }
+}
