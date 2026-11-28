@@ -70,3 +70,13 @@
 - 补测最终三枚后，`TM-S5-a40` 与 `TN-S5` 仍为 `seatKill=0`；`TA-S3` 在 90210/90211 的 long 反弹型三格分别为 `67.0% / 75.5%`，按当前 soft 带内参照重算为 **`seatKill=2`**。
 - 因此本节 §5 的 `TA-S3 seatKill=0` 结论作废；在完成替代或回滚前，不得把 v2.1.49 的 `TA-S3` 读作人席合格。
 - 原始件：`evidence-2026-11-28-family-27/final-carriers-seat-90210/90211.{txt,tsv}`；重算件：`seat-recompute-v2149.json`。
+
+## 7. 2026-11-28 23:20 补账：`arena-noise-floor` 补齐与 `TM-S5-a40` 小雷靶向复核
+
+- **Arena B 噪声地板补录**：按 `c61298e6` 接线自证通过（3 枚最大偏差 `0.0045pt` ≤ `0.01pt`）后，补跑并写入 [arena-noise-floor-1118.tsv](file:///d:/code/Epirus-Web/champion-map/data/arena-noise-floor-1118.tsv)：
+  - `TM-S5-a40`：`arenaB = 8.9657`, `spread = 61.0839pt`, 6 seed `[15.6469, 5.4394, 12.4919, -34.9298, 26.1541, -10.3536]`；
+  - `TN-S5`：`arenaB = -2.5705`, `spread = 53.6146pt`, 6 seed `[27.3325, 14.5245, -26.2821, -7.4265, 2.2854, -23.8314]`。
+  - `node tools/pool-add.mjs --audit` 从 `arenaUnknown: 2` 归零为 **`arenaUnknown: 0`**（35 枚全齐，`bad: []`）。
+- **`TM-S5-a40` 小雷靶向得分审计**（同 120 格 `fx-pool1126d` Stage 1，明细见 [minit-effectiveness.txt](file:///d:/code/Epirus-Web/docs/research/evidence-2026-11-28-family-27/minit-effectiveness.txt)）：
+  - `TM-S5-a40`：`32` 次施放 -> `28` 次非镜像无效化（`bigT:4, ji:21, gun:3`）+ `4` 次 `voidImmune (guard)` -> **`8` 分**（**`0.250` 分/次**，无效命中均分 **`0.286` 分**）。
+  - 对比：`TM-S2` 为 `11` 分（`0.688` 分/次，`railgun:9, laserEye:1, ji:2`）；`MT-PG` / `JN-DR` / `DR-R3E` 均为 `0` 分。`TM-S5-a40` 命中高费大雷 `bigT` 的真实得分虽不如 `TM-S2` 精准（分均由 `0.688` 降至 `0.250`），但仍显著高于此前全池 0 分包且通过 `PREREG` 全部硬门。

@@ -1,4 +1,17 @@
 
+=== TM-S5-a40 ===
+  casts(ok): 32 | non-mirror voided: 28 | voidImmune: 4 | rodBlock: 0
+  totalPts: 8 | pts/cast: 0.250 | pts/voidedHit: 0.286
+  buckets: {
+  '2pt(ring/3+ep)': 4,
+  '1pt(2ep)': 0,
+  '0pt(def)': 0,
+  '0pt(ji/gun)': 24,
+  '0pt(1ep_other)': 0
+}
+  voided hitsByKey: bigT:4, ji:21, gun:3
+  immuneByKey: guard:4
+
 === TM-S2 ===
   casts(ok): 16 | non-mirror voided: 12 | voidImmune: 4 | rodBlock: 0
   totalPts: 11 | pts/cast: 0.688 | pts/voidedHit: 0.917
