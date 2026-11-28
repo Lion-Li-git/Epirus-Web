@@ -1,14 +1,16 @@
 import { resolve, join } from 'node:path';
 import { readTable, writeTable } from '../map-table.mjs';
 import { rejectUnknownFlags } from '../../tools/audit-lib.mjs';
-import { FAMILY_FEATURES, buildFamilyProfiles, classifyFamily, methodOf, readPackInfo } from './family-classifier.mjs';
+import { FAMILY_FEATURES, FAMILY_METHODS, buildFamilyProfiles, classifyFamily, methodOf, readPackInfo } from './family-classifier.mjs';
 
-rejectUnknownFlags(process.argv.slice(2), ['data', 'ids', 'plan', 'write'], 'reclassify-family');
+rejectUnknownFlags(process.argv.slice(2), ['data', 'ids', 'plan', 'method', 'write'], 'reclassify-family');
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));
 const IDS = arg('ids', '').split(',').map((s) => s.trim()).filter(Boolean);
 const PLAN = arg('plan', '');
+const METHOD = arg('method', '');
+if (METHOD && FAMILY_METHODS.indexOf(METHOD) < 0) throw new Error('--method 只认 ' + FAMILY_METHODS.join('|'));
 const WRITE = process.argv.includes('--write');
 const ROOT = resolve(DATA, '../..');
 const readPack = (p) => readPackInfo(resolve(ROOT, p));
@@ -64,7 +66,7 @@ for (const id of IDS) {
   const fr = featureById.get(id);
   if (!fr) throw new Error(id + ' 缺 features 行');
   const feature = Object.fromEntries(FAMILY_FEATURES.map((c) => [c, fr[features.ix[c]]]));
-  const decision = classifyFamily({ id, dims: info.dims, meta: info.meta, parentId, parentMethod, feature, profiles, maxFam });
+  const decision = classifyFamily({ id, dims: info.dims, meta: info.meta, parentId, parentMethod, feature, profiles, maxFam, methodOverride: METHOD });
   if (decision.status !== 'matched' && decision.status !== 'new') throw new Error(id + ' 归族失败：' + decision.reason);
   const before = row[registry.ix.fam];
   row[registry.ix.fam] = decision.fam;

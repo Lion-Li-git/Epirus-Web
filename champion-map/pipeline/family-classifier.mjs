@@ -7,6 +7,8 @@ export const FAMILY_FEATURES = [
 ];
 export const FAMILY_DISTANCE_MAX = 0.32; // 现有 obs6 家族最近/质心距离约 95% 落在此线内，超过才开新族。
 
+export const FAMILY_METHODS = ['pg-mean', 'pg-ridge', 'supfit', 'ga'];
+
 export function methodOf(meta = {}) {
   if (meta.baseline === 'ridge' || meta.baseline === 'mean') return 'pg-' + meta.baseline;
   if (meta.teacher || meta.teacher2 || meta.teacher3 || meta.steps) return 'supfit';
@@ -82,11 +84,11 @@ function distance(a, b) {
   return Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0) / a.length);
 }
 
-export function classifyFamily({ id, dims, meta, parentId, parentMethod, feature, profiles, maxFam }) {
+export function classifyFamily({ id, dims, meta, parentId, parentMethod, feature, profiles, maxFam, methodOverride }) {
   if (dims.input !== 'obs6') return { status: 'unsupported', reason: '自动归族只支持 obs6 2.0 包' };
   if (!feature) return { status: 'need-feature', reason: '自动归族需要行为特征；请传 --display 或显式 --fam' };
-  const method = methodOf(meta);
-  if (method === 'unknown') return { status: 'unknown-method', reason: 'META 无法判定训练方法；请显式 --fam' };
+  const method = methodOverride || methodOf(meta);
+  if (method === 'unknown') return { status: 'unknown-method', reason: 'META 无法判定训练方法；请显式 --method 或 --fam' };
   if (parentId && (!parentMethod || parentMethod === 'unknown')) return { status: 'unknown-parent', reason: '父包训练方法未知；请显式 --fam' };
   const pm = parentId ? parentMethod : 'root';
   const transition = pm + '→' + method;

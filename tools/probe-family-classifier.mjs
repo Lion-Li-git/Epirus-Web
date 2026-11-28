@@ -57,4 +57,13 @@ const missing = classifyFamily({ id: 'MISS', dims: { input: 'obs6' }, meta: { ba
   parentId: 'S', parentMethod: 'supfit', feature: null, profiles, maxFam: 24 });
 assert.equal(missing.status, 'need-feature');
 
+const derived = classifyFamily({ id: 'DERIVED', dims: { input: 'obs6' }, meta: { parents: ['A', 'B'] },
+  parentId: 'A', parentMethod: 'pg-mean', feature: feature('DERIVED'), profiles, maxFam: 24 });
+assert.equal(derived.status, 'unknown-method');
+
+const derivedRidge = classifyFamily({ id: 'DERIVED', dims: { input: 'obs6' }, meta: { parents: ['A', 'B'] },
+  parentId: 'A', parentMethod: 'pg-mean', feature: feature('DERIVED'), profiles: withRidge, maxFam: 25, methodOverride: 'pg-ridge' });
+assert.equal(derivedRidge.status, 'matched');
+assert.equal(derivedRidge.method, 'pg-ridge');
+
 console.log('FAMILY-CLASSIFIER SELFTEST OK');
