@@ -1,0 +1,14 @@
+# 候选枚（只此一次，不落池表）：TM-MINIT-A0 wid=caa6a9b1cf22fca3
+# 候选枚（只此一次，不落池表）：TM-MINIT-A1 wid=997070bdb605a91b
+# 只给了 --candidate ⇒ 就量这 2 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report（并行 2 路，旗标逐字转给子进程）
+# 候选枚（只此一次，不落池表）：TM-MINIT-A0 wid=caa6a9b1cf22fca3
+# 候选枚（只此一次，不落池表）：TM-MINIT-A1 wid=997070bdb605a91b
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+# 候选枚（只此一次，不落池表）：TM-MINIT-A0 wid=caa6a9b1cf22fca3
+# 候选枚（只此一次，不落池表）：TM-MINIT-A1 wid=997070bdb605a91b
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+[TM-MINIT-A0] stage1 并集 19/30（自对局 15） 换招JS 0.0934 ‖ 16s → D:\code\Epirus-Web\champion-map\data\skill-report\TM-MINIT-A0.json
+[TM-MINIT-A1] stage1 并集 18/30（自对局 14） 换招JS 0.0799 ‖ 16.1s → D:\code\Epirus-Web\champion-map\data\skill-report\TM-MINIT-A1.json
+
+==== 2/2 包完成（fail=0）fixture=fx-pool1126d fp=c61298e6 ====

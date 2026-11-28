@@ -84,6 +84,7 @@
   1. `selftest3` 全绿，`promote` 0 阻断，`90210/90211 seatKill=0`；
   2. Stage 1：`winRate ≥ 42%`、`miniT ≥ 4`、`transfer ≥ 15`、`jinshield ≥ 25`、废珠 `≤ 35%`；
   3. 用 `tools/probe-minit-effectiveness.mjs` 复测：`totalPts ≥ 10` **且** `pts/cast ≥ 0.48`（比 `TM-S5-a40` 的 `8 / 0.250` 明确翻倍级提升）。
+- **结果（00:40）**：A0/A1 小雷分数达 `0.794/0.898`，但 Stage 1 胜率仅 `37.08%/36.58%`、废珠 `58.7%/44.4%`；A1 固定 PG 后胜率 `37.92%`、废珠 `55.7%`，仍不过门。三枚全部淘汰，`TM-S5-a40` 保留，池不变。详见 [`RESULTS-2026-11-29-tm-minit-targeting.md`](RESULTS-2026-11-29-tm-minit-targeting.md)。
 
 ---
 

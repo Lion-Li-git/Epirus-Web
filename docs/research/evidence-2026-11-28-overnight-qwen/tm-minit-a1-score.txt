@@ -1,0 +1,14 @@
+
+=== TM-MINIT-A1 ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: 997070bdb605a91b | cells: 1200 | measuredAt: 2026-11-28T16:35:27.627Z
+  casts(ok): 49 | non-mirror voided: 45 | voidImmune: 4 | rodBlock: 0
+  totalPts: 44 | pts/cast: 0.898 | pts/voidedHit: 0.978
+  buckets: {
+  "2pt(ring/3+ep)": 22,
+  "1pt(2ep)": 0,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 23,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:23, bigT:21, ring:1
+  immuneByKey: guard:4

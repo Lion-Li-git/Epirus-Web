@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：TM-MINIT-A1-PG wid=818dec1ae31c7590
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+[TM-MINIT-A1-PG] stage1 并集 19/30（自对局 14） 换招JS 0.0717 ‖ 17.2s → D:\code\Epirus-Web\champion-map\data\skill-report\TM-MINIT-A1-PG.json
