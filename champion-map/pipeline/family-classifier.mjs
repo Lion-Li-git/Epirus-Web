@@ -5,7 +5,7 @@ export const FAMILY_FEATURES = [
   'rounds', 'dmg', 'heavy', 'holo', 'drawRate', 'zeroRate', 'seatSpread',
   'distinctKeys', 'charges', 'waste', 'noThreatStance', 'fieldAAtk', 'rwDmg', 'S', 'Geff',
 ];
-export const FAMILY_DISTANCE_MAX = 0.32;
+export const FAMILY_DISTANCE_MAX = 0.32; // 现有 obs6 家族最近/质心距离约 95% 落在此线内，超过才开新族。
 
 export function methodOf(meta = {}) {
   if (meta.baseline === 'ridge' || meta.baseline === 'mean') return 'pg-' + meta.baseline;
@@ -106,6 +106,7 @@ export function classifyFamily({ id, dims, meta, parentId, parentMethod, feature
     return { fam: p.fam, label: p.label, distance: Math.min(centroidDistance, nearestDistance),
       centroidDistance, nearestDistance, n: count };
   }).sort((a, b) => a.distance - b.distance);
+  // 同父族同方法优先，其次显式方法标签、方法转变、同方法；行为距离同时看质心与最近成员。
   const tiers = [
     { name: 'parent', matches: scored.filter((s) => s.fam === String(profiles.find((p) => p.members.some((m) => m.id === parentId))?.fam || '')
       && compatible.find((p) => p.fam === s.fam).members.some((m) => m.method === method)) },

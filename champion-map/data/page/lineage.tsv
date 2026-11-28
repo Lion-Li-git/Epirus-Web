@@ -1053,5 +1053,5 @@ RD-PG	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-26T23:04:18.409Z	
 PG-CN-S1200	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-26T13:35:41.164Z	20261158		CN-DR	CN-DR	CN-DR	a4be887766a4eb3a																		seedpack-wid						
 L1B-S1200	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-27T11:47:04.210Z	20261127		PG-DR	PG-DR	PG-DR	1c5b2d627add3862																		seedpack-wid						
 L1B-S600	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-27T11:46:54.392Z	20261127		PG-DR	PG-DR	PG-DR	910b82ecbc976e0f																		seedpack-wid						
-LE-S2	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-28T04:02:23.510Z	20261128		FS2-LE26	FS2-LE26	FS2-LE26	f43d1e2551a4bd7a																		seedpack-wid						
-PH-S2	24	2.0 obs6.5 键道/覆盖补盲与协同蒸馏	2026-11-28T04:02:44.747Z	20261128		L1B-S1200	L1B-S1200	L1B-S1200	1fe874c317e3cf6e																		seedpack-wid						
+LE-S2	26	2.0 obs6.5 多教师蒸馏→PG 岭基线 行为分支（LE-S2）	2026-11-28T04:02:23.510Z	20261128		FS2-LE26	FS2-LE26	FS2-LE26	f43d1e2551a4bd7a																		seedpack-wid						
+PH-S2	26	2.0 obs6.5 多教师蒸馏→PG 岭基线 行为分支（LE-S2）	2026-11-28T04:02:44.747Z	20261128		L1B-S1200	L1B-S1200	L1B-S1200	1fe874c317e3cf6e																		seedpack-wid						

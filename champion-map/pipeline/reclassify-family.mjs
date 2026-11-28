@@ -17,7 +17,7 @@ const baseRows = rows.filter((r) => !targetSet.has(r[registry.ix.pack_id]));
 const profiles = buildFamilyProfiles({ ...registry, rows: baseRows }, features, readPack);
 const featureById = new Map(features.rows.map((r) => [r[registry.ix.pack_id], r]));
 const decisions = [];
-let maxFam = Math.max(0, ...rows.map((r) => Number(r[registry.ix.fam]) || 0));
+let maxFam = Math.max(0, ...rows.filter((r) => !targetSet.has(r[registry.ix.pack_id])).map((r) => Number(r[registry.ix.fam]) || 0));
 
 for (const id of IDS) {
   const row = rows.find((r) => r[registry.ix.pack_id] === id);
@@ -51,5 +51,14 @@ if (!WRITE) {
   console.log('--dry：未写 registry；加 --write 落盘');
 } else {
   writeTable(join(DATA, 'registry.tsv'), { header: registry.header, rows }, { backup: false });
-  console.log('已写 registry.tsv；下一步运行 lineage.mjs 与 rebuild-map.mjs');
+  const lineage = readTable(join(DATA, 'page/lineage.tsv'));
+  for (const id of IDS) {
+    const lr = lineage.rows.find((r) => r[lineage.ix.id] === id);
+    const rr = rows.find((r) => r[registry.ix.pack_id] === id);
+    if (!lr) throw new Error('lineage 没有 ' + id);
+    lr[lineage.ix.fam] = rr[registry.ix.fam];
+    lr[lineage.ix.famLabel] = rr[registry.ix.fam_label];
+  }
+  writeTable(join(DATA, 'page/lineage.tsv'), { header: lineage.header, rows: lineage.rows }, { backup: false });
+  console.log('已写 registry.tsv 与 lineage.tsv 的家族字段；下一步运行 rebuild-map.mjs');
 }
