@@ -57,7 +57,7 @@
 - `pipeline/validate --quiet`：通过；`map-selfcheck` 四视图 **101/0**。
 - `pool-add --audit`：`35 / 17+18 / bad=[] / untracked=0 / seatUnknown=0 / arenaUnknown=0`。
 - `knobs --check`：全集 35 / 暗键 0。
-- 远端 CI：`ffe4dc28` 及此前多次 gates 均成功；`dd2c98e8` 在本交接时仍在跑，最终收口提交会再触发一次。
+- 远端 CI：`dd2c98e8` 与最终交接提交 `1608e0de` 的 gates 均成功；最终 run 为 [46170483500](https://github.com/Lion-Li-git/Epirus-Web/actions/runs/46170483500)，状态回执见 `evidence-2026-11-28-overnight-qwen/final-ci-status.json`。
 
 ## 6. 次日建议顺序
 
