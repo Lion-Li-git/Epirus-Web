@@ -110,7 +110,10 @@ export function classifyFamily({ id, dims, meta, parentId, parentMethod, feature
   const tiers = [
     { name: 'parent', matches: scored.filter((s) => s.fam === String(profiles.find((p) => p.members.some((m) => m.id === parentId))?.fam || '')
       && compatible.find((p) => p.fam === s.fam).members.some((m) => m.method === method)) },
-    { name: 'method-label', matches: scored.filter((s) => compatible.find((p) => p.fam === s.fam).label.includes(methodLabel(method))) },
+    { name: 'method-label', matches: scored.filter((s) => {
+      const label = compatible.find((p) => p.fam === s.fam).label;
+      return label.endsWith(methodLabel(method) + ' 行为分支') || label.includes('→' + methodLabel(method) + ' 行为分支');
+    }) },
     { name: 'transition', matches: scored.filter((s) => compatible.find((p) => p.fam === s.fam).members.some((m) => m.transition === transition)) },
     { name: 'method', matches: scored.filter((s) => compatible.find((p) => p.fam === s.fam).members.some((m) => m.method === method)) },
   ];
