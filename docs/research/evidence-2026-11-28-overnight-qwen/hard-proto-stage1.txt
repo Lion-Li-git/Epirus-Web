@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：HARD-PROTO-PROBE wid=b58f80cbd2a34b10
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\champion-map\data\skill-report
+[HARD-PROTO-PROBE] stage1 并集 19/30（自对局 12） 换招JS 0.0808 ‖ 16.8s → D:\code\Epirus-Web\champion-map\data\skill-report\HARD-PROTO-PROBE.json
