@@ -76,5 +76,3 @@
      - 起点：`docs/artifacts/FS-DR.bak`（`selftest3` 全绿，`boomExpired=0`，`waste=53.9%`，`laserEye=12 / firestorm=28 / railgun=12`）；
      - 配方：`--mode=supfit --up=docs/artifacts/FS-DR.bak --teacher=pack:docs/artifacts/FS-DR.bak --teacher2=pack:docs/artifacts/obs6-coldstart/MX8-TN35-KL3.bak --teacher2frac=0.45 --teacher2keys=proto,holo,jinshield --rareOnly=laserEye,proto,holo --rareFrac=0.25 --rolloutMode=game --objective=cand --dagger=0 --keySplit=1 --shapeBal=1 --classPow=0.5 --classCap=6 --groups=1400 --steps=160 --lr=0.0002 --seed=20261128 --out=scratch/arms/FSDR-PH.bak`。
 - **止损不变**：C1/C2 任一若未过 `selftest3` 全绿或 `Stage 1` 覆盖+`waste ≤ 60%` 硬门，立即停线结题，不扫参追击。
-
-
