@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
-const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
+const OUT = process.env.LOO_OUT || 'docs/research/evidence-2026-11-27-overnight-qwen';
 const PREFIX = process.env.LOO_PREFIX || 'pool-loo-2026-11-28';
 const TARGETS = (process.env.LOO_TARGETS || 'AR-TK2,nov21-armor-tzt2d,MX6-GD-TF20,FC-S1,OBS6E9,TF2-DR').split(',');
 const SEED_BASE = Number(process.env.LOO_SEED_BASE || 95001);
@@ -34,7 +34,8 @@ function readResult(path) {
 }
 
 function viewOk(raw, variant) {
-  return raw.includes('# 抽法推导 = rosterFor(全表 ' + (variant === 'BASE' ? 35 : 34) + ' 枚)');
+  const omitted = variant === 'BASE' ? 0 : variant.split(',').filter(Boolean).length;
+  return raw.includes('# 抽法推导 = rosterFor(全表 ' + (35 - omitted) + ' 枚)');
 }
 
 async function runJob(job) {

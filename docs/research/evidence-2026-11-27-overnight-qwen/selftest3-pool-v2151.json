@@ -1,0 +1,374 @@
+{
+  "baseline": "67ab6641",
+  "summary": {
+    "total": 35,
+    "green": 31,
+    "red": 3,
+    "legacy": 1,
+    "error": 0,
+    "byTier": {
+      "hard": {
+        "green": 14,
+        "red": 3,
+        "legacy": 0
+      },
+      "soft": {
+        "green": 17,
+        "red": 0,
+        "legacy": 1
+      }
+    }
+  },
+  "report": [
+    {
+      "id": "DR-R3E",
+      "tier": "hard",
+      "path": "docs/artifacts/DR-R3E.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "FS-DR",
+      "tier": "hard",
+      "path": "docs/artifacts/FS-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "FS-G2",
+      "tier": "hard",
+      "path": "docs/artifacts/FS-G2.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "FS2-LE26",
+      "tier": "hard",
+      "path": "docs/artifacts/FS2-LE26.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "HL-G1",
+      "tier": "hard",
+      "path": "docs/artifacts/HL-G1.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "JN-DR",
+      "tier": "hard",
+      "path": "docs/artifacts/JN-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "MN-PG",
+      "tier": "hard",
+      "path": "docs/artifacts/MN-PG.bak",
+      "params": 16561,
+      "status": "red",
+      "green": false,
+      "red": true,
+      "exit": 8
+    },
+    {
+      "id": "MT-PG",
+      "tier": "hard",
+      "path": "docs/artifacts/MT-PG.bak",
+      "params": 16561,
+      "status": "red",
+      "green": false,
+      "red": true,
+      "exit": 8
+    },
+    {
+      "id": "nov22-ring3-gd6a18",
+      "tier": "hard",
+      "path": "docs/artifacts/nov22-ring3-gd6a18.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PG-CN",
+      "tier": "hard",
+      "path": "docs/artifacts/PG-CN.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PG-DR",
+      "tier": "hard",
+      "path": "docs/artifacts/PG-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PUR-2P",
+      "tier": "hard",
+      "path": "docs/artifacts/PUR-2P.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "RD-PG",
+      "tier": "hard",
+      "path": "docs/artifacts/RD-PG.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "T65-RINGBEAD",
+      "tier": "hard",
+      "path": "docs/artifacts/T65-RINGBEAD.bak",
+      "params": 16561,
+      "status": "red",
+      "green": false,
+      "red": true,
+      "exit": 8
+    },
+    {
+      "id": "TF-DR",
+      "tier": "hard",
+      "path": "docs/artifacts/TF-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TK-FS4",
+      "tier": "hard",
+      "path": "docs/artifacts/TK-FS4.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TN-S5",
+      "tier": "hard",
+      "path": "docs/artifacts/TN-S5.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "AR-TK2",
+      "tier": "soft",
+      "path": "docs/artifacts/AR-TK2.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "FC-S1",
+      "tier": "soft",
+      "path": "docs/artifacts/FC-S1.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "L1B-S1200",
+      "tier": "soft",
+      "path": "docs/artifacts/L1B-S1200.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "L1B-S600",
+      "tier": "soft",
+      "path": "docs/artifacts/L1B-S600.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "LE-S2",
+      "tier": "soft",
+      "path": "docs/artifacts/LE-S2.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "MSB11-R1S130778313",
+      "tier": "soft",
+      "path": "docs/artifacts/night-adapt/MSB11-R1S130778313.js",
+      "params": 12393,
+      "status": "legacy",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "nov21-armor-tzt2d",
+      "tier": "soft",
+      "path": "docs/artifacts/nov21-armor-tzt2d.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PG-CN-S1200",
+      "tier": "soft",
+      "path": "docs/artifacts/PG-CN-S1200.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PH-S2",
+      "tier": "soft",
+      "path": "docs/artifacts/PH-S2.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "PUR-DR",
+      "tier": "soft",
+      "path": "docs/artifacts/PUR-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "R-GD12",
+      "tier": "soft",
+      "path": "docs/artifacts/R-GD12.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "RG-MN",
+      "tier": "soft",
+      "path": "docs/artifacts/RG-MN.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "SOFT-RING-C3G25",
+      "tier": "soft",
+      "path": "docs/artifacts/SOFT-RING-C3G25.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TA-S3-R8",
+      "tier": "soft",
+      "path": "docs/artifacts/TA-S3-R8.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TF2-DR",
+      "tier": "soft",
+      "path": "docs/artifacts/TF2-DR.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TF2-RD",
+      "tier": "soft",
+      "path": "docs/artifacts/TF2-RD.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TK-PG",
+      "tier": "soft",
+      "path": "docs/artifacts/TK-PG.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    },
+    {
+      "id": "TM-S5-a40",
+      "tier": "soft",
+      "path": "docs/artifacts/TM-S5-a40.bak",
+      "params": 16561,
+      "status": "green",
+      "green": true,
+      "red": false,
+      "exit": 0
+    }
+  ]
+}

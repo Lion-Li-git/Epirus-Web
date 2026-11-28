@@ -47,7 +47,7 @@
 1. **确认干净基线**：补账已独立提交为 `0cd5ddcc`、本计划提交为 `36a9cca1`；核对 `git status`，记录当前分支、真实时间与 `pool-add --audit` 回执，Phase 0 代码改动另笔提交。
 2. **退役 4 个历史暗键（已完成）**：在 `training/server/knob-guard.mjs` 登记 `EPIRUS_DIV_W`、`EPIRUS_JSON`、`EPIRUS_T3P_BASELINE`、`EPIRUS_WORKERS` 的退役原因；将它们排除出旋钮全集，同时保留 `detectDarkKnobs` 的响亮拒绝。已重生成 `TRAINING-KNOBS.md` 并验证 **全集 35 / 暗键 0**，逐个设置旧键均进入 `gone` 而非静默忽略。
 3. **固化 `miniT` 靶向得分只读工具（已完成）**：新增 `tools/probe-minit-effectiveness.mjs`，支持 `--pack=<path|id>` 与 `--compare=<id1,id2>`，复用 `audit-lib`、`opp-pool` 与 `fixtures.tsv` 的 120 格种子；只计直放小雷，按目标 action 配对 `voided/voidImmune/rodBlock`。已复现 `TM-S5-a40 = 8 / 0.250`、`TM-S2 = 11 / 0.688`、`MT-PG = 0`、`JN-DR = 0`、`DR-R3E = 0`，证据落在本夜目录 `minit-*.txt`。
-4. **刷新 `v2.1.51` 全池 `selftest3` 普查**：运行 `CENSUS_PREFIX=selftest3-pool-v2151 CENSUS_BASELINE=0cd5ddcc node docs/research/evidence-2026-11-27-overnight-qwen/selftest3-pool-census.mjs`，产物落在该脚本固定的 `evidence-2026-11-27-overnight-qwen/selftest3-pool-v2151.{txt,json}`；核实 `TM-S5-a40` / `TN-S5` / `TA-S3-R8` 入池后全池最新绿座与红座（预期 31 绿 / 3 红 / 1 legacy）。
+4. **刷新 `v2.1.51` 全池 `selftest3` 普查（已完成）**：以 `CENSUS_BASELINE=67ab6641` 跑现有普查脚本，产物为 `evidence-2026-11-27-overnight-qwen/selftest3-pool-v2151.{txt,json}`；实测 **31 绿 / 3 红 / 1 legacy / 0 error**。红座为 `MN-PG / MT-PG / T65-RINGBEAD`，legacy 为 `MSB11-R1S130778313`；`TM-S5-a40 / TN-S5 / TA-S3-R8` 均绿。
 
 ---
 
