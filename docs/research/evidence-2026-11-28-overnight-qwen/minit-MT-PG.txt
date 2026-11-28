@@ -1,0 +1,14 @@
+
+=== MT-PG ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: ac6271b6e10a6381 | cells: 1200 | measuredAt: 2026-11-28T15:42:30.191Z
+  casts(ok): 39 | non-mirror voided: 24 | voidImmune: 15 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  "2pt(ring/3+ep)": 0,
+  "1pt(2ep)": 0,
+  "0pt(def)": 2,
+  "0pt(ji/gun)": 22,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: bagua:2, ji:6, gun:16
+  immuneByKey: guard:15

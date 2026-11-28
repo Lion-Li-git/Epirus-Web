@@ -1,0 +1,29 @@
+
+=== TM-S5-a40 ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: 922277a50709854e | cells: 1200 | measuredAt: 2026-11-28T15:41:56.405Z
+  casts(ok): 32 | non-mirror voided: 28 | voidImmune: 4 | rodBlock: 0
+  totalPts: 8 | pts/cast: 0.250 | pts/voidedHit: 0.286
+  buckets: {
+  "2pt(ring/3+ep)": 4,
+  "1pt(2ep)": 0,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 24,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:21, bigT:4, gun:3
+  immuneByKey: guard:4
+
+
+=== TM-S2 ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: bf3a8c28c7e47349 | cells: 1200 | measuredAt: 2026-11-28T15:42:07.429Z
+  casts(ok): 16 | non-mirror voided: 12 | voidImmune: 4 | rodBlock: 0
+  totalPts: 11 | pts/cast: 0.688 | pts/voidedHit: 0.917
+  buckets: {
+  "2pt(ring/3+ep)": 1,
+  "1pt(2ep)": 9,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 2,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:2, railgun:9, laserEye:1
+  immuneByKey: guard:4

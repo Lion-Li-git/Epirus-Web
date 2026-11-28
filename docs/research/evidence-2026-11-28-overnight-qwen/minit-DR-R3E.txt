@@ -1,0 +1,14 @@
+
+=== DR-R3E ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: eae4b0ad4013c202 | cells: 1200 | measuredAt: 2026-11-28T15:43:02.375Z
+  casts(ok): 1 | non-mirror voided: 1 | voidImmune: 0 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  "2pt(ring/3+ep)": 0,
+  "1pt(2ep)": 0,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 1,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:1
+  immuneByKey: 

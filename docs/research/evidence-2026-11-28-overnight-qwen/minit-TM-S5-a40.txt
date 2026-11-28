@@ -1,0 +1,14 @@
+
+=== TM-S5-a40 ===
+  fixtureKey: fx-pool1126d | rulesFingerprint: c61298e6 | wid: 922277a50709854e | cells: 1200 | measuredAt: 2026-11-28T15:39:33.392Z
+  casts(ok): 32 | non-mirror voided: 28 | voidImmune: 4 | rodBlock: 0
+  totalPts: 8 | pts/cast: 0.250 | pts/voidedHit: 0.286
+  buckets: {
+  "2pt(ring/3+ep)": 4,
+  "1pt(2ep)": 0,
+  "0pt(def)": 0,
+  "0pt(ji/gun)": 24,
+  "0pt(1ep_other)": 0,
+}
+  voided hitsByKey: ji:21, bigT:4, gun:3
+  immuneByKey: guard:4
