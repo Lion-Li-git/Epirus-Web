@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -31,16 +31,34 @@ function readResult(path) {
   return { values, parsed };
 }
 
-function runJob(job) {
+function viewOk(raw, variant) {
+  return raw.includes('# 抽法推导 = rosterFor(全表 ' + (variant === 'BASE' ? 35 : 34) + ' 枚)');
+}
+
+async function runJob(job) {
   const { variant, cfg, seed } = job;
   const stem = PREFIX + '-' + variant + '-' + cfg.key + '-s' + seed;
   const raw = resolve(ROOT, OUT, stem + '.txt');
+  if (existsSync(raw)) {
+    const old = readFileSync(raw, 'utf8');
+    if (viewOk(old, variant) && readResult(raw)) {
+      console.log(stem + '\tSKIP valid');
+      return;
+    }
+  }
   const args = ['tools/probe-diff-ladder.mjs', '--pool=1', '--n=' + cfg.n, '--mode=' + cfg.mode,
     '--games=' + cfg.games, '--seed=' + seed, '--surrogate=' + cfg.surrogate, '--quiet'];
   if (variant !== 'BASE') args.push('--poolomit=' + variant);
-  const cp = spawnSync(process.execPath, args, { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 << 20 });
-  writeFileSync(raw, (cp.stdout || '') + (cp.stderr || ''));
-  if (cp.status !== 0) throw new Error(stem + ' exit=' + cp.status + '\n' + (cp.stderr || cp.stdout).slice(-1200));
+  const cp = spawn(process.execPath, args, { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  cp.stdout.on('data', (d) => { stdout += d; });
+  cp.stderr.on('data', (d) => { stderr += d; });
+  const code = await new Promise((resolveExit, reject) => {
+    cp.once('error', reject);
+    cp.once('close', resolveExit);
+  });
+  writeFileSync(raw, stdout + stderr);
+  if (code !== 0) throw new Error(stem + ' exit=' + code + '\n' + stderr.slice(-1200));
   const result = readResult(raw);
   if (!result) throw new Error(stem + ' 缺三档读数');
   console.log(stem + '\t' + JSON.stringify(result.values));
@@ -50,7 +68,7 @@ async function worker() {
   while (!failed) {
     const i = cursor++;
     if (i >= jobs.length) return;
-    try { runJob(jobs[i]); } catch (e) { if (!failed) failed = e; }
+    try { await runJob(jobs[i]); } catch (e) { if (!failed) failed = e; }
   }
 }
 
@@ -60,7 +78,7 @@ if (failed) throw failed;
 const measurements = jobs.map(({ variant, cfg, seed }) => {
   const raw = readFileSync(resolve(ROOT, OUT, PREFIX + '-' + variant + '-' + cfg.key + '-s' + seed + '.txt'), 'utf8');
   const result = readResult(resolve(ROOT, OUT, PREFIX + '-' + variant + '-' + cfg.key + '-s' + seed + '.txt'));
-  if (!raw.includes('# 抽法推导 = rosterFor(全表 ' + (variant === 'BASE' ? 35 : 34) + ' 枚)')) throw new Error('池视图人数不符 ' + variant);
+  if (!viewOk(raw, variant)) throw new Error('池视图人数不符 ' + variant);
   const v = result.values;
   return { variant, config: cfg.key, seed, hard: v['lv:hard'], regular: v['lv:regular'], sparring: v['lv:sparring'],
     ordered: v['lv:hard'] < v['lv:regular'] && v['lv:regular'] < v['lv:sparring'] };
