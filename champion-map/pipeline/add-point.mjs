@@ -18,6 +18,7 @@ import { readTable, writeTable } from '../map-table.mjs';
 import { loadRulers } from './rulers.mjs';
 import { buildView, buildCoordsView, VERSION_PROJ_COLS } from './build-view.mjs';
 import { parseMeta, widOf } from '../pack-id.mjs';
+import { FAMILY_FEATURES, buildFamilyProfiles, classifyFamily, methodOf, packDims, readPackInfo } from './family-classifier.mjs';
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(('--' + k + '=').length) : d; };
 const DRY = process.argv.includes('--dry');
@@ -107,32 +108,7 @@ function findAncestorOnMap(startWid, startUp, dirs, resolveOnMap, rootDir, targe
 const packText = readFileSync(PACK, 'utf8');
 const now = new Date().toISOString();
 const meta = parseMeta(packText) || {};
-/* 11-16：自动进图必须认架构，不许把 obs6.5/modeBias 包默认塞进 fam23（v7 蒸馏）。
- *   11-17：统一单包不再做收容所；V3 与 MX1-8 分代归族。族标签是稳定键，按标签找已存在的族号，找不到才开新号。 */
-function packDims(txt) {
-  const m = /window\.EPIRUS_CHAMPION_3P\s*=\s*(\{[\s\S]*?\});/.exec(txt);
-  if (!m) return null;
-  try { const o = JSON.parse(m[1]); return o && o.dims ? o.dims : null; } catch { return null; }
-}
 const PACK_DIMS = packDims(packText) || {};
-/* 11-17：按 id 前缀与观测面分代归族；仅 obs6 包允许进 obs6/obs6.5 家族，防 obs3b/obs5 混入。 */
-function autoFamLabel(id, dims, m) {
-  if (dims.input === 'obs6') {
-    if (/^(OBS6-SHAPEDIST-V3|OBS6B2|DIV-V3-|OBS6-UNIFIED-|EQ-|BASE-)/.test(id)) {
-      return '2.0 obs6.5 V3 路由与统一单包（11-16）';
-    }
-    if (/^(FS-|FS2-|FC-|TK-FS|T65-RINGBEAD|SOFT-RING-C3G|DR-|ROD-DR|PUR-DR|PUR-2P|TF(?:2)?-(?:DR|RD|RDMX|RDC)|MT-DR|JN-DR|MN-DR|night2-E1|nov22-c3|nov24-(?:fsclose|pierce))/.test(id)) {
-      return '2.0 obs6.5 强包底座与多技能协同演进';
-    }
-    if (/^(MX[1-8]-|RING|TZ|R-GD|AR-TK|RG-|CN-G|MN-G|HL-G|night2-|day1119-|nov2\d-)/.test(id)
-        || (m && (m.rareOnly || m.teacher2keys || m.tool === 'pg-train' || (m.games && !m.teacher)))
-        || dims.modeBias === 1) {
-      return '2.0 obs6.5 键道/覆盖补盲与协同蒸馏';
-    }
-  }
-  return '';
-}
-const AUTO_FAM_LABEL = autoFamLabel(ID, PACK_DIMS, meta);
 function famRows() {
   /* 11-17 家族号单源化：唯一真源是 `data/registry.tsv`（sidecar 的 fam/famLabel 两列已删）。
    *   lineage.tsv 一并扫只为本它的 1.8 老行兜底（它是 registry+sidecar 的生成物，正常两处一致）。 */
@@ -187,43 +163,6 @@ for (const r of reg.rows) {
 let FAM_MAX = 0;
 for (const [t, fk] of [[reg, 'fam'], [linMain, 'fam']]) { const fi = t.ix[fk]; if (fi === undefined) continue;
   for (const r of t.rows) { const n = Number(r[fi]); if (Number.isFinite(n) && n > FAM_MAX) FAM_MAX = n; } }
-if (!FAM) {
-  if (AUTO_FAM_LABEL) {
-    const hit = findFamByLabel(AUTO_FAM_LABEL);
-    if (hit) { FAM = hit.fam; FAMLAB = AUTO_FAM_LABEL; }
-    else { FAM = String(FAM_MAX + 1); FAMLAB = AUTO_FAM_LABEL; }
-    console.log('自动家族：' + ID + ' ⇒ ' + FAM + ' / ' + FAMLAB);
-  } else if (FAMLAB) {
-    const hit = findFamByLabel(FAMLAB);
-    if (!hit) { console.error('⛔ --fam-label=' + FAMLAB + ' 未在册；请显式传 --fam=<id>'); process.exit(2); }
-    FAM = hit.fam;
-  } else {
-    console.error('⛔ 无法自动归类家族，请显式传 --fam=<id> --fam-label=<label>');
-    process.exit(2);
-  }
-} else {
-  const ex = findFamByNum(FAM);
-  if (ex) {
-    if (FAMLAB && ex.label !== FAMLAB) {
-      console.error('⛔ --fam=' + FAM + ' 在册标签为「' + ex.label + '」，与传入 --fam-label=「' + FAMLAB + '」冲突'); process.exit(2);
-    }
-    FAMLAB = ex.label;
-  } else if (!FAMLAB) {
-    if (AUTO_FAM_LABEL) FAMLAB = AUTO_FAM_LABEL;
-    else { console.error('⛔ --fam=' + FAM + ' 未在册且未传 --fam-label=<label>；拒绝静默新建'); process.exit(2); }
-  }
-}
-if (VER === '2.0' && PACK_DIMS.input) {
-  const fn = Number(FAM);
-  if (PACK_DIMS.input === 'obs6' && fn > 0 && fn < 21) {
-    console.error('⛔ 观测架构校验失败：obs6 包 ' + ID + ' 不许放进非 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
-    process.exit(2);
-  }
-  if (PACK_DIMS.input !== 'obs6' && (fn >= 21 || /obs6/i.test(FAMLAB))) {
-    console.error('⛔ 观测架构校验失败：' + PACK_DIMS.input + ' 包 ' + ID + ' 不许放进 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
-    process.exit(2);
-  }
-}
 /* 11-15 深夜（ZCode）：lineage 列**不再收族名**——11-07 裁定"血统列不再兼记产物来源"，但这里的缺省把
  *   FAMLAB 写进 lineage ⇒ 11-12/11-14 的进图全部带族名入列，页面 keep 式 `!!d.lin` 钉住把 19 枚 2.0 新点
  *   漏进「1.8 及以前」旧图（用户令"老版本图应冻结"）。族名只住 fam_label（registry 第 5 列）与
@@ -260,6 +199,53 @@ if (PARENT_ARG) {
     const anc = findAncestorOnMap(parentWid, startUp, ancDirs, resolveOnMap, rootDir);
     if (anc) { parentId = anc; parentSrc = 'seedpack-wid'; }
     else parentSrc = 'unknown-wid';
+  }
+}
+if (!FAM) {
+  if (FAMLAB) {
+    const hit = findFamByLabel(FAMLAB);
+    if (!hit) { console.error('⛔ --fam-label=' + FAMLAB + ' 未在册；请显式传 --fam=<id>'); process.exit(2); }
+    FAM = hit.fam;
+  } else {
+    const featureTable = readTable(join(DATA, 'features.tsv'));
+    const inputDisplay = DISP ? readTable(DISP) : null;
+    const sourceRow = inputDisplay && inputDisplay.rows.length === 1
+      ? { row: inputDisplay.rows[0], ix: inputDisplay.ix }
+      : (() => { const r = featureTable.rows.find((x) => x[featureTable.ix.pack_id] === ID); return r ? { row: r, ix: featureTable.ix } : null; })();
+    const feature = sourceRow ? Object.fromEntries(FAMILY_FEATURES.map((c) => [c, sourceRow.row[sourceRow.ix[c]]])) : null;
+    const readPack = (p) => readPackInfo(resolve(rootDir, p));
+    const profiles = buildFamilyProfiles(reg, featureTable, readPack);
+    const parentRow = parentId ? reg.rows.find((r) => r[reg.ix.pack_id] === parentId) : null;
+    let parentMethod = 'root';
+    if (parentRow) parentMethod = methodOf(readPack(parentRow[reg.ix.path]).meta);
+    const decision = classifyFamily({ id: ID, dims: PACK_DIMS, meta, parentId, parentMethod, feature, profiles, maxFam: FAM_MAX });
+    if (decision.status !== 'matched' && decision.status !== 'new') {
+      console.error('⛔ 自动归族失败：' + decision.reason + '；请显式传 --fam=<id> --fam-label=<label>'); process.exit(2);
+    }
+    FAM = decision.fam;
+    FAMLAB = decision.label;
+    console.log('自动家族：' + ID + ' ⇒ ' + FAM + ' / ' + FAMLAB + ' / ' + JSON.stringify(decision));
+  }
+} else {
+  const ex = findFamByNum(FAM);
+  if (ex) {
+    if (FAMLAB && ex.label !== FAMLAB) {
+      console.error('⛔ --fam=' + FAM + ' 在册标签为「' + ex.label + '」，与传入 --fam-label=「' + FAMLAB + '」冲突'); process.exit(2);
+    }
+    FAMLAB = ex.label;
+  } else if (!FAMLAB) {
+    console.error('⛔ --fam=' + FAM + ' 未在册且未传 --fam-label=<label>；拒绝静默新建'); process.exit(2);
+  }
+}
+if (VER === '2.0' && PACK_DIMS.input) {
+  const fn = Number(FAM);
+  if (PACK_DIMS.input === 'obs6' && fn > 0 && fn < 21) {
+    console.error('⛔ 观测架构校验失败：obs6 包 ' + ID + ' 不许放进非 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
+    process.exit(2);
+  }
+  if (PACK_DIMS.input !== 'obs6' && (fn >= 21 || /obs6/i.test(FAMLAB))) {
+    console.error('⛔ 观测架构校验失败：' + PACK_DIMS.input + ' 包 ' + ID + ' 不许放进 obs6 家族 FAM' + FAM + '（' + FAMLAB + '）');
+    process.exit(2);
   }
 }
 const metaSeed = String((meta.recipe && meta.recipe.seed) || meta.seed || 'unknown');

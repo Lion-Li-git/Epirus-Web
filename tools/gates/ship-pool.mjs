@@ -518,6 +518,9 @@ ok(/--elected 认不出来/.test(String(electBad.stderr || '')), '⑥c-2 拒绝�
     if (rId >= 0 && rFam >= 0 && rLab >= 0) for (const l of RG.slice(1)) { const c = l.split('\t');
       if (c[rId]) REGF.set(c[rId], { fam: c[rFam] === undefined ? '' : c[rFam], lab: c[rLab] === undefined ? '' : c[rLab] }); }
     eq(rId >= 0 && rFam >= 0 && rLab >= 0, true, '⑫ registry.tsv 必须带 pack_id/fam/fam_label 三列——家族号的唯一真源');
+    const familyProbe = spawnSync(process.execPath, ['tools/probe-family-classifier.mjs'], { encoding: 'utf8', timeout: 30000 });
+    eq(familyProbe.status, 0, '⑫g 自动归族必须优先已有家族、差异大才新建，且拒绝架构/特征缺失：' +
+      String(familyProbe.stdout || familyProbe.stderr || '').trim().slice(-500));
     const lin = new Set(), famTs = new Map(), newBad = [], stale = [];
     for (const f of ['champion-map/data/page/lineage.tsv']) {
       const R = rd(f), hd = R[0].split('\t');
