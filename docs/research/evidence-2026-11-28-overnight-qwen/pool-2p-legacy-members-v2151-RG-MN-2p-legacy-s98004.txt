@@ -1,0 +1,6 @@
+# 池真源表 = champion-map/data/page/pool-members.tsv（统一池：多人桌与 2P 桌同源，11-13 用户裁定）
+# 装配 = **池形态**（逐席不同枚，真源 champion-map/data/page/pool-members.tsv）：hard 17 枚 ‖ soft 18 枚
+# ⚑ 研究视图 --poolomit = RG-MN（真源表没动，保留其余成员原顺序）
+# 抽法推导 = rosterFor(全表 34 枚)：lv:sparring=单带 soft(17 枚) ‖ lv:regular=按带加权 hard/soft ‖ lv:hard=单带 hard(17 枚)
+# 掺席 = lv:sparring=0 席 ‖ lv:regular=0 席 ‖ lv:hard=0 席（与页面 `scriptSeats` 同一份推导；2 人桌只有 1 席 AI ⇒ 必然是 0 席）
+{"n":2,"mode":"standard","pack":"2P","games":1000,"rows":[{"id":"lv:hard","pct":19.2,"avgR":9.7,"dose":0.0846,"doseN":9744},{"id":"lv:regular","pct":25.4,"avgR":10.3,"dose":0.0855,"doseN":10333},{"id":"lv:sparring","pct":30.1,"avgR":10.5,"dose":0.2,"doseN":10534}]}

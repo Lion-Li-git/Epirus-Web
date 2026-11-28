@@ -16,7 +16,7 @@ const CONFIGS = [
   { key: '5p-long', n: 5, mode: 'long', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
   { key: '8p-multi', n: 8, mode: 'multi', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
   { key: '8p-long', n: 8, mode: 'long', surrogate: 'legacy', games: 400, seeds: [0, 1].map((i) => SEED_BASE + i) },
-];
+].filter((cfg) => !process.env.LOO_CONFIGS || process.env.LOO_CONFIGS.split(',').includes(cfg.key));
 const VARIANTS = ['BASE', ...TARGETS];
 const jobs = [];
 for (const variant of VARIANTS) for (const cfg of CONFIGS) for (const seed of cfg.seeds) jobs.push({ variant, cfg, seed });
