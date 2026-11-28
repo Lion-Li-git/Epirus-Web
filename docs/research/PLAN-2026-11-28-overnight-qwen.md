@@ -105,6 +105,7 @@
    - **结果（01:05）**：产物 `selftest3` 全绿，Stage 1 `49.83%, 19/30, holo36`，但 `proto=0`，核心端点失败；不扫参，`T65-RINGBEAD` 仍是唯一 hard proto 载体。详见 [`RESULTS-2026-11-29-hard-proto-probe.md`](RESULTS-2026-11-29-hard-proto-probe.md)。
    - **补充 mine 探针（01:15）**：绿色 `PG-DR` 只蒸 `MN-PG(mine@0.35)`，产物全绿但 Stage 1 `47.75%, 20/30, ring26, mine0`；核心端点失败，`MN-PG` 仍是唯一 hard mine 载体。详见 [`RESULTS-2026-11-29-hard-mine-probe.md`](RESULTS-2026-11-29-hard-mine-probe.md)。
    - **补充 soft taunt 探针（01:25，通过）**：绿色 `L1B-S1200` 只蒸 `TN-S5(taunt@0.35)`，产物全绿，Stage 1 `49.50%, 19/30, taunt20, ring15`；留作白班完整评估候选，本班不入池。详见 [`RESULTS-2026-11-29-soft-taunt-probe.md`](RESULTS-2026-11-29-soft-taunt-probe.md)。
+   - **补充 soft laserEye / rod 探针（01:35，均淘汰）**：laserEye 产物全绿但 Stage 1 `laserEye0`；rod 首件 `selftest3` 腿C红，未跑 Stage 1。`LE-S2 / TF2-RD` 仍是各自唯一载体。
 2. **整页与地图数据互证**：
    - 运行 `node tools/pool-skill-report.mjs --bake`（若本班修改过池），运行 `node champion-map/rebuild-map.mjs` 与 `node tools/map-selfcheck.mjs`，确认 `skill-report.html` 卡数、`pool-members.tsv` 行数、`bundled-champion-pool.js` 与 `champion-map/index.html` 四视图 **`101 PASS / 0 FAIL`** 完全对齐。
 
