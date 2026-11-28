@@ -1,0 +1,100 @@
+{
+  "MN-PG": {
+    "tier": "hard",
+    "lost": [
+      {
+        "skill": "mine",
+        "depth": 21
+      }
+    ],
+    "own": {
+      "ji": 120,
+      "sword": 77,
+      "gun": 113,
+      "reflect": 102,
+      "snipe": 93,
+      "guard": 64,
+      "mine": 21,
+      "bagua": 81,
+      "shift": 7,
+      "ring": 5,
+      "drain": 4,
+      "holo": 17,
+      "charge": 1,
+      "bigT": 4,
+      "railgun": 1,
+      "curse": 1
+    }
+  },
+  "MT-PG": {
+    "tier": "hard",
+    "lost": [],
+    "own": {
+      "ji": 120,
+      "sword": 79,
+      "gun": 114,
+      "bagua": 82,
+      "reflect": 99,
+      "snipe": 74,
+      "guard": 50,
+      "ring": 9,
+      "bigT": 8,
+      "drain": 1,
+      "charge": 4,
+      "miniT": 6,
+      "railgun": 1,
+      "curse": 2,
+      "holo": 1,
+      "jinshield": 3
+    }
+  },
+  "FC-S1": {
+    "tier": "soft",
+    "lost": [],
+    "own": {
+      "ji": 120,
+      "curse": 42,
+      "firestorm": 22,
+      "reflect": 100,
+      "sword": 71,
+      "gun": 102,
+      "bagua": 65,
+      "snipe": 96,
+      "guard": 60,
+      "cannon": 6,
+      "holo": 10,
+      "jinshield": 59,
+      "charge": 34,
+      "railgun": 2,
+      "shift": 10
+    }
+  },
+  "TF2-RD": {
+    "tier": "soft",
+    "lost": [
+      {
+        "skill": "rod",
+        "depth": 14
+      }
+    ],
+    "own": {
+      "ji": 120,
+      "sword": 58,
+      "gun": 118,
+      "bagua": 72,
+      "reflect": 93,
+      "guard": 51,
+      "snipe": 81,
+      "ring": 32,
+      "charge": 8,
+      "railgun": 3,
+      "rod": 14,
+      "bigT": 10,
+      "curse": 2,
+      "transfer": 11,
+      "drain": 4,
+      "holo": 2,
+      "shift": 2
+    }
+  }
+}

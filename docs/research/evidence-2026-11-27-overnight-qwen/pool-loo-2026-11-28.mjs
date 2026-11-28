@@ -7,6 +7,7 @@ const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
 const PREFIX = process.env.LOO_PREFIX || 'pool-loo-2026-11-28';
 const TARGETS = (process.env.LOO_TARGETS || 'AR-TK2,nov21-armor-tzt2d,MX6-GD-TF20,FC-S1,OBS6E9,TF2-DR').split(',');
 const SEED_BASE = Number(process.env.LOO_SEED_BASE || 95001);
+const BASELINE = process.env.LOO_BASELINE || '594ef9a2';
 const CONFIGS = [
   { key: '2p-rule', n: 2, mode: 'standard', surrogate: 'rule', games: 1000, seeds: [0, 1, 2, 3].map((i) => SEED_BASE + i) },
   { key: '2p-legacy', n: 2, mode: 'standard', surrogate: 'legacy', games: 1000, seeds: [0, 1, 2, 3].map((i) => SEED_BASE + i) },
@@ -104,7 +105,7 @@ for (const target of TARGETS) {
     };
   }
 }
-const payload = { baseline: '594ef9a2', rulesFingerprint: 'c61298e6', configs: CONFIGS, measurements, rows, summary };
+const payload = { baseline: BASELINE, rulesFingerprint: 'c61298e6', configs: CONFIGS, measurements, rows, summary };
 writeFileSync(resolve(ROOT, OUT, PREFIX + '.json'), JSON.stringify(payload, null, 2));
 const header = ['variant', 'config', 'seed', 'hard', 'regular', 'sparring', 'deltaHard', 'deltaRegular', 'deltaSparring', 'ordered'];
 const allRows = [...measurements.filter((r) => r.variant === 'BASE').map((r) => ({ ...r, deltaHard: 0, deltaRegular: 0, deltaSparring: 0 })), ...rows];

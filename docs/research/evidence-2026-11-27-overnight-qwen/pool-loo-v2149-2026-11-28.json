@@ -1,0 +1,1906 @@
+{
+  "baseline": "9bbe4fad",
+  "rulesFingerprint": "c61298e6",
+  "configs": [
+    {
+      "key": "2p-rule",
+      "n": 2,
+      "mode": "standard",
+      "surrogate": "rule",
+      "games": 1000,
+      "seeds": [
+        96001,
+        96002,
+        96003,
+        96004
+      ]
+    },
+    {
+      "key": "2p-legacy",
+      "n": 2,
+      "mode": "standard",
+      "surrogate": "legacy",
+      "games": 1000,
+      "seeds": [
+        96001,
+        96002,
+        96003,
+        96004
+      ]
+    },
+    {
+      "key": "5p-multi",
+      "n": 5,
+      "mode": "multi",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "5p-long",
+      "n": 5,
+      "mode": "long",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "8p-multi",
+      "n": 8,
+      "mode": "multi",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    },
+    {
+      "key": "8p-long",
+      "n": 8,
+      "mode": "long",
+      "surrogate": "legacy",
+      "games": 400,
+      "seeds": [
+        96001,
+        96002
+      ]
+    }
+  ],
+  "measurements": [
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 28.7,
+      "regular": 39.9,
+      "sparring": 53.5,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 31.9,
+      "regular": 40.5,
+      "sparring": 55.5,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 36.6,
+      "sparring": 54.5,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 33,
+      "regular": 40.9,
+      "sparring": 53.7,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21.5,
+      "regular": 26.5,
+      "sparring": 30.5,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 23.6,
+      "regular": 28.2,
+      "sparring": 29.1,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.9,
+      "regular": 26.8,
+      "sparring": 29.2,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 18.9,
+      "regular": 23.9,
+      "sparring": 26.6,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 2.75,
+      "regular": 10.25,
+      "sparring": 16.75,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 10.5,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 2.5,
+      "regular": 8.75,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 8,
+      "sparring": 10.25,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.75,
+      "regular": 13.5,
+      "sparring": 13.75,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 12.75,
+      "regular": 11,
+      "sparring": 12,
+      "ordered": false
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9,
+      "regular": 9.5,
+      "sparring": 9.75,
+      "ordered": true
+    },
+    {
+      "variant": "BASE",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.75,
+      "regular": 10.25,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 30.4,
+      "regular": 40.4,
+      "sparring": 53.5,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 29,
+      "regular": 40.9,
+      "sparring": 55.5,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 31.4,
+      "regular": 37.5,
+      "sparring": 54.5,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 30,
+      "regular": 41.7,
+      "sparring": 53.7,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21,
+      "regular": 25.9,
+      "sparring": 30.5,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 20.9,
+      "regular": 27.4,
+      "sparring": 29.1,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.7,
+      "regular": 27.3,
+      "sparring": 29.2,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.6,
+      "regular": 24.1,
+      "sparring": 26.6,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 3.75,
+      "regular": 10.5,
+      "sparring": 16.75,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 7.75,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 4.5,
+      "regular": 9,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 6.75,
+      "sparring": 10.25,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 9.75,
+      "regular": 14,
+      "sparring": 13.75,
+      "ordered": false
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 9.75,
+      "regular": 11.75,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9.5,
+      "regular": 8.75,
+      "sparring": 9.75,
+      "ordered": false
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.5,
+      "regular": 9.5,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 29.9,
+      "regular": 40.1,
+      "sparring": 53.5,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 28.9,
+      "regular": 41.3,
+      "sparring": 55.5,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 30.8,
+      "regular": 37.7,
+      "sparring": 54.5,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 30.1,
+      "regular": 41.7,
+      "sparring": 53.7,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 20.6,
+      "regular": 26,
+      "sparring": 30.5,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 27.8,
+      "sparring": 29.1,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.6,
+      "regular": 27.3,
+      "sparring": 29.2,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.3,
+      "regular": 24,
+      "sparring": 26.6,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 3.75,
+      "regular": 10.25,
+      "sparring": 16.75,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 3,
+      "regular": 7.5,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 9.5,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2,
+      "regular": 7.25,
+      "sparring": 10.25,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.25,
+      "regular": 11.75,
+      "sparring": 13.75,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 10.5,
+      "regular": 11.25,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 8,
+      "regular": 9,
+      "sparring": 9.75,
+      "ordered": true
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.5,
+      "regular": 8.75,
+      "sparring": 12.75,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 28.7,
+      "regular": 41.2,
+      "sparring": 52.5,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 31.9,
+      "regular": 40.5,
+      "sparring": 53.6,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 37.6,
+      "sparring": 51.8,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 33,
+      "regular": 40.2,
+      "sparring": 51.5,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21.5,
+      "regular": 28.3,
+      "sparring": 30.5,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 23.6,
+      "regular": 26.8,
+      "sparring": 29.2,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.9,
+      "regular": 26.2,
+      "sparring": 30,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 18.9,
+      "regular": 23.8,
+      "sparring": 30.4,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 2.75,
+      "regular": 10.25,
+      "sparring": 14.25,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 10.75,
+      "sparring": 15.5,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 2.5,
+      "regular": 8.5,
+      "sparring": 13.25,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 7,
+      "sparring": 13.5,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.75,
+      "regular": 10,
+      "sparring": 13.25,
+      "ordered": false
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 12.75,
+      "regular": 15.5,
+      "sparring": 14.75,
+      "ordered": false
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9,
+      "regular": 9.75,
+      "sparring": 12,
+      "ordered": true
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.75,
+      "regular": 8.25,
+      "sparring": 11.75,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 28.7,
+      "regular": 41.5,
+      "sparring": 54.7,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 31.9,
+      "regular": 39.8,
+      "sparring": 53.8,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 38.9,
+      "sparring": 54.7,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 33,
+      "regular": 41.8,
+      "sparring": 55,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21.5,
+      "regular": 26.2,
+      "sparring": 31.1,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 23.6,
+      "regular": 28.3,
+      "sparring": 31.3,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.9,
+      "regular": 27,
+      "sparring": 30.2,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 18.9,
+      "regular": 24.4,
+      "sparring": 28.3,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 2.75,
+      "regular": 10.75,
+      "sparring": 15.25,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 12,
+      "sparring": 16.75,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 2.5,
+      "regular": 7.75,
+      "sparring": 16.5,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 8.75,
+      "sparring": 16.75,
+      "ordered": true
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.75,
+      "regular": 15,
+      "sparring": 12.75,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 12.75,
+      "regular": 13.5,
+      "sparring": 11.75,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9,
+      "regular": 9.75,
+      "sparring": 9,
+      "ordered": false
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.75,
+      "regular": 8.5,
+      "sparring": 13,
+      "ordered": false
+    }
+  ],
+  "rows": [
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 30.4,
+      "regular": 40.4,
+      "sparring": 53.5,
+      "ordered": true,
+      "deltaHard": 1.6999999999999993,
+      "deltaRegular": 0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 29,
+      "regular": 40.9,
+      "sparring": 55.5,
+      "ordered": true,
+      "deltaHard": -2.8999999999999986,
+      "deltaRegular": 0.3999999999999986,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 31.4,
+      "regular": 37.5,
+      "sparring": 54.5,
+      "ordered": true,
+      "deltaHard": 1.8999999999999986,
+      "deltaRegular": 0.8999999999999986,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 30,
+      "regular": 41.7,
+      "sparring": 53.7,
+      "ordered": true,
+      "deltaHard": -3,
+      "deltaRegular": 0.8000000000000043,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21,
+      "regular": 25.9,
+      "sparring": 30.5,
+      "ordered": true,
+      "deltaHard": -0.5,
+      "deltaRegular": -0.6000000000000014,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 20.9,
+      "regular": 27.4,
+      "sparring": 29.1,
+      "ordered": true,
+      "deltaHard": -2.700000000000003,
+      "deltaRegular": -0.8000000000000007,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.7,
+      "regular": 27.3,
+      "sparring": 29.2,
+      "ordered": true,
+      "deltaHard": -0.1999999999999993,
+      "deltaRegular": 0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.6,
+      "regular": 24.1,
+      "sparring": 26.6,
+      "ordered": true,
+      "deltaHard": 1.7000000000000028,
+      "deltaRegular": 0.20000000000000284,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 3.75,
+      "regular": 10.5,
+      "sparring": 16.75,
+      "ordered": true,
+      "deltaHard": 1,
+      "deltaRegular": 0.25,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 7.75,
+      "sparring": 12.75,
+      "ordered": true,
+      "deltaHard": 0.5,
+      "deltaRegular": -2.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 4.5,
+      "regular": 9,
+      "sparring": 12,
+      "ordered": true,
+      "deltaHard": 2,
+      "deltaRegular": 0.25,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 6.75,
+      "sparring": 10.25,
+      "ordered": true,
+      "deltaHard": -0.5,
+      "deltaRegular": -1.25,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 9.75,
+      "regular": 14,
+      "sparring": 13.75,
+      "ordered": false,
+      "deltaHard": -1,
+      "deltaRegular": 0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 9.75,
+      "regular": 11.75,
+      "sparring": 12,
+      "ordered": true,
+      "deltaHard": -3,
+      "deltaRegular": 0.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9.5,
+      "regular": 8.75,
+      "sparring": 9.75,
+      "ordered": false,
+      "deltaHard": 0.5,
+      "deltaRegular": -0.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MN-PG",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.5,
+      "regular": 9.5,
+      "sparring": 12.75,
+      "ordered": true,
+      "deltaHard": -0.25,
+      "deltaRegular": -0.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 29.9,
+      "regular": 40.1,
+      "sparring": 53.5,
+      "ordered": true,
+      "deltaHard": 1.1999999999999993,
+      "deltaRegular": 0.20000000000000284,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 28.9,
+      "regular": 41.3,
+      "sparring": 55.5,
+      "ordered": true,
+      "deltaHard": -3,
+      "deltaRegular": 0.7999999999999972,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 30.8,
+      "regular": 37.7,
+      "sparring": 54.5,
+      "ordered": true,
+      "deltaHard": 1.3000000000000007,
+      "deltaRegular": 1.1000000000000014,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 30.1,
+      "regular": 41.7,
+      "sparring": 53.7,
+      "ordered": true,
+      "deltaHard": -2.8999999999999986,
+      "deltaRegular": 0.8000000000000043,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 20.6,
+      "regular": 26,
+      "sparring": 30.5,
+      "ordered": true,
+      "deltaHard": -0.8999999999999986,
+      "deltaRegular": -0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 21.5,
+      "regular": 27.8,
+      "sparring": 29.1,
+      "ordered": true,
+      "deltaHard": -2.1000000000000014,
+      "deltaRegular": -0.3999999999999986,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.6,
+      "regular": 27.3,
+      "sparring": 29.2,
+      "ordered": true,
+      "deltaHard": -0.29999999999999716,
+      "deltaRegular": 0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 20.3,
+      "regular": 24,
+      "sparring": 26.6,
+      "ordered": true,
+      "deltaHard": 1.4000000000000021,
+      "deltaRegular": 0.10000000000000142,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 3.75,
+      "regular": 10.25,
+      "sparring": 16.75,
+      "ordered": true,
+      "deltaHard": 1,
+      "deltaRegular": 0,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 3,
+      "regular": 7.5,
+      "sparring": 12.75,
+      "ordered": true,
+      "deltaHard": 1.25,
+      "deltaRegular": -3,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 4,
+      "regular": 9.5,
+      "sparring": 12,
+      "ordered": true,
+      "deltaHard": 1.5,
+      "deltaRegular": 0.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2,
+      "regular": 7.25,
+      "sparring": 10.25,
+      "ordered": true,
+      "deltaHard": -0.25,
+      "deltaRegular": -0.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.25,
+      "regular": 11.75,
+      "sparring": 13.75,
+      "ordered": true,
+      "deltaHard": -0.5,
+      "deltaRegular": -1.75,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 10.5,
+      "regular": 11.25,
+      "sparring": 12,
+      "ordered": true,
+      "deltaHard": -2.25,
+      "deltaRegular": 0.25,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 8,
+      "regular": 9,
+      "sparring": 9.75,
+      "ordered": true,
+      "deltaHard": -1,
+      "deltaRegular": -0.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "MT-PG",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.5,
+      "regular": 8.75,
+      "sparring": 12.75,
+      "ordered": true,
+      "deltaHard": -0.25,
+      "deltaRegular": -1.5,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 28.7,
+      "regular": 41.2,
+      "sparring": 52.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.3000000000000043,
+      "deltaSparring": -1
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 31.9,
+      "regular": 40.5,
+      "sparring": 53.6,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": -1.8999999999999986
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 37.6,
+      "sparring": 51.8,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1,
+      "deltaSparring": -2.700000000000003
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 33,
+      "regular": 40.2,
+      "sparring": 51.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.6999999999999957,
+      "deltaSparring": -2.200000000000003
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21.5,
+      "regular": 28.3,
+      "sparring": 30.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.8000000000000007,
+      "deltaSparring": 0
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 23.6,
+      "regular": 26.8,
+      "sparring": 29.2,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -1.3999999999999986,
+      "deltaSparring": 0.09999999999999787
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.9,
+      "regular": 26.2,
+      "sparring": 30,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.6000000000000014,
+      "deltaSparring": 0.8000000000000007
+    },
+    {
+      "variant": "FC-S1",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 18.9,
+      "regular": 23.8,
+      "sparring": 30.4,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.09999999999999787,
+      "deltaSparring": 3.799999999999997
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 2.75,
+      "regular": 10.25,
+      "sparring": 14.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0,
+      "deltaSparring": -2.5
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 10.75,
+      "sparring": 15.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.25,
+      "deltaSparring": 2.75
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 2.5,
+      "regular": 8.5,
+      "sparring": 13.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.25,
+      "deltaSparring": 1.25
+    },
+    {
+      "variant": "FC-S1",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 7,
+      "sparring": 13.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -1,
+      "deltaSparring": 3.25
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.75,
+      "regular": 10,
+      "sparring": 13.25,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -3.5,
+      "deltaSparring": -0.5
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 12.75,
+      "regular": 15.5,
+      "sparring": 14.75,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 4.5,
+      "deltaSparring": 2.75
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9,
+      "regular": 9.75,
+      "sparring": 12,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.25,
+      "deltaSparring": 2.25
+    },
+    {
+      "variant": "FC-S1",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.75,
+      "regular": 8.25,
+      "sparring": 11.75,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -2,
+      "deltaSparring": -1
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96001,
+      "hard": 28.7,
+      "regular": 41.5,
+      "sparring": 54.7,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.6000000000000014,
+      "deltaSparring": 1.2000000000000028
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96002,
+      "hard": 31.9,
+      "regular": 39.8,
+      "sparring": 53.8,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.7000000000000028,
+      "deltaSparring": -1.7000000000000028
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96003,
+      "hard": 29.5,
+      "regular": 38.9,
+      "sparring": 54.7,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 2.299999999999997,
+      "deltaSparring": 0.20000000000000284
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-rule",
+      "seed": 96004,
+      "hard": 33,
+      "regular": 41.8,
+      "sparring": 55,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.8999999999999986,
+      "deltaSparring": 1.2999999999999972
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96001,
+      "hard": 21.5,
+      "regular": 26.2,
+      "sparring": 31.1,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -0.3000000000000007,
+      "deltaSparring": 0.6000000000000014
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96002,
+      "hard": 23.6,
+      "regular": 28.3,
+      "sparring": 31.3,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.10000000000000142,
+      "deltaSparring": 2.1999999999999993
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96003,
+      "hard": 21.9,
+      "regular": 27,
+      "sparring": 30.2,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.1999999999999993,
+      "deltaSparring": 1
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "2p-legacy",
+      "seed": 96004,
+      "hard": 18.9,
+      "regular": 24.4,
+      "sparring": 28.3,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.5,
+      "deltaSparring": 1.6999999999999993
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-multi",
+      "seed": 96001,
+      "hard": 2.75,
+      "regular": 10.75,
+      "sparring": 15.25,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.5,
+      "deltaSparring": -1.5
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-multi",
+      "seed": 96002,
+      "hard": 1.75,
+      "regular": 12,
+      "sparring": 16.75,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 1.5,
+      "deltaSparring": 4
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-long",
+      "seed": 96001,
+      "hard": 2.5,
+      "regular": 7.75,
+      "sparring": 16.5,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": -1,
+      "deltaSparring": 4.5
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "5p-long",
+      "seed": 96002,
+      "hard": 2.25,
+      "regular": 8.75,
+      "sparring": 16.75,
+      "ordered": true,
+      "deltaHard": 0,
+      "deltaRegular": 0.75,
+      "deltaSparring": 6.5
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-multi",
+      "seed": 96001,
+      "hard": 10.75,
+      "regular": 15,
+      "sparring": 12.75,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 1.5,
+      "deltaSparring": -1
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-multi",
+      "seed": 96002,
+      "hard": 12.75,
+      "regular": 13.5,
+      "sparring": 11.75,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 2.5,
+      "deltaSparring": -0.25
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-long",
+      "seed": 96001,
+      "hard": 9,
+      "regular": 9.75,
+      "sparring": 9,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": 0.25,
+      "deltaSparring": -0.75
+    },
+    {
+      "variant": "TF2-RD",
+      "config": "8p-long",
+      "seed": 96002,
+      "hard": 8.75,
+      "regular": 8.5,
+      "sparring": 13,
+      "ordered": false,
+      "deltaHard": 0,
+      "deltaRegular": -1.75,
+      "deltaSparring": 0.25
+    }
+  ],
+  "summary": {
+    "MN-PG": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": -0.5750000000000002,
+        "deltaRegular": 0.6500000000000004,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.5,
+          0.3999999999999986,
+          0.8999999999999986,
+          0.8000000000000043
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": -0.4249999999999998,
+        "deltaRegular": -0.17499999999999982,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          -0.6000000000000014,
+          -0.8000000000000007,
+          0.5,
+          0.20000000000000284
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0.75,
+        "deltaRegular": -1.25,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.25,
+          -2.75
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0.75,
+        "deltaRegular": -0.5,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.25,
+          -1.25
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": -2,
+        "deltaRegular": 0.625,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.5,
+          0.75
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 1,
+        "inversionsAfter": 1
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0.125,
+        "deltaRegular": -0.75,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          -0.75,
+          -0.75
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1
+      }
+    },
+    "MT-PG": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": -0.8499999999999996,
+        "deltaRegular": 0.7250000000000014,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.20000000000000284,
+          0.7999999999999972,
+          1.1000000000000014,
+          0.8000000000000043
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": -0.47499999999999876,
+        "deltaRegular": -0.07499999999999929,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          -0.5,
+          -0.3999999999999986,
+          0.5,
+          0.10000000000000142
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 1.125,
+        "deltaRegular": -1.5,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0,
+          -3
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0.625,
+        "deltaRegular": 0,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          0.75,
+          -0.75
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": -1.375,
+        "deltaRegular": -0.75,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          -1.75,
+          0.25
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 1,
+        "inversionsAfter": 0
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": -0.625,
+        "deltaRegular": -1,
+        "deltaSparring": 0,
+        "deltaRegularBySeed": [
+          -0.5,
+          -1.5
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      }
+    },
+    "FC-S1": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": 0.40000000000000213,
+        "deltaSparring": -1.950000000000001,
+        "deltaRegularBySeed": [
+          1.3000000000000043,
+          0,
+          1,
+          -0.6999999999999957
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": -0.07499999999999929,
+        "deltaSparring": 1.174999999999999,
+        "deltaRegularBySeed": [
+          1.8000000000000007,
+          -1.3999999999999986,
+          -0.6000000000000014,
+          -0.09999999999999787
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.125,
+        "deltaSparring": 0.125,
+        "deltaRegularBySeed": [
+          0,
+          0.25
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.625,
+        "deltaSparring": 2.25,
+        "deltaRegularBySeed": [
+          -0.25,
+          -1
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 0.5,
+        "deltaSparring": 1.125,
+        "deltaRegularBySeed": [
+          -3.5,
+          4.5
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 1,
+        "inversionsAfter": 2
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.875,
+        "deltaSparring": 0.625,
+        "deltaRegularBySeed": [
+          0.25,
+          -2
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 1
+      }
+    },
+    "TF2-RD": {
+      "2p-rule": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": 1.0249999999999986,
+        "deltaSparring": 0.25,
+        "deltaRegularBySeed": [
+          1.6000000000000014,
+          -0.7000000000000028,
+          2.299999999999997,
+          0.8999999999999986
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "2p-legacy": {
+        "nSeeds": 4,
+        "deltaHard": 0,
+        "deltaRegular": 0.125,
+        "deltaSparring": 1.375,
+        "deltaRegularBySeed": [
+          -0.3000000000000007,
+          0.10000000000000142,
+          0.1999999999999993,
+          0.5
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 1,
+        "deltaSparring": 1.25,
+        "deltaRegularBySeed": [
+          0.5,
+          1.5
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "5p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.125,
+        "deltaSparring": 5.5,
+        "deltaRegularBySeed": [
+          -1,
+          0.75
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 0
+      },
+      "8p-multi": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": 2,
+        "deltaSparring": -0.625,
+        "deltaRegularBySeed": [
+          1.5,
+          2.5
+        ],
+        "allRegularSameSign": true,
+        "inversionsBefore": 1,
+        "inversionsAfter": 2
+      },
+      "8p-long": {
+        "nSeeds": 2,
+        "deltaHard": 0,
+        "deltaRegular": -0.75,
+        "deltaSparring": -0.25,
+        "deltaRegularBySeed": [
+          0.25,
+          -1.75
+        ],
+        "allRegularSameSign": false,
+        "inversionsBefore": 0,
+        "inversionsAfter": 2
+      }
+    }
+  }
+}

@@ -1,0 +1,256 @@
+{
+  "baseline": "9bbe4fad",
+  "members": 35,
+  "tiers": {
+    "hard": 17,
+    "soft": 18
+  },
+  "highWaste": [
+    {
+      "id": "MSB11-R1S130778313",
+      "tier": "soft",
+      "winPct": 50.83,
+      "wastePct": 100,
+      "expired": 1,
+      "gained": 1
+    },
+    {
+      "id": "AR-TK2",
+      "tier": "soft",
+      "winPct": 39.92,
+      "wastePct": 97.26810673443457,
+      "expired": 1531,
+      "gained": 1574
+    },
+    {
+      "id": "nov21-armor-tzt2d",
+      "tier": "soft",
+      "winPct": 40,
+      "wastePct": 97.10144927536231,
+      "expired": 1742,
+      "gained": 1794
+    },
+    {
+      "id": "FC-S1",
+      "tier": "soft",
+      "winPct": 39.08,
+      "wastePct": 96.36583888552393,
+      "expired": 1591,
+      "gained": 1651
+    },
+    {
+      "id": "TF-DR",
+      "tier": "hard",
+      "winPct": 48.08,
+      "wastePct": 94,
+      "expired": 94,
+      "gained": 100
+    },
+    {
+      "id": "TF2-DR",
+      "tier": "soft",
+      "winPct": 47.58,
+      "wastePct": 91.63879598662207,
+      "expired": 274,
+      "gained": 299
+    },
+    {
+      "id": "RG-MN",
+      "tier": "soft",
+      "winPct": 43.169999999999995,
+      "wastePct": 85.43307086614173,
+      "expired": 434,
+      "gained": 508
+    },
+    {
+      "id": "DR-R3E",
+      "tier": "hard",
+      "winPct": 50,
+      "wastePct": 77.61627906976744,
+      "expired": 267,
+      "gained": 344
+    },
+    {
+      "id": "JN-DR",
+      "tier": "hard",
+      "winPct": 53.669999999999995,
+      "wastePct": 72.48157248157248,
+      "expired": 295,
+      "gained": 407
+    },
+    {
+      "id": "nov22-ring3-gd6a18",
+      "tier": "hard",
+      "winPct": 47.42,
+      "wastePct": 65.95492289442467,
+      "expired": 556,
+      "gained": 843
+    },
+    {
+      "id": "TF2-RD",
+      "tier": "soft",
+      "winPct": 49.919999999999995,
+      "wastePct": 63.9344262295082,
+      "expired": 39,
+      "gained": 61
+    },
+    {
+      "id": "SOFT-RING-C3G25",
+      "tier": "soft",
+      "winPct": 34.25,
+      "wastePct": 61.15384615384615,
+      "expired": 159,
+      "gained": 260
+    }
+  ],
+  "rare": {
+    "hard": {
+      "taunt": [
+        {
+          "id": "DR-R3E",
+          "depth": 1
+        },
+        {
+          "id": "TN-S5",
+          "depth": 37
+        }
+      ],
+      "miniT": [
+        {
+          "id": "JN-DR",
+          "depth": 2
+        },
+        {
+          "id": "MT-PG",
+          "depth": 6
+        }
+      ],
+      "laserEye": [
+        {
+          "id": "FS-DR",
+          "depth": 12
+        },
+        {
+          "id": "FS2-LE26",
+          "depth": 52
+        }
+      ],
+      "purify": [
+        {
+          "id": "PUR-2P",
+          "depth": 1
+        }
+      ],
+      "mine": [
+        {
+          "id": "MN-PG",
+          "depth": 21
+        }
+      ],
+      "cannon": [
+        {
+          "id": "PG-CN",
+          "depth": 21
+        }
+      ],
+      "rod": [
+        {
+          "id": "PUR-2P",
+          "depth": 2
+        },
+        {
+          "id": "RD-PG",
+          "depth": 14
+        }
+      ],
+      "proto": [
+        {
+          "id": "T65-RINGBEAD",
+          "depth": 50
+        }
+      ],
+      "transfer": [
+        {
+          "id": "TF-DR",
+          "depth": 29
+        }
+      ],
+      "armor": [
+        {
+          "id": "TK-FS4",
+          "depth": 97
+        }
+      ],
+      "tank": [
+        {
+          "id": "TK-FS4",
+          "depth": 17
+        }
+      ],
+      "dualGun": []
+    },
+    "soft": {
+      "taunt": [
+        {
+          "id": "L1B-S1200",
+          "depth": 1
+        }
+      ],
+      "miniT": [
+        {
+          "id": "TM-S5-a40",
+          "depth": 4
+        }
+      ],
+      "laserEye": [
+        {
+          "id": "LE-S2",
+          "depth": 15
+        }
+      ],
+      "purify": [
+        {
+          "id": "PUR-DR",
+          "depth": 6
+        }
+      ],
+      "mine": [
+        {
+          "id": "MSB11-R1S130778313",
+          "depth": 40
+        },
+        {
+          "id": "RG-MN",
+          "depth": 41
+        }
+      ],
+      "cannon": [
+        {
+          "id": "FC-S1",
+          "depth": 6
+        },
+        {
+          "id": "PG-CN-S1200",
+          "depth": 27
+        }
+      ],
+      "rod": [
+        {
+          "id": "TF2-RD",
+          "depth": 14
+        }
+      ],
+      "proto": [
+        {
+          "id": "MSB11-R1S130778313",
+          "depth": 65
+        },
+        {
+          "id": "PH-S2",
+          "depth": 8
+        }
+      ],
+      "dualGun": []
+    }
+  }
+}
