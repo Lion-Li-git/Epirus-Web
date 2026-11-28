@@ -4,6 +4,15 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.47 — 11-28（`train-server` 控制台服务修复 ＆ `TN35-S` 清单外六臂收口）
+
+**这一版是什么**：修复本地训练服务 `training/server/train-server.mjs` 在浏览器打开带 `?token=` 地址返回 JSON 而非页面、对齐交接文档状态，并在不动冠军池（维持 35 枚 `hard 17 / soft 18`）与 `c61298e6` 指纹的前提下完成 `TN35-S` 清单外六臂探索验证与止损收口（`PREREG/RESULTS-2026-11-28-day-tn35.md`）。
+
+- **训练服务控制台修复（[`training/server/train-server.mjs`](training/server/train-server.mjs)）**：新增白名单静态路由 `/app/`（仅放行 `index.html`、`css/**`、`js/**` 与排除 `champion-map/archive/**` 后的 `champion-map/**`；`/app` 入口与全部训练 API 仍校验随机令牌）；`GET /` 对浏览器导航（无 `X-Epirus-Token` 且 `Accept` 含 `text/html`）`302` 跳转至 `/app/?token=...`，保留 JSON 探活/API 行为不变。同步扩充 [`tools/train-server-selftest.mjs`](tools/train-server-selftest.mjs) 校验跳转、HTML/CSS 放行与路径白名单隔离。
+- **交接状态对齐（[`docs/research/HANDOFF-2026-11-28-morning.md`](docs/research/HANDOFF-2026-11-28-morning.md)）**：消除 `02:03` 初版与 `06:36/07:48` 已完成项（Pages archive 排除、workflow 触发路径、`cdp-boot.mjs` 重试、soft 收口）之间的表格与 NEXT 重叠。
+- **清单外 `TN35-S` 六臂探索与机制结论（[`docs/research/RESULTS-2026-11-28-day-tn35.md`](docs/research/RESULTS-2026-11-28-day-tn35.md)）**：验证 H1（`L1B-S1200` 跨亲蒸馏）、H2（`FS2-LE26` 主从反转 + `--winOnly=0/1` 对照）与 H3（`TN35-FS2.snap0` 两阶段岭基线 PG ＆ `FS-DR` 无 DAgger 嫁接 `proto/holo/jinshield`）。六臂按预注册硬门（覆盖 + `废珠≤60%`）止损淘汰、产物全留在 `scratch/`；确认 `holo/proto` 与 `charge#boom → laserEye` 在单枚 `16561` 维策略头上存在结构性电珠闲置拮抗，且再证 `--winOnly=1` 稳梯度但收窄次级稀有技覆盖。
+- **验证**：`train-server-selftest`、旋钮册、`pool-add --audit`、`spec-run`、`meta-repo`、`ship-pool`、`D16/D168` 与 Chrome `smoke.mjs` 定向验证通过；未跑 `--group=engine` 整轮。
+
 ## v2.1.46 — 11-28（soft 第二次补强：L1B-S1200 原位替换 RINGB11）
 
 **这一版是什么**：在 v2.1.45 当前池上完成 L1b `seg1200` 的第二次完整准入链，用它原位替换 soft 成员 `RINGB11`，池维持 35 枚 `hard 17 / soft 18`。候选血统 `v:92 / S1o / 16561`，`selftest3` 全绿，Stage 1 胜率 51.58%、并集 19、电珠闭环 84.15%（69/82），A/B/C 为 `MxC=0.2562 / MxCL=0.1197 / arR=0.1565`，两 seed 人席 `seatKill=0`。

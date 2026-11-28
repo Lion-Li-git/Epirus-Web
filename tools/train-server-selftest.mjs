@@ -41,9 +41,20 @@ async function status(path, opts) {
 try {
   await waitReady();
   assert.equal(await status('/'), 401);
+  assert.equal(await status('/app/'), 401);
   assert.equal(await status('/', { headers: { Origin: 'https://evil.example', 'X-Epirus-Token': TOKEN } }), 403);
   assert.equal(await status('/', { headers: { Origin: 'null' } }), 401);
   assert.equal(await status('/', { headers: { Origin: 'null', 'X-Epirus-Token': TOKEN } }), 200);
+  const redir = await fetch(BASE + '/?token=' + TOKEN, { headers: { Accept: 'text/html' }, redirect: 'manual' });
+  assert.equal(redir.status, 302);
+  assert.equal(redir.headers.get('location'), '/app/?token=' + TOKEN);
+  const appHtml = await fetch(BASE + '/app/?token=' + TOKEN);
+  assert.equal(appHtml.status, 200);
+  assert.match(String(appHtml.headers.get('content-type') || ''), /text\/html/);
+  assert.match(await appHtml.text(), /Epirus|epirus/);
+  assert.equal(await status('/app/css/style.css'), 200);
+  assert.equal(await status('/app/docs/RULES-2P.md'), 404);
+  assert.equal(await status('/app/champion-map/archive/'), 404);
   assert.equal(await status('/train', { headers: { 'X-Epirus-Token': TOKEN } }), 405);
   assert.equal(await status('/reset', { method: 'POST', headers: { 'X-Epirus-Token': TOKEN } }), 200);
   const bad = await fetch(BASE + '/train?up=docs/artifacts/not-here.bak', {

@@ -8,8 +8,8 @@
 import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { dirname, resolve, sep } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -345,6 +345,34 @@ async function handleTrain(req, res, q) {
   });
 }
 
+const STATIC_MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.mjs': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.tsv': 'text/tab-separated-values; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+};
+
+function resolveAppAsset(pathname) {
+  let rel = '';
+  if (pathname === '/app/' || pathname === '/app/index.html') rel = 'index.html';
+  else if (pathname === '/app/champion-map' || pathname === '/app/champion-map/') rel = 'champion-map/index.html';
+  else if (pathname.startsWith('/app/')) rel = pathname.slice(5);
+  else return null;
+  if (!rel || rel.includes('\\') || rel.includes('\0')) return null;
+  if (rel !== 'index.html' && !/^(css|js|champion-map)\//.test(rel)) return null;
+  if (rel === 'champion-map/archive' || rel.startsWith('champion-map/archive/')) return null;
+  const full = resolve(ROOT, rel);
+  if (full !== ROOT && !full.startsWith(ROOT + sep)) return null;
+  if (!existsSync(full) || !statSync(full).isFile()) return null;
+  return full;
+}
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url || '/', 'http://127.0.0.1:' + PORT);
   const boundaryError = requestError(req, u, false);
@@ -358,13 +386,47 @@ const server = http.createServer(async (req, res) => {
     res.end();
     return;
   }
+  /* 静态 UI 子资源只放行白名单目录（排除 champion-map/archive），无需每个 <script>/<link> 带 token；
+   * 入口 HTML（/app /app/ /app/index.html）及全部训练 API 仍强制校验 token。 */
+  const isAppEntry = u.pathname === '/app' || u.pathname === '/app/' || u.pathname === '/app/index.html';
+  if (!isAppEntry && u.pathname.startsWith('/app/')) {
+    if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
+    const assetPath = resolveAppAsset(u.pathname);
+    if (!assetPath) { sendJson(req, res, 404, { ok: false, msg: 'unknown endpoint: ' + u.pathname }); return; }
+    const mime = STATIC_MIME[extname(assetPath).toLowerCase()] || 'application/octet-stream';
+    setCors(req, res);
+    res.writeHead(200, { 'Content-Type': mime, 'Cache-Control': 'no-store' });
+    res.end(readFileSync(assetPath));
+    return;
+  }
   const authError = requestError(req, u, true);
   if (authError) {
     sendJson(req, res, authError.code, { ok: false, msg: authError.msg });
     return;
   }
+  if (u.pathname === '/app') {
+    if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
+    const qs = u.searchParams.get('token') ? u.search : ('?token=' + encodeURIComponent(TOKEN));
+    res.writeHead(302, { Location: '/app/' + qs, 'Cache-Control': 'no-store' });
+    res.end();
+    return;
+  }
+  if (u.pathname === '/app/' || u.pathname === '/app/index.html') {
+    if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
+    const htmlPath = resolveAppAsset(u.pathname);
+    if (!htmlPath) { sendJson(req, res, 404, { ok: false, msg: 'index.html missing' }); return; }
+    res.writeHead(200, { 'Content-Type': STATIC_MIME['.html'], 'Cache-Control': 'no-store' });
+    res.end(readFileSync(htmlPath));
+    return;
+  }
   if (u.pathname === '/' || u.pathname === '/status') {
     if (req.method !== 'GET') { sendJson(req, res, 405, { ok: false, msg: 'Method Not Allowed' }); return; }
+    if (u.pathname === '/' && !req.headers['x-epirus-token'] && /text\/html/i.test(String(req.headers.accept || ''))) {
+      const tok = String(u.searchParams.get('token') || TOKEN);
+      res.writeHead(302, { Location: '/app/?token=' + encodeURIComponent(tok), 'Cache-Control': 'no-store' });
+      res.end();
+      return;
+    }
     sendJson(req, res, 200, { ok: true, engine: '2.0-obs6', active: !!activeChild, lastOut: lastOut || null });
     return;
   }
@@ -412,7 +474,7 @@ const IS_MAIN = process.argv[1] && import.meta.url === pathToFileURL(process.arg
 if (IS_MAIN) {
   server.listen(PORT, '127.0.0.1', () => {
     console.log('[train-server] 2.0 obs6 本地训练服务已监听 http://127.0.0.1:' + PORT);
-    console.log('[train-server] 打开 http://127.0.0.1:' + PORT + '/?token=' + TOKEN);
+    console.log('[train-server] 浏览器打开 http://127.0.0.1:' + PORT + '/app/?token=' + TOKEN + ' （API 探活: /?token=' + TOKEN + '）');
   });
 
   for (const sig of ['SIGINT', 'SIGTERM']) {

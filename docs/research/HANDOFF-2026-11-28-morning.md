@@ -1,6 +1,6 @@
 # HANDOFF · 2026-11-28 通宵班收口
 
-> 交接时间：2026-11-28 02:03（UTC+8）。
+> 交接时间：2026-11-28 02:03（初版）→ 07:48（UTC+8，§6–§7 续班收口更新）。
 > 当前产品：`v2.1.46`；规则指纹 `c61298e6`；池 35 枚 `hard 17 / soft 18`。
 > 本班没有跑 `--group=engine` 整轮门禁，全部为定向验证。
 
@@ -50,13 +50,13 @@
 
 | 项目 | 现状证据 | 建议动作 |
 |---|---|---|
-| Pages 发布 archive | `.github/workflows/pages.yml` 仍 `cp -r champion-map`；`champion-map/archive` 18M，整个 champion-map 184M | 先查运行时引用，再从 `_site` 排除 archive；不要直接删仓内文件 |
-| training workflow 触发面 | `.github/workflows/training.yml` 只覆盖 `training/**` 与 `tools/pack-fuse.mjs` | 补 `js/train/policy2.js`、`js/train/evo.js`、`js/core/**` 等训练自检依赖路径 |
+| Pages 发布 archive | `.github/workflows/pages.yml` 原 `cp -r champion-map`；`champion-map/archive` 18M | **已完成（见 §6）**：`_site` 已排除 archive（450 → 208 文件、61M → 43M），仓内文件保留 |
+| training workflow 触发面 | `.github/workflows/training.yml` 原只覆盖 `training/**` 与 `tools/pack-fuse.mjs` | **已完成（见 §6）**：已补 `tools/**`、`js/**`、`champion-map/**`（排除 archive）与自检夹具 |
 | 旋钮 KPI | `training/knobs.mjs --check`：全集 185、在用 144、仅动态提及 41、暗键 0；目标 ≤40 | 先做引用分类与前后计数，再分批合并/删除；禁止直接物理删 |
 | v7 退役残留 | `train-3p.mjs` 仍被 `training/train.mjs` 的 v7 模式及多份活文档引用 | 明确“保留复算入口”还是“整体退役”；若要退役，连文档同笔清零并挪到仓外隔离 |
-| CDP 启动偶发超时 | 一次 CI 在 30s 内未等到 `/json/version`，后续通过 | 先观察复发率；若复发，再给 `cdp-boot.mjs` 加有界重试，不放宽 smoke 断言 |
+| CDP 启动偶发超时 | 一次 CI 在 30s 内未等到 `/json/version`，后续通过 | **已完成（见 §6）**：已加 `launchChromeReady()` 有限重试（`attempts=2`），继续观察线上复发率 |
 
-## 5. DONE / DOING / NEXT
+## 5. 02:03 初版 DONE / DOING / NEXT（§6–§7 续班更新见下节）
 
 ### DONE
 
@@ -70,10 +70,10 @@
 
 ### NEXT
 
-- 最终 CI 已绿，本班可收工。
+- 最终 CI 已绿，本班已收工；§4 前两项与 CDP 退避已于 §6 落地，§7 已完成全部 soft 高废珠快筛与预检收口。
 - 不再重跑 `L1b seg1800/seg2400`、`AR-TK2` 直接 PG/教师、`FC-S1` PG、`MX8-R6B-KL` PG、`nov21-armor-tzt2d` PG、`MX6-GD-TF20` PG、`MX8-TN35-KL3` PG、`RG-MN` PG；`nov21-taunt-dsp0b` 当前上游预检红。
 - 下一班若继续 soft 高废珠，先提出清单外新假设；直接 PG 与低剂量教师线都已收口，不能扫剂量挽救。起点只查 `selftest3-pool-census-2026-11-28.txt`。
-- P3 剩余：旋钮 KPI 真实 API 合并、v7 退役决策、CDP 复发观察。
+- P3 剩余：**训练 console 页面访问（`train-server.mjs /` 浏览器打开给 JSON 而非页面）、旋钮 KPI 真实 API 合并、v7 退役决策**。
 
 ## 6. 06:36 续班：P3 工程债务
 
