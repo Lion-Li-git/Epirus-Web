@@ -64,3 +64,9 @@
 - 入池阶梯（`probe-diff-ladder --pool=1`）：2P standard 5000 局 **19.8% < 25.4% < 29.3%**；5P multi 1500 局 **2.9% < 7.9% < 13.9%**；5P long 600 局 **1.3% < 9.0% < 13.0%**；8P multi 300 局 **9.7% < 11.7% < 16.0%**，四组均 hard < regular < simple。
 - 旧 `TM-S2/TN-S2/TA-S2` 的 raw JSON 已移至 `D:/code/Epirus-Web-artifacts-quarantine/cleanup-2026-11-28-carriers/`；`.bak` 保留在册，未做物理删除。
 
+## 6. 2026-11-28 20:44 复核更正：最终 `TA-S3` 人席不是 0
+
+- v2.1.49 池表与 canonical 人席表当时仍指向初版 `TM-S2/TN-S2/TA-S2`；最终 `TM-S5-a40/TN-S5/TA-S3` 没有并入 `champion-map/pool-seat-90210/90211.tsv`。
+- 补测最终三枚后，`TM-S5-a40` 与 `TN-S5` 仍为 `seatKill=0`；`TA-S3` 在 90210/90211 的 long 反弹型三格分别为 `67.0% / 75.5%`，按当前 soft 带内参照重算为 **`seatKill=2`**。
+- 因此本节 §5 的 `TA-S3 seatKill=0` 结论作废；在完成替代或回滚前，不得把 v2.1.49 的 `TA-S3` 读作人席合格。
+- 原始件：`evidence-2026-11-28-family-27/final-carriers-seat-90210/90211.{txt,tsv}`；重算件：`seat-recompute-v2149.json`。

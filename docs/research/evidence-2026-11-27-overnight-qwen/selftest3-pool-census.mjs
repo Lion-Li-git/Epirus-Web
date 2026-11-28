@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
 const OUT = 'docs/research/evidence-2026-11-27-overnight-qwen';
+const PREFIX = process.env.CENSUS_PREFIX || 'phase1-selftest3-pool';
+const BASELINE = process.env.CENSUS_BASELINE || '';
 const table = readFileSync(resolve(ROOT, 'champion-map/data/page/pool-members.tsv'), 'utf8')
   .replace(/\r/g, '').trim().split('\n');
 const head = table[0].split('\t');
@@ -42,6 +44,6 @@ const summary = {
     legacy: report.filter((r) => r.tier === tier && r.status === 'legacy').length,
   }])),
 };
-writeFileSync(resolve(ROOT, OUT, 'phase1-selftest3-pool.txt'), text.join('\n'));
-writeFileSync(resolve(ROOT, OUT, 'phase1-selftest3-pool.json'), JSON.stringify({ summary, report }, null, 2));
+writeFileSync(resolve(ROOT, OUT, PREFIX + '.txt'), text.join('\n'));
+writeFileSync(resolve(ROOT, OUT, PREFIX + '.json'), JSON.stringify({ baseline: BASELINE, summary, report }, null, 2));
 console.log(JSON.stringify(summary));

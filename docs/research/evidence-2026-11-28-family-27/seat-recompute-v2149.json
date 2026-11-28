@@ -1,0 +1,12 @@
+{
+  "baseline": "9bbe4fad",
+  "pairHasBase": true,
+  "changes": [
+    {
+      "id": "TA-S3",
+      "tier": "soft",
+      "old": 0,
+      "now": 2
+    }
+  ]
+}
