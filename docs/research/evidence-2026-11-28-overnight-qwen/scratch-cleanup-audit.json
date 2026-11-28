@@ -1,0 +1,942 @@
+{
+  "cutoff": "2026-11-21T16:00:00.000Z",
+  "refs": 71,
+  "audit": [
+    {
+      "dir": "scratch/arms",
+      "files": 1385,
+      "size": 313343217,
+      "newest": "2026-11-28T16:55:37.162Z",
+      "referenced": 22,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/v7-mined",
+      "files": 770,
+      "size": 66067099,
+      "newest": "2026-11-25T18:04:20.942Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/session-mined",
+      "files": 13,
+      "size": 31516840,
+      "newest": "2026-11-20T15:05:20.963Z",
+      "referenced": 0,
+      "eligible": true
+    },
+    {
+      "dir": "scratch/switch-endgame-1124",
+      "files": 9,
+      "size": 7922863,
+      "newest": "2026-11-24T11:16:32.168Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/2p-v7-1124",
+      "files": 54,
+      "size": 5854509,
+      "newest": "2026-11-24T13:27:33.326Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/2p-strong-1124",
+      "files": 109,
+      "size": 5771368,
+      "newest": "2026-11-24T13:02:26.106Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-cand",
+      "files": 50,
+      "size": 5101859,
+      "newest": "2026-11-26T23:53:14.274Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/2p-preserve-1124",
+      "files": 154,
+      "size": 3750601,
+      "newest": "2026-11-24T15:49:03.231Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/ga-arms",
+      "files": 24,
+      "size": 3628214,
+      "newest": "2026-11-19T11:52:43.029Z",
+      "referenced": 24,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/qoder-1120-recipemine",
+      "files": 30,
+      "size": 3328646,
+      "newest": "2026-11-20T15:17:00.850Z",
+      "referenced": 0,
+      "eligible": true
+    },
+    {
+      "dir": "scratch/skill-report-grid",
+      "files": 30,
+      "size": 2767563,
+      "newest": "2026-11-23T21:52:37.362Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/teacher-screen2-1124",
+      "files": 6,
+      "size": 2562371,
+      "newest": "2026-11-24T12:48:00.966Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/skill-report-loop",
+      "files": 25,
+      "size": 2428973,
+      "newest": "2026-11-23T16:53:32.090Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/carrier-eval",
+      "files": 20,
+      "size": 2181384,
+      "newest": "2026-11-28T14:14:14.701Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/skill-eval",
+      "files": 15,
+      "size": 1659076,
+      "newest": "2026-11-28T06:57:22.002Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/skill-report-shape",
+      "files": 14,
+      "size": 1512807,
+      "newest": "2026-11-26T17:27:30.594Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-p0",
+      "files": 15,
+      "size": 1330921,
+      "newest": "2026-11-26T03:13:40.948Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgfix",
+      "files": 8,
+      "size": 847934,
+      "newest": "2026-11-26T11:13:42.623Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/night3",
+      "files": 5,
+      "size": 821354,
+      "newest": "2026-11-19T11:52:42.433Z",
+      "referenced": 5,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/ds-1109",
+      "files": 5,
+      "size": 816772,
+      "newest": "2026-11-19T11:52:43.901Z",
+      "referenced": 5,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgfs3",
+      "files": 6,
+      "size": 671047,
+      "newest": "2026-11-26T11:22:06.721Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pg1",
+      "files": 6,
+      "size": 669535,
+      "newest": "2026-11-26T11:06:36.812Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/ds-1108",
+      "files": 4,
+      "size": 652596,
+      "newest": "2026-11-19T11:52:43.412Z",
+      "referenced": 4,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/p1-current-1125",
+      "files": 61,
+      "size": 633970,
+      "newest": "2026-11-24T16:09:46.143Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgdrs2",
+      "files": 5,
+      "size": 504230,
+      "newest": "2026-11-26T11:27:39.516Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgrgcn",
+      "files": 5,
+      "size": 494230,
+      "newest": "2026-11-26T11:17:37.065Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill",
+      "files": 8,
+      "size": 491781,
+      "newest": "2026-11-24T17:37:19.902Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/night5",
+      "files": 3,
+      "size": 490419,
+      "newest": "2026-11-19T11:52:42.530Z",
+      "referenced": 3,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/night6",
+      "files": 3,
+      "size": 488567,
+      "newest": "2026-11-19T11:52:42.638Z",
+      "referenced": 3,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/night4",
+      "files": 3,
+      "size": 483347,
+      "newest": "2026-11-20T04:08:54.187Z",
+      "referenced": 3,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-purify2",
+      "files": 5,
+      "size": 450342,
+      "newest": "2026-11-25T08:25:52.149Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fs2pg2",
+      "files": 4,
+      "size": 447743,
+      "newest": "2026-11-26T10:09:59.830Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgfs2",
+      "files": 4,
+      "size": 447667,
+      "newest": "2026-11-26T11:17:00.685Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-ringpg",
+      "files": 4,
+      "size": 424190,
+      "newest": "2026-11-24T18:27:33.882Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/minit-closure-check",
+      "files": 4,
+      "size": 418591,
+      "newest": "2026-11-28T05:07:47.871Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/logs",
+      "files": 43,
+      "size": 356505,
+      "newest": "2026-11-28T11:06:55.956Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pg2",
+      "files": 3,
+      "size": 342929,
+      "newest": "2026-11-26T11:09:12.058Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-cnt65",
+      "files": 3,
+      "size": 317857,
+      "newest": "2026-11-26T11:25:56.098Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-laserfuse",
+      "files": 3,
+      "size": 314158,
+      "newest": "2026-11-24T22:37:37.372Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-laserpg",
+      "files": 3,
+      "size": 312430,
+      "newest": "2026-11-24T19:56:00.314Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-le40pg",
+      "files": 3,
+      "size": 293375,
+      "newest": "2026-11-24T20:40:55.413Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fs2t65",
+      "files": 2,
+      "size": 231484,
+      "newest": "2026-11-26T10:03:49.138Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fsdrpg3",
+      "files": 2,
+      "size": 214904,
+      "newest": "2026-11-26T10:17:19.726Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fs2drclean",
+      "files": 2,
+      "size": 212217,
+      "newest": "2026-11-26T10:13:48.754Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-laserkl8",
+      "files": 2,
+      "size": 209178,
+      "newest": "2026-11-24T22:21:46.135Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-rgdr3",
+      "files": 2,
+      "size": 203830,
+      "newest": "2026-11-26T11:34:36.766Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-humanpg",
+      "files": 2,
+      "size": 195667,
+      "newest": "2026-11-24T21:20:41.697Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-rgdr2p",
+      "files": 2,
+      "size": 193144,
+      "newest": "2026-11-26T11:30:26.209Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-l04le",
+      "files": 2,
+      "size": 192662,
+      "newest": "2026-11-24T19:32:22.000Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-lowdosele",
+      "files": 2,
+      "size": 192377,
+      "newest": "2026-11-24T19:03:41.196Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-pack40le",
+      "files": 2,
+      "size": 191886,
+      "newest": "2026-11-24T19:49:28.808Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-rgcnle",
+      "files": 2,
+      "size": 188502,
+      "newest": "2026-11-24T18:51:07.010Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualguntilt",
+      "files": 2,
+      "size": 185365,
+      "newest": "2026-11-24T22:51:37.857Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-hardgaps2",
+      "files": 2,
+      "size": 183701,
+      "newest": "2026-11-24T20:22:41.879Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-rod",
+      "files": 2,
+      "size": 178865,
+      "newest": "2026-11-25T08:00:57.613Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-drain-test",
+      "files": 2,
+      "size": 178644,
+      "newest": "2026-11-25T06:57:45.653Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-hardgaps",
+      "files": 2,
+      "size": 176810,
+      "newest": "2026-11-24T20:12:26.453Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/command-checkup",
+      "files": 1,
+      "size": 141299,
+      "newest": "2026-11-20T15:15:16.538Z",
+      "referenced": 0,
+      "eligible": true
+    },
+    {
+      "dir": "scratch/shapeW-matrix-1124",
+      "files": 159,
+      "size": 118390,
+      "newest": "2026-11-24T10:18:53.850Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fs2drr0",
+      "files": 1,
+      "size": 108614,
+      "newest": "2026-11-26T10:19:28.060Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/teacher-screen-1124",
+      "files": 3,
+      "size": 106690,
+      "newest": "2026-11-24T12:47:32.127Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fs2dr",
+      "files": 1,
+      "size": 105457,
+      "newest": "2026-11-26T09:59:23.360Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-ringbasele",
+      "files": 1,
+      "size": 105291,
+      "newest": "2026-11-24T18:07:57.773Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-lh6",
+      "files": 1,
+      "size": 104759,
+      "newest": "2026-11-24T17:43:13.082Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-laserkl8-s28",
+      "files": 1,
+      "size": 104614,
+      "newest": "2026-11-24T22:28:52.164Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/tkfs1-sr.json",
+      "files": 1,
+      "size": 103895,
+      "newest": "2026-11-24T03:21:11.300Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/tkfs3-sr.json",
+      "files": 1,
+      "size": 103810,
+      "newest": "2026-11-24T03:31:40.330Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-c3g25",
+      "files": 1,
+      "size": 102439,
+      "newest": "2026-11-24T17:43:42.765Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/tkfs4-sr.json",
+      "files": 1,
+      "size": 102079,
+      "newest": "2026-11-24T03:30:54.582Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/psr-switchlib",
+      "files": 1,
+      "size": 102076,
+      "newest": "2026-11-24T11:09:35.415Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/psr-switchlib-final",
+      "files": 1,
+      "size": 102076,
+      "newest": "2026-11-24T11:17:18.802Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/stage1-pgdr2p",
+      "files": 1,
+      "size": 101150,
+      "newest": "2026-11-26T11:43:39.989Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-selfrarele",
+      "files": 1,
+      "size": 99885,
+      "newest": "2026-11-24T21:52:18.502Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-lh6cand",
+      "files": 1,
+      "size": 99778,
+      "newest": "2026-11-24T17:50:31.824Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/tkfs2-sr.json",
+      "files": 1,
+      "size": 99526,
+      "newest": "2026-11-24T03:22:51.156Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-le40pg26",
+      "files": 1,
+      "size": 98488,
+      "newest": "2026-11-24T20:55:54.634Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-cand-nov24-baseswap-20261101",
+      "files": 1,
+      "size": 98443,
+      "newest": "2026-11-24T00:02:46.754Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-le40",
+      "files": 1,
+      "size": 97796,
+      "newest": "2026-11-24T20:23:31.563Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-purify",
+      "files": 1,
+      "size": 97063,
+      "newest": "2026-11-25T07:47:03.720Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-cand-nov24-pierce5-20261102",
+      "files": 1,
+      "size": 94709,
+      "newest": "2026-11-24T00:02:31.912Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-le40redistill",
+      "files": 1,
+      "size": 94302,
+      "newest": "2026-11-24T21:06:54.079Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-cand-nov24-pierce5-20261101",
+      "files": 1,
+      "size": 94058,
+      "newest": "2026-11-24T00:02:17.232Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-cand-nov24-pierce5-20261103",
+      "files": 1,
+      "size": 93817,
+      "newest": "2026-11-24T00:02:03.323Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgunpg",
+      "files": 1,
+      "size": 93051,
+      "newest": "2026-11-24T22:46:37.155Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualguntilt1e20",
+      "files": 1,
+      "size": 92500,
+      "newest": "2026-11-24T22:52:27.669Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-fsg2p",
+      "files": 1,
+      "size": 92317,
+      "newest": "2026-11-25T08:29:31.398Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-purifypg",
+      "files": 1,
+      "size": 92210,
+      "newest": "2026-11-24T21:46:16.655Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgunkey",
+      "files": 1,
+      "size": 89329,
+      "newest": "2026-11-24T23:18:02.254Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgun9k",
+      "files": 1,
+      "size": 89014,
+      "newest": "2026-11-24T21:52:00.252Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgun36k",
+      "files": 1,
+      "size": 87844,
+      "newest": "2026-11-24T22:34:47.114Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgunkey-s26",
+      "files": 1,
+      "size": 87643,
+      "newest": "2026-11-24T23:47:32.061Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-skill-dualgunmulti",
+      "files": 1,
+      "size": 87167,
+      "newest": "2026-11-24T21:29:05.380Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/sr-taunt",
+      "files": 1,
+      "size": 85538,
+      "newest": "2026-11-25T08:11:03.441Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/promote-backfill-1124",
+      "files": 5,
+      "size": 34599,
+      "newest": "2026-11-24T10:26:10.647Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/dsh-mined",
+      "files": 8,
+      "size": 33623,
+      "newest": "2026-11-19T16:17:17.523Z",
+      "referenced": 0,
+      "eligible": true
+    },
+    {
+      "dir": "scratch/analysis-v2150",
+      "files": 3,
+      "size": 30436,
+      "newest": "2026-11-28T13:31:53.745Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-paired",
+      "files": 36,
+      "size": 29140,
+      "newest": "2026-11-24T17:58:31.497Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/2p-weighted-1124",
+      "files": 34,
+      "size": 24425,
+      "newest": "2026-11-24T15:53:52.618Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-ringpg",
+      "files": 24,
+      "size": 19732,
+      "newest": "2026-11-24T18:28:59.761Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-lowdose",
+      "files": 24,
+      "size": 19144,
+      "newest": "2026-11-24T19:18:58.794Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-le40pg",
+      "files": 24,
+      "size": 19072,
+      "newest": "2026-11-24T20:41:56.737Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-humanpg",
+      "files": 18,
+      "size": 14334,
+      "newest": "2026-11-24T21:23:17.892Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-ringbasele",
+      "files": 12,
+      "size": 9729,
+      "newest": "2026-11-24T18:18:58.685Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-ringpg2",
+      "files": 12,
+      "size": 9658,
+      "newest": "2026-11-24T20:02:50.325Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-l04",
+      "files": 12,
+      "size": 9619,
+      "newest": "2026-11-24T19:39:34.587Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-le40pg26",
+      "files": 12,
+      "size": 9553,
+      "newest": "2026-11-24T20:56:25.321Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human",
+      "files": 32,
+      "size": 4901,
+      "newest": "2026-11-24T18:39:12.475Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena-le40",
+      "files": 6,
+      "size": 4783,
+      "newest": "2026-11-24T20:29:51.280Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-lowdose",
+      "files": 32,
+      "size": 4630,
+      "newest": "2026-11-24T19:17:57.059Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-arena",
+      "files": 4,
+      "size": 3266,
+      "newest": "2026-11-24T17:49:46.948Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-ringpg",
+      "files": 8,
+      "size": 1324,
+      "newest": "2026-11-24T20:02:18.754Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-humanpg",
+      "files": 8,
+      "size": 1312,
+      "newest": "2026-11-24T21:22:31.386Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-le40pg",
+      "files": 8,
+      "size": 1282,
+      "newest": "2026-11-24T20:47:52.574Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-le40pg26",
+      "files": 8,
+      "size": 1280,
+      "newest": "2026-11-24T21:02:19.081Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-l04",
+      "files": 8,
+      "size": 1272,
+      "newest": "2026-11-24T19:39:02.766Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/nov25-human-le40",
+      "files": 8,
+      "size": 1078,
+      "newest": "2026-11-24T20:29:35.991Z",
+      "referenced": 0,
+      "eligible": false
+    },
+    {
+      "dir": "scratch/night-adapt2",
+      "files": 0,
+      "size": 0,
+      "newest": null,
+      "referenced": 0,
+      "eligible": false
+    }
+  ]
+}

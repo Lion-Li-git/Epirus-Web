@@ -1,0 +1,286 @@
+{
+  "cutoff": "2026-11-21T16:00:00.000Z",
+  "registryRefs": 71,
+  "items": [
+    {
+      "dir": "scratch/session-mined",
+      "files": [
+        {
+          "path": "scratch\\session-mined\\qoder-logs-telemetry__logs_sessions_C--Users-14765-AppData-Local-Pro.txt",
+          "size": 12,
+          "sha256": "81c3636c284969c781135050955e56d90538750a8837613a42b237e92afe061f"
+        },
+        {
+          "path": "scratch\\session-mined\\qoder-logs-telemetry__logs_sessions_C--Users-14765-Documents-Qoder-2.txt",
+          "size": 12,
+          "sha256": "81c3636c284969c781135050955e56d90538750a8837613a42b237e92afe061f"
+        },
+        {
+          "path": "scratch\\session-mined\\qoder-projects-transcript__projects_C--Users-14765-Documents-Qoder-2026-0.txt",
+          "size": 12,
+          "sha256": "81c3636c284969c781135050955e56d90538750a8837613a42b237e92afe061f"
+        },
+        {
+          "path": "scratch\\session-mined\\qoder-projects-transcript__projects_C--Users-14765-Documents-Qoder-2026-1.txt",
+          "size": 12,
+          "sha256": "81c3636c284969c781135050955e56d90538750a8837613a42b237e92afe061f"
+        },
+        {
+          "path": "scratch\\session-mined\\recipe-index.tsv",
+          "size": 326,
+          "sha256": "f0bfde691db294c17baaf25051608a65d580e3c39f09895153fb8e2cfcc2c01c"
+        },
+        {
+          "path": "scratch\\session-mined\\roots-all.tsv",
+          "size": 804,
+          "sha256": "84e6dd34ceed1d84f043675e5c820661548775c89d8774b4c3aec794320d4f7f"
+        },
+        {
+          "path": "scratch\\session-mined\\server-urls-all.tsv",
+          "size": 27294,
+          "sha256": "1e1b561d0e1a6597ba70606cb292e36b320dd5ef18d8f65fe8ce8571ea2f5b86"
+        },
+        {
+          "path": "scratch\\session-mined\\train-commands-full.tsv",
+          "size": 759429,
+          "sha256": "c755ba24128a7ce6a9b50cc6608dc9f348ba5edaed7b205d43e801a87fa158c1"
+        },
+        {
+          "path": "scratch\\session-mined\\train-commands-refined.tsv",
+          "size": 11639,
+          "sha256": "a4eca32369f550ce01892125863131018ab898c342d64a8e8d9e2b0f98c47bdc"
+        },
+        {
+          "path": "scratch\\session-mined\\train-records-all.tsv",
+          "size": 30062044,
+          "sha256": "02974b0a695c7eace8113179d67b0afc582118913995ee7f3f7f29202c05e0ce"
+        },
+        {
+          "path": "scratch\\session-mined\\train-snippets-full.tsv",
+          "size": 459675,
+          "sha256": "256fe27bc8162af6f0d9f9e9037d1b741284a153cd4c85a4a06c8f8490c5f848"
+        },
+        {
+          "path": "scratch\\session-mined\\train3p-all.tsv",
+          "size": 110593,
+          "sha256": "ae080c9d48ca1b38504f13ab0dab656d2455f215edfb122e1184541142793f48"
+        },
+        {
+          "path": "scratch\\session-mined\\training-recipes-consolidated.tsv",
+          "size": 84988,
+          "sha256": "7009c8c8741268b11590d643d56225125bfc9ed0796b94bddbb5bd524eeaee82"
+        }
+      ]
+    },
+    {
+      "dir": "scratch/qoder-1120-recipemine",
+      "files": [
+        {
+          "path": "scratch\\qoder-1120-recipemine\\arrays\\0421f946-56335.json",
+          "size": 108615,
+          "sha256": "a74e55bd298db88c4577551b7c7ef2d87da5a53ccc1e2fa05d1f5e61d70b8551"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\arrays\\0421f946-56346.json",
+          "size": 109175,
+          "sha256": "3bd098606d00046c8caef0807b4b01c129af3e99d11d4fd21a21f9dc77309c39"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\arrays\\f352937a-24325.json",
+          "size": 108422,
+          "sha256": "46ec336a5bd37a02d5d37d44b7f2d207048002df1e748d4ff74b1c2f66549a53"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\checkup.msg",
+          "size": 3536,
+          "sha256": "fff539452b0921040c7a45dfac4cda7fa5749ace627d6ebfd6649f56a164ff2b"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\cmd_why.py",
+          "size": 4367,
+          "sha256": "352d130cb0cae83ed08a3a5e90097ce4a9271b47188d558d528e3a7e148f1d64"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\cmd_why8.py",
+          "size": 3618,
+          "sha256": "f6c24a233abb93bc6d2b63100dedeefcc2833bc49d9461d030bb702db09fc6ac"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\command-checkup.mjs",
+          "size": 7894,
+          "sha256": "2fc5844241c88a41603a6192ce06a168ab12c4038f9c9e8461199c3f1bd9f5ff"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\command-checkup.tsv",
+          "size": 139397,
+          "sha256": "063cd1972cd71e12f1e6982d6710df2a4a4eb60405b36a526bb3cba29a545e01"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\cross_missing.py",
+          "size": 4812,
+          "sha256": "baf0bd0bef6ae4e9ac3c56406cbdd93011b0c19d13706e2767d322c27ad5e621"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\fixdep.msg",
+          "size": 1948,
+          "sha256": "cb66037f94c1f66f2d5987ae6f58b17cfe8a21444b8bcfc5b91a525fd8f8baaf"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\main11-ci.log",
+          "size": 61,
+          "sha256": "45caa82f881bd4914c31d8899d60b43b94c8fa52bd5a67ea4b7a528cff4c0382"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\mine_qoder.py",
+          "size": 4692,
+          "sha256": "64b57b90aca87ec51b91b20d553f8f8d95bf1325fd803bc80546ee352347e6e9"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\mine_qoder2.py",
+          "size": 7038,
+          "sha256": "8777d8efda5746ee0b8e9b07c62175d97a9e27452b8bea76ce73d2c971cc08d5"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\missing-A-commands.txt",
+          "size": 6717,
+          "sha256": "e5084ee8e9f0d3212ee1f4bd820efb165cb27cbf4a25972e6c3e252e195efd95"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\missing-vs-transcript.tsv",
+          "size": 8257,
+          "sha256": "a4137480efbf8485eda8419e36a11cb9ddf6d35af26ba5a405425630ac5c02d0"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-cmd-why-projects.tsv",
+          "size": 220929,
+          "sha256": "71fc7010204d42e6ea6a85dff06b7650fab89538302c0574396dbe59221dad6f"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-cmd-why.tsv",
+          "size": 30,
+          "sha256": "a69592ae3d19049d7564ac390038c8981b43969ead13f071659155c5ee9ae707"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-commands-uniq.tsv",
+          "size": 2323748,
+          "sha256": "7bd765425ed39f4efdc49e78400b360538d792025c9d6233a5e17e7280bb9322"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-hits-missing.tsv",
+          "size": 66075,
+          "sha256": "bf711a5342a2bd850135bd273172ff8bbbbbb65f1c580b26d0de6cfb2857a1bf"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-missing-hit.tsv",
+          "size": 990,
+          "sha256": "de617248cc60bbaf8f26ee5bfa32153afc1f3265081e288ef019fefcdfd22bb7"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\qoder-trainruns-uniq.tsv",
+          "size": 112852,
+          "sha256": "bfb59b25cc457e4019f9f55dfe1b7ed9b11840b9427fda1233f5e6c49cba0c09"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\salvage.py",
+          "size": 4245,
+          "sha256": "15f8e781d929c238b9155b99f4351e97e0417d192c5622c0bbaaf9fdf217d666"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\salvaged-arrays.tsv",
+          "size": 1802,
+          "sha256": "a3822d89d9070b4df2edbb1a637bcd3aa23efa8bb604256e2b9e36a11d9d64ea"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\salvaged-meta.tsv",
+          "size": 68271,
+          "sha256": "212e9acca0da1ea52af62f5f9fb3ac3fdd90221017e56cb94b0625ef78399950"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\salvaged-wids.tsv",
+          "size": 129,
+          "sha256": "aff6a40d40d4d5ab18ab071d51a59a4df2a841ad4e403470b5062e01de6c74a0"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\salvage_arrays.py",
+          "size": 3309,
+          "sha256": "5229ecb144e7f5e91b8b92c6efc6cc86fa52fb0159751d520e3d8d22658c0b45"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\STRICT-cmd-hit.tsv",
+          "size": 3060,
+          "sha256": "6e96637b6a4a0ae573ae42fb7ab0530c4627d772cc9a666b315182d8ee9c72dc"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\strict_cross.py",
+          "size": 3293,
+          "sha256": "7333d2586e0c8726fda8fab22c49662838c4a93bb8fbb44fe8e7e0c880659876"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\toolkit.sec7.md",
+          "size": 1002,
+          "sha256": "883f4f67d0785ee05a52e53810ea7bf1ca1fda186187ccebac5271581f62e97e"
+        },
+        {
+          "path": "scratch\\qoder-1120-recipemine\\wid.js",
+          "size": 362,
+          "sha256": "154894c911f48840c63b41b14e5d25ee84e4e801bee5a85e0c346f2be82ce779"
+        }
+      ]
+    },
+    {
+      "dir": "scratch/command-checkup",
+      "files": [
+        {
+          "path": "scratch\\command-checkup\\command-checkup.tsv",
+          "size": 141299,
+          "sha256": "37aa7646c6680a9c2cda6ce5b0891356e0ea962a29643af1387c20d8beda26a2"
+        }
+      ]
+    },
+    {
+      "dir": "scratch/dsh-mined",
+      "files": [
+        {
+          "path": "scratch\\dsh-mined\\--C-Users-14765-Documents-dsh--__session-41a7e690-d98f-49ea-ba60-847d8a529ec4.txt",
+          "size": 48,
+          "sha256": "3b88270d24c52154cd6ca6d4e3415182d2a570e904a524a87e5c3fb1299d716e"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__2a2446ca-d0e3-434d-a964-99e8ec6231f2.txt",
+          "size": 410,
+          "sha256": "cb6ab808dcdbbc257cf26126013d9889919912ba9884dffe0216bbfd74e04446"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__8b55fd5f-5cd4-4899-a4ed-28c5a26ede3e.txt",
+          "size": 31,
+          "sha256": "b70909679e95d1d993d5005a6f84e32d26988daed3991a75946c0db449ac6925"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__session-04e0a3ef-782a-40e0-a1eb-fc943e064895.txt",
+          "size": 647,
+          "sha256": "9e3a85656e117e8d8d57c7391d977ebad52231614372450c785d0b4d282dab05"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__session-1d1d41c5-9483-4f40-82db-b73ba9ae05e5.txt",
+          "size": 4734,
+          "sha256": "79634d5496ed2cbbe461afc92a42a050a32ee4edb3661fb6ce43bbf99cd89281"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__session-2130f385-b086-4fce-aeda-99692167c122.txt",
+          "size": 31,
+          "sha256": "b70909679e95d1d993d5005a6f84e32d26988daed3991a75946c0db449ac6925"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__session-7715716a-c7fb-47ca-9399-ed91c76ffe4a.txt",
+          "size": 26330,
+          "sha256": "34c891db0d919e1ad6135ec127887e2c8820fd018f0f97d37d84f155d017215d"
+        },
+        {
+          "path": "scratch\\dsh-mined\\--D-code-Epirus-Web--__session-af4c3351-80bc-48cd-91ee-bc744ef18bb6.txt",
+          "size": 1392,
+          "sha256": "41b3ed798db934938e044ab198d2451b20bee16c4d09314d62667c0334c8f34f"
+        }
+      ]
+    }
+  ]
+}

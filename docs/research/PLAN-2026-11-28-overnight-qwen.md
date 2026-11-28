@@ -112,12 +112,12 @@
 
 > **规则**：凡主线提前做完或提前止损，立即顺延取用下列高价值条目，**不要提前数小时挂机收工**！
 
-- **Stretch 1 · 历史 `scratch/` 大目录隔离清理**：
-  先严格用脚本对账 `champion-map/data/registry.tsv`（及 `lineage.tsv` 父链）确认哪些 `scratch/arms/` 旧快照**无主且超期**，将无主旧临时文件夹保持原相对路径整体迁至仓外 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-29\` 并留 SHA256/清单，严禁任何直接删除。
-- **Stretch 2 · `AR-TK2` 低优先级监测复核**：
-  检查 `TA-S3-R8` 入 `soft` 后，`AR-TK2` 是否仍有保留价值（例如对比移除 `AR-TK2` 后的 4P/5P 阶梯变化与 `armor/tank` 覆盖深度）。
-- **Stretch 3 · `dualGun/mirror` 只读诊断（最低优先级，不占核心窗口）**：
-  仅在所有核心主线、加固与收工门禁完成后仍有余量时，依据 [`RESULTS-2026-11-28-dualgun-mirror.md`](RESULTS-2026-11-28-dualgun-mirror.md) 统计 `legal` 状态窗与策略概率；本班不开训练、不入池、不改规则引擎。
+- **Stretch 1 · 历史 `scratch/` 大目录隔离清理（已完成）**：
+  对账 registry/lineage 后，4 个无主超期目录、52 文件、35,020,408 字节已整体迁至 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-29-scratch\`，SHA256 清单已落盘；`scratch/` 476MB → 443MB，无物理删除。
+- **Stretch 2 · `AR-TK2` 低优先级监测复核（已完成，保留）**：
+  4P/5P 摘除显示 `4P long Δregular=+0.88 / Δsparring=+1.13`，`5P multi/long Δregular=−1.50/−1.75`，方向混合但仍有真实难度角色；`armor=120 / tank=22`，废珠 `97.27%`。裁定保留，不开训练、不改池。
+- **Stretch 3 · `dualGun/mirror` 只读诊断（跳过重复）**：
+  11-28 已完成 35 池运行时诊断，本班不重跑已有结论；用户已明确其优先级低，不开训练、不入池、不改规则引擎。
 
 ---
 

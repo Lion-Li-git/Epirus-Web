@@ -1,0 +1,90 @@
+{
+  "baseline": "b88d775b",
+  "rulesFingerprint": "c61298e6",
+  "fixtureKey": "fx-pool1126d",
+  "seedBase": 99001,
+  "rows": [
+    {
+      "variant": "BASE",
+      "mode": "multi",
+      "seed": 99002,
+      "lv:hard": 3.5,
+      "lv:regular": 7.5,
+      "lv:sparring": 16
+    },
+    {
+      "variant": "BASE",
+      "mode": "multi",
+      "seed": 99001,
+      "lv:hard": 3.5,
+      "lv:regular": 10.75,
+      "lv:sparring": 15.5
+    },
+    {
+      "variant": "BASE",
+      "mode": "long",
+      "seed": 99001,
+      "lv:hard": 4.25,
+      "lv:regular": 9.25,
+      "lv:sparring": 10.75
+    },
+    {
+      "variant": "BASE",
+      "mode": "long",
+      "seed": 99002,
+      "lv:hard": 1.5,
+      "lv:regular": 8.5,
+      "lv:sparring": 13.25
+    },
+    {
+      "variant": "OMIT",
+      "mode": "multi",
+      "seed": 99001,
+      "lv:hard": 3.5,
+      "lv:regular": 8.25,
+      "lv:sparring": 16
+    },
+    {
+      "variant": "OMIT",
+      "mode": "multi",
+      "seed": 99002,
+      "lv:hard": 3.5,
+      "lv:regular": 7,
+      "lv:sparring": 15.75
+    },
+    {
+      "variant": "OMIT",
+      "mode": "long",
+      "seed": 99002,
+      "lv:hard": 1.5,
+      "lv:regular": 6.5,
+      "lv:sparring": 13.5
+    },
+    {
+      "variant": "OMIT",
+      "mode": "long",
+      "seed": 99001,
+      "lv:hard": 4.25,
+      "lv:regular": 7.75,
+      "lv:sparring": 13.75
+    }
+  ],
+  "summary": {
+    "multi": {
+      "baseRegular": 9.125,
+      "omitRegular": 7.625,
+      "deltaRegular": -1.5,
+      "baseSparring": 15.75,
+      "omitSparring": 15.875,
+      "deltaSparring": 0.125
+    },
+    "long": {
+      "baseRegular": 8.875,
+      "omitRegular": 7.125,
+      "deltaRegular": -1.75,
+      "baseSparring": 12,
+      "omitSparring": 13.625,
+      "deltaSparring": 1.625
+    }
+  }
+}
