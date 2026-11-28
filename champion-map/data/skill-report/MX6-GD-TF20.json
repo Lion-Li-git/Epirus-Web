@@ -7576,8 +7576,8 @@
  "tier": "soft",
  "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-27T16:21:21.896Z",
- "stageSec": 15,
+ "measuredAt": "2026-11-28T05:08:51.160Z",
+ "stageSec": 17.3,
  "stage2": {
   "shortlist": [
    "tank",

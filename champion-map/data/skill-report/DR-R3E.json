@@ -728,14 +728,14 @@
    },
    "miniT": {
     "uses": 1,
-    "paid": 0,
-    "wasted": 1,
+    "paid": 1,
+    "wasted": 0,
     "unit": "games",
     "byShape": {
      "3:long": {
       "uses": 1,
-      "paid": 0,
-      "wasted": 1,
+      "paid": 1,
+      "wasted": 0,
       "rate": null
      }
     },
@@ -7094,8 +7094,8 @@
  "tier": "hard",
  "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-27T16:18:49.047Z",
- "stageSec": 16.7,
+ "measuredAt": "2026-11-28T05:08:18.005Z",
+ "stageSec": 16.8,
  "stage2": {
   "shortlist": [
    "tank",

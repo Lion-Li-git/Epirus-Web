@@ -497,42 +497,42 @@
    },
    "miniT": {
     "uses": 30,
-    "paid": 0,
-    "wasted": 30,
+    "paid": 23,
+    "wasted": 7,
     "unit": "games",
     "byShape": {
      "8:long": {
       "uses": 18,
-      "paid": 0,
-      "wasted": 18,
+      "paid": 11,
+      "wasted": 7,
       "rate": null
      },
      "3:multi": {
       "uses": 2,
-      "paid": 0,
-      "wasted": 2,
+      "paid": 2,
+      "wasted": 0,
       "rate": null
      },
      "3:long": {
       "uses": 3,
-      "paid": 0,
-      "wasted": 3,
+      "paid": 3,
+      "wasted": 0,
       "rate": null
      },
      "5:multi": {
       "uses": 3,
-      "paid": 0,
-      "wasted": 3,
+      "paid": 3,
+      "wasted": 0,
       "rate": null
      },
      "8:multi": {
       "uses": 4,
-      "paid": 0,
-      "wasted": 4,
+      "paid": 4,
+      "wasted": 0,
       "rate": null
      }
     },
-    "rate": 0,
+    "rate": 0.7666666666666667,
     "readable": true
    },
    "railgun": {
@@ -6895,8 +6895,8 @@
  "tier": "hard",
  "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-27T16:19:37.263Z",
- "stageSec": 13.8,
+ "measuredAt": "2026-11-28T05:08:33.803Z",
+ "stageSec": 15.8,
  "stage2": {
   "shortlist": [
    "tank",

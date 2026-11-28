@@ -602,20 +602,20 @@
    },
    "miniT": {
     "uses": 13,
-    "paid": 0,
-    "wasted": 13,
+    "paid": 13,
+    "wasted": 0,
     "unit": "games",
     "byShape": {
      "5:long": {
       "uses": 4,
-      "paid": 0,
-      "wasted": 4,
+      "paid": 4,
+      "wasted": 0,
       "rate": null
      },
      "8:long": {
       "uses": 9,
-      "paid": 0,
-      "wasted": 9,
+      "paid": 9,
+      "wasted": 0,
       "rate": null
      }
     },
@@ -7341,8 +7341,8 @@
  "tier": "hard",
  "rulesFingerprint": "c61298e6",
  "fixtureKey": "fx-pool1126d",
- "measuredAt": "2026-11-27T16:19:23.357Z",
- "stageSec": 17.4,
+ "measuredAt": "2026-11-28T05:09:10.917Z",
+ "stageSec": 19.7,
  "stage2": {
   "shortlist": [
    "tank",

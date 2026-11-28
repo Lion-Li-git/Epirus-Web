@@ -202,9 +202,12 @@ function stage1(W, pack, oppDesc, gamesCensus) {
         /* 闭环按局判定（第二遍扫同一份 events，不改上面那台的任何计数 ⇒ 老读数逐字不动） */
         {
           const used = new Set(), paid = new Set(), holoTargets = new Set(), tauntTargets = new Set();
-          let gStick = 0, gBoomHit = 0, gBoomEmpty = 0;
+          let gStick = 0, gBoomHit = 0, gBoomEmpty = 0, pendingVoid = null, pendingVoidMirror = false, prevEvent = null;
+          // 小雷不造伤害；voidedBy 不带施法者，需配紧邻的 voided，并由前一条 mirror 事件排除镜面复制。
           const roundActors = new Set();
           for (const e of ((r.state && r.state.events) || [])) {
+            const priorEvent = prevEvent;
+            prevEvent = e;
             if (e.type === 'action') {
               if (roundActors.has(e.pid)) roundActors.clear();
               roundActors.add(e.pid);
@@ -214,6 +217,11 @@ function stage1(W, pack, oppDesc, gamesCensus) {
                 if (e.key === R.SK.CURSE) curseStats.curseOk++;
                 else if (e.key === R.SK.FIRESTORM) curseStats.firestormOk++;
               }
+            } else if (e.type === 'voided') {
+              pendingVoid = e;
+              pendingVoidMirror = !!(priorEvent && priorEvent.type === 'mirror' && priorEvent.key === R.SK.MINI_T);
+            } else if (e.type === 'voidedBy' && e.by === R.SK.MINI_T && !pendingVoidMirror && pendingVoid && pendingVoid.byPid === seat) {
+              paid.add(R.SK.MINI_T);
             } else if (e.type === 'curse' && e.owner === seat) {
               gStick++;
               curseStats.curseLanded++;
