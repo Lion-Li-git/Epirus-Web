@@ -104,8 +104,8 @@
    - **动作**：按 `PH-S2` 的低废 `proto` 经验，只跑 **1 组轻量预研臂**（`PG-DR.bak` 绿底座 + `PH-S2.bak(proto,holo@0.35)` 蒸馏 `groups=1200, steps=120` + Stage 1 普查），验证能否低成本为 `hard` 造出第二枚可梯度续训的绿 `proto` 载体，解除 `T65-RINGBEAD` 的唯一覆盖绑定（**不强制在本班进池**，拿硬读数为白班铺路）。
    - **结果（01:05）**：产物 `selftest3` 全绿，Stage 1 `49.83%, 19/30, holo36`，但 `proto=0`，核心端点失败；不扫参，`T65-RINGBEAD` 仍是唯一 hard proto 载体。详见 [`RESULTS-2026-11-29-hard-proto-probe.md`](RESULTS-2026-11-29-hard-proto-probe.md)。
    - **补充 mine 探针（01:15）**：绿色 `PG-DR` 只蒸 `MN-PG(mine@0.35)`，产物全绿但 Stage 1 `47.75%, 20/30, ring26, mine0`；核心端点失败，`MN-PG` 仍是唯一 hard mine 载体。详见 [`RESULTS-2026-11-29-hard-mine-probe.md`](RESULTS-2026-11-29-hard-mine-probe.md)。
-   - **补充 soft taunt 探针（01:25，通过）**：绿色 `L1B-S1200` 只蒸 `TN-S5(taunt@0.35)`，产物全绿，Stage 1 `49.50%, 19/30, taunt20, ring15`；留作白班完整评估候选，本班不入池。详见 [`RESULTS-2026-11-29-soft-taunt-probe.md`](RESULTS-2026-11-29-soft-taunt-probe.md)。
-   - **补充 soft laserEye / rod 探针（01:35，均淘汰）**：laserEye 产物全绿但 Stage 1 `laserEye0`；rod 首件 `selftest3` 腿C红，未跑 Stage 1。`LE-S2 / TF2-RD` 仍是各自唯一载体。
+   - **补充 soft taunt 探针（01:2x，通过）**：绿色 `L1B-S1200` 只蒸 `TN-S5(taunt@0.35)`，产物全绿，Stage 1 `49.50%, 19/30, taunt20, ring15`；留作白班完整评估候选，本班不入池。详见 [`RESULTS-2026-11-29-soft-taunt-probe.md`](RESULTS-2026-11-29-soft-taunt-probe.md)。
+   - **补充 soft laserEye / rod 探针（01:2x，均淘汰）**：laserEye 产物全绿但 Stage 1 `laserEye0`；rod 首件 `selftest3` 腿C红，未跑 Stage 1。`LE-S2 / TF2-RD` 仍是各自唯一载体。
 2. **整页与地图数据互证**：
    - 运行 `node tools/pool-skill-report.mjs --bake`（若本班修改过池），运行 `node champion-map/rebuild-map.mjs` 与 `node tools/map-selfcheck.mjs`，确认 `skill-report.html` 卡数、`pool-members.tsv` 行数、`bundled-champion-pool.js` 与 `champion-map/index.html` 四视图 **`101 PASS / 0 FAIL`** 完全对齐。
 
@@ -134,3 +134,4 @@
 2. **文书留痕**：
    - 更新 [`docs/TRAINING-RUN-LOG.md`](../TRAINING-RUN-LOG.md) 与 [`CHANGELOG.md`](../../CHANGELOG.md)（仅当产品池/代码有发布变更时升级版本号）；
    - 新建交接报告 `docs/research/HANDOFF-2026-11-29-morning.md`：按「已完成 / 未达门淘汰 / 新机制结论 / 未动保留项 / 次日白班建议」分栏，逐条写明真实文件路径、产物 `wid`、seed、`rulesFingerprint=c61298e6`、`fixtureKey=fx-pool1126d` 与未跑项说明，严禁编造或跳过失败项。
+- **执行结果（01:24）**：全部主线、补充探针与 Stretch 已收口；`gate-all --auto` 5 道全绿，`map-selfcheck` 四视图 101/0，`pool-add --audit bad=[]`，`knobs` 暗键 0。池仍 35 枚 17/18；唯一白班候选为 `SOFT-TAUNT-PROBE`。详见交接报告。

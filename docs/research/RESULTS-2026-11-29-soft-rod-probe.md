@@ -1,6 +1,6 @@
 # RESULTS · 2026-11-29 · soft `rod` 绿色备份探针
 
-> 完成时间：2026-11-29 01:35（UTC+8）。
+> 完成时间：2026-11-29 01:2x（UTC+8）。
 > 预注册：[`PREREG-2026-11-29-soft-rod-probe.md`](PREREG-2026-11-29-soft-rod-probe.md)。
 > 基线：`main@ffe4dc28`，规则指纹 `c61298e6`，夹具 `fx-pool1126d`。
 
