@@ -735,3 +735,17 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T17:51:45.010Z	L1B-S1200	docs/artifacts/L1B-S1200.bak	0a0470c99b6344d7	85200	page	data/arena-league-1118-page.tsv	0.071254	0.023515
 2026-11-27T17:51:47.570Z	L1B-S1200	docs/artifacts/L1B-S1200.bak	0a0470c99b6344d7	86200	page	data/arena-league-1118-page.tsv	0.401470	0.137285
 2026-11-27T17:51:50.100Z	L1B-S1200	docs/artifacts/L1B-S1200.bak	0a0470c99b6344d7	87200	page	data/arena-league-1118-page.tsv	0.005833	0.009415
+2026-11-28T04:13:47.850Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	82200	page	data/arena-league-1118-page.tsv	0.245915	0.044708
+2026-11-28T04:16:16.691Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	82200	page	data/arena-league-1118-page.tsv	0.469801	0.136222
+2026-11-28T04:18:01.903Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	82200	page	data/arena-league-1118-page.tsv	0.245915	0.044708
+2026-11-28T04:18:06.691Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	83200	page	data/arena-league-1118-page.tsv	-0.076225	-0.013420
+2026-11-28T04:18:11.166Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	84200	page	data/arena-league-1118-page.tsv	0.082012	0.025779
+2026-11-28T04:18:15.960Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	85200	page	data/arena-league-1118-page.tsv	0.191041	0.059399
+2026-11-28T04:18:20.288Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	86200	page	data/arena-league-1118-page.tsv	0.054706	0.029658
+2026-11-28T04:18:24.885Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	87200	page	data/arena-league-1118-page.tsv	-0.057408	-0.024380
+2026-11-28T04:19:02.184Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	82200	page	data/arena-league-1118-page.tsv	0.469801	0.136222
+2026-11-28T04:19:07.378Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	83200	page	data/arena-league-1118-page.tsv	-0.076225	-0.008716
+2026-11-28T04:19:12.661Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	84200	page	data/arena-league-1118-page.tsv	0.430631	0.143890
+2026-11-28T04:19:17.948Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	85200	page	data/arena-league-1118-page.tsv	0.471981	0.132809
+2026-11-28T04:19:23.367Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	86200	page	data/arena-league-1118-page.tsv	0.289886	0.103813
+2026-11-28T04:19:28.633Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	87200	page	data/arena-league-1118-page.tsv	0.127905	0.052190

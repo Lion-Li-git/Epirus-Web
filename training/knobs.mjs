@@ -34,7 +34,6 @@ const CHECK = process.argv.includes('--check');
  * ENTRIES 留着，但只用来给"读它的入口"那一列署名（署名是信息，不是判据）。 */
 const ENTRIES = [
   { tool: 'promote-champion', file: 'tools/promote-champion.mjs' },
-  { tool: 'train-3p', file: 'training/train-3p.mjs' },
   { tool: 'train', file: 'training/train.mjs' },
 ];
 const READ_ROOTS = ['tools', 'training', 'js', 'champion-map'];
@@ -101,12 +100,9 @@ md.push('> 生成器就是本文件：`node training/knobs.mjs` 重生成；CI �
 md.push('> ⚠ `--check` 比的是**整篇字节**（不是只比数据账三个数——旧头注这么写，是错的：`cur !== content` 才 exit 1）。');
 md.push('> 判"在用/暗键"的口径（2026-11-24 换）：**按读法扫维护面**（`tools/ training/ js/ champion-map/` 里 `process.env.X` / `env[\'X\']` / `e.<KEY>` 别名），');
 md.push('> 名单模块与注释不参与判定；`env[变量]` 这种**动态读法**看不见具体键，落进"仅动态提及"档，**不是删除候选**。');
-md.push('> 为什么换口径：旧口径拿手维护的入口名单判，实测两头都错过——`training/train-3p.mjs` 整族键（`EPIRUS_ANCHOR`/`BREADTH_FLOOR`/`GA_GATE`…）与 `tools/np-parallel.mjs` 读的 `EPIRUS_BATCH_MAX` 都被判成暗键，照表删就删坏现役代码。');
-md.push('> 运行时那套（`training/server/knob-guard.mjs` 的 `readKeysOf()` / `detectDarkKnobs()`，按**单个入口**的 import 闭包判）没变，也不该变：那是"这个入口认不认这个键"，本册答的是"全仓还有没有人读"。');
-md.push('> 注解：历史 `SELF_ENV_KEYS` 行尾注解收割已随 v7 线退役；当前 `--check` 只校验册子新鲜度与暗键。');
-md.push('> 历史台账（`REMOVED_TRAIN_KEYS` 等）在被删文件里，随 git 史可考。');
-md.push('> 2026-11-19 起 v7 产线（train-best/fast/server 那批）退役、其旋钮宇宙大幅缩水；⚠ 但那句"train-3p 已删除"**不成立**：');
-md.push('> `training/train-3p.mjs` 仍在仓（`tools/command-checkup.mjs:22,68` 拿它当 env 读者入口跑 `detectDarkKnobs`），死掉的是 `tools/train-3p.mjs` 那条旧路径（`tools/gate-all.mjs:89` 记着）。');
+md.push('> 为什么换口径：按全局实际读法扫维护面比手维护入口名单更稳，不靠手工白名单猜读者。');
+md.push('> 运行时那套（`training/server/knob-guard.mjs` 的 `readKeysOf()` / `detectDarkKnobs()`，按**单个入口**的 import 闭包判）仍保留给门禁与工具复用。');
+md.push('> 注解：v7 线（`train-3p.mjs`、`econ-env.mjs`、`train-env.mjs` 等）已于 2026-11-28 正式整体退役并移至仓外隔离区 `cleanup-2026-11-28`（随 git 史可考）；当前 `--check` 校验册子新鲜度与暗键。');
 md.push('> 2.0 产线（pg-train / supfit-gd）是 **--flag** 接口（见 training/README.md §〇），不走 env 旋钮。');
 md.push('> 数据账：全集 ' + universe.length + ' ‖ 在用（有读法）' + live.length + ' ‖ 仅动态提及 ' + dyn.length + ' ‖ 暗键 ' + dark.length);
 md.push('');

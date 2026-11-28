@@ -424,7 +424,7 @@ console.log('     各类占比：' + Object.keys(brd.catShares).map(function (c)
   /* v1.5.101（第十轮复核 §4-3）：`energy` 这一档**必须标注含"攒了没花"** —— 否则 25.4% 会被读成
    * "开始用能量类"，实际是"开始囤积"（候选② 就是这种：energy 25.4% 而 `ep≥3` 决策点 = 0）。 */
   return (c === 'energy' ? 'energy(含空转/过期珠)' : c) + ' ' + (100 * brd.catShares[c]).toFixed(1) + '%';
-}).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=EPIRUS_DIV_W）；本行**只记录**');
+}).join(' · ') + '   ⇒ 目标形状 目标 = H + T·S（H=强度/T=divW）；本行**只记录**');
 /* v1.5.93：**功能角色**那一层（8 角色）与 4 个 `cat` 并存 —— 一眼看出"更细的分区是否真的不同"。 */
 console.log('     功能角色（' + brd.K_role + ' 个）：类间 ' + brd.S_role.toFixed(3) + ' · 角色内 ' + brd.S_roleWithin.toFixed(3) +
   ' · 覆盖 ' + brd.rolesUsed + '/' + brd.K_role + ' · G_role=' + brd.G_role.toFixed(2) +

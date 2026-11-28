@@ -72,8 +72,8 @@
 ### 当前训练入口
 
 - 日常训练：`pg-train` / `supfit-gd`，唯一合法产物形状为 `v:92 / S1o`。
-- 历史逐位复刻：`training/train-3p.mjs` 仅由 `training/train.mjs --mode=v7 --era=<commit>` 委托调用。
-- 页面「🧪 训练场」：`pg` / `supfit` 双模式，带 SSE 进度与多人槽回写。
+- 历史 `v7` 线（原 `train-3p.mjs` / `econ-env.mjs` / `train-env.mjs`）：已于 2026-11-28 整体退役，按 `AGENTS.md §24` 迁往仓外隔离区 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-28\`（含 SHA 清单；`training/train.mjs` 已移除 `--mode=v7` 入口）。如需历史复算，请检出相应历史 commit。
+- 页面「🧪 训练场」：`pg` / `supfit` 双模式，通过 `training/server/train-server.mjs` 提供本地控制台页（`/app/?token=...`）与 POST SSE 训练回写。
 
 ### 已隔离的一次性探针
 

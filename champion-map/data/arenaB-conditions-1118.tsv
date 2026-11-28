@@ -84,3 +84,5 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T11:44:29.153Z	PG-CN-S1200	docs/artifacts/PG-CN-S1200.bak	5b0d7004b5992447	82200	exam	data/arena-league-1118.tsv	0.123085	0.029776
 2026-11-27T16:46:25.603Z	L1B-S1200	scratch/arms/nov27-long-pgdr-l1b.seg1200.bak	0a0470c99b6344d7	82200	exam	data/arena-league-1118.tsv	0.412239	0.115107
 2026-11-27T17:01:13.676Z	L1B-S600	scratch/arms/nov27-long-pgdr-l1b.seg600.bak	23a8b70edb8e6346	82200	exam	data/arena-league-1118.tsv	0.299478	0.095887
+2026-11-28T04:13:53.678Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	82200	exam	data/arena-league-1118.tsv	0.241743	0.079588
+2026-11-28T04:16:21.738Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	82200	exam	data/arena-league-1118.tsv	0.412239	0.132292

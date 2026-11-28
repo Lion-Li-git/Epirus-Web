@@ -144,3 +144,5 @@ measure-RD-PG	a-v2-page-1109	A	-	-	measure-RD-PG	RD-PG-readings.tsv	32	2026-11-2
 measure-PG-CN-S1200	a-v2-page-1109	A	-	-	measure-PG-CN-S1200	PG-CN-S1200-readings.tsv	32	2026-11-27T11:45:24.990Z	add-point
 measure-L1B-S1200	a-v2-page-1109	A	-	-	measure-L1B-S1200	L1B-S1200-readings.tsv	32	2026-11-27T16:47:27.700Z	add-point
 measure-L1B-S600	a-v2-page-1109	A	-	-	measure-L1B-S600	L1B-S600-readings.tsv	32	2026-11-27T17:02:13.308Z	add-point
+measure-LE-S2	a-v2-page-1109	A	-	-	measure-LE-S2	LE-S2-readings.tsv	32	2026-11-28T04:15:14.497Z	add-point
+measure-PH-S2	a-v2-page-1109	A	-	-	measure-PH-S2	PH-S2-readings.tsv	32	2026-11-28T04:17:33.428Z	add-point

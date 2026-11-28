@@ -650,19 +650,19 @@ export function ci95tag(pct, n) {
 
 export function feasPlan(env, over) {
   const e = env || {};
-  const pick = function (k, envKey, dft) {
+  const pick = function (k, envVal, dft) {
     /* 优先级：**调用点显式 override > env > 默认**（D125① 钉这条 —— 我第一版写反成 env 赢，被门当场抓住） */
-    const v = k != null && k !== '' ? k : (e[envKey] != null && e[envKey] !== '' ? e[envKey] : dft);
+    const v = k != null && k !== '' ? k : (envVal != null && envVal !== '' ? envVal : dft);
     const n = Number(v);
     return (isFinite(n) && n > 0) ? n : dft;
   };
   const o = over || {};
   const p = {
-    games: pick(o.games, 'EPIRUS_FEAS_GAMES', FEAS_N_DEFAULTS.games),
-    aggr: pick(o.aggr, 'EPIRUS_AGGR_GAMES', FEAS_N_DEFAULTS.aggr),
-    seat: pick(o.seat, 'EPIRUS_SEAT_GAMES', FEAS_N_DEFAULTS.seat),
-    density: pick(o.density, 'EPIRUS_DENSITY_GAMES', FEAS_N_DEFAULTS.density),
-    charge: pick(o.charge, 'EPIRUS_CHARGE_GAMES', FEAS_N_DEFAULTS.charge)
+    games: pick(o.games, e.EPIRUS_FEAS_GAMES, FEAS_N_DEFAULTS.games),
+    aggr: pick(o.aggr, e.EPIRUS_AGGR_GAMES, FEAS_N_DEFAULTS.aggr),
+    seat: pick(o.seat, e.EPIRUS_SEAT_GAMES, FEAS_N_DEFAULTS.seat),
+    density: pick(o.density, e.EPIRUS_DENSITY_GAMES, FEAS_N_DEFAULTS.density),
+    charge: pick(o.charge, e.EPIRUS_CHARGE_GAMES, FEAS_N_DEFAULTS.charge)
   };
   p.tag = 'n=' + p.games + '/aggr' + p.aggr + '/seat' + p.seat;   // 印在读数旁边用
   return p;

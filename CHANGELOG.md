@@ -4,6 +4,17 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.48 — 11-28（`v7` 训练线正式整体退役 · `knobs ≤ 40` 达标 ＆ `LE-S2`/`PH-S2` 分担替换 `MX8-TN35-KL3`/`MX8-R6B-KL`）
+
+**这一版是什么**：经用户拍板授权后执行两项结构性改动：① 正式整体退役历史 `v7` 训练代码并同笔清零活文档引用，将环境旋钮全集从 `185` 合法降至 `≤40`；② 用两枚分离低废珠、`seatKill=0` 的 `soft` 载体 [`docs/artifacts/LE-S2.bak`](docs/artifacts/LE-S2.bak)（`laserEye/firestorm`）与 [`docs/artifacts/PH-S2.bak`](docs/artifacts/PH-S2.bak)（`proto/holo/ring`）替换掉高废珠且带人席否决的 `MX8-TN35-KL3`（`seatKill=2`）与 `MX8-R6B-KL`（`seatKill=1`），池维持 35 枚 `hard 17 / soft 18`。
+
+- **`v7` 整体退役与 `knobs` KPI 收敛**：依 `AGENTS.md §24` 将 [`training/train-3p.mjs`](training/train-3p.mjs) 等 5 个 `v7` 训练侧遗留文件连同 SHA256 清单整体迁出至仓外隔离目录 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-28\`；移除 [`training/train.mjs`](training/train.mjs) 的 `--mode=v7` / `--era` 入口、清理 [`training/knobs.mjs`](training/knobs.mjs) 入口与说明、静态化 [`tools/audit-lib.mjs`](tools/audit-lib.mjs) `feasPlan` 对五项局数旋钮的读取。`node training/knobs.mjs --check` 实测降至 **`≤40`**。
+- **双载体分担入池与 `MX8` 双退池（[RESULTS-2026-11-28-day-split-v7.md](docs/research/RESULTS-2026-11-28-day-split-v7.md)）**：
+  - `LE-S2`（[`docs/artifacts/LE-S2.bak`](docs/artifacts/LE-S2.bak)，`wid=f43d1e2551a4bd7a`）：`FS2-LE26` 底 + `L1B-S1200`（`ring/bigT/drain`）+ Stage C 岭基线 PG，`selftest3` 全绿，Stage 1 胜率 `41.25%`、总废珠 **`27.92%`**（`boom 296/299` 仅 3 过期）、`laserEye=15`、`firestorm=33`，Stage 2 强度 `21` 技，`Arena B = -2.5213pt`，`promote` `0` 阻断、`90210/90211 seatKill=0`；
+  - `PH-S2`（[`docs/artifacts/PH-S2.bak`](docs/artifacts/PH-S2.bak)，`wid=1fe874c317e3cf6e`）：`L1B-S1200` 底 + `MX8-TN35-KL3`（`proto/holo/jinshield`）+ Stage C 岭基线 PG，`selftest3` 全绿，Stage 1 胜率 `48.83%`、总废珠 **`51.72%`**（仅 15 过期）、`proto=8`、`holo=29`、`ring=20`、`drain=11`，Stage 2 强度 `25` 技，`Arena B = +28.998pt`，`promote` `0` 阻断、`90210/90211 seatKill=0`；
+  - 备份 `MX8-TN35-KL3.json` / `MX8-R6B-KL.json` 至仓外隔离区后通过 `pool-add --retire` 退池；`soft` 全部 `27` 项技能深度均 `≥1`（无任何技能归零），`soft` 现仅余 `1` 枚点名 `seatKill=1`（`MX6-GD-TF20`）。
+- **池级与页面验证**：`pool-add --audit` `35 枚 (17/18), bad=[]`、`D234` / `meta-repo` / `D16` / `D168` / `spec-run` / `train-server-selftest` / `knobs --check` 通过；`probe-diff-ladder --pool=1` 在 `2P rule`（`30.8% < 42.3% < 52.1%`）、`2P legacy`（`19.2% < 24.3% < 26.7%`）、`5P multi`（`2.9% < 10.4% < 15.4%` & `3.4% < 10.8% < 17.9%`）、`5P long`（`4.5% < 7.3% < 14.0%`）及 `seed=77000` 全部严格单调；未跑 `--group=engine` 整轮。
+
 ## v2.1.47 — 11-28（`train-server` 控制台服务修复 ＆ `TN35-S` 清单外六臂收口）
 
 **这一版是什么**：修复本地训练服务 `training/server/train-server.mjs` 在浏览器打开带 `?token=` 地址返回 JSON 而非页面、对齐交接文档状态，并在不动冠军池（维持 35 枚 `hard 17 / soft 18`）与 `c61298e6` 指纹的前提下完成 `TN35-S` 清单外六臂探索验证与止损收口（`PREREG/RESULTS-2026-11-28-day-tn35.md`）。
