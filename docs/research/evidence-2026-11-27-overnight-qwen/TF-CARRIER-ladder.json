@@ -1,0 +1,231 @@
+{
+  "rows": [
+    {
+      "config": "2p-rule",
+      "seed": 99001,
+      "base": {
+        "lv:regular": 16,
+        "lv:hard": 16,
+        "lv:sparring": 25.1
+      },
+      "tf": {
+        "lv:regular": 13.7,
+        "lv:hard": 13.7,
+        "lv:sparring": 26
+      },
+      "delta": {
+        "lv:hard": -2.3000000000000007,
+        "lv:regular": -2.3000000000000007,
+        "lv:sparring": 0.8999999999999986
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-rule",
+      "seed": 99002,
+      "base": {
+        "lv:regular": 18.2,
+        "lv:hard": 18.2,
+        "lv:sparring": 26.3
+      },
+      "tf": {
+        "lv:regular": 17.4,
+        "lv:hard": 17.4,
+        "lv:sparring": 23.6
+      },
+      "delta": {
+        "lv:hard": -0.8000000000000007,
+        "lv:regular": -0.8000000000000007,
+        "lv:sparring": -2.6999999999999993
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-rule",
+      "seed": 99003,
+      "base": {
+        "lv:regular": 19,
+        "lv:hard": 19,
+        "lv:sparring": 27.1
+      },
+      "tf": {
+        "lv:regular": 17.3,
+        "lv:hard": 17.3,
+        "lv:sparring": 27.1
+      },
+      "delta": {
+        "lv:hard": -1.6999999999999993,
+        "lv:regular": -1.6999999999999993,
+        "lv:sparring": 0
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-rule",
+      "seed": 99004,
+      "base": {
+        "lv:regular": 17.3,
+        "lv:hard": 17.3,
+        "lv:sparring": 27.4
+      },
+      "tf": {
+        "lv:regular": 15.5,
+        "lv:hard": 15.5,
+        "lv:sparring": 27.6
+      },
+      "delta": {
+        "lv:hard": -1.8000000000000007,
+        "lv:regular": -1.8000000000000007,
+        "lv:sparring": 0.20000000000000284
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-legacy",
+      "seed": 99001,
+      "base": {
+        "lv:sparring": 20.2,
+        "lv:regular": 21.8,
+        "lv:hard": 21.8
+      },
+      "tf": {
+        "lv:sparring": 18.1,
+        "lv:regular": 18.5,
+        "lv:hard": 18.5
+      },
+      "delta": {
+        "lv:hard": -3.3000000000000007,
+        "lv:regular": -3.3000000000000007,
+        "lv:sparring": -2.099999999999998
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-legacy",
+      "seed": 99002,
+      "base": {
+        "lv:sparring": 19.1,
+        "lv:regular": 19.4,
+        "lv:hard": 19.4
+      },
+      "tf": {
+        "lv:regular": 18,
+        "lv:hard": 18,
+        "lv:sparring": 18.1
+      },
+      "delta": {
+        "lv:hard": -1.3999999999999986,
+        "lv:regular": -1.3999999999999986,
+        "lv:sparring": -1
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-legacy",
+      "seed": 99003,
+      "base": {
+        "lv:regular": 20.4,
+        "lv:hard": 20.4,
+        "lv:sparring": 21.3
+      },
+      "tf": {
+        "lv:sparring": 17.7,
+        "lv:regular": 19.8,
+        "lv:hard": 19.8
+      },
+      "delta": {
+        "lv:hard": -0.5999999999999979,
+        "lv:regular": -0.5999999999999979,
+        "lv:sparring": -3.6000000000000014
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "2p-legacy",
+      "seed": 99004,
+      "base": {
+        "lv:sparring": 18.7,
+        "lv:regular": 21.1,
+        "lv:hard": 21.1
+      },
+      "tf": {
+        "lv:sparring": 15.9,
+        "lv:regular": 18.7,
+        "lv:hard": 18.7
+      },
+      "delta": {
+        "lv:hard": -2.400000000000002,
+        "lv:regular": -2.400000000000002,
+        "lv:sparring": -2.799999999999999
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "5p-long",
+      "seed": 99001,
+      "base": {
+        "lv:regular": 2.5,
+        "lv:hard": 2.5,
+        "lv:sparring": 3
+      },
+      "tf": {
+        "lv:regular": 1.5,
+        "lv:hard": 1.5,
+        "lv:sparring": 3
+      },
+      "delta": {
+        "lv:hard": -1,
+        "lv:regular": -1,
+        "lv:sparring": 0
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    },
+    {
+      "config": "5p-long",
+      "seed": 99002,
+      "base": {
+        "lv:regular": 1.75,
+        "lv:hard": 1.75,
+        "lv:sparring": 2.5
+      },
+      "tf": {
+        "lv:sparring": 2.25,
+        "lv:regular": 2.25,
+        "lv:hard": 2.25
+      },
+      "delta": {
+        "lv:hard": 0.5,
+        "lv:regular": 0.5,
+        "lv:sparring": -0.25
+      },
+      "orderedBase": false,
+      "orderedTf": false
+    }
+  ],
+  "summary": {
+    "2p-rule": {
+      "lv:hard": -1.6500000000000004,
+      "lv:regular": -1.6500000000000004,
+      "lv:sparring": -0.39999999999999947
+    },
+    "2p-legacy": {
+      "lv:hard": -1.9249999999999998,
+      "lv:regular": -1.9249999999999998,
+      "lv:sparring": -2.3749999999999996
+    },
+    "5p-long": {
+      "lv:hard": -0.25,
+      "lv:regular": -0.25,
+      "lv:sparring": -0.125
+    }
+  }
+}

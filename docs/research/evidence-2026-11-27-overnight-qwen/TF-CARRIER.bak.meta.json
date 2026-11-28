@@ -1,0 +1,271 @@
+{
+ "tool": "supfit-gd",
+ "tag": "TF-CARRIER",
+ "parent": "docs/artifacts/L1B-S1200.bak",
+ "seed": 20261128,
+ "collectionSeed": 2667729073,
+ "collectionSalt": 2229199715,
+ "lr": 0.0001,
+ "steps": 80,
+ "groups": 1000,
+ "trainG": 746,
+ "testG": 254,
+ "objective": "cand",
+ "dagger": 0,
+ "dagTemp": 0.15,
+ "pool": 1200,
+ "shapeBal": 1,
+ "rolloutMode": "game",
+ "classPow": 0.5,
+ "classCap": 6,
+ "teacher": "pack:docs/artifacts/L1B-S1200.bak",
+ "keySplit": 1,
+ "rareOnly": "gun,reflect,guard",
+ "rareFrac": 0.25,
+ "arenaPool": null,
+ "arenaShapes": "2:standard@2,3:multi,5:multi@3,5:long,8:long",
+ "arenaShapeWeights": [
+  {
+   "shape": "2:standard",
+   "weight": 2
+  },
+  {
+   "shape": "3:multi",
+   "weight": 1
+  },
+  {
+   "shape": "5:multi",
+   "weight": 3
+  },
+  {
+   "shape": "5:long",
+   "weight": 1
+  },
+  {
+   "shape": "8:long",
+   "weight": 1
+  }
+ ],
+ "teacher2": "pack:docs/artifacts/TF2-DR.bak",
+ "teacher2frac": 0.1,
+ "teacher2keys": "gun,reflect,guard",
+ "teacher2shapes": "5:multi",
+ "teacher3": null,
+ "teacher3frac": null,
+ "teacher3keys": null,
+ "teacher3shapes": null,
+ "teacher4": null,
+ "teacher4frac": null,
+ "teacher4keys": null,
+ "teacher4shapes": null,
+ "shapeTeachers": null,
+ "playedAgree": {
+  "n": 0,
+  "hit": 0,
+  "stuckCharge": 0,
+  "missCharge": 0,
+  "missFire": 0
+ },
+ "label": {
+  "ok": 994,
+  "moved": 6,
+  "gone": 0,
+  "keys": 1000,
+  "rare": 246,
+  "byKey": {
+   "ji": 411,
+   "bigT": 5,
+   "gun": 219,
+   "guard": 121,
+   "bagua": 51,
+   "sword": 49,
+   "snipe": 60,
+   "holo": 14,
+   "reflect": 57,
+   "drain": 2,
+   "ring": 9,
+   "charge": 1,
+   "railgun": 1
+  },
+  "byShape": {
+   "0": {
+    "n": 250,
+    "ok": 250,
+    "moved": 0,
+    "keys": {
+     "ji": 154,
+     "bigT": 4,
+     "gun": 39,
+     "guard": 4,
+     "bagua": 3,
+     "sword": 35,
+     "snipe": 11
+    }
+   },
+   "1": {
+    "n": 125,
+    "ok": 123,
+    "moved": 2,
+    "keys": {
+     "ji": 49,
+     "snipe": 10,
+     "holo": 4,
+     "gun": 24,
+     "reflect": 8,
+     "guard": 22,
+     "bagua": 4,
+     "sword": 3,
+     "drain": 1
+    }
+   },
+   "2": {
+    "n": 375,
+    "ok": 373,
+    "moved": 2,
+    "keys": {
+     "gun": 78,
+     "guard": 78,
+     "ji": 124,
+     "reflect": 34,
+     "bagua": 21,
+     "snipe": 32,
+     "holo": 6,
+     "ring": 2
+    }
+   },
+   "3": {
+    "n": 125,
+    "ok": 124,
+    "moved": 1,
+    "keys": {
+     "ji": 48,
+     "snipe": 3,
+     "ring": 7,
+     "bigT": 1,
+     "gun": 38,
+     "holo": 1,
+     "bagua": 7,
+     "guard": 2,
+     "reflect": 4,
+     "drain": 1,
+     "charge": 1,
+     "railgun": 1,
+     "sword": 11
+    }
+   },
+   "4": {
+    "n": 125,
+    "ok": 124,
+    "moved": 1,
+    "keys": {
+     "ji": 36,
+     "snipe": 4,
+     "gun": 40,
+     "bagua": 16,
+     "reflect": 11,
+     "guard": 15,
+     "holo": 3
+    }
+   }
+  },
+  "t1Groups": 1218,
+  "t2Groups": 68,
+  "t2Fallback": 40,
+  "t2Hits": 56
+ },
+ "supfitGd": {
+  "objective": "cand",
+  "dagger": 0,
+  "rounds": [
+   {
+    "round": 0,
+    "trainG": 746,
+    "teacherAgree": 0.9448818897637795,
+    "teacherLl": -0.1965143019331343,
+    "studentAgree": null,
+    "studentN": 0
+   }
+  ],
+  "roundsMoved": [],
+  "startAgree": 0.9763779527559056,
+  "startLl": -0.14914153812196107,
+  "agree": 0.9448818897637795,
+  "ll": -0.1965143019331343,
+  "wAgree": 0.9336889121926332,
+  "nTest": 254,
+  "nTrain": 746,
+  "testClassNotInTrain": 0,
+  "startClassNotInTrain": 0,
+  "studentAgree": null,
+  "studentN": 0,
+  "byKey": [
+   {
+    "key": "ji",
+    "n": 113,
+    "hit": 109
+   },
+   {
+    "key": "gun",
+    "n": 55,
+    "hit": 51
+   },
+   {
+    "key": "sword",
+    "n": 11,
+    "hit": 11
+   },
+   {
+    "key": "bagua",
+    "n": 15,
+    "hit": 14
+   },
+   {
+    "key": "bigT",
+    "n": 1,
+    "hit": 1
+   },
+   {
+    "key": "snipe",
+    "n": 15,
+    "hit": 12
+   },
+   {
+    "key": "guard",
+    "n": 29,
+    "hit": 28
+   },
+   {
+    "key": "holo",
+    "n": 4,
+    "hit": 3
+   },
+   {
+    "key": "reflect",
+    "n": 10,
+    "hit": 10
+   },
+   {
+    "key": "ring",
+    "n": 1,
+    "hit": 1
+   }
+  ],
+  "verdict": "⇒ P-A1 只对 key 路径预登记；cand 路径的验收在实战尺（chain-price 的窗/珠/净分）"
+ },
+ "container": {
+  "v": 92,
+  "input": "obs6",
+  "dof": 287,
+  "gen": 3,
+  "keySplit": 1
+ },
+ "lineage": {
+  "parent": "docs/artifacts/L1B-S1200.bak",
+  "gen": 3,
+  "recipe": {
+   "teacher": "pack:docs/artifacts/L1B-S1200.bak",
+   "objective": "weighted candidate log-likelihood log pi(teacher action), class=key#bead (temp=1)",
+   "solver": "Adam+analytic backprop (pg-lib)"
+  }
+ }
+}

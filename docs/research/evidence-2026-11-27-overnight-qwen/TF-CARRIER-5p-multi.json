@@ -1,0 +1,41 @@
+{
+  "rows": [
+    {
+      "opponent": "gunspam",
+      "games": 400,
+      "tfBaseMeanPt": -0.5,
+      "tfBaseSePt": 2.2359282188836027,
+      "tfTeacherMeanPt": 5,
+      "tfTeacherSePt": 3.112474899497183
+    },
+    {
+      "opponent": "wall",
+      "games": 400,
+      "tfBaseMeanPt": -0.25,
+      "tfBaseSePt": 2.046300014660607,
+      "tfTeacherMeanPt": -2,
+      "tfTeacherSePt": 3.1606961258558215
+    },
+    {
+      "opponent": "heavyfire",
+      "games": 400,
+      "tfBaseMeanPt": 1.25,
+      "tfBaseSePt": 2.249131776930823,
+      "tfTeacherMeanPt": 5.75,
+      "tfTeacherSePt": 2.868770424763892
+    },
+    {
+      "opponent": "balanced",
+      "games": 400,
+      "tfBaseMeanPt": 0.5,
+      "tfBaseSePt": 2.091500657422799,
+      "tfTeacherMeanPt": 9.5,
+      "tfTeacherSePt": 3.1463272239231572
+    }
+  ],
+  "summary": {
+    "tfBaseMeanPt": 0.25,
+    "tfTeacherMeanPt": 4.5625,
+    "opponentsTfNoWorse": 4
+  }
+}
