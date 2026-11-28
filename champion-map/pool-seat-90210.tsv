@@ -179,3 +179,5 @@ TN-S5	docs/artifacts/TN-S5.bak	multi	200	90210	0	0	2	0	0	0	0	0.29	2.0	只攒不�
 TN-S5	docs/artifacts/TN-S5.bak	long	200	90210	0	1.5	0	1.5	0	0	0	0.43	1.5	全程只防御	28.571428571428573
 TA-S3	docs/artifacts/TA-S3.bak	multi	200	90210	0	0	0.5	2.5	0	0	0	0.43	2.5	只枪压制	4.285714285714286
 TA-S3	docs/artifacts/TA-S3.bak	long	200	90210	67	0	0	0.5	0	67	67	28.79	67.0	全程刷反弹	2.2857142857142856
+TA-S3-R8	docs/artifacts/TA-S3-R8.bak	multi	200	90210	0	0	0.5	2.5	0	0	0	0.43	2.5	只枪压制	4.285714285714286
+TA-S3-R8	docs/artifacts/TA-S3-R8.bak	long	200	90210	8	0	11	2	0	8	8	5.29	11.0	只攒不打(农民)	15.428571428571429

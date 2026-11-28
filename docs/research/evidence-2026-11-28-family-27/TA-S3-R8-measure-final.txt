@@ -1,0 +1,7 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S3-R8.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S3-R8.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S3-R8.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S3-R8.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/TA-S3-R8-extra.tsv --ids=TA-S3-R8 --out=staging/TA-S3-R8-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+readings 32 条 ‖ display TA-S3-R8-display.tsv
+--no-add：停在 D:\code\Epirus-Web\champion-map\staging\TA-S3-R8-readings.tsv

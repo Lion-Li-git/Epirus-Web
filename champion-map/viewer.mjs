@@ -3055,15 +3055,6 @@ function drawMap(fr) {
     if (st.color !== 'fam' && !isShipped(d) && al > 0.3 && !unmeasuredGray(d)) {
       g.strokeStyle = st.bg; g.lineWidth = 0.85 * devicePixelRatio; g.stroke();
     }
-    if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
-      g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
-    else if (st.cmp.indexOf(d.id) >= 0) { g.globalAlpha = 1; g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
-      g.beginPath(); g.arc(pr[i].x, pr[i].y, rr + 3.4 * devicePixelRatio, 0, 6.284); g.stroke(); }
-    /* §E449 这里必须**重新起一条路径**再描墨环：上面选中环 / 对比环各自 beginPath 过，当前路径已经变成
-     *   半径 rr+5 的那一圈，直接 stroke 等于**把黄色选中环用墨色重描一遍** ⇒
-     *   立体态里选中一枚冠军，画布上只剩墨环、没有黄环（页内那条「指针往返」扫整张画布数到 0 颗环色像素，
-     *   就是这件事：它报的不是"判据坏"，是**用户点中冠军之后看不见选中反馈**）。
-     *   顺带原来那圈点边也被挪到了 rr+5 上（选中的冠军比没选中的多一圈外移的墨边）。 */
     if (isC && al > 0.5) { g.beginPath(); g.arc(pr[i].x, pr[i].y, rr, 0, 6.284);
       g.strokeStyle = st.ink; g.lineWidth = 1.5; g.stroke(); }
     /* §E302 过线**只**按逐枚真值标：绿环 = 这枚自己过了**当前主语**那道闸（枚数现读，印在右侧图例与表头，别抄进注释）。
@@ -3079,6 +3070,16 @@ function drawMap(fr) {
       g.beginPath(); g.arc(foot[0], foot[1], 2.4 * st.size, 0, 6.284); g.fillStyle = st.ink; g.fill(); }
     g.globalAlpha = 1;
     scr[pr[i].i] = [pr[i].x, pr[i].y];
+  }
+  for (i = 0; i < pr.length; i++) {
+    var od = P[pr[i].i], os = scr[pr[i].i];
+    if (!os) continue;
+    var orr = dotR(od, st.k), ocol = null, ow = 0;
+    if (od.id === st.sel) { ocol = '#ffd166'; ow = 2 * devicePixelRatio; orr += 5 * devicePixelRatio; }
+    else if (st.cmp.indexOf(od.id) >= 0) { ocol = '#7fd1ff'; ow = 1.6 * devicePixelRatio; orr += 3.4 * devicePixelRatio; }
+    if (!ocol) continue;
+    g.globalAlpha = 1; g.strokeStyle = ocol; g.lineWidth = ow;
+    g.beginPath(); g.arc(os[0], os[1], orr, 0, 6.284); g.stroke();
   }
   drawChain();   /* §E763 地图（平面⇄立体同一台相机）：链跟着点走，缩放/平移每帧重取坐标 */
   labelReset();

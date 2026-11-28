@@ -1,0 +1,4 @@
+# 候选枚（只此一次，不落池表）：TA-S3-R2 wid=b8ee07a0fe0e1218
+# 只给了 --candidate ⇒ 就量这 1 枚候选（不落任何池表）
+# 落盘目录 = D:\code\Epirus-Web\scratch\carrier-eval\TA-S3-R2
+[TA-S3-R2] stage1 并集 12/30（自对局 11） 换招JS 0.0869 ‖ 12s → D:\code\Epirus-Web\scratch\carrier-eval\TA-S3-R2\TA-S3-R2.json

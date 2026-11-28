@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.51 — 11-28（TA-S3 修复版入池：long 八卦阵单点偏置，人席否决清零）
+
+**这一版是什么**：用户要求优先做好 TA-S3。R2–R7 的监督蒸馏、融合与分段 PG 均未同时守住覆盖和人席；最终 `TA-S3-R8` 只在 `modeBias` 的 `long × bagua` 坐标加 **+4.0**，其余权重逐位不变。它保留 TA 的 armor/tank/jinshield 角色，同时把 5P long 反弹席人类胜率从 67% 降到 8% 量级。
+
+- **候选**：[`docs/artifacts/TA-S3-R8.bak`](docs/artifacts/TA-S3-R8.bak)，`wid=bbab49f37978aae3`，soft；`selftest3` 六腿全绿，Stage 1 **46.83% / union 15 / armor 95 / tank 25 / jinshield 19**，总废珠 0（无珠经济）；`promote` 0 阻断；90210/90211 人席 **`seatKill=0`**。
+- **池变更**：`TA-S3-R8` 原位替换 v2.1.50 安全回滚的 `OBS6E9`，池维持 **35 枚（hard 17 / soft 18）**，规则指纹 `c61298e6` 不变。
+- **地图修复**：新点进入 FAM27 后，立体地图选中环被后绘邻枚圆盘遮盖，页检「指针往返」环色占比降至 48%。改为所有点填充完成后重绘选中/对比环，重烘四视图 **101 PASS / 0 FAIL**。
+- **池级验证**：`pool-add --audit` **35 枚 / hard 17 + soft 18 / bad=[] / seatUnknown=0**；回滚后四组阶梯仍严格单调：2P rule **29.1% < 40.9% < 54.1%**、2P legacy **19.8% < 25.1% < 26.9%**、5P multi **3.4% < 10.1% < 15.9%**、5P long **2.5% < 8.3% < 11.8%**。
+- **验证**：`spec-run` 96/96、`ship-pool`、`ship-promote`、`meta-repo`、Chrome `SMOKE OK` / `BATTLE OK`；未跑 `--group=engine` 整轮。
+
 ## v2.1.50 — 11-28（TA 槽安全回滚：`TA-S3` 人席否决复算为 2，恢复 `OBS6E9`）
 
 **这一版是什么**：补测 v2.1.49 最终三枚载体的人席时发现 canonical 批表仍指向初版 `TM-S2/TN-S2/TA-S2`。补齐最终候选证据后，`TM-S5-a40` 与 `TN-S5` 仍为 `seatKill=0`，但 `TA-S3` 在 90210/90211 的 long 反弹型席位上分别为 `67.0% / 75.5%`，按 soft 带内口径复算为 **`seatKill=2`**。一条反弹特化 PG 修正臂 `TA-SEAT-FIX` 虽通过 Stage 1（win 45.42%、tank 26、armor 97、jinshield 15、废珠 18.2%），但人席仍为 `36.0% / 47.0%`、`seatKill=2`，按预注册淘汰。

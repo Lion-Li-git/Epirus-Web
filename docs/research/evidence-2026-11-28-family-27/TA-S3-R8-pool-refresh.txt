@@ -1,0 +1,4 @@
+✔ 已刷 champion-map/pool-members.tsv：改了 1 行 ‖ 人席仍没量过的 0 枚
+   · TA-S3-R8 pass/-1 → pass/0
+   ↻ 演化图已自动同步：（一致）
+   ↻ skill-report.html 已自动重烘
