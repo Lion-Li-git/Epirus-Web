@@ -4,13 +4,22 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.50 — 11-28（TA 槽安全回滚：`TA-S3` 人席否决复算为 2，恢复 `OBS6E9`）
+
+**这一版是什么**：补测 v2.1.49 最终三枚载体的人席时发现 canonical 批表仍指向初版 `TM-S2/TN-S2/TA-S2`。补齐最终候选证据后，`TM-S5-a40` 与 `TN-S5` 仍为 `seatKill=0`，但 `TA-S3` 在 90210/90211 的 long 反弹型席位上分别为 `67.0% / 75.5%`，按 soft 带内口径复算为 **`seatKill=2`**。一条反弹特化 PG 修正臂 `TA-SEAT-FIX` 虽通过 Stage 1（win 45.42%、tank 26、armor 97、jinshield 15、废珠 18.2%），但人席仍为 `36.0% / 47.0%`、`seatKill=2`，按预注册淘汰。
+
+- **安全回滚**：TA 槽恢复 v2.1.48 的 [`docs/artifacts/obs6-coldstart/OBS6E9.bak`](docs/artifacts/obs6-coldstart/OBS6E9.bak)（`wid=d2a64af418b85949`），池维持 **35 枚（hard 17 / soft 18）**，规则指纹 `c61298e6` 不变。
+- **产物隔离**：`TA-S3` 的 skill-report raw 与 `js/pool-packs/TA-S3.js` 已整体挪到仓外 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-28-ta-seat-rollback\`，未物理抹除；`OBS6E9.json` 从既有隔离件恢复。
+- **池级验证**：`pool-add --audit` 为 `35 枚 / 17+18 / bad=[] / seatUnknown=0`；`probe-pool` soft 装配通过。回滚后四组阶梯仍严格单调：2P rule **29.1% < 40.8% < 54.0%**、2P legacy **19.8% < 24.3% < 26.5%**、5P multi **3.4% < 11.1% < 15.8%**、5P long **2.5% < 8.5% < 12.0%**。
+- **研究收口**：v2.1.49 四候选 LOO 未触发强度角色门槛，不开 MN/MT/FC/TF2 替身训练；`MN-PG` 与 `TF2-RD` 因唯一 mine/rod 覆盖保留，`MT-PG` 与 `FC-S1` 列为退役建议但不本臂执行。
+
 ## v2.1.49 — 11-28（预注册载体补臂：`TM-S5-a40` / `TN-S5` / `TA-S3` 入池 · 池维持 35 枚）
 
 **这一版是什么**：按 [PREREG-2026-11-28-pool-shortboard-carriers.md](docs/research/PREREG-2026-11-28-pool-shortboard-carriers.md) 补 `TM` / `TN` / `TA` 三条短板载体的硬门，替换掉此前未过预注册的 `TM-S2` / `TN-S2` / `TA-S2`，池维持 **35 枚（hard 17 / soft 18）**。
 
 - **P0 `TM-S5-a40`**（[docs/artifacts/TM-S5-a40.bak](docs/artifacts/TM-S5-a40.bak)，`wid=922277a50709854e`，soft）：`TM-S3`（miniT 6、win 39.50%）与 `TM-S4`（miniT 2、win 43.50%）按 40/60 权重插值，取到两边都过线；Stage 1 **win 42.75%**、`miniT 4`、`transfer 20`、`jinshield 48`、废珠 29.09%；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
 - **P1 `TN-S5`**（[docs/artifacts/TN-S5.bak](docs/artifacts/TN-S5.bak)，`wid=4039c918f4cb171b`，hard）：`TN-S4` 低剂量重训后 Stage C 岭基线 PG（2400 局，`klW=0.03` / `klTilt=taunt,jinshield`）；Stage 1 **win 42.83%**、`taunt 37`、`jinshield 21`、废珠 22.22%；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
-- **P2 `TA-S3`**（[docs/artifacts/TA-S3.bak](docs/artifacts/TA-S3.bak)，`wid=4a533551923d12dd`，soft）：以 `TA-S2` 为底座、单教师 `TK-FS4` 只补 `tank/armor`，避开多教师优先级饥饿；Stage 1 **win 47.58%**、`armor 97`、`tank 33`、`jinshield 27`、废珠 0（无珠经济）；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
+- **P2 `TA-S3`**（[docs/artifacts/TA-S3.bak](docs/artifacts/TA-S3.bak)，`wid=4a533551923d12dd`，soft）：以 `TA-S2` 为底座、单教师 `TK-FS4` 只补 `tank/armor`，避开多教师优先级饥饿；Stage 1 **win 47.58%**、`armor 97`、`tank 33`、`jinshield 27`、废珠 0（无珠经济）；`selftest3` 绿，`promote` 0 阻断；当时账本记 `seatKill=0`，20:44 最终候选复算为 `seatKill=2`，已在 v2.1.50 回滚。
 - **池级验证**：`pool-add --audit` **35 枚 / hard 17 + soft 18 / bad=[]`；`probe-diff-ladder --pool=1` 实测四组全单调——2P standard（5000 局）**19.8% < 25.4% < 29.3%**、5P multi（1500 局）**2.9% < 7.9% < 13.9%**、5P long（600 局）**1.3% < 9.0% < 13.0%**、8P multi（300 局）**9.7% < 11.7% < 16.0%**。`TM-S2` / `TN-S2` / `TA-S2` 的 skill-report 原文件按 `AGENTS.md §24` 移到仓外隔离区 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-28-carriers\`。
 - **验证**：`node tools/spec-run.mjs` 96/96；本版不涉及规则/引擎改动（规则指纹 `c61298e6` 未变）；后续跑完整门禁并发布。
 

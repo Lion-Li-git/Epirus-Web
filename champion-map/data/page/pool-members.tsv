@@ -29,7 +29,7 @@ PUR-DR	7fd8b3c1d487dcdd	docs/artifacts/PUR-DR.bak	soft	0	pass	0	Wed Nov 25 2026 
 R-GD12	7e55abc3894ca3e2	docs/artifacts/R-GD12.bak	soft	0	pass	0	Sun Nov 22 2026 14:34:57 GMT+0800 (中国标准时间)	GD6ATEACH+ringEcon@0.12(long,lr4e-4): hard带ring新强将, arenaB=+15.89pt, seatKill=0 ‖ 11-26 v2.1.32 已被 JN-DR/MN-DR/PUR-2P 上位替出 hard，下放平衡 2P/soft
 RG-MN	7e4628cbec354183	docs/artifacts/RG-MN.bak	soft	0	pass	0	Mon Nov 23 2026 16:39:15 GMT+0800 (中国标准时间)	hard长程聚能环×地雷单轮防抖(GD6ATEACH+MN-G1+ringEcon@0.22): arenaB=+11.38pt(arS=.133/arL=.132/arR=.442), MxCL=.257, G(long)=5.61, seatKill=0(multi<=1%,long<=9%) ‖ 11-26 v2.1.32 已被 JN-DR/MN-DR/PUR-2P 上位替出 hard，下放平衡 2P/soft
 SOFT-RING-C3G25	8c7030eb03258b17	docs/artifacts/SOFT-RING-C3G25.bak	soft	0	pass	0	Wed Nov 25 2026 11:43:58 GMT+0800 (中国标准时间)	c3g+ring+天火闭环93%+2P替身rule14.35%/legacy36.0%
-TA-S3	4a533551923d12dd	docs/artifacts/TA-S3.bak	soft	0	pass	0	Sat Nov 28 2026 18:45:46 GMT+0800 (中国标准时间)	v2.1.49 补 P2: 单教师TK-FS4重训, Stage1 win47.58%/tank33/armor97/jin27, selftest3绿, promote0阻断, seatKill0
+OBS6E9	d2a64af418b85949	docs/artifacts/obs6-coldstart/OBS6E9.bak	soft	0	pass	0	Sat Nov 28 2026 20:55:00 GMT+0800 (中国标准时间)	v2.1.50 安全回滚：TA-S3 最终人席复算 seatKill=2，TA-SEAT-FIX 仍未过门，恢复 v2.1.48 原槽 OBS6E9；规则指纹 c61298e6 未变
 TF2-DR	97430ee6cf744e0f	docs/artifacts/TF2-DR.bak	soft	0	pass	0	Wed Nov 25 2026 23:27:17 GMT+0800 (中国标准时间)	transfer2接续DR-R3E长程广度
 TF2-RD	ccc8268b8e386077	docs/artifacts/TF2-RD.bak	soft	0	pass	0	Wed Nov 25 2026 23:26:21 GMT+0800 (中国标准时间)	transfer2接续ROD-DR补齐rod+transfer
 TK-PG	4fb5b59cb4e5a446	docs/artifacts/TK-PG.bak	soft	0	pass	0	Thu Nov 26 2026 23:44:39 GMT+0800 (中国标准时间)	v2.1.36 soft替换MX8-R6C-KL: PG-DR低剂量坦克蒸馏, Stage1 48.5%/18格, 坦克27次13格95.8%兑现, 电珠闭环40.8%, 2P rule18.8%/legacy19.0%, ArenaB+21.45pt, promote0阻断, seatKill0

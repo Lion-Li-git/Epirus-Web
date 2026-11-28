@@ -1,0 +1,21 @@
+# selftest3 ‖ TA-S4-a70.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.064（逐坐标 16561 里可分辨 1205）‖ 判定 1186 ‖ 不进判定 15920（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 11 对账（跳过 22 个不可导并列最大值）
+# selftest3 全绿 ✔（本次梯度训练允许开）
+  ⚑ 基线 = 观测侧闭式岭回归 V(xin)（住在训练器里，不进包 ‖ l2 0.01 ‖ 每批重拟合 ‖ 采集用上一次拟合 ⇒ 不自家打分自家）
+# pg-train（B 臂） ‖ 起点 TA-S4-a70.bak ‖ 面=obs6 ‖ 局 1600 ‖ 批 48 ‖ lr 0.0003 ‖ temp 0.5 ‖ λc 0 ‖ λf 0 ‖ λexp 0.1 ‖ 死电罚 0.1 ‖ dmgW 0.04 ‖ defTax 0.02 ‖ 基线 ridge ‖ seed 20261138
+  口径：arena2 reflectspam,reflectmix,reflecttank,human:rule,human:legacy,wall,gunspam,heavyfire,guardgun ‖ poolFp=41125ce1 ‖ shapes=2:multi,2:long,3:multi,3:long,5:multi,5:long,8:multi,8:long ‖ salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度
+  ⚑ 价值容量（岭回归**按局** 2 折留出 R²，n=1063 ‖ 局=48）：读 xin(80 维) = -0.312 ‖ 读手挑 14 标量 = -0.108
+  ⚑ seg 快照（400 局）→ scratch/arms/TA-SEAT-FIX.seg400.bak
+  ⚑ P-B2 快照（1/3 预算）→ scratch/arms/TA-SEAT-FIX-8k.bak
+  ⚑ seg 快照（800 局）→ scratch/arms/TA-SEAT-FIX.seg800.bak
+  局 1200 ‖ 步 25 ‖ 平均净分 0.093 ‖ 炮 0.01/局 ‖ 纪律蓄 0.01/局 ‖ 死电 0.01/局 ‖ 伤 4.32/局 ‖ 花珠 0.01/废珠 0.02 ‖ 熵 0.238nats ‖ zip坏 0/1200 ‖ 锚L1 0.060 ‖ **R² -0.169** ‖ V 0.11±0.37 ‖ G 0.19±0.69 ‖ 回滚 0
+  ⚑ seg 快照（1200 局）→ scratch/arms/TA-SEAT-FIX.seg1200.bak
+  局 1600 ‖ 步 34 ‖ 平均净分 0.099 ‖ 炮 0.01/局 ‖ 纪律蓄 0.01/局 ‖ 死电 0.01/局 ‖ 伤 4.31/局 ‖ 花珠 0.01/废珠 0.02 ‖ 熵 0.238nats ‖ zip坏 0/1600 ‖ 锚L1 0.057 ‖ **R² -0.423** ‖ V -0.01±0.34 ‖ G -0.07±0.64 ‖ 回滚 0
+  ⚑ seg 快照（1600 局）→ scratch/arms/TA-SEAT-FIX.seg1600.bak
+  终：局 1600 ‖ 平均净分 0.099 ‖ 炮/局 0.009 ‖ 纪律蓄/局 0.011 ‖ 死电/局 0.014 ‖ 花珠/废珠 0.01/0.02 ‖ zip 坏 0/1600 ‖ 耗时 27s
+  产物 → scratch/arms/TA-SEAT-FIX.bak

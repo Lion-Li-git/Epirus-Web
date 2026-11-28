@@ -1,0 +1,27 @@
+rebuild-map: run
+—— ① 历史戳检查：当前 B=b-arena-page-1118 非 F2/F5 夹具 ⇒ 跳过（旧戳只服务 gen3 旧图）——
+—— ② 版本投影各自重算（17.0s）——
+版本 1.8 自证：831/831 枚三维坐标不同于全库 fit
+版本 2.0 自证：231/231 枚三维坐标不同于全库 fit
+已写 display.tsv / projections.tsv：1062 行，版本投影列 10 个
+—— ②b build-view 编译 coords-view（0.5s）——
+coords-view: 1062 行 × 167 列 ⇒ D:\code\Epirus-Web\champion-map\data\build\coords-view.tsv ‖ 无 display 模板 0
+对照 D:\code\Epirus-Web\champion-map\archive\2026-11-18-de\coords-gen10-de-1118.tsv：matched 998 ‖ max_abs_diff 0 ‖ mismatch 0
+current A/B = a-v2coop-page-1114 / b-arena-page-1118 ‖ projections 未参与换尺
+—— ②b sync page/coords.tsv（0.1s）——
+registry 1062 ‖ coords 已有 1062 ‖ 缺 0
+将追加 0 行（名册已齐）
+—— ③a lineage 2.0 只读一致性（0.1s）——
+LINEAGE_CHECK_OK 2.0 rows=231（只读，未重算家族）
+—— ③ lineage 跳过：registry 缺 133 枚权重文件（11-19 清理；Gemini 已挽回 130 枚，其中 86 枚是 sha 不同但 wid 相同的 quarantine 件，权重等价；docs/ARTIFACT-LOSS-1119.md） ⇒ 重生成会塌家族/融合父边（§E503）；保留在册 lineage.tsv。补回权重后自动恢复，或加 --require-lineage 强制跑 ——
+—— ④ build-trends 趋势页（0.9s）——
+已写 champion-map/trends.html：83.6 KB
+—— ④ viewer 烘 index.html（0.3s）——
+内联脚本解析自证 ✅ 6427 行 JS 能被引擎收下
+模板转义自证 ✅ 代码/字符串里没有会被模板字面量吃掉反斜杠的写法（白名单：双反斜杠 / 反斜杠$ / 续行；注释不计）
+已写 D:\code\Epirus-Web\champion-map\index.html（2447 KB，自包含、无外部依赖）
+—— ④ shot 页内自检（9.0s）——
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：101 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 页内自检 0 FAIL
