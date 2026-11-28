@@ -1,0 +1,21 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TN-S2.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TN-S2.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TN-S2.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TN-S2.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/TN-S2-extra.tsv --ids=TN-S2 --out=staging/TN-S2-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+—— arena-b —— arS=0.0541 arL=0.0088 arR=0.0963
+—— mixedfix —— MxC=0.1457 MxCL=0.2171 MxSkU=19 MxSkE=17
+—— ax-multi —— [冠军4N] h2=79.54 h3=55.90 h5=36.76 h8=17.50 x2=0.5908 x3=0.3385 x5=0.2095 x8=0.0571 n2=2600 n3=1440 n5=740 n8=440 sec=17.9 mode=multi dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=17 skE=17 keys=bagua,bigT,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,railgun,reflect,ring,snipe,sword,taunt coop=v3x40
+—— a-multi —— [冠军4N] h2=77.62 h3=53.82 h5=42.97 h8=21.36 x2=0.5523 x3=0.3073 x5=0.2872 x8=0.1013 n2=2600 n3=1440 n5=740 n8=440 sec=19.3 mode=multi dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=20 skE=19 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,snipe,sword,taunt,transfer coop=v3x40
+—— ax-long —— [冠军4N] h2=90.31 h3=61.88 h5=41.89 h8=25.23 x2=0.8062 x3=0.4281 x5=0.2736 x8=0.1455 n2=2600 n3=1440 n5=740 n8=440 sec=32.4 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=20 skE=19 keys=bagua,bigT,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,laserEye,miniT,railgun,reflect,ring,shift,snipe,sword,taunt coop=v3x40
+—— a-long —— [冠军4N] h2=85.88 h3=61.60 h5=41.22 h8=27.95 x2=0.7177 x3=0.4240 x5=0.2652 x8=0.1766 n2=2600 n3=1440 n5=740 n8=440 sec=32.5 mode=long dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=24 skE=23 keys=bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,laserEye,mine,miniT,railgun,reflect,ring,rod,shift,snipe,sword,taunt,transfer coop=v3x40
+—— ruler ——
+  1/1 ‖ 39.73s/枚 ‖ 已用 40s ‖ 预计还需 0.0 分 ‖ 最新 TN-S2 H=49.4 S=1.50
+完成 1 枚，用时 40s ⇒ D:\code\Epirus-Web\champion-map\staging\TN-S2-ruler.tsv
+readings 32 条 ‖ display TN-S2-display.tsv
+build: exam-view 1058 行 ‖ coords-view 1058 行，无 display 0
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：101 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 页内自检 0 FAIL
+✅ add-point 完成：TN-S2

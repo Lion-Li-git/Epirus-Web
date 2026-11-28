@@ -2907,15 +2907,25 @@ var NBACK = 0; NEDG = 0; NCHAIN = 0; NSOUP = 0; NSOUP1 = 0; NSOUP2 = 0; NSOUP3 =
     if (isShipped(d) && al > 0.5) { g.strokeStyle = st.ink; g.lineWidth = 1.4; g.stroke(); }
     if (RSUBJ(d) === 1 && al > 0.3) { g.globalAlpha = al * 0.72; g.strokeStyle = '#39d98a'; g.lineWidth = 1.15 * devicePixelRatio;
       g.beginPath(); g.arc(p[0], p[1], rr + 2.2 * st.size, 0, 6.284); g.stroke(); }   /* §E677 环 = 当前桌形那把闸过了 */
-    /* §E590 池层环（环色 = 难度档，见图例/画布底那行提示）。画在"选中/对比"**之前** ⇒ 那两圈永远压得住它，
-     *   不然选中一枚池成员会出现"金环被粉环盖住"这种读不出选中的情形。 */
-    if (d.pt && POOL_COL[d.pt]) { g.globalAlpha = Math.max(0.55, Math.min(1, al * 0.95)); g.strokeStyle = POOL_COL[d.pt];
+    g.globalAlpha = 1;
+  }
+  /* 池层与选中/对比环放在点填充之后二遍叠加，避免同簇邻点填充压掉早绘节点的池环；仍保留 §E590 选中/对比压在池环之上 */
+  if (!NOPTS) {
+    for (i = 0; i < N; i++) { var d = P[i], p = scr[i]; if (!p || !(d.pt && POOL_COL[d.pt])) continue;
+      var al = alphaOf(d), rr = dotR(d, TKX);
+      g.globalAlpha = Math.max(0.55, Math.min(1, al * 0.95)); g.strokeStyle = POOL_COL[d.pt];
       g.lineWidth = 1.7 * devicePixelRatio;
-      g.beginPath(); g.arc(p[0], p[1], rr + 3.7 * st.size, 0, 6.284); g.stroke(); }
-    if (d.id === st.sel) { g.globalAlpha = 1; g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
-      g.beginPath(); g.arc(p[0], p[1], rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
-    if (st.cmp.indexOf(d.id) >= 0 && d.id !== st.sel) { g.globalAlpha = 1; g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
-      g.beginPath(); g.arc(p[0], p[1], rr + 3.4 * devicePixelRatio, 0, 6.284); g.stroke(); }
+      g.beginPath(); g.arc(p[0], p[1], rr + 3.7 * st.size, 0, 6.284); g.stroke();
+    }
+    for (i = 0; i < N; i++) { var d = P[i], p = scr[i]; if (!p) continue;
+      var isSel = d.id === st.sel, isCmp = !isSel && st.cmp.indexOf(d.id) >= 0;
+      if (!isSel && !isCmp) continue;
+      var rr = dotR(d, TKX); g.globalAlpha = 1;
+      if (isSel) { g.strokeStyle = '#ffd166'; g.lineWidth = 2 * devicePixelRatio;
+        g.beginPath(); g.arc(p[0], p[1], rr + 5 * devicePixelRatio, 0, 6.284); g.stroke(); }
+      else { g.strokeStyle = '#7fd1ff'; g.lineWidth = 1.6 * devicePixelRatio;
+        g.beginPath(); g.arc(p[0], p[1], rr + 3.4 * devicePixelRatio, 0, 6.284); g.stroke(); }
+    }
     g.globalAlpha = 1;
   }
   labelReset();

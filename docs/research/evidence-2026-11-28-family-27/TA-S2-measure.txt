@@ -1,0 +1,21 @@
+[measure] a-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S2.bak --dose=page --mode=multi --exam=A --coop=v3
+[measure] ax-multi：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S2.bak --dose=exam --mode=multi --exam=A --coop=v3
+[measure] a-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S2.bak --dose=page --mode=long --exam=A --coop=v3
+[measure] ax-long：node tools/exam-4n.mjs 100 77000 docs/artifacts/TA-S2.bak --dose=exam --mode=long --exam=A --coop=v3
+[measure] ruler：node champion-map/ruler-measure.mjs --extra=staging/TA-S2-extra.tsv --ids=TA-S2 --out=staging/TA-S2-ruler.tsv --exam=120 --self=40 --seat=100 --probe=40
+—— arena-b —— arS=0.1511 arL=0.0846 arR=0.3862
+—— mixedfix —— MxC=0.1847 MxCL=0.2564 MxSkU=17 MxSkE=17
+—— ax-multi —— [冠军4N] h2=81.19 h3=56.94 h5=37.30 h8=17.73 x2=0.6238 x3=0.3542 x5=0.2162 x8=0.0597 n2=2600 n3=1440 n5=740 n8=440 sec=16.7 mode=multi dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=17 skE=17 keys=armor,bagua,bigT,charge,curse,drain,guard,gun,holo,ji,jinshield,railgun,reflect,ring,snipe,sword,tank coop=v3x40
+—— a-multi —— [冠军4N] h2=79.88 h3=57.92 h5=35.27 h8=17.95 x2=0.5977 x3=0.3688 x5=0.1909 x8=0.0623 n2=2600 n3=1440 n5=740 n8=440 sec=17.8 mode=multi dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=18 keys=armor,bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,railgun,reflect,ring,rod,snipe,sword,tank coop=v3x40
+—— ax-long —— [冠军4N] h2=82.96 h3=55.97 h5=31.22 h8=28.41 x2=0.6592 x3=0.3396 x5=0.1402 x8=0.1818 n2=2600 n3=1440 n5=740 n8=440 sec=33.0 mode=long dose=exam pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=19 skE=18 keys=armor,bagua,bigT,cannon,charge,curse,drain,guard,gun,holo,ji,jinshield,railgun,reflect,ring,shift,snipe,sword,tank coop=v3x40
+—— a-long —— [冠军4N] h2=82.42 h3=54.58 h5=35.41 h8=26.14 x2=0.6485 x3=0.3187 x5=0.1926 x8=0.1558 n2=2600 n3=1440 n5=740 n8=440 sec=33.1 mode=long dose=page:lv:regular pool=v2#fbf59889 K=28 plan=v2 champ=0 skU=23 skE=20 keys=armor,bagua,bigT,cannon,charge,curse,drain,firestorm,guard,gun,holo,ji,jinshield,miniT,railgun,reflect,ring,rod,shift,snipe,sword,tank,transfer coop=v3x40
+—— ruler ——
+  1/1 ‖ 39.45s/枚 ‖ 已用 39s ‖ 预计还需 0.0 分 ‖ 最新 TA-S2 H=56 S=1.87
+完成 1 枚，用时 39s ⇒ D:\code\Epirus-Web\champion-map\staging\TA-S2-ruler.tsv
+readings 32 条 ‖ display TA-S2-display.tsv
+build: exam-view 1059 行 ‖ coords-view 1059 行，无 display 0
+PASS §E573 势场快路必须逐位等于独立暴力（2448 项比对）
+PASS 行带亮度：四档底色上的 ΔL* 必须肉眼可辨又不刺眼（当前档 ∈ [1,12.5]；旋钮临时调到 60 也必须被钳在 12.5 内）
+断言：101 PASS ‖ 0 FAIL
+✅ rebuild-map 完成：data coords-view + index.html + 页内自检 0 FAIL
+✅ add-point 完成：TA-S2

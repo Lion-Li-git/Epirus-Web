@@ -4,6 +4,16 @@
 
 > 产物点名（D82）：本批 38 个 band/seg 原始快照（MSB16/MSB16T/MSB17 系）未入仓；目录 docs/artifacts 被忽略，读数与哈希见 docs/research/STATUS-2026-11-13-night4-zcode.md §三B/§四；原始文件约 10 MB，只在盘上保留。
 
+## v2.1.49 — 11-28（预注册载体补臂：`TM-S5-a40` / `TN-S5` / `TA-S3` 入池 · 池维持 35 枚）
+
+**这一版是什么**：按 [PREREG-2026-11-28-pool-shortboard-carriers.md](docs/research/PREREG-2026-11-28-pool-shortboard-carriers.md) 补 `TM` / `TN` / `TA` 三条短板载体的硬门，替换掉此前未过预注册的 `TM-S2` / `TN-S2` / `TA-S2`，池维持 **35 枚（hard 17 / soft 18）**。
+
+- **P0 `TM-S5-a40`**（[docs/artifacts/TM-S5-a40.bak](docs/artifacts/TM-S5-a40.bak)，`wid=922277a50709854e`，soft）：`TM-S3`（miniT 6、win 39.50%）与 `TM-S4`（miniT 2、win 43.50%）按 40/60 权重插值，取到两边都过线；Stage 1 **win 42.75%**、`miniT 4`、`transfer 20`、`jinshield 48`、废珠 29.09%；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
+- **P1 `TN-S5`**（[docs/artifacts/TN-S5.bak](docs/artifacts/TN-S5.bak)，`wid=4039c918f4cb171b`，hard）：`TN-S4` 低剂量重训后 Stage C 岭基线 PG（2400 局，`klW=0.03` / `klTilt=taunt,jinshield`）；Stage 1 **win 42.83%**、`taunt 37`、`jinshield 21`、废珠 22.22%；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
+- **P2 `TA-S3`**（[docs/artifacts/TA-S3.bak](docs/artifacts/TA-S3.bak)，`wid=4a533551923d12dd`，soft）：以 `TA-S2` 为底座、单教师 `TK-FS4` 只补 `tank/armor`，避开多教师优先级饥饿；Stage 1 **win 47.58%**、`armor 97`、`tank 33`、`jinshield 27`、废珠 0（无珠经济）；`selftest3` 绿，`promote` 0 阻断，`seatKill=0`。
+- **池级验证**：`pool-add --audit` **35 枚 / hard 17 + soft 18 / bad=[]`；`probe-diff-ladder --pool=1` 实测四组全单调——2P standard（5000 局）**19.8% < 25.4% < 29.3%**、5P multi（1500 局）**2.9% < 7.9% < 13.9%**、5P long（600 局）**1.3% < 9.0% < 13.0%**、8P multi（300 局）**9.7% < 11.7% < 16.0%**。`TM-S2` / `TN-S2` / `TA-S2` 的 skill-report 原文件按 `AGENTS.md §24` 移到仓外隔离区 `D:\code\Epirus-Web-artifacts-quarantine\cleanup-2026-11-28-carriers\`。
+- **验证**：`node tools/spec-run.mjs` 96/96；本版不涉及规则/引擎改动（规则指纹 `c61298e6` 未变）；后续跑完整门禁并发布。
+
 ## v2.1.48 — 11-28（`v7` 训练线正式整体退役 · `knobs ≤ 40` 达标 ＆ `LE-S2`/`PH-S2` 分担替换 `MX8-TN35-KL3`/`MX8-R6B-KL`）
 
 **这一版是什么**：经用户拍板授权后执行两项结构性改动：① 正式整体退役历史 `v7` 训练代码并同笔清零活文档引用，将环境旋钮全集从 `185` 合法降至 `≤40`；② 用两枚分离低废珠、`seatKill=0` 的 `soft` 载体 [`docs/artifacts/LE-S2.bak`](docs/artifacts/LE-S2.bak)（`laserEye/firestorm`）与 [`docs/artifacts/PH-S2.bak`](docs/artifacts/PH-S2.bak)（`proto/holo/ring`）替换掉高废珠且带人席否决的 `MX8-TN35-KL3`（`seatKill=2`）与 `MX8-R6B-KL`（`seatKill=1`），池维持 35 枚 `hard 17 / soft 18`。

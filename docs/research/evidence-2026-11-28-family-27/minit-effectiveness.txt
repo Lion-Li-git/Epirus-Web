@@ -1,0 +1,52 @@
+
+=== TM-S2 ===
+  casts(ok): 16 | non-mirror voided: 12 | voidImmune: 4 | rodBlock: 0
+  totalPts: 11 | pts/cast: 0.688 | pts/voidedHit: 0.917
+  buckets: {
+  '2pt(ring/3+ep)': 1,
+  '1pt(2ep)': 9,
+  '0pt(def)': 0,
+  '0pt(ji/gun)': 2,
+  '0pt(1ep_other)': 0
+}
+  voided hitsByKey: railgun:9, ji:2, laserEye:1
+  immuneByKey: guard:4
+
+=== MT-PG ===
+  casts(ok): 39 | non-mirror voided: 24 | voidImmune: 15 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  '2pt(ring/3+ep)': 0,
+  '1pt(2ep)': 0,
+  '0pt(def)': 2,
+  '0pt(ji/gun)': 22,
+  '0pt(1ep_other)': 0
+}
+  voided hitsByKey: gun:16, ji:6, bagua:2
+  immuneByKey: guard:15
+
+=== JN-DR ===
+  casts(ok): 27 | non-mirror voided: 27 | voidImmune: 0 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  '2pt(ring/3+ep)': 0,
+  '1pt(2ep)': 0,
+  '0pt(def)': 0,
+  '0pt(ji/gun)': 27,
+  '0pt(1ep_other)': 0
+}
+  voided hitsByKey: ji:27
+  immuneByKey: 
+
+=== DR-R3E ===
+  casts(ok): 1 | non-mirror voided: 1 | voidImmune: 0 | rodBlock: 0
+  totalPts: 0 | pts/cast: 0.000 | pts/voidedHit: 0.000
+  buckets: {
+  '2pt(ring/3+ep)': 0,
+  '1pt(2ep)': 0,
+  '0pt(def)': 0,
+  '0pt(ji/gun)': 1,
+  '0pt(1ep_other)': 0
+}
+  voided hitsByKey: ji:1
+  immuneByKey: 

@@ -1,0 +1,21 @@
+# selftest3 ‖ TN-S1.bak ‖ 参数 16561 ‖ 决策点 50
+腿A probs 复刻: ✔ 逐位同
+腿B 前向重放:   ✔ 逐位同
+腿C 数值梯度:   ✔ 17106 个参数对账 ‖ 全扫点 π=0.870（逐坐标 16561 里可分辨 2775）‖ 判定 2816 ‖ 不进判定 14290（训练尺度 <1e-5 或被 ulp(logπ)/ε 盖住）‖ 最坏相对误差 0.00e+0
+腿D 尾同源:     ✔
+腿E 浏览器镜像: ✔ 10 决策点 tape 逐位同
+腿F 键级导数:   ✔ 33 对账
+# selftest3 全绿 ✔（本次梯度训练允许开）
+  ⚑ 基线 = 观测侧闭式岭回归 V(xin)（住在训练器里，不进包 ‖ l2 0.01 ‖ 每批重拟合 ‖ 采集用上一次拟合 ⇒ 不自家打分自家）
+# pg-train（B 臂） ‖ 起点 TN-S1.bak ‖ 面=obs6 ‖ 局 2400 ‖ 批 48 ‖ lr 0.0003 ‖ temp 0.5 ‖ λc 0 ‖ λf 0 ‖ 基线 ridge ‖ seed 20261128
+  口径：arena2 champion,breakdef,wall,tankline,heavyfire,guardgun,protowall,whiff,reflectmix,reflecttank,defreflectgun,reflectspam,mix,aggro,combocounter,guardspam,baguaspam,balanced,beadburst,defend,only:ji,only:charge,only:ring,only:gun,only:sword,only:tank,only:snipe,only:guard,only:reflect,only:bagua,only:shift,only:jinshield,only:armor,only:proto,only:holo,only:drain,only:railgun,only:miniT,only:bigT,only:rod,only:laserEye,only:transfer,only:curse,only:firestorm,only:mine,only:taunt,only:cannon,only:purify,only:dualGun,only:mirror,random ‖ poolFp=cc652985 ‖ shapes=2:multi,2:multi4,2:long,3:multi,3:multi4,3:long,5:multi,5:multi4,5:long,8:multi,10:multi ‖ salt=101 gameSeq 连续 ‖ 塑形常驻 ‖ 大雷助推照执行不进梯度
+  ⚑ 价值容量（岭回归**按局** 2 折留出 R²，n=1207 ‖ 局=48）：读 xin(80 维) = -0.929 ‖ 读手挑 14 标量 = -0.447
+  ⚑ seg 快照（600 局）→ scratch/arms/TN-S2.seg600.bak
+  ⚑ P-B2 快照（1/3 预算）→ scratch/arms/TN-S2-8k.bak
+  局 1200 ‖ 步 25 ‖ 平均净分 0.171 ‖ 炮 0.02/局 ‖ 纪律蓄 0.02/局 ‖ 熵 0.186nats ‖ zip坏 0/1200 ‖ 锚L1 0.118 ‖ **R² -0.018** ‖ V 0.36±0.32 ‖ G 0.30±0.61 ‖ 回滚 0
+  ⚑ seg 快照（1200 局）→ scratch/arms/TN-S2.seg1200.bak
+  ⚑ seg 快照（1800 局）→ scratch/arms/TN-S2.seg1800.bak
+  局 2400 ‖ 步 50 ‖ 平均净分 0.199 ‖ 炮 0.02/局 ‖ 纪律蓄 0.02/局 ‖ 熵 0.183nats ‖ zip坏 0/2400 ‖ 锚L1 0.126 ‖ **R² -0.168** ‖ V 0.28±0.36 ‖ G 0.26±0.66 ‖ 回滚 0
+  ⚑ seg 快照（2400 局）→ scratch/arms/TN-S2.seg2400.bak
+  终：局 2400 ‖ 平均净分 0.199 ‖ 炮/局 0.023 ‖ 纪律蓄/局 0.022 ‖ zip 坏 0/2400 ‖ 耗时 49s
+  产物 → scratch/arms/TN-S2.bak

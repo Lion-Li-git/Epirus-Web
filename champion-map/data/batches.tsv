@@ -146,3 +146,9 @@ measure-L1B-S1200	a-v2-page-1109	A	-	-	measure-L1B-S1200	L1B-S1200-readings.tsv	
 measure-L1B-S600	a-v2-page-1109	A	-	-	measure-L1B-S600	L1B-S600-readings.tsv	32	2026-11-27T17:02:13.308Z	add-point
 measure-LE-S2	a-v2-page-1109	A	-	-	measure-LE-S2	LE-S2-readings.tsv	32	2026-11-28T04:15:14.497Z	add-point
 measure-PH-S2	a-v2-page-1109	A	-	-	measure-PH-S2	PH-S2-readings.tsv	32	2026-11-28T04:17:33.428Z	add-point
+measure-TM-S2	a-v2-page-1109	A	-	-	measure-TM-S2	TM-S2-readings.tsv	32	2026-11-28T08:46:14.273Z	add-point
+measure-TN-S2	a-v2-page-1109	A	-	-	measure-TN-S2	TN-S2-readings.tsv	32	2026-11-28T09:05:13.541Z	add-point
+measure-TA-S2	a-v2-page-1109	A	-	-	measure-TA-S2	TA-S2-readings.tsv	32	2026-11-28T09:19:07.536Z	add-point
+measure-TN-S5	a-v2-page-1109	A	-	-	measure-TN-S5	TN-S5-readings.tsv	32	2026-11-28T10:55:28.145Z	add-point
+measure-TA-S3	a-v2-page-1109	A	-	-	measure-TA-S3	TA-S3-readings.tsv	32	2026-11-28T10:58:34.397Z	add-point
+measure-TM-S5-a40	a-v2-page-1109	A	-	-	measure-TM-S5-a40	TM-S5-a40-readings.tsv	32	2026-11-28T11:00:03.358Z	add-point

@@ -37,11 +37,14 @@ S-s120	pass	—
 SOFT-RING-C3G25	pass	—			
 T65-RINGBEAD	pass	—			
 T8-s114	pass	—			
+TA-S2	pass	—			
 TF-DR	pass	—			
 TF2-DR	pass	—			
 TF2-RD	pass	—			
 TK-FS4	pass	—			
 TK-PG	pass	—			
+TM-S2	pass	—			
+TN-S2	pass	—			
 K2	block	G5/long 清不了防席（它夺冠 30%）		30	
 night2-S1	block	F 被集火还手率 15.1% < 20%（被 4 席猛攻时不还手） ——【被围殴时不是只攒钱不还手】不成立〔原机器名：还			
 night2-S3	block	G5/long 清不了防席（它夺冠 28%） · G5/multi 清不了防席（它夺冠 61%）		61	
@@ -335,4 +338,4 @@ nov24-bandsym-jin	block	breadth-multi
 TF-RDMX	pass	—			
 TF2-RDC	pass	—
 LE-S2	pass	—			
-PH-S2	pass	—			
+PH-S2	pass	—

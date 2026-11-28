@@ -86,3 +86,9 @@ at	id	pack	packSha256_16	seedBase	dose	leagueTable	shortR	shortX4
 2026-11-27T17:01:13.676Z	L1B-S600	scratch/arms/nov27-long-pgdr-l1b.seg600.bak	23a8b70edb8e6346	82200	exam	data/arena-league-1118.tsv	0.299478	0.095887
 2026-11-28T04:13:53.678Z	LE-S2	docs/artifacts/LE-S2.bak	f7bd1c3466150db8	82200	exam	data/arena-league-1118.tsv	0.241743	0.079588
 2026-11-28T04:16:21.738Z	PH-S2	docs/artifacts/PH-S2.bak	d88e1f7641f2c457	82200	exam	data/arena-league-1118.tsv	0.412239	0.132292
+2026-11-28T08:45:18.610Z	TM-S2	docs/artifacts/TM-S2.bak	294e162d2fad4076	82200	exam	data/arena-league-1118.tsv	-0.197887	-0.048834
+2026-11-28T09:04:15.643Z	TN-S2	docs/artifacts/TN-S2.bak	f34e01166ca5de74	82200	exam	data/arena-league-1118.tsv	-0.064608	-0.005569
+2026-11-28T09:18:07.800Z	TA-S2	docs/artifacts/TA-S2.bak	cf82a1b6b4f9ba97	82200	exam	data/arena-league-1118.tsv	0.575816	0.182364
+2026-11-28T10:51:44.610Z	TM-S5-a40	docs/artifacts/TM-S5-a40.bak	071620b3086515a6	82200	exam	data/arena-league-1118.tsv	0.182980	0.044909
+2026-11-28T10:54:13.153Z	TN-S5	docs/artifacts/TN-S5.bak	2b94064c90d8b44a	82200	exam	data/arena-league-1118.tsv	0.123085	0.025320
+2026-11-28T10:57:19.374Z	TA-S3	docs/artifacts/TA-S3.bak	30b780c459bc986c	82200	exam	data/arena-league-1118.tsv	0.629143	0.198528
