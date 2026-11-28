@@ -3,15 +3,47 @@ import { readTable, writeTable } from '../map-table.mjs';
 import { rejectUnknownFlags } from '../../tools/audit-lib.mjs';
 import { FAMILY_FEATURES, buildFamilyProfiles, classifyFamily, methodOf, readPackInfo } from './family-classifier.mjs';
 
-rejectUnknownFlags(process.argv.slice(2), ['data', 'ids', 'write'], 'reclassify-family');
+rejectUnknownFlags(process.argv.slice(2), ['data', 'ids', 'plan', 'write'], 'reclassify-family');
 
 const arg = (k, d) => { const a = process.argv.find((x) => x.indexOf('--' + k + '=') === 0); return a ? a.slice(k.length + 3) : d; };
 const DATA = resolve(arg('data', 'champion-map/data'));
 const IDS = arg('ids', '').split(',').map((s) => s.trim()).filter(Boolean);
+const PLAN = arg('plan', '');
 const WRITE = process.argv.includes('--write');
 const ROOT = resolve(DATA, '../..');
 const readPack = (p) => readPackInfo(resolve(ROOT, p));
-if (!IDS.length) throw new Error('需要 --ids=<id1,id2>');
+if (PLAN) {
+  const plan = readTable(resolve(PLAN));
+  for (const c of ['id', 'fam', 'fam_label']) if (plan.ix[c] === undefined) throw new Error('计划缺列 ' + c);
+  const reg = readTable(join(DATA, 'registry.tsv'));
+  const lin = readTable(join(DATA, 'page/lineage.tsv'));
+  const seen = new Set(), labels = new Map();
+  for (const r of plan.rows) {
+    const id = r[plan.ix.id], fam = r[plan.ix.fam], label = r[plan.ix.fam_label];
+    if (!id || seen.has(id)) throw new Error('计划 id 为空或重复：' + id);
+    if (!/^\d+$/.test(fam) || Number(fam) < 1 || !label) throw new Error('计划家族非法：' + id);
+    if (labels.has(fam) && labels.get(fam) !== label) throw new Error('同一家族标签冲突：' + fam);
+    labels.set(fam, label);
+    seen.add(id);
+    const rr = reg.rows.find((x) => x[reg.ix.pack_id] === id);
+    const lr = lin.rows.find((x) => x[lin.ix.id] === id);
+    if (!rr || !lr) throw new Error('计划含不在册节点：' + id);
+    rr[reg.ix.fam] = fam;
+    rr[reg.ix.fam_label] = label;
+    lr[lin.ix.fam] = fam;
+    lr[lin.ix.famLabel] = label;
+  }
+  for (const r of reg.rows) if (!seen.has(r[reg.ix.pack_id]) && labels.has(r[reg.ix.fam]) && r[reg.ix.fam_label] !== labels.get(r[reg.ix.fam])) {
+    throw new Error('家族 ' + r[reg.ix.fam] + ' 标签与未迁移成员冲突：' + r[reg.ix.pack_id]);
+  }
+  if (WRITE) {
+    writeTable(join(DATA, 'registry.tsv'), { header: reg.header, rows: reg.rows }, { backup: false });
+    writeTable(join(DATA, 'page/lineage.tsv'), { header: lin.header, rows: lin.rows }, { backup: false });
+    console.log('已应用家族计划：' + seen.size + ' 枚');
+  } else console.log('--dry：计划有效，未写盘（加 --write）');
+  process.exit(0);
+}
+if (!IDS.length) throw new Error('需要 --ids=<id1,id2> 或 --plan=<tsv>');
 const registry = readTable(join(DATA, 'registry.tsv'));
 const features = readTable(join(DATA, 'features.tsv'));
 const targetSet = new Set(IDS);

@@ -1,0 +1,52 @@
+id	fam	fam_label
+MX1-E9-GD	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX1-GD-EQ	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX2-U4-EQ	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX3-GDEQ-GD	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX4-GD-T4	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX5-GD-T2STR	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX5-GD-LE40	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX7-T2-R	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX6-GD-TF15	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX6-GD-TF20	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX8-R6B-KL	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX8-CN-M	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX8-R6C-KL	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX8-TN25-KL	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+MX8-TN35-KL3	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+RINGB9	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+TZT2D	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+RING-MINIT-CONT	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+day1119-cannon-pg	24	2.0 obs6.5 MX 矩阵与 PG 均值覆盖
+TZ2C	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+nov21-purify-dsp0	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+nov21-taunt-dsp0b	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+R-GD12	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+nov22-ring3-gd6a18	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+CN-G1	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+MN-G1	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+RG-MN	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+HL-G1	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+RG-CN	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+night2-X2b-fuse	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+nov21-armor-tzt2d	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+AR-TK2	23	2.0 obs6.5 V3 路由与统一单包（11-16）
+TZPUR	25	2.0 obs6.5 强包底座与多技能协同演进
+nov24-bandsym-jin	25	2.0 obs6.5 强包底座与多技能协同演进
+night2-S6	25	2.0 obs6.5 强包底座与多技能协同演进
+nov21-rod-tzt2d-r10	25	2.0 obs6.5 强包底座与多技能协同演进
+nov22-tzt2d-stab	25	2.0 obs6.5 强包底座与多技能协同演进
+nov22-c4c-t20	25	2.0 obs6.5 强包底座与多技能协同演进
+AR-TK3	25	2.0 obs6.5 强包底座与多技能协同演进
+CN-DR	25	2.0 obs6.5 强包底座与多技能协同演进
+PG-DR	25	2.0 obs6.5 强包底座与多技能协同演进
+TK-PG	25	2.0 obs6.5 强包底座与多技能协同演进
+MN-PG	25	2.0 obs6.5 强包底座与多技能协同演进
+PG-CN	25	2.0 obs6.5 强包底座与多技能协同演进
+MT-PG	25	2.0 obs6.5 强包底座与多技能协同演进
+RD-PG	25	2.0 obs6.5 强包底座与多技能协同演进
+PG-CN-S1200	25	2.0 obs6.5 强包底座与多技能协同演进
+L1B-S1200	25	2.0 obs6.5 强包底座与多技能协同演进
+L1B-S600	25	2.0 obs6.5 强包底座与多技能协同演进
+LE-S2	25	2.0 obs6.5 强包底座与多技能协同演进
+PH-S2	25	2.0 obs6.5 强包底座与多技能协同演进
